@@ -108,7 +108,7 @@ export const MobilePodcastDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted pb-28">
+    <div className="min-h-screen bg-muted pb-[130px]">
       {/* Header */}
       <header className="bg-card px-5 pt-5 pb-4 border-b border-border sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-3">
@@ -340,38 +340,6 @@ export const MobilePodcastDashboard: React.FC = () => {
         </section>
       )}
 
-      {/* Floating Mini Player (Placeholder) */}
-      {latestHistory && (
-        <div className="fixed bottom-4 left-4 right-4 z-50">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigateToEpisode(latestHistory)}
-            className="w-full bg-primary rounded-xl p-2.5 !flex items-center gap-2 shadow-xl active:scale-[0.99] transition-transform"
-          >
-            <div
-              className="w-9 h-9 bg-indigo-500 dark:bg-indigo-400/70 rounded-lg flex items-center justify-center bg-cover bg-center"
-              style={{ backgroundImage: `url(${latestHistory.channelImage || '/logo.png'})` }}
-            >
-              <Disc
-                className="w-4 h-4 text-white animate-spin"
-                style={{ animationDuration: '3s' }}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-primary-foreground text-xs truncate">
-                {latestHistory.episodeTitle}
-              </h4>
-              <div className="h-1 bg-muted rounded-full mt-1 overflow-hidden">
-                <div className="h-full bg-green-400 dark:bg-green-300 w-1/2" />
-              </div>
-            </div>
-            <span className="w-8 h-8 bg-card rounded-full flex items-center justify-center text-foreground">
-              <Pause className="w-3 h-3 fill-current" />
-            </span>
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

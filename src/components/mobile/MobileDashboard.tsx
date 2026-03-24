@@ -123,7 +123,7 @@ const MobileDashboardLayout = ({
   };
 
   return (
-    <div className="relative min-h-screen pb-24 bg-transparent overflow-hidden">
+    <div className="relative min-h-screen pb-[130px] bg-transparent overflow-hidden">
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-3">
         <div className="flex justify-between items-center gap-3 mb-3">
           <div className="flex items-center gap-3">

@@ -216,7 +216,7 @@ export const MobileProfilePage: React.FC = () => {
   } as const;
 
   return (
-    <div className="min-h-[100dvh] bg-muted pb-20">
+    <div className="min-h-[100dvh] bg-muted pb-[130px]">
       {/* Header */}
       <div className="bg-card p-6 pb-8 rounded-b-[2.5rem] shadow-sm z-10 relative">
         <div className="flex justify-between items-center mb-6">

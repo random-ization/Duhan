@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,12 +47,12 @@ import {
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
 
-type ViewMode = 'gallery' | 'list' | 'table';
-type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
-type NoteKind = 'quote_card' | 'longform_page';
-type TranslateFn = ReturnType<typeof useTranslation>['t'];
+export type ViewMode = 'gallery' | 'list' | 'table';
+export type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
+export type NoteKind = 'quote_card' | 'longform_page';
+export type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
-type NotebookListResult = {
+export type NotebookListResult = {
   notebooks: Array<{
     id: Id<'note_pages'>;
     title: string;
@@ -66,7 +68,7 @@ type NotebookListResult = {
   };
 };
 
-type SearchItem = {
+export type SearchItem = {
   id: Id<'note_pages'>;
   title: string;
   icon?: string;
@@ -84,12 +86,12 @@ type SearchItem = {
   snippet: string;
 };
 
-type SearchResult = {
+export type SearchResult = {
   items: SearchItem[];
   nextCursor: number | null;
 };
 
-type NoteBlock = {
+export type NoteBlock = {
   id: string;
   blockKey?: string;
   blockType: string;
@@ -97,7 +99,7 @@ type NoteBlock = {
   sortOrder: number;
 };
 
-type PagePayload = {
+export type PagePayload = {
   page: {
     id: Id<'note_pages'>;
     title: string;
@@ -111,12 +113,12 @@ type PagePayload = {
   blocks: NoteBlock[];
 };
 
-const EMPTY_DOC: JSONContent = {
+export const EMPTY_DOC: JSONContent = {
   type: 'doc',
   content: [{ type: 'paragraph' }],
 };
 
-const toSourceLabel = (sourceModule: string | undefined, t: TranslateFn) => {
+export const toSourceLabel = (sourceModule: string | undefined, t: TranslateFn) => {
   if (!sourceModule) return t('notes.v2.source.manual', { defaultValue: 'Manual' });
   const normalized = sourceModule.trim().toUpperCase();
   if (normalized.includes('TOPIK')) return t('notes.v2.source.topik', { defaultValue: 'TOPIK' });
@@ -138,7 +140,7 @@ const toSourceLabel = (sourceModule: string | undefined, t: TranslateFn) => {
   return t('notes.v2.source.manual', { defaultValue: 'Manual' });
 };
 
-const toCardType = (item: SearchItem, t: TranslateFn) => {
+export const toCardType = (item: SearchItem, t: TranslateFn) => {
   const source = toSourceLabel(item.sourceModule, t);
   const noteType = (item.noteType || '').toLowerCase();
 
@@ -182,7 +184,7 @@ const toCardType = (item: SearchItem, t: TranslateFn) => {
   };
 };
 
-const toStatusBadge = (status: string, t: TranslateFn) => {
+export const toStatusBadge = (status: string, t: TranslateFn) => {
   const normalized = status.trim().toLowerCase();
   if (normalized === 'reviewed') {
     return {
@@ -196,7 +198,7 @@ const toStatusBadge = (status: string, t: TranslateFn) => {
   };
 };
 
-const toSourcePath = (sourceRef?: Record<string, unknown>): string | null => {
+export const toSourcePath = (sourceRef?: Record<string, unknown>): string | null => {
   if (!sourceRef) return null;
   const module = typeof sourceRef.module === 'string' ? sourceRef.module : '';
   const contentId =
@@ -212,7 +214,7 @@ const toSourcePath = (sourceRef?: Record<string, unknown>): string | null => {
   return null;
 };
 
-const blocksToEditorDoc = (blocks: NoteBlock[]): JSONContent => {
+export const blocksToEditorDoc = (blocks: NoteBlock[]): JSONContent => {
   const tiptapDoc = blocks.find(block => block.blockType === 'tiptap_doc');
   if (tiptapDoc && tiptapDoc.content && typeof tiptapDoc.content === 'object') {
     return tiptapDoc.content as JSONContent;
@@ -220,7 +222,7 @@ const blocksToEditorDoc = (blocks: NoteBlock[]): JSONContent => {
   return EMPTY_DOC;
 };
 
-const formatTime = (timestamp: number, locale: string) =>
+export const formatTime = (timestamp: number, locale: string) =>
   new Date(timestamp).toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
@@ -228,7 +230,7 @@ const formatTime = (timestamp: number, locale: string) =>
     minute: '2-digit',
   });
 
-const decodeCommonHtmlEntities = (value: string) =>
+export const decodeCommonHtmlEntities = (value: string) =>
   value
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
@@ -236,23 +238,23 @@ const decodeCommonHtmlEntities = (value: string) =>
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'");
 
-const normalizeLooseInlineTags = (value: string) =>
+export const normalizeLooseInlineTags = (value: string) =>
   value.replace(
     /<\s*(\/?)\s*(u|strong|b|em|i|mark|code|del|ins)\s*>/gi,
     (_all, slash: string, tag: string) => `<${slash}${tag.toLowerCase()}>`
   );
 
-const RICH_TEXT_CLASS =
+export const RICH_TEXT_CLASS =
   '[&_u]:underline [&_u]:decoration-2 [&_u]:underline-offset-2 [&_u]:decoration-primary/70 ' +
   '[&_strong]:font-extrabold [&_em]:italic [&_mark]:rounded [&_mark]:bg-yellow-200/70 [&_mark]:px-1 ' +
   '[&_code]:rounded [&_code]:bg-foreground/5 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.95em] ' +
   '[&_del]:opacity-80 [&_del]:line-through [&_ins]:underline [&_ins]:decoration-2 [&_ins]:underline-offset-2';
 
-const QUOTE_CARD_RICH_CLASS =
+export const QUOTE_CARD_RICH_CLASS =
   'relative overflow-hidden border-l-[3px] border-primary/70 bg-gradient-to-br from-muted/60 via-muted/30 to-card ' +
   'shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]';
 
-const toPlainText = (value?: string | null) => {
+export const toPlainText = (value?: string | null) => {
   if (!value) return '';
   return normalizeLooseInlineTags(decodeCommonHtmlEntities(value))
     .replace(/<[^>]*>/g, ' ')
@@ -267,7 +269,7 @@ const toPlainText = (value?: string | null) => {
     .trim();
 };
 
-const toRichHtml = (value?: string | null) => {
+export const toRichHtml = (value?: string | null) => {
   if (!value) return '';
   const decoded = normalizeLooseInlineTags(decodeCommonHtmlEntities(value));
   const withMarkdown = decoded
@@ -282,9 +284,9 @@ const toRichHtml = (value?: string | null) => {
   return sanitizeHtml(withMarkdown.replace(/\n/g, '<br />'));
 };
 
-const toPreviewHtml = (snippet?: string | null) => toRichHtml(snippet);
+export const toPreviewHtml = (snippet?: string | null) => toRichHtml(snippet);
 
-const extractBlockText = (content: unknown): string => {
+export const extractBlockText = (content: unknown): string => {
   if (typeof content === 'string') return content.trim();
   if (Array.isArray(content)) return content.map(extractBlockText).join(' ').trim();
   if (!content || typeof content !== 'object') return '';
@@ -300,7 +302,7 @@ const extractBlockText = (content: unknown): string => {
   return Object.values(record).map(extractBlockText).join(' ').trim();
 };
 
-const getQuoteCardContent = (payload?: PagePayload | null) => {
+export const getQuoteCardContent = (payload?: PagePayload | null) => {
   const blocks = payload?.blocks || [];
   const quoteBlock = blocks.find(
     block => block.blockKey === 'quote' || block.blockType === 'quote'
@@ -317,7 +319,7 @@ const getQuoteCardContent = (payload?: PagePayload | null) => {
   };
 };
 
-const noteTextToEditorDoc = (value: string): JSONContent => {
+export const noteTextToEditorDoc = (value: string): JSONContent => {
   const lines = value
     .split(/\n+/)
     .map(line => line.trim())
@@ -332,7 +334,7 @@ const noteTextToEditorDoc = (value: string): JSONContent => {
   };
 };
 
-const extractEditorDocText = (value: unknown): string => {
+export const extractEditorDocText = (value: unknown): string => {
   if (typeof value === 'string') return value;
   if (Array.isArray(value)) return value.map(extractEditorDocText).join(' ');
   if (!value || typeof value !== 'object') return '';
@@ -343,6 +345,7 @@ const extractEditorDocText = (value: unknown): string => {
 };
 
 export default function NotebookV2Page() {
+  const isMobile = useIsMobile();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const dateLocale = useMemo(() => {
@@ -798,6 +801,18 @@ export default function NotebookV2Page() {
     content: contextualSidebarContent,
     enabled: true,
   });
+
+  if (isMobile) {
+    return <MobileNotebookPage {...{
+      t, navigate, dateLocale, activeNotebookId, setActiveNotebookId,
+      selectedPageId, setSelectedPageId, query, setQuery, sourceFilter, setSourceFilter,
+      editorOpen, setEditorOpen, handleEditorOpenChange, editorExpanded, setEditorExpanded,
+      title, setTitle, noteKind, setNoteKind, quoteText, setQuoteText, editorDoc, setEditorDoc,
+      saveState, lastSavedAt, notebooksResult, sourceSummary, searchResult, pendingReviewCount,
+      selectedSearchItem, selectedIsQuoteCard, selectedPagePayload,
+      handleCreateNote, handleDeletePage, handleOpenSource, handleRetrySave,
+    }} />;
+  }
 
   return (
     <div className="w-full min-h-full bg-background text-foreground font-sans rounded-3xl border border-border overflow-hidden">

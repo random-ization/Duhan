@@ -19,7 +19,7 @@ import {
   useCurrentLanguage,
   useLocalizedNavigate,
 } from '../../hooks/useLocalizedNavigate';
-import { Button, Switch } from '../ui';
+import { Button } from '../ui';
 import {
   useContextualSidebarState,
   useLayoutActions,
@@ -240,135 +240,99 @@ const SidebarFooter = ({
     className={`mt-auto border-t ${collapsed ? 'px-2 py-3' : 'p-3'}`}
     style={{ borderColor: 'var(--sb-border)' }}
   >
-    <div className="space-y-2">
+    <div className={`flex items-center gap-2 ${collapsed ? 'flex-col' : ''}`}>
       <HoverTooltip
         label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
         side={collapsed ? 'right' : 'top'}
       >
-        {collapsed ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={toggleDarkMode}
-            aria-label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-            title={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-            className="mx-auto h-11 w-11 rounded-xl p-0 transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)]"
-            style={{ color: 'var(--sb-muted-text)' }}
-          >
-            <span className="flex items-center justify-center">
-              {isDarkMode ? (
-                <Moon size={17} aria-hidden="true" />
-              ) : (
-                <Sun size={17} aria-hidden="true" />
-              )}
-            </span>
-          </Button>
-        ) : (
-          <div
-            className="flex items-center justify-between rounded-xl px-3 py-2"
-            style={{ backgroundColor: 'var(--sb-surface-muted)' }}
-          >
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg"
-                style={{ backgroundColor: 'var(--sb-surface)' }}
-              >
-                {isDarkMode ? (
-                  <Moon size={16} aria-hidden="true" style={{ color: 'var(--sb-text)' }} />
-                ) : (
-                  <Sun size={16} aria-hidden="true" style={{ color: 'var(--sb-text)' }} />
-                )}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: 'var(--sb-text)' }}>
-                  {t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-                </p>
-                <p className="text-[11px]" style={{ color: 'var(--sb-muted-text)' }}>
-                  {isDarkMode
-                    ? t('sidebar.darkModeOn', { defaultValue: 'On for all pages' })
-                    : t('sidebar.darkModeOff', { defaultValue: 'Off for all pages' })}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={isDarkMode}
-              onCheckedChange={toggleDarkMode}
-              aria-label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-              className="data-[state=checked]:bg-indigo-600 data-[state=unchecked]:bg-[var(--sb-border)]"
-            />
-          </div>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={toggleDarkMode}
+          aria-label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
+          aria-pressed={isDarkMode}
+          title={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
+          className={`rounded-lg p-2 transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
+            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'w-9'
+          }`}
+          style={{
+            color: isDarkMode ? 'var(--sb-text)' : 'var(--sb-muted-text)',
+            backgroundColor: isDarkMode ? 'var(--sb-surface-muted)' : 'transparent',
+          }}
+        >
+          <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
+            {isDarkMode ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+          </span>
+        </Button>
       </HoverTooltip>
 
-      <div className={`flex items-center gap-2 ${collapsed ? 'flex-col' : ''}`}>
-        <HoverTooltip
-          label={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
-          side={collapsed ? 'right' : 'top'}
+      <HoverTooltip
+        label={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
+        side={collapsed ? 'right' : 'top'}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => {
+            if (pathWithoutLang === '/dashboard') {
+              toggleEditMode();
+            } else {
+              navigate('/profile');
+            }
+          }}
+          aria-label={
+            pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
+          }
+          title={
+            pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
+          }
+          className={`rounded-lg py-2 text-[14px] font-medium transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
+            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'flex-1 px-3'
+          }`}
+          style={{
+            color:
+              pathWithoutLang === '/dashboard' && isEditing
+                ? 'var(--sb-success-text)'
+                : 'var(--sb-muted-text)',
+          }}
         >
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => {
-              if (pathWithoutLang === '/dashboard') {
-                toggleEditMode();
-              } else {
-                navigate('/profile');
-              }
-            }}
-            aria-label={
-              pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
-            }
-            title={
-              pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
-            }
-            className={`rounded-lg py-2 text-[14px] font-medium transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-              collapsed ? 'h-11 w-11 rounded-xl p-0' : 'flex-1 px-3'
-            }`}
-            style={{
-              color:
-                pathWithoutLang === '/dashboard' && isEditing
-                  ? 'var(--sb-success-text)'
-                  : 'var(--sb-muted-text)',
-            }}
-          >
-            <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-              {pathWithoutLang === '/dashboard' && isEditing ? (
-                <Check size={17} aria-hidden="true" />
-              ) : (
-                <Settings size={17} aria-hidden="true" />
-              )}
-              {!collapsed && (
-                <span>
-                  {pathWithoutLang === '/dashboard' && isEditing
-                    ? t('done')
-                    : t('sidebar.settings', { defaultValue: 'Settings & account' })}
-                </span>
-              )}
-            </span>
-          </Button>
-        </HoverTooltip>
+          <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
+            {pathWithoutLang === '/dashboard' && isEditing ? (
+              <Check size={17} aria-hidden="true" />
+            ) : (
+              <Settings size={17} aria-hidden="true" />
+            )}
+            {!collapsed && (
+              <span>
+                {pathWithoutLang === '/dashboard' && isEditing
+                  ? t('done')
+                  : t('sidebar.settings', { defaultValue: 'Settings & account' })}
+              </span>
+            )}
+          </span>
+        </Button>
+      </HoverTooltip>
 
-        <HoverTooltip label={t('sidebar.logout')} side={collapsed ? 'right' : 'top'}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={logout}
-            aria-label={t('sidebar.logout')}
-            title={t('sidebar.logout')}
-            className={`rounded-lg p-2 transition-colors hover:bg-[var(--sb-danger-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-              collapsed ? 'h-11 w-11 rounded-xl p-0' : 'w-9'
-            }`}
-            style={{ color: 'var(--sb-danger-text)' }}
-          >
-            <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-              <LogOut size={16} aria-hidden="true" />
-            </span>
-          </Button>
-        </HoverTooltip>
-      </div>
+      <HoverTooltip label={t('sidebar.logout')} side={collapsed ? 'right' : 'top'}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={logout}
+          aria-label={t('sidebar.logout')}
+          title={t('sidebar.logout')}
+          className={`rounded-lg p-2 transition-colors hover:bg-[var(--sb-danger-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
+            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'w-9'
+          }`}
+          style={{ color: 'var(--sb-danger-text)' }}
+        >
+          <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
+            <LogOut size={16} aria-hidden="true" />
+          </span>
+        </Button>
+      </HoverTooltip>
     </div>
   </div>
 );

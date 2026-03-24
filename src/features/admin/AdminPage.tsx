@@ -15,6 +15,13 @@ import { UserManagement } from '../../components/admin/UserManagement';
 import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import LegalDocumentEditor from '../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
+// PodcastManager was removed during revert; use inline placeholder until re-implemented
+const PodcastManager: React.FC = () => (
+  <div className="p-8">
+    <h2 className="text-xl font-bold mb-4">播客管理</h2>
+    <p className="text-zinc-500">播客管理模块正在重构中...</p>
+  </div>
+);
 import { TypingManager } from './TypingManager';
 import {
   Book,
@@ -32,6 +39,7 @@ import {
   Activity,
   BookOpen,
   Type,
+  Podcast,
 } from 'lucide-react';
 
 // --- Sub-components for Tabs ---
@@ -148,6 +156,7 @@ type AdminTab =
   | 'topik'
   | 'legal'
   | 'video'
+  | 'podcast'
   | 'diagnostics'
   | 'typing';
 
@@ -190,6 +199,7 @@ const AdminPage: React.FC = () => {
     { id: 'topik', label: 'TOPIK', icon: ClipboardCheck },
     { id: 'legal', label: '法律', icon: FileText },
     { id: 'video', label: '视频', icon: Video },
+    { id: 'podcast', label: '播客', icon: Podcast },
     { id: 'diagnostics', label: '诊断', icon: Activity },
     { id: 'typing', label: '打字', icon: Type },
   ];
@@ -216,6 +226,8 @@ const AdminPage: React.FC = () => {
         return <LegalDocumentEditor />;
       case 'video':
         return <VideoManager />;
+      case 'podcast':
+        return <PodcastManager />;
       case 'typing':
         return <TypingManager />;
       case 'diagnostics':

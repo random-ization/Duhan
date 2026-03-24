@@ -96,12 +96,17 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
     return grammar?.unitId ?? null;
   }, [courseGrammars, selectedGrammarId]);
 
+  // Track units the user has explicitly collapsed so auto-expand doesn't fight them
+  const [manuallyCollapsedUnits, setManuallyCollapsedUnits] = useState<Set<number>>(new Set());
+
   const visibleExpandedUnits = useMemo(() => {
-    if (selectedUnitId === null || expandedUnits.has(selectedUnitId)) return expandedUnits;
+    if (selectedUnitId === null || expandedUnits.has(selectedUnitId) || manuallyCollapsedUnits.has(selectedUnitId)) {
+      return expandedUnits;
+    }
     const next = new Set(expandedUnits);
     next.add(selectedUnitId);
     return next;
-  }, [expandedUnits, selectedUnitId]);
+  }, [expandedUnits, selectedUnitId, manuallyCollapsedUnits]);
 
   const getUnitName = (unitId: number) => {
     const units: Record<number, string> = {
@@ -172,6 +177,7 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
   const progressPercent = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
 
   const toggleUnit = (unitId: number) => {
+    const isCurrentlyExpanded = visibleExpandedUnits.has(unitId);
     setExpandedUnits(prev => {
       const next = new Set(prev);
       if (next.has(unitId)) {
@@ -181,6 +187,22 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
       }
       return next;
     });
+    // If the user is collapsing the currently auto-expanded unit, remember it
+    if (isCurrentlyExpanded && unitId === selectedUnitId) {
+      setManuallyCollapsedUnits(prev => {
+        const next = new Set(prev);
+        next.add(unitId);
+        return next;
+      });
+    } else {
+      // If re-expanding, remove from manually collapsed
+      setManuallyCollapsedUnits(prev => {
+        if (!prev.has(unitId)) return prev;
+        const next = new Set(prev);
+        next.delete(unitId);
+        return next;
+      });
+    }
   };
 
   const statusMeta = (status: GrammarStatus) => {
@@ -271,7 +293,7 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
               <Button
                 variant="ghost"
                 size="auto"
-                className="w-full px-3 py-2 rounded-none text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="w-full px-3 py-2 rounded-none text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors active:scale-[0.99]"
                 onClick={() => toggleUnit(unitId)}
               >
                 <div className="w-full flex items-center justify-between gap-2">
@@ -310,21 +332,21 @@ const GrammarDirectorySidebar: React.FC<GrammarDirectorySidebarProps> = ({
                         variant="ghost"
                         size="auto"
                         onClick={() => onSelectGrammar(item.id, item.unitId)}
-                        className={`w-full justify-start rounded-lg px-2.5 py-2 h-auto transition-colors border ${
+                        className={`w-full justify-start rounded-xl px-2.5 py-2.5 transition-all active:scale-[0.97] border ${
                           isActive
-                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30'
-                            : 'bg-white text-slate-700 border-transparent hover:bg-slate-50 hover:border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:border-slate-700'
+                            ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200/50 dark:from-indigo-500 dark:to-blue-500 dark:shadow-none border-transparent'
+                            : 'bg-transparent text-slate-700 hover:bg-white hover:shadow-sm border-transparent dark:text-slate-200 dark:hover:bg-slate-800/60'
                         }`}
                       >
                         <span
-                          className={`h-8 w-1 rounded-full mr-2 ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}
+                          className={`h-8 w-1 rounded-full mr-2 transition-colors ${isActive ? 'bg-white/40' : 'bg-transparent'}`}
                           aria-hidden
                         />
-                        <span className="mr-2 text-xs text-slate-400 w-5 text-left dark:text-slate-500">
+                        <span className={`mr-2 text-xs w-5 text-left font-semibold transition-colors ${isActive ? 'text-indigo-100' : 'text-slate-400 dark:text-slate-500'}`}>
                           {index + 1}
                         </span>
                         <span className="min-w-0 flex-1 text-left">
-                          <span className="block truncate text-sm font-medium">
+                          <span className="block truncate text-sm font-bold">
                             {getLocalizedGrammarTitle(item, language)}
                           </span>
                           <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">

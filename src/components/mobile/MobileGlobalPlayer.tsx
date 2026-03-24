@@ -80,29 +80,33 @@ export const MobileGlobalPlayer: React.FC = () => {
   return (
     <>
       {isMinimized && (
-        <div className="fixed bottom-20 left-4 right-4 z-50">
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+110px)] left-4 right-4 z-50 pointer-events-none">
           <div
-            className="bg-primary/95 backdrop-blur-md rounded-2xl p-3 flex items-center shadow-2xl border border-white/10"
+            className="pointer-events-auto bg-card/80 dark:bg-card/60 backdrop-blur-2xl rounded-[1.5rem] p-2 pr-3 flex items-center shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)] border border-border/50"
             onClick={() => setMinimized(false)}
             role="button"
             tabIndex={0}
           >
             <img
               src={artworkSrc}
-              className="w-10 h-10 rounded-lg bg-muted object-cover shrink-0"
+              className="w-12 h-12 rounded-[14px] bg-muted object-cover shrink-0 shadow-sm"
               alt={t('mobilePlayer.artAlt', { defaultValue: 'Art' })}
               loading="lazy"
             />
-            <div className="flex-1 min-w-0 mx-3">
-              <h4 className="text-white font-bold text-sm truncate">{activeEpisode.title}</h4>
-              <p className="text-muted-foreground text-xs truncate">{activeEpisode.channelTitle}</p>
+            <div className="flex-1 min-w-0 mx-3 flex flex-col justify-center">
+              <h4 className="text-foreground font-bold text-[13px] tracking-tight truncate">
+                {activeEpisode.title}
+              </h4>
+              <p className="text-muted-foreground text-[11px] font-semibold truncate mt-0.5">
+                {activeEpisode.channelTitle}
+              </p>
             </div>
-            <div className="flex items-center gap-3 pr-1">
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="ghost"
-                size="auto"
+                size="icon"
                 type="button"
-                className="text-white p-1"
+                className="w-10 h-10 rounded-full text-foreground hover:bg-muted active:scale-90 transition-transform"
                 onClick={e => {
                   e.stopPropagation();
                   togglePlay();

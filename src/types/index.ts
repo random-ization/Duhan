@@ -387,12 +387,25 @@ export const isTextbookContentV2 = (content: unknown): content is TextbookConten
 export interface PodcastChannel {
   id?: string;
   itunesId?: string;
+  podcastIndexId?: string;
   title: string;
   author: string;
   feedUrl: string;
   artworkUrl?: string;
   artwork?: string; // Alias
   description?: string;
+  sourceBackend?: 'podcastindex';
+  subtitleEligibility?: 'unknown' | 'candidate' | 'ready' | 'rejected';
+  subtitleSourceKind?:
+    | 'none'
+    | 'podcast_transcript'
+    | 'description_link'
+    | 'vtt'
+    | 'srt'
+    | 'json'
+    | 'external_link';
+  subtitleVerifiedAt?: number;
+  subtitleNotes?: string;
 }
 
 export interface PodcastEpisode {
@@ -410,11 +423,24 @@ export interface PodcastEpisode {
   channel?: {
     id?: string;
     itunesId?: string;
+    podcastIndexId?: string;
     title?: string;
     author?: string;
     feedUrl?: string;
     artworkUrl?: string;
     artwork?: string;
+    sourceBackend?: 'podcastindex';
+    subtitleEligibility?: 'unknown' | 'candidate' | 'ready' | 'rejected';
+    subtitleSourceKind?:
+      | 'none'
+      | 'podcast_transcript'
+      | 'description_link'
+      | 'vtt'
+      | 'srt'
+      | 'json'
+      | 'external_link';
+    subtitleVerifiedAt?: number;
+    subtitleNotes?: string;
   };
 }
 

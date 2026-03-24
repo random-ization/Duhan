@@ -40,7 +40,7 @@ export default function MobileGrammarFeed({
   }
 
   return (
-    <div className="p-4 pb-24 space-y-3">
+    <div className="p-4 pb-[130px] space-y-3">
       {grammarPoints.map(point => {
         const isMastered = point.status === 'MASTERED';
         const proficiency = point.proficiency || 0;

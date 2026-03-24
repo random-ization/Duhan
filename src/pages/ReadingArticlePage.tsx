@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams } from 'react-router-dom';
-import { BookOpen, Check, ChevronLeft, Languages, Star, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Check, ChevronLeft, Languages, Sparkles, Star, Volume2, VolumeX } from 'lucide-react';
 import { AI, DICTIONARY, NEWS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
@@ -12,6 +12,15 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../components/ui';
 import { Button } from '../components/ui';
 import { Textarea } from '../components/ui';
+import {
+  Sheet,
+  SheetContent,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
+} from '../components/ui';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
 import AnnotationToolbar from '../features/annotation-kit/components/AnnotationToolbar';
@@ -1721,6 +1730,7 @@ const SELECTION_TOOLBAR_DISMISS_SELECTORS = [
 ] as const;
 
 export default function ReadingArticlePage() {
+  const isMobile = useIsMobile();
   const { articleId = '' } = useParams<{ articleId: string }>();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
@@ -2635,6 +2645,30 @@ export default function ReadingArticlePage() {
           startNoteFromSelection={startNoteFromSelection}
           onClose={() => setSelectionToolbar(prev => ({ ...prev, visible: false }))}
         />
+
+        {isMobile && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button className="rounded-full shadow-2xl px-6 py-6 font-bold bg-primary text-primary-foreground border-2 border-primary/20 hover:scale-105 transition-transform flex items-center gap-2">
+                  <Sparkles size={18} /> {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
+                </Button>
+              </SheetTrigger>
+              <SheetPortal>
+                <SheetOverlay className="z-[60] bg-black/60 backdrop-blur-sm" />
+                <SheetContent
+                  className="fixed inset-x-0 bottom-0 z-[60] mt-10 h-[85dvh] rounded-t-3xl border-border px-4 py-6 shadow-2xl"
+                >
+                  <SheetTitle className="sr-only">AI and Dictionary</SheetTitle>
+                  <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20" />
+                  <div className="h-full overflow-y-auto pb-10 pr-2">
+                    {contextualSidebarContent}
+                  </div>
+                </SheetContent>
+              </SheetPortal>
+            </Sheet>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -31,7 +31,7 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
   const progress = total > 0 ? (masteredCount / total) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-[130px]">
       {/* Header */}
       <header className="bg-card p-6 pb-8 border-b border-border rounded-b-[2rem] shadow-sm relative overflow-hidden">
         {/* Decor */}

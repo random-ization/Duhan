@@ -75,7 +75,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   };
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-[130px]">
       {/* Header */}
       <header className="bg-card px-4 sm:px-5 pt-[calc(env(safe-area-inset-top)+12px)] pb-4 border-b border-border sticky top-0 z-20">
         <div className="flex items-center gap-3 mb-3">

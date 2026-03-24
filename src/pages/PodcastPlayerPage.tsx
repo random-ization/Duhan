@@ -1766,7 +1766,18 @@ const PodcastPlayerPage: React.FC = () => {
 
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
-    return transcript.findIndex(line => currentTime >= line.start && currentTime < line.end);
+    const currentIndex = transcript.findIndex(
+      line => currentTime >= line.start && currentTime < line.end
+    );
+
+    // If we're hovering in a silence gap, optionally remain on the previous line to prevent flickering
+    if (currentIndex === -1) {
+      for (let i = transcript.length - 1; i >= 0; i--) {
+        if (currentTime >= transcript[i].end) return i;
+      }
+    }
+    
+    return currentIndex;
   }, [currentTime, transcript]);
 
   useEffect(() => {

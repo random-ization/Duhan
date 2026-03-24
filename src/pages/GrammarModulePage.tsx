@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelRightOpen, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useQuery, useMutation } from 'convex/react';
@@ -19,6 +19,13 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetOverlay,
+  SheetPortal,
+} from '../components/ui/sheet';
 
 const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
 
@@ -262,16 +269,9 @@ const GrammarModulePage: React.FC = () => {
         ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30'
         : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
 
-  const gridStyle = isAiPanelOpen
-    ? { gridTemplateColumns: '250px minmax(0,1fr) 320px' }
-    : { gridTemplateColumns: '250px minmax(0,1fr)' };
-
   return (
     <div className="h-full min-h-0 overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div
-        className="h-full min-h-0 grid transition-[grid-template-columns] duration-300"
-        style={gridStyle}
-      >
+      <div className="h-full min-h-0 grid transition-[grid-template-columns] duration-300" style={{ gridTemplateColumns: '250px minmax(0,1fr)' }}>
         <GrammarDirectorySidebar
           courseGrammars={allCourseGrammar || []}
           searchQuery={searchQuery}
@@ -331,21 +331,12 @@ const GrammarModulePage: React.FC = () => {
                     : t('grammarModule.markMastery', { defaultValue: 'Mark learned' })}
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={() => setIsAiPanelOpen(prev => !prev)}
+                  variant={isAiPanelOpen ? 'default' : 'outline'}
+                  onClick={() => setIsAiPanelOpen(true)}
                   className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  {isAiPanelOpen ? (
-                    <>
-                      <PanelRightClose className="h-4 w-4 mr-1.5" />
-                      {t('grammarModule.aiPanelHide', { defaultValue: 'Hide AI' })}
-                    </>
-                  ) : (
-                    <>
-                      <PanelRightOpen className="h-4 w-4 mr-1.5" />
-                      {t('grammarModule.aiPanelShow', { defaultValue: 'Show AI' })}
-                    </>
-                  )}
+                  <PanelRightOpen className="h-4 w-4 mr-1.5" />
+                  {t('grammarModule.aiPanelShow', { defaultValue: 'Show AI' })}
                 </Button>
               </div>
             </div>
@@ -359,9 +350,44 @@ const GrammarModulePage: React.FC = () => {
             hasPrev={currentIndex > 0}
           />
         </section>
-
-        {isAiPanelOpen ? <GrammarAuxiliaryPane grammar={desktopSelectedGrammar} /> : null}
       </div>
+
+      <Sheet open={isAiPanelOpen} onOpenChange={setIsAiPanelOpen}>
+        <SheetPortal>
+          <SheetOverlay className="bg-slate-950/32 backdrop-blur-[2px]" />
+          <SheetContent
+            unstyled
+            className="fixed inset-y-3 right-3 z-50 flex w-[min(560px,calc(100vw-24px))] max-w-none flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-950"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+                  <PanelRightOpen className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-base font-bold text-slate-900 dark:text-white">
+                    {t('grammarModule.aiTutorTitle', { defaultValue: 'AI Grammar Tutor' })}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedTitle ||
+                      t('grammarModule.aiTutorReadingPanelDesc', {
+                        defaultValue: 'Ask follow-up questions about the current grammar point.',
+                      })}
+                  </p>
+                </div>
+              </div>
+
+              <SheetClose className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
+                <X className="h-4 w-4" />
+              </SheetClose>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <GrammarAuxiliaryPane grammar={desktopSelectedGrammar} embedded />
+            </div>
+          </SheetContent>
+        </SheetPortal>
+      </Sheet>
     </div>
   );
 };

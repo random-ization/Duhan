@@ -133,9 +133,10 @@ export default function DictionarySearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted">
-      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-md border-b border-border px-4 py-3">
-        <div className="flex items-center gap-3 mb-3">
+    <div className="min-h-[100dvh] bg-muted pb-safe">
+      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-lg border-b border-border px-4 md:px-8 py-3 md:py-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center gap-3 mb-3 md:mb-4">
           <Button
             type="button"
             onClick={() => navigate(returnTo)}
@@ -174,9 +175,10 @@ export default function DictionarySearchPage() {
             {t('search', { defaultValue: 'Search' })}
           </Button>
         </form>
+        </div>
       </header>
 
-      <main className="px-4 py-4 pb-24">
+      <main className="px-4 md:px-8 max-w-3xl mx-auto py-6 pb-[130px] md:pb-32">
         {loading && (
           <div className="py-16 flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -209,13 +211,13 @@ export default function DictionarySearchPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-black text-foreground">{entry.word}</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <h2 className="text-xl md:text-2xl font-black text-foreground">{entry.word}</h2>
+                    <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-1">
                       {[entry.pronunciation, entry.pos].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                <p className="mt-3 text-[15px] md:text-base text-muted-foreground leading-relaxed">
                   {getMeaning(entry) ||
                     t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
                 </p>

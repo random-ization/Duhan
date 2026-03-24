@@ -447,6 +447,8 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           end: typeof u.end === 'number' ? u.end : undefined,
           text: typeof u.transcript === 'string' ? u.transcript.trim() : '',
           translation: '',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          words: Array.isArray((u as any).words) ? (u as any).words : undefined,
         })
       )
       .filter(segment => Boolean(segment.text));
@@ -462,6 +464,8 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           end: typeof s.end === 'number' ? s.end : undefined,
           text: typeof s.text === 'string' ? s.text.trim() : '',
           translation: '',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          words: Array.isArray((s as any).words) ? (s as any).words : undefined,
         })
       )
       .filter(segment => Boolean(segment.text));
@@ -591,11 +595,13 @@ async function translateSegmentTexts(
   if (baseSegments.length === 0) return [];
   if (!normalizedTargetLang) return [];
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.MIMO_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return [];
 
+  const baseURL = process.env.MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1';
+
   try {
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, baseURL });
 
     const MAX_TRANSLATE_SEGMENTS = 2000;
     if (baseSegments.length > MAX_TRANSLATE_SEGMENTS) {
@@ -654,7 +660,7 @@ async function translateSegmentTexts(
       strictJsonMode: boolean
     ): Promise<string[]> => {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'mimo-v2-flash',
         messages: [
           {
             role: 'system',
@@ -683,17 +689,28 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
     };
 
     const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
+      const segmentTexts = chunk.segments.map(s => s.text);
+      let translations: string[] = [];
+
       try {
-        const segmentTexts = chunk.segments.map(s => s.text);
-        let translations = await requestBatchTranslations(segmentTexts, true);
-        if (!translations.some(item => item.trim().length > 0)) {
-          translations = await requestBatchTranslations(segmentTexts, false);
-        }
-        return { index: chunk.index, translations };
+        translations = await requestBatchTranslations(segmentTexts, true);
       } catch (e) {
-        console.error(`[AI] Batch ${chunk.index} failed:`, e);
-        return { index: chunk.index, translations: new Array(chunk.segments.length).fill('') };
+        console.warn(`[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`, e instanceof Error ? e.message : e);
       }
+
+      if (!translations.some(item => item.trim().length > 0)) {
+        try {
+          translations = await requestBatchTranslations(segmentTexts, false);
+        } catch (e) {
+          console.error(`[AI] Batch ${chunk.index} fallback translation failed:`, e instanceof Error ? e.message : e);
+        }
+      }
+
+      if (!translations.some(item => item.trim().length > 0)) {
+        translations = new Array(chunk.segments.length).fill('');
+      }
+
+      return { index: chunk.index, translations };
     };
 
     const CONCURRENCY = 5;

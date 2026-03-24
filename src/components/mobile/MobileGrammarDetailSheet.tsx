@@ -291,7 +291,7 @@ export default function MobileGrammarDetailSheet({
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className="fixed bottom-0 left-0 right-0 bg-card rounded-t-[2rem] z-[61] h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+          className="fixed bottom-0 left-0 right-0 bg-card rounded-t-[2rem] z-[61] h-[85dvh] flex flex-col shadow-2xl overflow-hidden"
         >
           {/* Header */}
           <div className="bg-muted p-6 pb-4 border-b border-border flex items-start justify-between shrink-0">

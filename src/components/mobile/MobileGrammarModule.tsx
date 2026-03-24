@@ -58,7 +58,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
     .sort((a, b) => a - b);
 
   return (
-    <div className="pb-24 pt-4 px-4 bg-muted min-h-screen">
+    <div className="pb-[130px] pt-4 px-4 bg-muted min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-black text-foreground mb-1">
@@ -108,11 +108,11 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
         <div className="space-y-6">
           {units.map(unit => (
             <div key={unit} className="space-y-3">
-              <div className="flex items-center gap-2 pl-1">
-                <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-400/14 dark:text-indigo-200 text-xs font-bold uppercase tracking-wider">
+              <div className="sticky top-[72px] z-10 flex items-center gap-2 pl-1 py-1.5 bg-muted/90 backdrop-blur-md">
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200 text-xs font-bold uppercase tracking-wider shadow-sm border border-indigo-200/50 dark:border-indigo-400/20">
                   {t('unit', { defaultValue: 'Unit' })} {unit}
                 </span>
-                <div className="h-px bg-muted flex-1" />
+                <div className="h-px bg-border/60 flex-1" />
               </div>
 
               <div className="grid gap-2">
@@ -123,14 +123,14 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
                     size="auto"
                     key={`${unit}-${point.pattern}`}
                     onClick={() => setSelectedPoint(point)}
-                    className="w-full bg-card p-4 rounded-xl border border-border shadow-sm active:scale-[0.99] transition-transform text-left flex items-center justify-between group"
+                    className="w-full bg-card p-4 rounded-xl border border-border shadow-sm active:scale-[0.98] transition-all text-left flex items-center justify-between group hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:shadow-md"
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 text-indigo-500 dark:text-indigo-300">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 shadow-inner">
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-foreground truncate pr-2">{point.pattern}</h3>
+                        <h3 className="font-bold text-foreground truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{point.pattern}</h3>
                         <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-[200px]">
                           {getLocalizedContent(point, 'explanation', language)}
                         </p>

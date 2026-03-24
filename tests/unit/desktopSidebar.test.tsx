@@ -47,17 +47,17 @@ describe('DesktopSidebar dark mode toggle', () => {
     vi.clearAllMocks();
   });
 
-  it('renders a bottom dark mode switch and toggles global theme', () => {
+  it('renders a compact bottom dark mode button and toggles global theme', () => {
     render(
       <MemoryRouter initialEntries={['/zh/dashboard']}>
         <DesktopSidebar />
       </MemoryRouter>
     );
 
-    const darkModeSwitch = screen.getByRole('switch', { name: 'Dark mode' });
-    expect(darkModeSwitch).toHaveAttribute('aria-checked', 'true');
+    const darkModeButton = screen.getByRole('button', { name: 'Dark mode' });
+    expect(darkModeButton).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.click(darkModeSwitch);
+    fireEvent.click(darkModeButton);
 
     expect(setThemeMock).toHaveBeenCalledWith('light');
   });

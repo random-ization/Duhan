@@ -296,7 +296,7 @@ export default function MobileVocabView({
   };
 
   return (
-    <div className="min-h-screen bg-muted flex flex-col pb-safe">
+    <div className="min-h-screen bg-muted flex flex-col pb-[130px]">
       <FlashcardSettingsModal
         isOpen={showFlashcardSettings}
         onClose={() => setShowFlashcardSettings(false)}
