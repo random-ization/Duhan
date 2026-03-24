@@ -1,5 +1,6 @@
 # Baseline file list for i18n hardcoded CJK scan.
 # If you intentionally add a new hardcoded CJK string, update this file in the same PR.
+src/components/grammar/GrammarDetailPane.tsx
 src/components/AnalysisSheet.tsx
 src/components/annotation/AnnotationSidebar.tsx
 src/components/AnnotationMenu.tsx
@@ -60,4 +61,6 @@ src/pages/VocabBookSpellingPage.tsx
 src/pages/VocabModulePage.tsx
 src/routes.tsx
 src/types/index.ts
+src/utils/grammarDisplaySanitizer.ts
+src/utils/grammarMaskingRemark.ts
 src/utils/languageUtils.ts
