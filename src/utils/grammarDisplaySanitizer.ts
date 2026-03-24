@@ -322,7 +322,7 @@ function normalizeInlineExampleTranslations(input: string): string {
 
     if (headingMatch) {
       const level = headingMatch[2].length;
-      const headingText = stripMarkdownFormatting(headingMatch[3]).trim();
+      const _headingText = stripMarkdownFormatting(headingMatch[3]).trim();
       if (level <= 2) {
         inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(trimmed);
       } else if (EXAMPLE_SECTION_HEADING_RE.test(trimmed)) {

@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   ArrowLeft, CheckCircle2, Folder, Search, Plus, Loader2, Play, Maximize2, Minimize2, X, MoreVertical, Trash2
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+
 import {
   Button, Input, Sheet, SheetContent, SheetOverlay, SheetPortal, SheetTitle,
   DropdownMenu, DropdownMenuContent, DropdownMenuTrigger
@@ -22,7 +22,7 @@ import {
   toSourceLabel,
   toCardType,
   toStatusBadge,
-  toSourcePath,
+  toSourcePath as _toSourcePath,
   formatTime,
   RICH_TEXT_CLASS,
   QUOTE_CARD_RICH_CLASS,
@@ -74,9 +74,9 @@ interface MobileNotebookPageProps {
 export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = (props) => {
   const {
     t, navigate, dateLocale, activeNotebookId, setActiveNotebookId,
-    selectedPageId, setSelectedPageId, query, setQuery, sourceFilter, setSourceFilter,
+    selectedPageId, setSelectedPageId, query, setQuery, sourceFilter: _sourceFilter, setSourceFilter: _setSourceFilter,
     editorOpen, handleEditorOpenChange, editorExpanded, setEditorExpanded,
-    title, setTitle, noteKind, setNoteKind, quoteText, setQuoteText, editorDoc, setEditorDoc,
+    title, setTitle, noteKind: _noteKind, setNoteKind: _setNoteKind, quoteText, setQuoteText: _setQuoteText, editorDoc, setEditorDoc,
     saveState, notebooksResult, searchResult, pendingReviewCount, selectedSearchItem,
     selectedIsQuoteCard, selectedPagePayload, handleCreateNote, handleDeletePage, handleOpenSource
   } = props;

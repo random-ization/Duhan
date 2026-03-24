@@ -84,14 +84,14 @@ function markNodeMask(node: MarkdownNode, kind: 'translation' | 'answer'): void 
   node.data.hProperties['data-grammar-mask'] = kind;
 }
 
-function prependTokenToFirstText(node: MarkdownNode, token: string): boolean {
+function _prependTokenToFirstText(node: MarkdownNode, token: string): boolean {
   if (node.type === 'text') {
     node.value = `${token}${node.value || ''}`;
     return true;
   }
 
   for (const child of node.children || []) {
-    if (prependTokenToFirstText(child, token)) return true;
+    if (_prependTokenToFirstText(child, token)) return true;
   }
 
   return false;

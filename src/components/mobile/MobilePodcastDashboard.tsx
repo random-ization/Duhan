@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from 'convex/react';
-import { Disc, Search, ArrowLeft, Pause, PlayCircle } from 'lucide-react';
+import { Search, ArrowLeft, Pause, PlayCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { NoArgs, qRef } from '../../utils/convexRefs';
