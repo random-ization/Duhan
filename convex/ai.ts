@@ -339,6 +339,28 @@ type SegmentInput = {
   words?: TranscriptSegment['words'];
 };
 
+function normalizeTranscriptWords(input: unknown): TranscriptSegment['words'] {
+  if (!Array.isArray(input)) return undefined;
+  const words = input
+    .map(item => {
+      if (!item || typeof item !== 'object') return null;
+      const candidate = item as Record<string, unknown>;
+      const word =
+        typeof candidate.word === 'string'
+          ? candidate.word.trim()
+          : typeof candidate.punctuated_word === 'string'
+            ? candidate.punctuated_word.trim()
+            : '';
+      const start = typeof candidate.start === 'number' ? candidate.start : null;
+      const end = typeof candidate.end === 'number' ? candidate.end : null;
+      if (!word || start === null || end === null) return null;
+      return { word, start, end };
+    })
+    .filter((item): item is { word: string; start: number; end: number } => item !== null);
+
+  return words.length > 0 ? words : undefined;
+}
+
 type DeepgramUtterance = {
   start?: number;
   end?: number;
@@ -448,7 +470,7 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           text: typeof u.transcript === 'string' ? u.transcript.trim() : '',
           translation: '',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          words: Array.isArray((u as any).words) ? (u as any).words : undefined,
+          words: normalizeTranscriptWords((u as any).words),
         })
       )
       .filter(segment => Boolean(segment.text));
@@ -465,7 +487,7 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           text: typeof s.text === 'string' ? s.text.trim() : '',
           translation: '',
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          words: Array.isArray((s as any).words) ? (s as any).words : undefined,
+          words: normalizeTranscriptWords((s as any).words),
         })
       )
       .filter(segment => Boolean(segment.text));
@@ -517,7 +539,7 @@ function mergeShortSegments(segments: SegmentInput[]): TranscriptSegment[] {
 
     const segStart = typeof seg.start === 'number' ? seg.start : null;
     const segEnd = typeof seg.end === 'number' ? seg.end : null;
-    const segWords = Array.isArray(seg.words) ? [...seg.words] : undefined;
+    const segWords = normalizeTranscriptWords(seg.words);
     const segTranslation = typeof seg.translation === 'string' ? seg.translation : '';
 
     if (!current) {
@@ -695,14 +717,20 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       try {
         translations = await requestBatchTranslations(segmentTexts, true);
       } catch (e) {
-        console.warn(`[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`, e instanceof Error ? e.message : e);
+        console.warn(
+          `[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`,
+          e instanceof Error ? e.message : e
+        );
       }
 
       if (!translations.some(item => item.trim().length > 0)) {
         try {
           translations = await requestBatchTranslations(segmentTexts, false);
         } catch (e) {
-          console.error(`[AI] Batch ${chunk.index} fallback translation failed:`, e instanceof Error ? e.message : e);
+          console.error(
+            `[AI] Batch ${chunk.index} fallback translation failed:`,
+            e instanceof Error ? e.message : e
+          );
         }
       }
 
