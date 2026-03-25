@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ValidationStatus } from '../hooks/useKoreanTyping';
+import { ValidationStatus } from '../utils/hangulUtils';
 
 interface TypingAreaProps {
   text: string;
@@ -48,7 +48,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
           } else if (status === 'incorrect') {
             colorClass = 'text-red-500'; // Typed Wrong
           } else if (status === 'pending') {
-            colorClass = 'text-muted-foreground'; // Pending (actively composing)
+            colorClass = 'text-blue-600 dark:text-blue-400'; // Pending (actively composing)
           }
         }
 
@@ -69,7 +69,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
                 relative inline-block border-b-2 border-transparent transition-all
                 ${colorClass}
                 ${showCursor && focused ? 'bg-muted/50 animate-pulse rounded' : ''}
-                ${isPending ? 'bg-muted rounded' : ''}
+                ${isPending && focused ? 'bg-blue-500/15 dark:bg-blue-400/15 rounded' : ''}
                 ${status === 'incorrect' ? 'decoration-red-500 underline-offset-4' : ''}
             `}
           >

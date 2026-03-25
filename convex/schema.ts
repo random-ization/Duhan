@@ -527,6 +527,14 @@ export default defineSchema({
     isFeatured: v.boolean(),
 
     postgresId: v.optional(v.string()),
+    sourceBackend: v.optional(v.string()),
+    podcastIndexId: v.optional(v.string()),
+
+    // Subtitle management
+    subtitleEligibility: v.optional(v.string()),
+    subtitleNotes: v.optional(v.string()),
+    subtitleSourceKind: v.optional(v.string()),
+    subtitleVerifiedAt: v.optional(v.number()),
 
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),

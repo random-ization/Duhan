@@ -1,5 +1,4 @@
 import React, { forwardRef } from 'react';
-import { Input } from '../../../components/ui';
 
 interface HiddenInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   // No specific props needed yet
@@ -8,22 +7,21 @@ interface HiddenInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const HiddenInput = forwardRef<HTMLInputElement, HiddenInputProps>((props, ref) => {
   return (
-    <Input
+    <input
       ref={ref}
       type="text"
       style={{
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '1px',
-        height: '1px',
-        border: 'none',
+        position: 'absolute',
+        left: '-9999px',
+        top: '0',
+        width: '120px',
+        height: '32px',
+        border: '0',
         outline: 'none',
         background: 'transparent',
-        color: 'transparent',
-        caretColor: 'transparent',
-        // Allow input events but hide visually
+        color: '#111827',
+        caretColor: '#111827',
+        opacity: 0,
       }}
       autoComplete="off"
       autoCapitalize="off"

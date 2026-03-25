@@ -135,10 +135,11 @@ const keyboardThemeStyles = `
 
   /* Word Practice V6 Styles (Blue Compact Card) */
   .word-prompt-card {
-    background: #2563eb; /* Strong solid blue */
-    box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 14px 28px -10px rgba(37, 99, 235, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+  }
   .word-prompt-card:hover {
     transform: scale(1.05);
 }

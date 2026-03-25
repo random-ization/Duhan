@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { disassemble } from 'es-hangul';
+import {
+  TypingMode,
+  TypingPhase,
+  ValidationStatus,
+  normalizeKorean,
+  checkInputStatus as checkInput,
+} from '../utils/hangulUtils';
 
-export type TypingMode = 'sentence' | 'paragraph' | 'word';
-export type TypingPhase = 'start' | 'typing' | 'finish';
-export type ValidationStatus = 'correct' | 'incorrect' | 'pending';
+export type { TypingMode, TypingPhase, ValidationStatus };
 
 export interface TypingStats {
   wpm: number;
@@ -76,152 +81,6 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
       return () => clearInterval(interval);
     }
   }, [phase, calculateStats]);
-
-  // Normalize Korean text to handle different Unicode representations
-  // Hangul Jamo (U+1100-U+11FF) vs Hangul Compatibility Jamo (U+3130-U+318F)
-  const normalizeKorean = (str: string): string => {
-    // First apply NFC normalization
-    let normalized = str.normalize('NFC');
-
-    // Map Hangul Jamo to Compatibility Jamo
-    const jamoMap: Record<string, string> = {
-      // Initial consonants (Choseong) -> Compatibility Jamo
-      '\u1100': '\u3131',
-      '\u1101': '\u3132',
-      '\u1102': '\u3134',
-      '\u1103': '\u3137',
-      '\u1104': '\u3138',
-      '\u1105': '\u3139',
-      '\u1106': '\u3141',
-      '\u1107': '\u3142',
-      '\u1108': '\u3143',
-      '\u1109': '\u3145',
-      '\u110A': '\u3146',
-      '\u110B': '\u3147',
-      '\u110C': '\u3148',
-      '\u110D': '\u3149',
-      '\u110E': '\u314A',
-      '\u110F': '\u314B',
-      '\u1110': '\u314C',
-      '\u1111': '\u314D',
-      '\u1112': '\u314E',
-
-      // Medial vowels (Jungseong) -> Compatibility Jamo
-      '\u1161': '\u314F',
-      '\u1162': '\u3150',
-      '\u1163': '\u3151',
-      '\u1164': '\u3152',
-      '\u1165': '\u3153',
-      '\u1166': '\u3154',
-      '\u1167': '\u3155',
-      '\u1168': '\u3156',
-      '\u1169': '\u3157',
-      '\u116A': '\u3158',
-      '\u116B': '\u3159',
-      '\u116C': '\u315A',
-      '\u116D': '\u315B',
-      '\u116E': '\u315C',
-      '\u116F': '\u315D',
-      '\u1170': '\u315E',
-      '\u1171': '\u315F',
-      '\u1172': '\u3160',
-      '\u1173': '\u3161',
-      '\u1174': '\u3162',
-      '\u1175': '\u3163',
-
-      // Final consonants (Jongseong) -> Compatibility Jamo
-      '\u11A8': '\u3131',
-      '\u11A9': '\u3132',
-      '\u11AA': '\u3133',
-      '\u11AB': '\u3134',
-      '\u11AC': '\u3135',
-      '\u11AD': '\u3136',
-      '\u11AE': '\u3137',
-      '\u11AF': '\u3139',
-      '\u11B0': '\u313A',
-      '\u11B1': '\u313B',
-      '\u11B2': '\u313C',
-      '\u11B3': '\u313D',
-      '\u11B4': '\u313E',
-      '\u11B5': '\u313F',
-      '\u11B6': '\u3140',
-      '\u11B7': '\u3141',
-      '\u11B8': '\u3142',
-      '\u11B9': '\u3144',
-      '\u11BA': '\u3145',
-      '\u11BB': '\u3146',
-      '\u11BC': '\u3147',
-      '\u11BD': '\u3148',
-      '\u11BE': '\u314A',
-      '\u11BF': '\u314B',
-      '\u11C0': '\u314C',
-      '\u11C1': '\u314D',
-      '\u11C2': '\u314E',
-    };
-
-    for (const [from, to] of Object.entries(jamoMap)) {
-      normalized = normalized.split(from).join(to);
-    }
-
-    return normalized;
-  };
-
-  // Check if input jamos match target jamos with potential migration
-  const isConsonantMigration = useCallback(
-    (inputJamos: string, targetJamos: string, nextTargetChar: string): boolean => {
-      if (inputJamos.length <= targetJamos.length) return false;
-      if (!inputJamos.startsWith(targetJamos)) return false;
-
-      const extraJamos = inputJamos.substring(targetJamos.length);
-      const nextTargetJamos = normalizeKorean(disassemble(nextTargetChar));
-
-      return nextTargetJamos.startsWith(extraJamos);
-    },
-    []
-  );
-
-  // Core Korean Logic - Character validation
-  // Now also considers if extra trailing consonant could be initial of next char
-  const checkInput = useCallback(
-    (targetChar: string, inputChar: string, nextTargetChar?: string): ValidationStatus => {
-      if (!targetChar) return 'incorrect';
-      if (!inputChar) return 'pending';
-
-      try {
-        // Normalize both characters
-        const normalizedTarget = normalizeKorean(targetChar);
-        const normalizedInput = normalizeKorean(inputChar);
-
-        // 1. Exact Match (for spaces, punctuation, etc.)
-        if (normalizedTarget === normalizedInput) return 'correct';
-
-        // 2. Disassemble both characters and normalize the result
-        const targetJamos = normalizeKorean(disassemble(targetChar));
-        const inputJamos = normalizeKorean(disassemble(inputChar));
-
-        // 3. Exact jamo match = correct
-        if (targetJamos === inputJamos) return 'correct';
-
-        // 4. Prefix Match = still composing (pending)
-        // Example: Target 'ㄱㅏ' (가), Input 'ㄱ' → Pending
-        if (targetJamos.startsWith(inputJamos)) {
-          return 'pending';
-        }
-
-        // 5. Check if input has extra trailing consonant(s) that could be the initial of the next character
-        if (nextTargetChar && isConsonantMigration(inputJamos, targetJamos, nextTargetChar)) {
-          return 'pending';
-        }
-
-        // 6. If input is longer or doesn't match prefix → incorrect
-        return 'incorrect';
-      } catch {
-        // Fallback for non-Hangul
-        return targetChar === inputChar ? 'correct' : 'incorrect';
-      }
-    },
-    [isConsonantMigration]
-  );
 
   // Get the next jamo needed for keyboard hints
   // Handles: normal typing, completed chars, and consonant migration
@@ -314,7 +173,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
         calculateStats();
       }
     },
-    [initialText, checkInput, calculateStats]
+    [initialText, calculateStats]
   );
 
   // Sync Input change
@@ -340,7 +199,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     };
 
     const handleInput = () => {
-      const rawValue = el.value;
+      const rawValue = el.value.normalize('NFC');
       setUserInput(rawValue);
 
       // IME composing text is UI-only; do not run validation/WPM progression yet.
@@ -358,14 +217,14 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
 
     const handleCompositionUpdate = () => {
       // Keep transient composing value visible in the UI.
-      setUserInput(el.value);
+      setUserInput(el.value.normalize('NFC'));
     };
 
     const handleCompositionEnd = () => {
       isComposingRef.current = false;
       setIsComposing(false);
 
-      const rawValue = el.value;
+      const rawValue = el.value.normalize('NFC');
       setUserInput(rawValue);
       applyCommittedInput(rawValue);
     };
@@ -379,7 +238,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
       // Backspace/Enter timing differs by browser+IME; re-sync after native value settles.
       if (event.key === 'Backspace' || event.key === 'Enter') {
         queueMicrotask(() => {
-          const rawValue = el.value;
+          const rawValue = el.value.normalize('NFC');
           setUserInput(rawValue);
           applyCommittedInput(rawValue);
         });

@@ -13,9 +13,13 @@ import {
   sanitizeGrammarMarkdown,
   stripLeadingDuplicateHeading,
   GRAMMAR_MASK_ANSWER_TOKEN,
-  GRAMMAR_MASK_TRANSLATION_TOKEN,
-  GRAMMAR_MASK_TRANSLATION_START_TOKEN,
+  GRAMMAR_MASK_ANSWER_END_TOKEN,
   GRAMMAR_MASK_ANSWER_START_TOKEN,
+  GRAMMAR_MASK_TRANSLATION_TOKEN,
+  GRAMMAR_MASK_TRANSLATION_END_TOKEN,
+  GRAMMAR_MASK_TRANSLATION_START_TOKEN,
+  getGrammarMaskKind,
+  stripGrammarMaskTokens,
 } from '../../utils/grammarDisplaySanitizer';
 import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
 import { Button } from '../ui';
@@ -149,12 +153,149 @@ function getRedEyeMaskClass(enabled: boolean): string {
   return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
 }
 
-function getNodeMaskKind(node: any): 'translation' | 'answer' | null {
-  const value =
-    node?.properties?.['data-grammar-mask'] ??
-    node?.data?.hProperties?.['data-grammar-mask'] ??
-    null;
-  return value === 'translation' || value === 'answer' ? value : null;
+function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
+  const stripped = stripGrammarMaskTokens(input).trim();
+  if (stripped.length > 0) return null;
+  if (input.includes(GRAMMAR_MASK_TRANSLATION_TOKEN)) return 'translation';
+  if (input.includes(GRAMMAR_MASK_ANSWER_TOKEN)) return 'answer';
+  return null;
+}
+
+function wrapMaskedInlineNode(
+  node: React.ReactNode,
+  maskKind: 'translation' | 'answer',
+  redEyeEnabled: boolean,
+  key: string
+): React.ReactNode {
+  return (
+    <span key={key} data-grammar-mask={maskKind} className={getRedEyeMaskClass(redEyeEnabled)}>
+      {node}
+    </span>
+  );
+}
+
+function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.ReactNode[] {
+  const segments: React.ReactNode[] = [];
+  let remaining = input;
+  let key = 0;
+
+  while (remaining.length > 0) {
+    const indices = [
+      { kind: 'translation-line', index: remaining.indexOf(GRAMMAR_MASK_TRANSLATION_TOKEN) },
+      { kind: 'answer-line', index: remaining.indexOf(GRAMMAR_MASK_ANSWER_TOKEN) },
+      {
+        kind: 'translation-inline',
+        index: remaining.indexOf(GRAMMAR_MASK_TRANSLATION_START_TOKEN),
+      },
+      { kind: 'answer-inline', index: remaining.indexOf(GRAMMAR_MASK_ANSWER_START_TOKEN) },
+    ].filter(item => item.index >= 0);
+
+    if (indices.length === 0) {
+      const cleanRemaining = stripGrammarMaskTokens(remaining);
+      segments.push(cleanRemaining);
+      break;
+    }
+
+    const next = indices.sort((a, b) => a.index - b.index)[0];
+    if (next.index > 0) {
+      const plainText = stripGrammarMaskTokens(remaining.slice(0, next.index));
+      segments.push(plainText);
+    }
+
+    if (next.kind === 'translation-line' || next.kind === 'answer-line') {
+      const token =
+        next.kind === 'translation-line'
+          ? GRAMMAR_MASK_TRANSLATION_TOKEN
+          : GRAMMAR_MASK_ANSWER_TOKEN;
+      const maskedContent = stripGrammarMaskTokens(remaining.slice(next.index + token.length));
+      segments.push(
+        <span
+          key={`mask-${key++}`}
+          data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
+          className={getRedEyeMaskClass(redEyeEnabled)}
+        >
+          {maskedContent}
+        </span>
+      );
+      break;
+    }
+
+    const startToken =
+      next.kind === 'translation-inline'
+        ? GRAMMAR_MASK_TRANSLATION_START_TOKEN
+        : GRAMMAR_MASK_ANSWER_START_TOKEN;
+    const endToken =
+      next.kind === 'translation-inline'
+        ? GRAMMAR_MASK_TRANSLATION_END_TOKEN
+        : GRAMMAR_MASK_ANSWER_END_TOKEN;
+    const endIndex = remaining.indexOf(endToken, next.index + startToken.length);
+    if (endIndex < 0) {
+      segments.push(stripGrammarMaskTokens(remaining));
+      break;
+    }
+    const maskedContent = stripGrammarMaskTokens(
+      remaining.slice(next.index + startToken.length, endIndex)
+    );
+    segments.push(
+      <span
+        key={`mask-${key++}`}
+        data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
+        className={getRedEyeMaskClass(redEyeEnabled)}
+      >
+        {maskedContent}
+      </span>
+    );
+    remaining = remaining.slice(endIndex + endToken.length);
+  }
+
+  return segments;
+}
+
+function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.ReactNode {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return renderMaskedTextSegments(String(node), redEyeEnabled);
+  }
+  if (Array.isArray(node)) {
+    const rendered: React.ReactNode[] = [];
+    let pendingMask: 'translation' | 'answer' | null = null;
+
+    node.forEach((child, index) => {
+      if (typeof child === 'string' || typeof child === 'number') {
+        const text = String(child);
+        const standaloneMaskKind = getStandaloneLineMaskKind(text);
+        if (standaloneMaskKind) {
+          pendingMask = standaloneMaskKind;
+          return;
+        }
+
+        const renderedChild = renderMaskedNode(child, redEyeEnabled);
+        if (pendingMask) {
+          rendered.push(
+            wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
+          );
+        } else {
+          rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
+        }
+        return;
+      }
+
+      const renderedChild = renderMaskedNode(child, redEyeEnabled);
+      if (pendingMask) {
+        rendered.push(
+          wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
+        );
+      } else {
+        rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
+      }
+    });
+
+    return rendered;
+  }
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode };
+    return React.cloneElement(node, props, renderMaskedNode(props.children, redEyeEnabled));
+  }
+  return node;
 }
 
 const MarkdownRenderer: React.FC<{
@@ -181,18 +322,9 @@ const MarkdownRenderer: React.FC<{
             {children}
           </h3>
         ),
-        p: ({ children, node }) => {
+        p: ({ children, node: _node }) => {
           const rawText = extractTextContent(children);
-          const nodeMaskKind = getNodeMaskKind(node);
-          const maskKind =
-            nodeMaskKind ||
-            (rawText.trim().includes(GRAMMAR_MASK_ANSWER_TOKEN) ||
-            rawText.trim().includes(GRAMMAR_MASK_ANSWER_START_TOKEN)
-              ? 'answer'
-              : rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_TOKEN) ||
-                  rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_START_TOKEN)
-                ? 'translation'
-                : null);
+          const maskKind = getGrammarMaskKind(rawText);
 
           return (
             <p
@@ -200,29 +332,22 @@ const MarkdownRenderer: React.FC<{
                 maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
               }`}
             >
-              {children}
+              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
             </p>
           );
         },
         ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
         ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
-        li: ({ children, node }) => {
+        li: ({ children, node: _node }) => {
           const rawText = extractTextContent(children);
-          const nodeMaskKind = getNodeMaskKind(node);
-          const maskKind =
-            nodeMaskKind ||
-            (rawText.trim().includes(GRAMMAR_MASK_ANSWER_TOKEN)
-              ? 'answer'
-              : rawText.trim().includes(GRAMMAR_MASK_TRANSLATION_TOKEN)
-                ? 'translation'
-                : null);
+          const maskKind = getGrammarMaskKind(rawText);
           return (
             <li
               className={`text-sm leading-relaxed text-muted-foreground ${
                 maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
               }`}
             >
-              {children}
+              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
             </li>
           );
         },
@@ -244,9 +369,19 @@ const MarkdownRenderer: React.FC<{
         th: ({ children }) => (
           <th className="border-b border-border bg-muted px-3 py-2 font-bold">{children}</th>
         ),
-        td: ({ children }) => (
-          <td className="border-b border-border px-3 py-2 align-top">{children}</td>
-        ),
+        td: ({ children }) => {
+          const rawText = extractTextContent(children);
+          const maskKind = getGrammarMaskKind(rawText);
+          return (
+            <td
+              className={`border-b border-border px-3 py-2 align-top ${
+                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
+              }`}
+            >
+              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+            </td>
+          );
+        },
       }}
     >
       {content}

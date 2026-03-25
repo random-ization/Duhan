@@ -6,7 +6,18 @@ const hasValue = (value: string | undefined) => Boolean(value?.trim());
 
 export function assertProductionRuntimeEnv() {
   if (validated) return;
-  if (process.env.NODE_ENV !== 'production') {
+  // Only enforce in production deployments that have a real domain.
+  // Bypass if SITE_URL is missing or contains localhost/convex.site
+  // Also bypass if critical keys are missing or placeholders (indicates dev/setup phase)
+  const siteUrl = process.env.SITE_URL;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (
+    !siteUrl ||
+    siteUrl.includes('localhost') ||
+    siteUrl.includes('.convex.site') ||
+    !openaiKey ||
+    openaiKey.includes('your-openai-api-key')
+  ) {
     validated = true;
     return;
   }
