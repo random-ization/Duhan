@@ -2417,7 +2417,7 @@ const learningSessionModeValidator = v.union(
   v.literal('TEST')
 );
 
-const learningSessionSnapshotValidator = v.object({
+const learningQuizSessionSnapshotValidator = v.object({
   wordIds: v.array(v.string()),
   questionIndex: v.number(),
   wrongWordIds: v.array(v.string()),
@@ -2435,6 +2435,43 @@ const learningSessionSnapshotValidator = v.object({
   pendingAdvanceReason: v.optional(v.union(v.literal('WRONG'), v.literal('DONT_KNOW'))),
   timestamp: v.number(),
 });
+
+const flashcardSessionSnapshotValidator = v.object({
+  cardIndex: v.number(),
+  isRandom: v.boolean(),
+  trackProgress: v.boolean(),
+  orderedWordIds: v.array(v.string()),
+  history: v.array(v.number()),
+  stats: v.object({
+    correctWordIds: v.array(v.string()),
+    incorrectWordIds: v.array(v.string()),
+  }),
+  timestamp: v.number(),
+});
+
+const vocabTestSessionSnapshotValidator = v.object({
+  stage: v.literal('RUNNING'),
+  answerLanguage: v.union(v.literal('KOREAN'), v.literal('NATIVE'), v.literal('BOTH')),
+  enabledTypes: v.object({
+    TRUE_FALSE: v.boolean(),
+    MULTIPLE_CHOICE: v.boolean(),
+    FILL_10: v.boolean(),
+    WRITTEN: v.boolean(),
+  }),
+  questionCount: v.number(),
+  cards: v.array(v.any()),
+  activeCardIndex: v.number(),
+  answers: v.optional(v.record(v.string(), v.any())),
+  startedAt: v.union(v.number(), v.null()),
+  submitAttempted: v.boolean(),
+  timestamp: v.number(),
+});
+
+const learningSessionSnapshotValidator = v.union(
+  learningQuizSessionSnapshotValidator,
+  flashcardSessionSnapshotValidator,
+  vocabTestSessionSnapshotValidator
+);
 
 export const getActiveLearningSession = query({
   args: {
