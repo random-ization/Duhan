@@ -27,7 +27,7 @@ const ANSWER_HEADING_LINE_RE = new RegExp(
   'i'
 );
 const ANSWER_INLINE_LINE_RE = new RegExp(
-  `^\\s*(?:[-*+]\\s+|\\d+\\.\\s+)?(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]\\s*.+$`,
+  `^\\s*(?:[-*+]\\s+|\\d+\\.\\s+)(?:\\*{1,2})?${ANSWER_LABEL_CORE_RE.source}(?:\\*{1,2})?\\s*[:：]\\s*.+$`,
   'i'
 );
 const NUMBERED_ITEM_RE = /^\s*\d+\.\s+/;
@@ -81,7 +81,14 @@ function isTranslationOnlyLine(line: string): boolean {
 function isLikelyTranslationLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
-  return !HANGUL_RE.test(trimmed) && (HAN_RE.test(trimmed) || LATIN_RE.test(trimmed));
+  if (HANGUL_RE.test(trimmed)) return false;
+  if (HAN_RE.test(trimmed)) return true;
+  // For Latin translations, require more than just a label (at least 2 words or a sentence ender)
+  if (LATIN_RE.test(trimmed)) {
+    if (SIMPLE_LATIN_LABEL_RE.test(trimmed)) return false;
+    return trimmed.split(/\s+/).filter(Boolean).length >= 2 || /[.!?]/.test(trimmed);
+  }
+  return false;
 }
 
 function isKoreanPromptLine(line: string): boolean {
@@ -227,7 +234,14 @@ function normalizeQuizItemBlock(lines: string[]): string[] {
 function normalizeQuizAnswerSubLines(lines: string[]): string[] {
   return lines.map(line => {
     const trimmed = line.trim();
-    if (!ANSWER_INLINE_LINE_RE.test(trimmed)) return line;
+    // Only mask if the line explicitly starts with an Answer label (after any bullet)
+    const labelMatch = trimmed.match(
+      new RegExp(
+        `^(?:[-*+]\\s+|\\d+\\.\\s+)?(?:\\*{1,2})?(${ANSWER_LABEL_CORE_RE.source})(?:\\*{1,2})?\\s*[:：]`,
+        'i'
+      )
+    );
+    if (!labelMatch) return line;
 
     const withoutBullet = trimmed.replace(/^[-*+]\s+/, '');
     return `   - ${GRAMMAR_MASK_ANSWER_TOKEN}${withoutBullet}`;
@@ -266,17 +280,14 @@ function normalizeNestedExampleTranslations(input: string): string {
 
     const headingMatch = trimmed.match(/^(\s{0,3})(#{1,6})\s+(.*)$/);
     if (headingMatch) {
-      const level = headingMatch[2].length;
       const headingText = stripMarkdownFormatting(headingMatch[3]).trim();
-      if (level <= 2) {
-        inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(
-          `${headingMatch[1]}${headingMatch[2]} ${headingText}`
-        );
-      } else if (
-        EXAMPLE_SECTION_HEADING_RE.test(`${headingMatch[1]}${headingMatch[2]} ${headingText}`)
-      ) {
-        inExampleSection = true;
-      }
+      const isExampleHeading = EXAMPLE_SECTION_HEADING_RE.test(
+        `${headingMatch[1]}${headingMatch[2]} ${headingText}`
+      );
+
+      // Always update inExampleSection for any heading
+      inExampleSection = isExampleHeading;
+
       output.push(line);
       previousPrimaryLine = '';
       continue;
@@ -291,12 +302,15 @@ function normalizeNestedExampleTranslations(input: string): string {
       (NUMBERED_ITEM_RE.test(trimmed) && HANGUL_RE.test(trimmed)) ||
       (/^\s*[-*+]\s+/.test(trimmed) && HANGUL_RE.test(trimmed));
 
+    const isLikelyIndentedTranslation = /^\s+/.test(line) && isLikelyTranslationLine(trimmed);
+    const isLikelySiblingBulletTranslation =
+      /^\s*[-*+]\s+/.test(line) && !HANGUL_RE.test(trimmed) && isLikelyTranslationLine(trimmed);
+
     if (
       inExampleSection &&
-      /^\s+/.test(line) &&
+      (isLikelyIndentedTranslation || isLikelySiblingBulletTranslation) &&
       !NUMBERED_ITEM_RE.test(trimmed) &&
       !ANSWER_INLINE_LINE_RE.test(stripMarkdownEmphasis(trimmed)) &&
-      isLikelyTranslationLine(trimmed) &&
       HANGUL_RE.test(previousPrimaryLine)
     ) {
       output.push(applyMaskTokenToLine(line, GRAMMAR_MASK_TRANSLATION_TOKEN));

@@ -450,6 +450,7 @@ function handleStartSentenceMode(args: {
   sentenceQueue: string[];
   setSentenceQueue: React.Dispatch<React.SetStateAction<string[]>>;
   setTargetText: React.Dispatch<React.SetStateAction<string>>;
+  categories: PracticeCategory[];
 }) {
   const {
     setPracticeMode,
@@ -463,6 +464,7 @@ function handleStartSentenceMode(args: {
     sentenceQueue,
     setSentenceQueue,
     setTargetText,
+    categories,
   } = args;
   setPracticeMode('sentence');
   setGameState('playing');
@@ -473,8 +475,8 @@ function handleStartSentenceMode(args: {
     setTotalCharactersTyped,
   });
 
-  if (!selectedCategory && PRACTICE_CATEGORIES.length > 0) {
-    const category = PRACTICE_CATEGORIES[0];
+  if (!selectedCategory && categories.length > 0) {
+    const category = categories[0];
     setSelectedCategory(category);
     const queue = generateSentenceQueue(category);
     setSentenceQueue(queue);
@@ -501,6 +503,7 @@ function handleStartParagraphMode(args: {
   selectedParagraph: PracticeParagraph | null;
   setSelectedParagraph: React.Dispatch<React.SetStateAction<PracticeParagraph | null>>;
   setTargetText: React.Dispatch<React.SetStateAction<string>>;
+  paragraphs: PracticeParagraph[];
 }) {
   const {
     setPracticeMode,
@@ -512,6 +515,7 @@ function handleStartParagraphMode(args: {
     selectedParagraph,
     setSelectedParagraph,
     setTargetText,
+    paragraphs,
   } = args;
   setPracticeMode('paragraph');
   setGameState('playing');
@@ -521,8 +525,8 @@ function handleStartParagraphMode(args: {
     setSentencesCompleted,
     setTotalCharactersTyped,
   });
-  if (!selectedParagraph && PRACTICE_PARAGRAPHS.length > 0) {
-    const paragraph = PRACTICE_PARAGRAPHS[0];
+  if (!selectedParagraph && paragraphs.length > 0) {
+    const paragraph = paragraphs[0];
     setSelectedParagraph(paragraph);
     setTargetText(paragraph.text);
     return;
@@ -536,6 +540,12 @@ const SELECT_BOX_CLASS =
   'w-full appearance-none bg-card rounded-2xl p-3 pl-4 pr-8 border border-border shadow-sm text-xs font-bold text-muted-foreground outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-300/40 cursor-pointer';
 const SENTENCE_SELECT_CLASS =
   'h-auto w-full appearance-none bg-card rounded-2xl p-3 pl-12 pr-8 border border-border shadow-sm text-xs font-bold text-muted-foreground outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-300/40 cursor-pointer';
+
+const splitTypingSentences = (content: string): string[] =>
+  content
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
 
 type TargetChar = {
   char: string;
@@ -558,6 +568,14 @@ type WordPracticeEntry = {
   id: string;
   word: string;
   meaning: string;
+};
+
+type TypingTextRecord = {
+  _id: string;
+  title: string;
+  content: string;
+  description?: string;
+  category?: string;
 };
 
 function getTypingModeTitle(practiceMode: PracticeMode, t: TypingTranslateFn) {
@@ -687,16 +705,17 @@ const WordModeSelectors: React.FC<{
 );
 
 const ParagraphModeSelector: React.FC<{
+  paragraphs: PracticeParagraph[];
   selectedParagraphId: string;
   onParagraphChange: (paragraphId: string) => void;
-}> = ({ selectedParagraphId, onParagraphChange }) => (
+}> = ({ paragraphs, selectedParagraphId, onParagraphChange }) => (
   <div className="relative group">
     <Select
       value={selectedParagraphId}
       onChange={e => onParagraphChange(e.target.value)}
       className={SELECT_BOX_CLASS}
     >
-      {PRACTICE_PARAGRAPHS.map(paragraph => (
+      {paragraphs.map(paragraph => (
         <option key={paragraph.id} value={paragraph.id}>
           {paragraph.title}
         </option>
@@ -707,16 +726,23 @@ const ParagraphModeSelector: React.FC<{
 );
 
 const SentenceModeSelector: React.FC<{
+  categories: PracticeCategory[];
   selectedCategoryId: string;
   selectedCategoryIcon: string;
   onCategoryChange: (categoryId: string) => void;
-}> = ({ selectedCategoryId, selectedCategoryIcon, onCategoryChange }) => (
+}> = ({ categories, selectedCategoryId, selectedCategoryIcon, onCategoryChange }) => (
   <div className="relative group">
     <Select
       value={selectedCategoryId}
       onChange={e => onCategoryChange(e.target.value)}
       className={SENTENCE_SELECT_CLASS}
-    />
+    >
+      {categories.map(category => (
+        <option key={category.id} value={category.id}>
+          {category.icon} {category.title}
+        </option>
+      ))}
+    </Select>
     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-lg filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
       {selectedCategoryIcon}
     </div>
@@ -734,8 +760,10 @@ const TypingModeSelectorPanel: React.FC<{
   onCourseIdChange: (courseId: string) => void;
   selectedUnitId: number;
   onUnitChange: (unitId: number) => void;
+  paragraphs: PracticeParagraph[];
   selectedParagraphId: string;
   onParagraphChange: (paragraphId: string) => void;
+  sentenceCategories: PracticeCategory[];
   selectedCategoryId: string;
   selectedCategoryIcon: string;
   onCategoryChange: (categoryId: string) => void;
@@ -757,12 +785,14 @@ const TypingModeSelectorPanel: React.FC<{
     ),
     paragraph: (
       <ParagraphModeSelector
+        paragraphs={props.paragraphs}
         selectedParagraphId={props.selectedParagraphId}
         onParagraphChange={props.onParagraphChange}
       />
     ),
     sentence: (
       <SentenceModeSelector
+        categories={props.sentenceCategories}
         selectedCategoryId={props.selectedCategoryId}
         selectedCategoryIcon={props.selectedCategoryIcon}
         onCategoryChange={props.onCategoryChange}
@@ -1147,8 +1177,10 @@ const TypingSidebar: React.FC<{
   onCourseIdChange: (courseId: string) => void;
   selectedUnitId: number;
   onUnitChange: (unitId: number) => void;
+  paragraphs: PracticeParagraph[];
   selectedParagraphId: string;
   onParagraphChange: (paragraphId: string) => void;
+  sentenceCategories: PracticeCategory[];
   selectedCategoryId: string;
   selectedCategoryIcon: string;
   onCategoryChange: (categoryId: string) => void;
@@ -1218,8 +1250,10 @@ const TypingSidebar: React.FC<{
             onCourseIdChange={props.onCourseIdChange}
             selectedUnitId={props.selectedUnitId}
             onUnitChange={props.onUnitChange}
+            paragraphs={props.paragraphs}
             selectedParagraphId={props.selectedParagraphId}
             onParagraphChange={props.onParagraphChange}
+            sentenceCategories={props.sentenceCategories}
             selectedCategoryId={props.selectedCategoryId}
             selectedCategoryIcon={props.selectedCategoryIcon}
             onCategoryChange={props.onCategoryChange}
@@ -1305,8 +1339,10 @@ const DesktopTypingGameLayout: React.FC<{
   onCourseIdChange: (courseId: string) => void;
   selectedUnitId: number;
   onUnitChange: (unitId: number) => void;
+  paragraphs: PracticeParagraph[];
   selectedParagraphId: string;
   onParagraphChange: (paragraphId: string) => void;
+  sentenceCategories: PracticeCategory[];
   selectedCategoryId: string;
   selectedCategoryIcon: string;
   onCategoryChange: (categoryId: string) => void;
@@ -1352,8 +1388,10 @@ const DesktopTypingGameLayout: React.FC<{
   onCourseIdChange,
   selectedUnitId,
   onUnitChange,
+  paragraphs,
   selectedParagraphId,
   onParagraphChange,
+  sentenceCategories,
   selectedCategoryId,
   selectedCategoryIcon,
   onCategoryChange,
@@ -1402,8 +1440,10 @@ const DesktopTypingGameLayout: React.FC<{
       onCourseIdChange={onCourseIdChange}
       selectedUnitId={selectedUnitId}
       onUnitChange={onUnitChange}
+      paragraphs={paragraphs}
       selectedParagraphId={selectedParagraphId}
       onParagraphChange={onParagraphChange}
+      sentenceCategories={sentenceCategories}
       selectedCategoryId={selectedCategoryId}
       selectedCategoryIcon={selectedCategoryIcon}
       onCategoryChange={onCategoryChange}
@@ -1487,6 +1527,16 @@ const DesktopTypingPage: React.FC = () => {
     api.vocab.getOfCourse,
     selectedCourseId ? { courseId: selectedCourseId, unitId: selectedUnitId } : 'skip'
   );
+  const sentenceTextsResult = useQuery(api.typing.listTexts, {
+    type: 'SENTENCE',
+    onlyPublic: true,
+    paginationOpts: { numItems: 200, cursor: null },
+  });
+  const articleTextsResult = useQuery(api.typing.listTexts, {
+    type: 'ARTICLE',
+    onlyPublic: true,
+    paginationOpts: { numItems: 200, cursor: null },
+  });
 
   const { t } = useTranslation(); // Init translation hook
   const selectedCourseVolumeOptions = useMemo(
@@ -1531,6 +1581,51 @@ const DesktopTypingPage: React.FC = () => {
   const [mode] = useState<TypingMode>('sentence');
   const [isFocused, setIsFocused] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  const sentenceCategories = useMemo<PracticeCategory[]>(() => {
+    const page = (sentenceTextsResult?.page ?? []) as TypingTextRecord[];
+    if (page.length === 0) return PRACTICE_CATEGORIES;
+
+    const grouped = new Map<string, PracticeCategory>();
+    page.forEach(text => {
+      const rawCategory = text.category?.trim() || 'Custom';
+      const key = rawCategory.toLowerCase();
+      const sentences = splitTypingSentences(text.content);
+      if (sentences.length === 0) return;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          id: `db-${key}`,
+          title: rawCategory,
+          description: text.description || `Typing sentences in ${rawCategory}`,
+          icon: '📝',
+          sentences: [],
+        });
+      }
+
+      const item = grouped.get(key)!;
+      item.sentences.push(...sentences);
+    });
+
+    const built = Array.from(grouped.values()).filter(category => category.sentences.length > 0);
+    return built.length > 0 ? built : PRACTICE_CATEGORIES;
+  }, [sentenceTextsResult]);
+
+  const practiceParagraphs = useMemo<PracticeParagraph[]>(() => {
+    const page = (articleTextsResult?.page ?? []) as TypingTextRecord[];
+    if (page.length === 0) return PRACTICE_PARAGRAPHS;
+
+    const built = page
+      .map(text => ({
+        id: `db-${text._id}`,
+        title: text.title,
+        description: text.description || 'Typing article from admin content',
+        text: text.content,
+      }))
+      .filter(item => item.text.trim().length > 0);
+
+    return built.length > 0 ? built : PRACTICE_PARAGRAPHS;
+  }, [articleTextsResult]);
 
   // Hide main app sidebar when playing, show when in lobby
   // Hide main app sidebar AND footer when playing/on page
@@ -1793,6 +1888,7 @@ const DesktopTypingPage: React.FC = () => {
       sentenceQueue,
       setSentenceQueue,
       setTargetText,
+      categories: sentenceCategories,
     });
   };
 
@@ -1807,6 +1903,7 @@ const DesktopTypingPage: React.FC = () => {
       selectedParagraph,
       setSelectedParagraph,
       setTargetText,
+      paragraphs: practiceParagraphs,
     });
   };
 
@@ -1832,7 +1929,7 @@ const DesktopTypingPage: React.FC = () => {
   };
 
   const handleParagraphChange = (paragraphId: string) => {
-    const paragraph = PRACTICE_PARAGRAPHS.find(item => item.id === paragraphId);
+    const paragraph = practiceParagraphs.find(item => item.id === paragraphId);
     if (!paragraph) return;
     setSelectedParagraph(paragraph);
     setTargetText(paragraph.text);
@@ -1843,8 +1940,8 @@ const DesktopTypingPage: React.FC = () => {
   };
 
   const handleCategoryChange = (categoryId: string) => {
-    const category = PRACTICE_CATEGORIES.find(item => item.id === categoryId);
-    if (!category || gameState !== 'playing') return;
+    const category = sentenceCategories.find(item => item.id === categoryId);
+    if (!category) return;
     setSelectedCategory(category);
     const queue = generateSentenceQueue(category);
     setSentenceQueue(queue);
@@ -1886,8 +1983,10 @@ const DesktopTypingPage: React.FC = () => {
         onCourseIdChange={handleCourseIdChange}
         selectedUnitId={selectedUnitId}
         onUnitChange={handleUnitChange}
+        paragraphs={practiceParagraphs}
         selectedParagraphId={selectedParagraph?.id || ''}
         onParagraphChange={handleParagraphChange}
+        sentenceCategories={sentenceCategories}
         selectedCategoryId={selectedCategory?.id || ''}
         selectedCategoryIcon={selectedCategory?.icon || '📝'}
         onCategoryChange={handleCategoryChange}

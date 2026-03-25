@@ -19,13 +19,7 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetOverlay,
-  SheetPortal,
-} from '../components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from '../components/ui/sheet';
 
 const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
 
@@ -271,7 +265,10 @@ const GrammarModulePage: React.FC = () => {
 
   return (
     <div className="h-full min-h-0 overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="h-full min-h-0 grid transition-[grid-template-columns] duration-300" style={{ gridTemplateColumns: '250px minmax(0,1fr)' }}>
+      <div
+        className="h-full min-h-0 grid transition-[grid-template-columns] duration-300"
+        style={{ gridTemplateColumns: '250px minmax(0,1fr)' }}
+      >
         <GrammarDirectorySidebar
           courseGrammars={allCourseGrammar || []}
           searchQuery={searchQuery}
@@ -332,11 +329,13 @@ const GrammarModulePage: React.FC = () => {
                 </Button>
                 <Button
                   variant={isAiPanelOpen ? 'default' : 'outline'}
-                  onClick={() => setIsAiPanelOpen(true)}
+                  onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
                   className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   <PanelRightOpen className="h-4 w-4 mr-1.5" />
-                  {t('grammarModule.aiPanelShow', { defaultValue: 'Show AI' })}
+                  {isAiPanelOpen
+                    ? t('grammarModule.aiPanelHide', { defaultValue: 'Hide AI' })
+                    : t('grammarModule.aiPanelShow', { defaultValue: 'Show AI' })}
                 </Button>
               </div>
             </div>

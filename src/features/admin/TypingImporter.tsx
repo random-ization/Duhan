@@ -26,6 +26,11 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
   onSave,
   onClose,
 }) => {
+  const typeLabelByValue: Record<'WORD' | 'SENTENCE' | 'ARTICLE', string> = {
+    WORD: '单词 (Word)',
+    SENTENCE: '句子 (Sentence)',
+    ARTICLE: '长文 (Article)',
+  };
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TypingTextData>({
     title: '',
@@ -64,7 +69,7 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
 
     setLoading(true);
     try {
-      await onSave(formData);
+      await onSave({ ...formData, type: initialType });
     } catch (error) {
       console.error(error);
     } finally {
@@ -99,7 +104,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
           <form id="typing-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-bold text-zinc-700">标题</label>
+                <label htmlFor="title" className="text-sm font-bold text-zinc-700">
+                  标题
+                </label>
                 <input
                   id="title"
                   type="text"
@@ -112,23 +119,26 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="type" className="text-sm font-bold text-zinc-700">类型</label>
-                <select
+                <label htmlFor="type" className="text-sm font-bold text-zinc-700">
+                  类型
+                </label>
+                <div
                   id="type"
-                  value={formData.type}
-                  onChange={e => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 focus:border-zinc-900 focus:outline-none transition font-medium bg-white"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 bg-zinc-50 text-zinc-800 font-semibold"
                 >
-                  <option value="WORD">单词 (Word)</option>
-                  <option value="SENTENCE">句子 (Sentence)</option>
-                  <option value="ARTICLE">长文 (Article)</option>
-                </select>
+                  {typeLabelByValue[initialType]}
+                </div>
+                <p className="text-xs text-zinc-500">
+                  类型由上方标签决定。如需上传长文，请先切换到「长文 (Article)」标签后再新建。
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label htmlFor="category" className="text-sm font-bold text-zinc-700">分类 (可选)</label>
+                <label htmlFor="category" className="text-sm font-bold text-zinc-700">
+                  分类 (可选)
+                </label>
                 <div className="relative">
                   <input
                     id="category"
@@ -150,7 +160,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="difficulty" className="text-sm font-bold text-zinc-700">难度 (1-5)</label>
+                <label htmlFor="difficulty" className="text-sm font-bold text-zinc-700">
+                  难度 (1-5)
+                </label>
                 <input
                   id="difficulty"
                   type="number"
@@ -188,7 +200,9 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-bold text-zinc-700">描述 (可选)</label>
+              <label htmlFor="description" className="text-sm font-bold text-zinc-700">
+                描述 (可选)
+              </label>
               <input
                 id="description"
                 type="text"
@@ -202,7 +216,8 @@ export const TypingImporter: React.FC<TypingImporterProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between items-end">
                 <label htmlFor="content" className="text-sm font-bold text-zinc-700">
-                  内容 <span className="text-zinc-400 font-normal ml-2 text-xs">
+                  内容{' '}
+                  <span className="text-zinc-400 font-normal ml-2 text-xs">
                     {formData.type === 'ARTICLE' ? '(完整文章文本)' : '(每行一个，空行会被忽略)'}
                   </span>
                 </label>
