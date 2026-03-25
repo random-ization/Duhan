@@ -23,6 +23,17 @@ const VocabBookSpellingPage: React.FC = () => {
 
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
   const q = params.get('q')?.trim();
+  const selected = params.get('selected')?.trim();
+  const selectedWordIds = useMemo(
+    () =>
+      selected
+        ? selected
+            .split(',')
+            .map(id => id.trim())
+            .filter(Boolean)
+        : undefined,
+    [selected]
+  );
   const category: VocabBookCategory =
     categoryParam === 'UNLEARNED' || categoryParam === 'MASTERED' || categoryParam === 'DUE'
       ? (categoryParam as VocabBookCategory)
@@ -35,6 +46,7 @@ const VocabBookSpellingPage: React.FC = () => {
     includeMastered: true,
     search: q || undefined,
     savedByUserOnly: true,
+    selectedWordIds,
     category,
     cursor: pageCursor || undefined,
     limit: PAGE_SIZE,
@@ -43,7 +55,7 @@ const VocabBookSpellingPage: React.FC = () => {
   React.useEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
-  }, [category, q]);
+  }, [category, q, selected]);
 
   React.useEffect(() => {
     if (!vocabBookPage) return;

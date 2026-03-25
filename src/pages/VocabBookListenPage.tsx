@@ -86,6 +86,17 @@ const VocabBookListenPage: React.FC = () => {
 
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
   const q = params.get('q')?.trim();
+  const selected = params.get('selected')?.trim();
+  const selectedWordIds = useMemo(
+    () =>
+      selected
+        ? selected
+            .split(',')
+            .map(id => id.trim())
+            .filter(Boolean)
+        : undefined,
+    [selected]
+  );
   const category: VocabBookCategory =
     categoryParam === 'UNLEARNED' || categoryParam === 'MASTERED' || categoryParam === 'DUE'
       ? (categoryParam as VocabBookCategory)
@@ -101,6 +112,7 @@ const VocabBookListenPage: React.FC = () => {
     includeMastered: true,
     search: q || undefined,
     savedByUserOnly: true,
+    selectedWordIds,
     category,
     cursor: pageCursor || undefined,
     limit: PAGE_SIZE,
@@ -150,7 +162,7 @@ const VocabBookListenPage: React.FC = () => {
     setLoadedItems([]);
     setNextCursor(null);
     setIndex(0);
-  }, [category, q]);
+  }, [category, q, selected]);
 
   useEffect(() => {
     indexRef.current = index;

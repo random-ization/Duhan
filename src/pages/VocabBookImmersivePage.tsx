@@ -468,6 +468,17 @@ const VocabBookImmersivePage: React.FC = () => {
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
   const focusId = params.get('focus');
   const q = params.get('q')?.trim();
+  const selected = params.get('selected')?.trim();
+  const selectedWordIds = useMemo(
+    () =>
+      selected
+        ? selected
+            .split(',')
+            .map(id => id.trim())
+            .filter(Boolean)
+        : undefined,
+    [selected]
+  );
 
   const category = normalizeCategory(categoryParam);
 
@@ -479,6 +490,7 @@ const VocabBookImmersivePage: React.FC = () => {
     includeMastered: true,
     search: q || undefined,
     savedByUserOnly: true,
+    selectedWordIds,
     category,
     cursor: pageCursor || undefined,
     limit: PAGE_SIZE,
@@ -492,7 +504,7 @@ const VocabBookImmersivePage: React.FC = () => {
     setNextCursor(null);
     setIndex(0);
     setRevealed(false);
-  }, [category, q]);
+  }, [category, q, selected]);
 
   useEffect(() => {
     if (!vocabBookPage) return;

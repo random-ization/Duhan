@@ -293,6 +293,7 @@ export const VOCAB = {
       includeMastered?: boolean;
       limit?: number;
       savedByUserOnly?: boolean;
+      selectedWordIds?: string[];
       category?: 'ALL' | 'UNLEARNED' | 'DUE' | 'MASTERED';
       cursor?: string;
     },
@@ -423,6 +424,13 @@ export const VOCAB = {
     { wordId: Id<'words'>; mastered: boolean },
     { success: boolean; action: string }
   >('vocab:setMastery'),
+  setMasteryBulk: mRef<
+    { wordIds: Id<'words'>[]; mastered: boolean },
+    { success: boolean; updated: number }
+  >('vocab:setMasteryBulk'),
+  removeFromVocabBookBulk: mRef<{ wordIds: Id<'words'>[] }, { success: boolean; removed: number }>(
+    'vocab:removeFromVocabBookBulk'
+  ),
 };
 
 export const VOCAB_PDF = {
@@ -434,6 +442,7 @@ export const VOCAB_PDF = {
       shuffle: boolean;
       category: 'UNLEARNED' | 'DUE' | 'MASTERED';
       q?: string;
+      selectedWordIds?: string[];
     },
     { url: string }
   >('vocabPdf:exportVocabBookPdf'),

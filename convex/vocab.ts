@@ -1738,6 +1738,7 @@ export const getVocabBookPage = query({
     includeMastered: v.optional(v.boolean()),
     limit: v.optional(v.number()),
     savedByUserOnly: v.optional(v.boolean()),
+    selectedWordIds: v.optional(v.array(v.string())),
     category: v.optional(
       v.union(v.literal('ALL'), v.literal('UNLEARNED'), v.literal('DUE'), v.literal('MASTERED'))
     ),
@@ -1753,6 +1754,10 @@ export const getVocabBookPage = query({
       const includeMastered = args.includeMastered ?? false;
       const category: VocabBookCategory = args.category ?? 'ALL';
       const searchQuery = args.search?.trim().toLowerCase() || '';
+      const selectedWordIds = new Set(
+        (args.selectedWordIds ?? []).map(id => id.trim()).filter(id => id.length > 0)
+      );
+      const hasSelectedWordIds = selectedWordIds.size > 0;
       const hardCap = 120;
       const pageSize =
         args.limit && args.limit > 0 ? Math.min(args.limit, hardCap) : Math.min(60, hardCap);
@@ -1777,8 +1782,10 @@ export const getVocabBookPage = query({
         offset = 0;
 
         const progressPage = pageSlice.filter(progress => {
+          if (hasSelectedWordIds && !selectedWordIds.has(String(progress.wordId))) return false;
           if (args.savedByUserOnly && progress.savedByUser !== true) return false;
           if (!includeMastered && progress.status === 'MASTERED') return false;
+          if (hasSelectedWordIds) return true;
           return matchVocabBookCategory(progress, category);
         });
 
@@ -2006,6 +2013,121 @@ export const setMastery = mutation({
     });
 
     return { success: true, action: 'updated' as const };
+  },
+});
+
+export const setMasteryBulk = mutation({
+  args: {
+    wordIds: v.array(v.id('words')),
+    mastered: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const uniqueWordIds = Array.from(new Set(args.wordIds.map(id => String(id))));
+    let updated = 0;
+
+    for (const wordIdString of uniqueWordIds) {
+      const wordId = ctx.db.normalizeId('words', wordIdString);
+      if (!wordId) continue;
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      const existingProgress = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
+        .unique();
+
+      if (args.mastered) {
+        const due = now + 365 * oneDay;
+        const patch = {
+          status: 'MASTERED',
+          interval: 365,
+          streak: existingProgress?.streak ?? existingProgress?.reps ?? 0,
+          nextReviewAt: due,
+          lastReviewedAt: now,
+          state: 2,
+          due,
+          stability: Math.max(existingProgress?.stability ?? 0, 31),
+          scheduled_days: 365,
+          reps: (existingProgress?.reps ?? 0) + 1,
+          last_review: now,
+        };
+
+        if (existingProgress) {
+          await ctx.db.patch(existingProgress._id, patch);
+          updated += 1;
+        } else {
+          await ctx.db.insert('user_vocab_progress', {
+            userId,
+            wordId,
+            status: 'MASTERED',
+            interval: 365,
+            streak: 0,
+            nextReviewAt: due,
+            lastReviewedAt: now,
+            state: 2,
+            due,
+            stability: 31,
+            scheduled_days: 365,
+            reps: 1,
+            lapses: 0,
+            learning_steps: 0,
+            elapsed_days: 0,
+            difficulty: 5,
+            last_review: now,
+            savedByUser: true,
+          });
+          updated += 1;
+        }
+        continue;
+      }
+
+      if (existingProgress) {
+        const due = now + oneDay;
+        await ctx.db.patch(existingProgress._id, {
+          status: 'LEARNING',
+          interval: 1,
+          streak: 0,
+          nextReviewAt: due,
+          lastReviewedAt: now,
+          state: 1,
+          due,
+          scheduled_days: 1,
+          elapsed_days: 0,
+          last_review: now,
+          savedByUser: true,
+        });
+        updated += 1;
+      }
+    }
+
+    return { success: true, updated };
+  },
+});
+
+export const removeFromVocabBookBulk = mutation({
+  args: {
+    wordIds: v.array(v.id('words')),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const uniqueWordIds = Array.from(new Set(args.wordIds.map(id => String(id))));
+    let removed = 0;
+
+    for (const wordIdString of uniqueWordIds) {
+      const wordId = ctx.db.normalizeId('words', wordIdString);
+      if (!wordId) continue;
+      const progress = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
+        .unique();
+      if (!progress) continue;
+      if (progress.savedByUser !== true) continue;
+      await ctx.db.delete(progress._id);
+      removed += 1;
+    }
+
+    return { success: true, removed };
   },
 });
 

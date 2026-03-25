@@ -160,17 +160,23 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitleDefault: 'Typing',
     allowHiddenChrome: true,
   }),
-  'vocab-book': segments => ({
-    hasFooter: false,
-    headerType: IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '') ? 'detail' : 'section',
-    headerAction: IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '') ? 'more' : 'filter',
-    headerTitle: 'dashboard.vocab.title',
-    headerTitleDefault: 'Vocab',
-    hasDesktopSidebar: !IMMERSIVE_VOCAB_ROUTES.has(segments[1] || ''),
-    hasBottomNav: !IMMERSIVE_VOCAB_ROUTES.has(segments[1] || ''),
-    hasHeader: false,
-    allowHiddenChrome: IMMERSIVE_VOCAB_ROUTES.has(segments[1] || ''),
-  }),
+  'vocab-book': segments => {
+    const isImmersive = IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '');
+    return {
+      hasFooter: false,
+      headerType: isImmersive ? 'detail' : 'section',
+      headerAction: isImmersive ? 'more' : 'filter',
+      headerTitle: 'dashboard.vocab.title',
+      headerTitleDefault: 'Vocab',
+      hasDesktopSidebar: !isImmersive,
+      hasBottomNav: !isImmersive,
+      hasHeader: false,
+      usePatternBackground: false,
+      useDesktopContainerPadding: false,
+      useDesktopMaxWidth: false,
+      allowHiddenChrome: isImmersive,
+    };
+  },
   vocabbook: () => ({
     hasFooter: false,
     hasHeader: false,

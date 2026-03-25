@@ -7,8 +7,14 @@ export const getVocabBookForUser = internalQuery({
     search: v.optional(v.string()),
     includeMastered: v.optional(v.boolean()),
     limit: v.optional(v.number()),
+    selectedWordIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
+    const selectedWordIds = new Set(
+      (args.selectedWordIds ?? []).map(id => id.trim()).filter(id => id.length > 0)
+    );
+    const hasSelectedWordIds = selectedWordIds.size > 0;
+
     const progressItems = await ctx.db
       .query('user_vocab_progress')
       .withIndex('by_user', q => q.eq('userId', args.userId))
@@ -18,7 +24,11 @@ export const getVocabBookForUser = internalQuery({
       ? progressItems
       : progressItems.filter(p => p.status !== 'MASTERED');
 
-    const wordIds = [...new Set(filteredProgress.map(p => p.wordId))];
+    const scopedProgress = hasSelectedWordIds
+      ? filteredProgress.filter(p => selectedWordIds.has(String(p.wordId)))
+      : filteredProgress;
+
+    const wordIds = [...new Set(scopedProgress.map(p => p.wordId))];
     const wordsArray = await Promise.all(wordIds.map(id => ctx.db.get(id)));
     const wordsMap = new Map(wordsArray.filter(Boolean).map(w => [w!._id.toString(), w!]));
 
@@ -35,7 +45,7 @@ export const getVocabBookForUser = internalQuery({
     const appearanceMap = new Map(latestAppearances);
 
     const searchQuery = args.search?.trim().toLowerCase();
-    const items = filteredProgress
+    const items = scopedProgress
       .map(progress => {
         const word = wordsMap.get(progress.wordId.toString());
         if (!word) return null;

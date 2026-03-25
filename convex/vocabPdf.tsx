@@ -21,7 +21,13 @@ import {
 // Query typing
 const getVocabBookForUserQuery = makeFunctionReference<
   'query',
-  { userId: string; search?: string; includeMastered?: boolean; limit?: number },
+  {
+    userId: string;
+    search?: string;
+    includeMastered?: boolean;
+    limit?: number;
+    selectedWordIds?: string[];
+  },
   Array<{
     id: string;
     word: string;
@@ -34,7 +40,13 @@ const getVocabBookForUserQuery = makeFunctionReference<
 >('vocabPdfQueries:getVocabBookForUser') as unknown as FunctionReference<
   'query',
   'internal',
-  { userId: string; search?: string; includeMastered?: boolean; limit?: number },
+  {
+    userId: string;
+    search?: string;
+    includeMastered?: boolean;
+    limit?: number;
+    selectedWordIds?: string[];
+  },
   Array<{
     id: string;
     word: string;
@@ -55,6 +67,7 @@ export const exportVocabBookPdf = action({
     shuffle: v.boolean(),
     category: v.union(v.literal('UNLEARNED'), v.literal('DUE'), v.literal('MASTERED')),
     q: v.optional(v.string()),
+    selectedWordIds: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -92,6 +105,7 @@ export const exportVocabBookPdf = action({
       userId,
       includeMastered: true,
       search: args.q || undefined,
+      selectedWordIds: args.selectedWordIds,
     });
 
     const filtered = raw

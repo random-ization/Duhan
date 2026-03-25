@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
   Search,
   BookOpen,
+  Volume2,
   Loader2,
   ArrowLeft,
   Zap,
@@ -12,6 +13,9 @@ import {
   Headphones,
   PencilLine,
   SpellCheck,
+  Square,
+  CheckSquare,
+  Trash2,
   X,
   ChevronDown,
   ChevronUp,
@@ -31,6 +35,7 @@ import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../component
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 import type { VocabBookItemDto } from '../../convex/vocab';
+import type { Id } from '../../convex/_generated/dataModel';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
@@ -38,7 +43,6 @@ type LabelsBundle = ReturnType<typeof getLabels>;
 const VOCAB_PAGE_SIZE = 80;
 const VIRTUAL_OVERSCAN_ROWS = 8;
 const VIRTUAL_ROW_GAP = 12;
-const VIRTUALIZATION_MIN_ITEMS = 120;
 const DEFAULT_ROW_HEIGHT = 96;
 
 const ACTIVE_EXPORT_MODE_BUTTON_CLASS =
@@ -275,8 +279,13 @@ const VocabBookPage: React.FC = () => {
   );
   const [estimatedRowHeight, setEstimatedRowHeight] = useState(DEFAULT_ROW_HEIGHT);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedWordIds, setSelectedWordIds] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
 
   const setMastery = useMutation(VOCAB.setMastery);
+  const setMasteryBulk = useMutation(VOCAB.setMasteryBulk);
+  const removeFromVocabBookBulk = useMutation(VOCAB.removeFromVocabBookBulk);
   const exportPdf = useAction(VOCAB_PDF.exportVocabBookPdf);
 
   const trimmedSearch = searchQuery.trim();
@@ -295,6 +304,7 @@ const VocabBookPage: React.FC = () => {
     setLoadedItems([]);
     setNextCursor(null);
     setExpandedId(null);
+    setSelectedWordIds(new Set());
   }, [activeCategory, trimmedSearch]);
 
   useEffect(() => {
@@ -376,10 +386,34 @@ const VocabBookPage: React.FC = () => {
       }),
     [items, optimisticMastery]
   );
+  const visibleWordIds = useMemo(
+    () => visibleItems.map(({ item }) => String(item.id)),
+    [visibleItems]
+  );
+  const selectedCount = selectedWordIds.size;
+  const allVisibleSelected =
+    visibleWordIds.length > 0 && visibleWordIds.every(id => selectedWordIds.has(id));
+
+  useEffect(() => {
+    if (selectedWordIds.size === 0) return;
+    const visibleSet = new Set(visibleWordIds);
+    setSelectedWordIds(current => {
+      let changed = false;
+      const next = new Set<string>();
+      current.forEach(id => {
+        if (visibleSet.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [visibleWordIds, selectedWordIds.size]);
 
   const windowedItems = useMemo(() => {
     const total = visibleItems.length;
-    const shouldVirtualize = expandedId === null && total >= VIRTUALIZATION_MIN_ITEMS;
+    const shouldVirtualize = false;
 
     if (!shouldVirtualize) {
       return {
@@ -415,7 +449,7 @@ const VocabBookPage: React.FC = () => {
       topSpacerHeight,
       bottomSpacerHeight,
     };
-  }, [visibleItems, expandedId, scrollY, viewportHeight, estimatedRowHeight]);
+  }, [visibleItems, scrollY, viewportHeight, estimatedRowHeight]);
 
   const updateEstimatedRowHeight = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
@@ -531,6 +565,7 @@ const VocabBookPage: React.FC = () => {
         shuffle: exportShuffle,
         category: activeCategory,
         q: trimmedSearch || undefined,
+        selectedWordIds: selectedCount > 0 ? Array.from(selectedWordIds) : undefined,
       });
 
       const categoryLabel = activeCategory.toLowerCase();
@@ -559,14 +594,87 @@ const VocabBookPage: React.FC = () => {
     const currentCategoryHasItems = visibleItems.length > 0;
     params.set('category', currentCategoryHasItems ? activeCategory : 'all');
     if (trimmedSearch) params.set('q', trimmedSearch);
+    if (selectedCount > 0) {
+      params.set('selected', Array.from(selectedWordIds).join(','));
+    }
     navigate(`/vocab-book/${mode}?${params.toString()}`);
   };
 
+  const toggleSelectWord = (wordId: string) => {
+    setSelectedWordIds(current => {
+      const next = new Set(current);
+      if (next.has(wordId)) {
+        next.delete(wordId);
+      } else {
+        next.add(wordId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (visibleWordIds.length === 0) return;
+    setSelectedWordIds(current => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        visibleWordIds.forEach(id => next.delete(id));
+      } else {
+        visibleWordIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const runBulkSetMastery = async (mastered: boolean) => {
+    if (selectedCount === 0 || bulkPending) return;
+    const ids = Array.from(selectedWordIds);
+    try {
+      setBulkPending(true);
+      await setMasteryBulk({ wordIds: ids as unknown as Id<'words'>[], mastered });
+      setOptimisticMastery(current => {
+        const next = { ...current };
+        ids.forEach(id => {
+          next[id] = mastered;
+        });
+        return next;
+      });
+      setSelectedWordIds(new Set());
+      notify.success(mastered ? 'Marked as mastered' : 'Moved back to learning');
+    } catch {
+      notify.error(labels.vocabBook?.saveFailed || 'Failed to save word status. Please retry.');
+    } finally {
+      setBulkPending(false);
+    }
+  };
+
+  const runBulkRemove = async () => {
+    if (selectedCount === 0 || bulkPending) return;
+    const ids = Array.from(selectedWordIds);
+    try {
+      setBulkPending(true);
+      await removeFromVocabBookBulk({ wordIds: ids as unknown as Id<'words'>[] });
+      setLoadedItems(current => current.filter(item => !selectedWordIds.has(String(item.id))));
+      setOptimisticMastery(current => {
+        const next = { ...current };
+        ids.forEach(id => {
+          delete next[id];
+        });
+        return next;
+      });
+      setSelectedWordIds(new Set());
+      notify.success('Removed from vocab book');
+    } catch {
+      notify.error('Failed to remove selected words');
+    } finally {
+      setBulkPending(false);
+    }
+  };
+
   const renderHeader = () => (
-    <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-indigo-100 dark:border-indigo-300/20">
-      <div className="max-w-6xl mx-auto px-4 py-5">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-4">
+    <div className="sticky top-0 z-20 bg-[#FAFAFA]/90 backdrop-blur-xl border-b border-slate-200/70">
+      <div className="w-full px-6 pt-6 pb-4">
+        <div className="flex items-end justify-between mb-4">
+          <div className="flex items-center gap-3">
             <Button
               type="button"
               variant="ghost"
@@ -578,36 +686,31 @@ const VocabBookPage: React.FC = () => {
                 }
                 navigate('/practice');
               }}
-              className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.05),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.18)]"
+              className="p-2 rounded-xl bg-white border border-slate-200 hover:border-teal-400 transition-all shadow-sm"
             >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </Button>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 dark:from-indigo-300/70 dark:to-purple-300/70 rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(99,102,241,0.3)] dark:shadow-[0_8px_20px_rgba(165,180,252,0.2)] border-[3px] border-indigo-300 dark:border-indigo-300/35">
-                <BookOpen className="w-7 h-7 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-black text-foreground tracking-tight">
-                  {labels.dashboard?.vocab?.title || 'Vocab Book'}
-                </h1>
-                <p className="text-muted-foreground font-bold text-sm">
-                  {labels.dashboard?.vocab?.subtitle || 'SRS Smart Review'}
-                </p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900">
+                {labels.dashboard?.vocab?.title || 'Vocab Book'}
+              </h1>
+              <p className="text-sm font-medium text-slate-500">
+                {(labels.vocabBook?.subtitlePrefix || 'Total') + ' '}
+                <span className="font-black text-teal-600">{stats.total}</span>
+                {(labels.vocabBook?.subtitleSuffix || ' words') + ''}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {stats.dueNow > 0 && (
-              <div className="hidden sm:flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-400/12 dark:to-orange-400/12 rounded-2xl border-[3px] border-red-200 dark:border-red-300/25 shadow-[0_4px_15px_rgba(239,68,68,0.15),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_15px_rgba(252,165,165,0.12)]">
-                <div className="p-2 bg-red-500 dark:bg-red-400/75 rounded-xl">
-                  <Zap className="w-5 h-5 text-primary-foreground" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="p-1.5 bg-amber-500 rounded-lg">
+                  <Zap className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-black text-red-600 dark:text-red-200">
-                    {stats.dueNow}
-                  </p>
-                  <p className="text-xs font-bold text-red-400 dark:text-red-300">
+                  <p className="text-sm font-black text-amber-700">{stats.dueNow}</p>
+                  <p className="text-[11px] font-bold text-amber-600">
                     {labels.vocab?.dueNow || labels.dashboard?.vocab?.dueNow || 'Due now'}
                   </p>
                 </div>
@@ -622,24 +725,24 @@ const VocabBookPage: React.FC = () => {
               loading={loading}
               loadingText={labels.vocabBook?.exportPdf || 'Export PDF'}
               loadingIconClassName="w-5 h-5"
-              className="px-4 py-3 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 font-black text-muted-foreground shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(148,163,184,0.16)] disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-teal-400 font-bold text-slate-700 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
-              <FileDown className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+              <FileDown className="w-4 h-4 text-slate-600" />
               {labels.vocabBook?.exportPdf || 'Export PDF'}
             </Button>
           </div>
         </div>
 
         {/* Search & Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               type="text"
               placeholder={labels.vocab?.search || 'Search words...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="h-auto w-full pl-12 pr-4 py-3 bg-card border-[3px] border-border rounded-2xl text-sm font-medium focus:ring-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(99,102,241,0.1)] dark:focus:shadow-[0_0_0_4px_rgba(165,180,252,0.18)] transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]"
+              className="h-auto w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-teal-100 focus:border-teal-500 transition-all shadow-sm"
             />
           </div>
 
@@ -649,18 +752,15 @@ const VocabBookPage: React.FC = () => {
               let activeClasses = '';
               if (isActive) {
                 if (btn.color === 'blue') {
-                  activeClasses =
-                    'bg-blue-500 text-primary-foreground border-blue-400 shadow-[0_4px_12px_rgba(59,130,246,0.3)] dark:bg-blue-400/80 dark:border-blue-300/35 dark:shadow-[0_4px_12px_rgba(147,197,253,0.2)]';
+                  activeClasses = 'bg-sky-500 text-white border-sky-500 shadow-sm';
                 } else if (btn.color === 'amber') {
-                  activeClasses =
-                    'bg-amber-500 text-primary-foreground border-amber-400 shadow-[0_4px_12px_rgba(245,158,11,0.3)] dark:bg-amber-400/80 dark:border-amber-300/35 dark:shadow-[0_4px_12px_rgba(253,230,138,0.2)]';
+                  activeClasses = 'bg-amber-500 text-white border-amber-500 shadow-sm';
                 } else {
-                  activeClasses =
-                    'bg-emerald-600 text-primary-foreground border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.3)] dark:bg-emerald-400/80 dark:border-emerald-300/35 dark:shadow-[0_4px_12px_rgba(110,231,183,0.2)]';
+                  activeClasses = 'bg-emerald-500 text-white border-emerald-500 shadow-sm';
                 }
               } else {
                 activeClasses =
-                  'bg-card text-muted-foreground border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.04)]';
+                  'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 shadow-sm';
               }
 
               return (
@@ -670,12 +770,12 @@ const VocabBookPage: React.FC = () => {
                   size="auto"
                   key={btn.key}
                   onClick={() => setActiveCategory(btn.key)}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-sm border-[3px] transition-all duration-200 ${activeClasses}`}
+                  className={`px-4 py-2 rounded-xl font-bold text-sm border transition-all duration-200 ${activeClasses}`}
                 >
                   {btn.label}
                   <span
                     className={`ml-2 px-2 py-0.5 rounded-lg text-xs ${
-                      isActive ? 'bg-card/20' : 'bg-muted'
+                      isActive ? 'bg-white/20' : 'bg-slate-100'
                     }`}
                   >
                     {btn.count}
@@ -684,6 +784,25 @@ const VocabBookPage: React.FC = () => {
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={toggleSelectAllVisible}
+            disabled={visibleWordIds.length === 0}
+            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs"
+          >
+            {allVisibleSelected ? (
+              <CheckSquare className="w-4 h-4 mr-1.5" />
+            ) : (
+              <Square className="w-4 h-4 mr-1.5" />
+            )}
+            {allVisibleSelected ? '取消全选' : '全选当前列表'}
+          </Button>
+          <span className="text-xs font-semibold text-slate-500">已选 {selectedCount} 个单词</span>
         </div>
       </div>
     </div>
@@ -700,6 +819,33 @@ const VocabBookPage: React.FC = () => {
     if (trimmedSearch) params.set('q', trimmedSearch);
     navigate(`/vocab-book/immerse?${params.toString()}`);
   };
+
+  const pronounceWord = useCallback((word: VocabBookItemDto) => {
+    if (typeof window === 'undefined') return;
+
+    if (word.audioUrl) {
+      try {
+        if (!audioRef.current) {
+          audioRef.current = new Audio();
+        }
+        audioRef.current.pause();
+        audioRef.current.src = word.audioUrl;
+        void audioRef.current.play();
+        return;
+      } catch {
+        // Fall through to speech synthesis.
+      }
+    }
+
+    if (!('speechSynthesis' in window)) return;
+    const text = word.word?.trim();
+    if (!text) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    utterance.rate = 0.9;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, []);
 
   const renderContent = () => {
     if (loading) {
@@ -755,28 +901,79 @@ const VocabBookPage: React.FC = () => {
           {windowedItems.enabled && windowedItems.topSpacerHeight > 0 && (
             <div aria-hidden style={{ height: windowedItems.topSpacerHeight }} />
           )}
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {windowedItems.items.map(({ item: word, isMastered }, index) => {
               const id = String(word.id);
               const isExpanded = expandedId === id;
               const isMasteryPending = masteryPendingId === id;
+              const isSelected = selectedWordIds.has(id);
 
               return (
                 <motion.div
                   key={id}
                   layoutId={`vocab-word-card-${id}`}
                   ref={index === 0 ? updateEstimatedRowHeight : undefined}
-                  className="bg-card rounded-2xl border-[3px] border-border shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
+                  className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-teal-200 transition-all overflow-hidden"
                 >
-                  <div className="flex items-center justify-between gap-3 px-5 py-4">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelectWord(id);
+                      }}
+                      className={`p-2 rounded-xl border shadow-sm shrink-0 ${
+                        isSelected
+                          ? 'bg-teal-50 border-teal-300 text-teal-600'
+                          : 'bg-white border-slate-200 text-slate-500'
+                      }`}
+                      aria-label={isSelected ? 'Deselect word' : 'Select word'}
+                    >
+                      {isSelected ? (
+                        <CheckSquare className="w-5 h-5" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        pronounceWord(word);
+                      }}
+                      className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:text-teal-600 group-hover:bg-teal-50 flex items-center justify-center transition-colors shrink-0"
+                      aria-label={`Play ${word.word}`}
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </Button>
+
                     <Button
                       type="button"
                       variant="ghost"
                       size="auto"
                       onClick={() => openImmersiveForWord(id)}
-                      className="flex-1 min-w-0 justify-start text-left"
+                      className="flex-1 min-w-0 justify-start text-left !p-0"
                     >
-                      <div className="text-xl font-black text-foreground truncate">{word.word}</div>
+                      <div className="min-w-0">
+                        <div className="flex items-baseline gap-2 min-w-0">
+                          <div className="text-xl font-black text-slate-800 truncate">
+                            {word.word}
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md uppercase shrink-0">
+                            {word.partOfSpeech || 'Word'}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium text-slate-600 truncate mt-0.5">
+                          {getLocalizedMeaning(word, language)}
+                        </div>
+                      </div>
                     </Button>
 
                     <Button
@@ -784,7 +981,7 @@ const VocabBookPage: React.FC = () => {
                       variant="ghost"
                       size="auto"
                       onClick={() => toggleExpand(id)}
-                      className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                      className="p-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 shadow-sm shrink-0"
                       aria-label={isExpanded ? collapseMeaningLabel : expandMeaningLabel}
                     >
                       {isExpanded ? (
@@ -834,7 +1031,7 @@ const VocabBookPage: React.FC = () => {
                         </span>
                       }
                       loadingIconClassName="w-5 h-5"
-                      className="p-2 rounded-xl bg-card border-2 border-border hover:border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] shrink-0"
+                      className="p-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 shadow-sm shrink-0"
                       aria-label={
                         isMastered
                           ? labels.vocabBook?.unmarkMastered || 'Unmark mastered'
@@ -850,10 +1047,32 @@ const VocabBookPage: React.FC = () => {
                   </div>
 
                   {isExpanded && (
-                    <div className="px-5 pb-5">
-                      <div className="pt-3 border-t-2 border-dashed border-border">
-                        <div className="text-muted-foreground font-bold leading-relaxed">
-                          {getLocalizedMeaning(word, language)}
+                    <div className="px-4 pb-4">
+                      <div className="pt-3 border-t border-slate-100 space-y-2">
+                        {word.exampleSentence ? (
+                          <p className="text-sm text-slate-700">{word.exampleSentence}</p>
+                        ) : null}
+                        {word.exampleMeaning ? (
+                          <p className="text-sm text-slate-500">{word.exampleMeaning}</p>
+                        ) : null}
+                        {word.pronunciation ? (
+                          <p className="text-xs text-slate-400">[{word.pronunciation}]</p>
+                        ) : null}
+                        {!word.exampleSentence && !word.exampleMeaning && !word.pronunciation ? (
+                          <div className="text-slate-500 font-medium">
+                            {getLocalizedMeaning(word, language)}
+                          </div>
+                        ) : null}
+                        <div className="pt-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="auto"
+                            onClick={() => openImmersiveForWord(id)}
+                            className="text-xs font-bold text-teal-600 hover:text-teal-700"
+                          >
+                            {labels.vocabBook?.openDetail || 'Open detail'}
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -921,9 +1140,38 @@ const VocabBookPage: React.FC = () => {
   };
 
   const renderFloatingActions = () => (
-    <div className="fixed inset-x-0 bottom-4 z-[70] px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-card/90 backdrop-blur-xl border-[3px] border-border rounded-[24px] shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-3">
+    <div className="fixed inset-x-0 bottom-5 z-[70] px-4">
+      <div className="max-w-md mx-auto">
+        {selectedCount > 0 && (
+          <div className="mb-2 bg-white border border-slate-200 rounded-2xl shadow-sm p-2 grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => {
+                void runBulkSetMastery(true);
+              }}
+              disabled={bulkPending}
+              className="py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold"
+            >
+              设为已掌握
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => {
+                void runBulkRemove();
+              }}
+              disabled={bulkPending}
+              className="py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold inline-flex items-center justify-center gap-1"
+            >
+              <Trash2 className="w-4 h-4" />
+              移除单词
+            </Button>
+          </div>
+        )}
+        <div className="bg-white/85 backdrop-blur-xl border border-slate-200/70 rounded-[2rem] shadow-2xl p-2">
           <div className="grid grid-cols-4 gap-2">
             <Button
               type="button"
@@ -931,11 +1179,11 @@ const VocabBookPage: React.FC = () => {
               size="auto"
               onClick={() => startLearning('immerse')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-violet-50 text-slate-500 hover:text-violet-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
-                <span className="text-xs font-black text-muted-foreground">
+                <Layers className="w-5 h-5" />
+                <span className="text-[11px] font-black tracking-wide">
                   {labels.vocab?.modeImmersive || 'Immersive'}
                 </span>
               </div>
@@ -947,11 +1195,11 @@ const VocabBookPage: React.FC = () => {
               size="auto"
               onClick={() => startLearning('listen')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-amber-50 text-slate-500 hover:text-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <Headphones className="w-5 h-5 text-amber-700 dark:text-amber-300" />
-                <span className="text-xs font-black text-muted-foreground">
+                <Headphones className="w-5 h-5" />
+                <span className="text-[11px] font-black tracking-wide">
                   {labels.vocab?.modeListen || 'Listen'}
                 </span>
               </div>
@@ -963,11 +1211,11 @@ const VocabBookPage: React.FC = () => {
               size="auto"
               onClick={() => startLearning('dictation')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-rose-50 text-slate-500 hover:text-rose-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <PencilLine className="w-5 h-5 text-rose-600 dark:text-rose-300" />
-                <span className="text-xs font-black text-muted-foreground">
+                <PencilLine className="w-5 h-5" />
+                <span className="text-[11px] font-black tracking-wide">
                   {labels.vocab?.modeDictation || 'Dictation'}
                 </span>
               </div>
@@ -979,11 +1227,11 @@ const VocabBookPage: React.FC = () => {
               size="auto"
               onClick={() => startLearning('spelling')}
               disabled={stats.total === 0}
-              className="py-3 rounded-2xl border-2 border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-300/35 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-teal-50 text-slate-500 hover:text-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <div className="flex flex-col items-center gap-1">
-                <SpellCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
-                <span className="text-xs font-black text-muted-foreground">
+                <SpellCheck className="w-5 h-5" />
+                <span className="text-[11px] font-black tracking-wide">
                   {labels.vocab?.modeSpelling || 'Spelling'}
                 </span>
               </div>
@@ -1011,9 +1259,9 @@ const VocabBookPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-400/8 dark:via-background dark:to-purple-400/8">
+    <div className="min-h-screen bg-[#FAFAFA]">
       {renderHeader()}
-      <div className="max-w-6xl mx-auto px-4 py-8 pb-28">{renderContent()}</div>
+      <div className="w-full px-6 py-6 pb-28">{renderContent()}</div>
       {renderExportModal()}
       {renderFloatingActions()}
     </div>
