@@ -302,12 +302,12 @@ export const VOCAB = {
     'vocab:getReviewSummary'
   ),
   getActiveLearningSession: qRef<
-    { instituteId: string; unitId: number; mode: 'LEARN' | 'TEST' },
+    { instituteId: string; unitId: number; mode: 'FLASHCARD' | 'LEARN' | 'TEST' },
     {
       id: string;
       instituteId: string;
       unitId: number;
-      mode: 'LEARN' | 'TEST';
+      mode: 'FLASHCARD' | 'LEARN' | 'TEST';
       status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
       snapshot?: unknown;
       startedAt: number;
@@ -344,7 +344,7 @@ export const VOCAB = {
     {
       instituteId: string;
       unitId: number;
-      mode: 'LEARN' | 'TEST';
+      mode: 'FLASHCARD' | 'LEARN' | 'TEST';
       snapshot: unknown;
     },
     { success: boolean; sessionId: string; action: 'created' | 'updated' }

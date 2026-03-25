@@ -21,6 +21,19 @@ import FlashcardFullscreenOverlay from './FlashcardFullscreenOverlay';
 import { Button } from '../../../components/ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../../../components/ui';
 
+export type FlashcardSessionSnapshot = {
+  cardIndex: number;
+  isRandom: boolean;
+  trackProgress: boolean;
+  orderedWordIds: string[];
+  history: number[];
+  stats: {
+    correctWordIds: string[];
+    incorrectWordIds: string[];
+  };
+  timestamp: number;
+};
+
 interface FlashcardViewProps {
   words: ExtendedVocabularyItem[];
   settings: VocabSettings;
@@ -35,6 +48,8 @@ interface FlashcardViewProps {
   onSpeak?: (text: string) => void;
   courseId?: string;
   progressKey?: string;
+  resumeSnapshot?: FlashcardSessionSnapshot | null;
+  onSessionSnapshot?: (snapshot: FlashcardSessionSnapshot) => void;
 }
 
 const useFlashcardSettings = (settings: VocabSettings) => {
@@ -134,12 +149,26 @@ const useFlashcardStats = (
     incorrect: ExtendedVocabularyItem[];
   }) => void,
   onSaveWord?: (word: ExtendedVocabularyItem) => void,
-  onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void
+  onCardReview?: (word: ExtendedVocabularyItem, result: boolean | number) => void,
+  resumeSnapshot?: FlashcardSessionSnapshot | null
 ) => {
-  const [isRandom, setIsRandom] = useState(settings.flashcard.random);
-  const [words, setWords] = useState<ExtendedVocabularyItem[]>(() =>
-    settings.flashcard.random ? [...initialWords].sort(() => Math.random() - 0.5) : initialWords
-  );
+  const [isRandom, setIsRandom] = useState(resumeSnapshot?.isRandom ?? settings.flashcard.random);
+  const [words, setWords] = useState<ExtendedVocabularyItem[]>(() => {
+    if (resumeSnapshot && resumeSnapshot.orderedWordIds.length > 0) {
+      const map = new Map(initialWords.map(word => [word.id, word]));
+      const restored = resumeSnapshot.orderedWordIds
+        .map(id => map.get(id))
+        .filter((word): word is ExtendedVocabularyItem => Boolean(word));
+      if (restored.length > 0) {
+        const restoredIds = new Set(restored.map(word => word.id));
+        const tail = initialWords.filter(word => !restoredIds.has(word.id));
+        return [...restored, ...tail];
+      }
+    }
+    return settings.flashcard.random
+      ? [...initialWords].sort(() => Math.random() - 0.5)
+      : initialWords;
+  });
 
   const [cardIndex, setCardIndex] = useState(() => {
     if (storageKey) {
@@ -155,16 +184,31 @@ const useFlashcardStats = (
         }
       }
     }
+    if (resumeSnapshot) {
+      const maxIndex = Math.max(0, initialWords.length - 1);
+      return Math.max(0, Math.min(resumeSnapshot.cardIndex, maxIndex));
+    }
     return 0;
   });
 
   const [isFlipped, setIsFlipped] = useState(false);
-  const [history, setHistory] = useState<number[]>([]);
-  const [trackProgress, setTrackProgress] = useState(true);
+  const [history, setHistory] = useState<number[]>(resumeSnapshot?.history ?? []);
+  const [trackProgress, setTrackProgress] = useState(resumeSnapshot?.trackProgress ?? true);
   const [sessionStats, setSessionStats] = useState<{
     correct: ExtendedVocabularyItem[];
     incorrect: ExtendedVocabularyItem[];
   }>(() => {
+    if (resumeSnapshot) {
+      const map = new Map(initialWords.map(word => [word.id, word]));
+      return {
+        correct: resumeSnapshot.stats.correctWordIds
+          .map(id => map.get(id))
+          .filter((word): word is ExtendedVocabularyItem => Boolean(word)),
+        incorrect: resumeSnapshot.stats.incorrectWordIds
+          .map(id => map.get(id))
+          .filter((word): word is ExtendedVocabularyItem => Boolean(word)),
+      };
+    }
     if (storageKey) {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -249,16 +293,21 @@ const useFlashcardStats = (
     setIsRandom(prev => {
       const newRandom = !prev;
       if (newRandom) {
-        setWords([...initialWords].sort(() => Math.random() - 0.5));
+        const completed = words.slice(0, cardIndex);
+        const remaining = words.slice(cardIndex);
+        const shuffledRemaining = [...remaining].sort(() => Math.random() - 0.5);
+        setWords([...completed, ...shuffledRemaining]);
       } else {
-        setWords(initialWords);
+        const completedIds = new Set(words.slice(0, cardIndex).map(word => word.id));
+        const completed = initialWords.filter(word => completedIds.has(word.id));
+        const remaining = initialWords.filter(word => !completedIds.has(word.id));
+        const reordered = [...completed, ...remaining];
+        setWords(reordered);
+        setCardIndex(reordered.length > 0 ? Math.min(completed.length, reordered.length - 1) : 0);
       }
-      setCardIndex(0);
-      setHistory([]);
-      setSessionStats({ correct: [], incorrect: [] });
       return newRandom;
     });
-  }, [initialWords]);
+  }, [initialWords, words, cardIndex]);
 
   return {
     words,
@@ -649,6 +698,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     onSpeak,
     courseId,
     progressKey,
+    resumeSnapshot,
+    onSessionSnapshot,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
@@ -678,7 +729,15 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       handleCardRate,
       handleUndo,
       toggleRandom,
-    } = useFlashcardStats(initialWords, settings, storageKey, onComplete, onSaveWord, onCardReview);
+    } = useFlashcardStats(
+      initialWords,
+      settings,
+      storageKey,
+      onComplete,
+      onSaveWord,
+      onCardReview,
+      resumeSnapshot
+    );
 
     const { dragOffset, isDragging, handleDragStart, handleDragMove, handleDragEnd } =
       useFlashcardDrag(handleCardRate);
@@ -692,6 +751,28 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     } = useFlashcardFullscreen(setSidebarHidden, sidebarHidden);
 
     useEffect(() => stopTTS, [stopTTS]);
+
+    useEffect(() => {
+      if (!onSessionSnapshot) return;
+      if (words.length === 0) return;
+
+      const timer = setTimeout(() => {
+        onSessionSnapshot({
+          cardIndex,
+          isRandom,
+          trackProgress,
+          orderedWordIds: words.map(word => word.id),
+          history,
+          stats: {
+            correctWordIds: sessionStats.correct.map(word => word.id),
+            incorrectWordIds: sessionStats.incorrect.map(word => word.id),
+          },
+          timestamp: Date.now(),
+        });
+      }, 900);
+
+      return () => clearTimeout(timer);
+    }, [onSessionSnapshot, words, cardIndex, isRandom, trackProgress, history, sessionStats]);
 
     const speakKorean = useCallback(
       (text: string) => {

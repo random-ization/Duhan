@@ -653,7 +653,7 @@ export default defineSchema({
     userId: v.id('users'),
     instituteId: v.string(),
     unitId: v.number(), // ALL is represented by -1
-    mode: v.union(v.literal('LEARN'), v.literal('TEST')),
+    mode: v.union(v.literal('FLASHCARD'), v.literal('LEARN'), v.literal('TEST')),
     status: v.union(v.literal('ACTIVE'), v.literal('COMPLETED'), v.literal('ABANDONED')),
     snapshot: v.optional(v.any()),
     startedAt: v.number(),

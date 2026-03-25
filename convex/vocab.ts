@@ -2289,7 +2289,11 @@ export const updateVocab = mutation({
   },
 });
 
-const learningSessionModeValidator = v.union(v.literal('LEARN'), v.literal('TEST'));
+const learningSessionModeValidator = v.union(
+  v.literal('FLASHCARD'),
+  v.literal('LEARN'),
+  v.literal('TEST')
+);
 
 const learningSessionSnapshotValidator = v.object({
   wordIds: v.array(v.string()),
