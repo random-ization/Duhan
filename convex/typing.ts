@@ -38,15 +38,18 @@ export const listTexts = query({
       if (args.onlyPublic) {
         articleQuery = articleQuery.filter(q => q.eq(q.field('isPublic'), true));
       }
-      const articleResults = await articleQuery.order('desc').paginate(args.paginationOpts);
+      const articlePage = await articleQuery.order('desc').take(args.paginationOpts.numItems);
       return args.onlyPublic
         ? {
-            ...articleResults,
-            page: (articleResults.page as Array<{ isPublic?: boolean }>).filter(
+            ...results,
+            page: (articlePage as Array<{ isPublic?: boolean }>).filter(
               (text: { isPublic?: boolean }) => text.isPublic === true
             ),
           }
-        : articleResults;
+        : {
+            ...results,
+            page: articlePage,
+          };
     }
 
     // In-memory filter for combinations that might be missed by simple .filter() or if complex

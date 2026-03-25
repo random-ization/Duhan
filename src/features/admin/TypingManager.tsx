@@ -30,11 +30,13 @@ export const TypingManager: React.FC = () => {
     categories.length > 0
       ? categories
       : Array.from(
-        new Set(textsResult?.page.map((t: any) => t.category).filter(Boolean) as string[])
-      );
+          new Set(
+            (textsResult?.page?.map((t: any) => t.category).filter(Boolean) ?? []) as string[]
+          )
+        );
 
   // Filtered data
-  const filteredTexts = textsResult?.page.filter((text: any) => {
+  const filteredTexts = textsResult?.page?.filter((text: any) => {
     const matchesSearch =
       text.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (text.content.length < 100 && text.content.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -78,9 +80,7 @@ export const TypingManager: React.FC = () => {
     }
 
     if (filteredTexts?.length === 0) {
-      return (
-        <div className="p-12 text-center text-zinc-400 italic">暂无内容，点击右上角新建</div>
-      );
+      return <div className="p-12 text-center text-zinc-400 italic">暂无内容，点击右上角新建</div>;
     }
 
     return (
@@ -119,28 +119,31 @@ export const TypingManager: React.FC = () => {
         <div className="flex border-b-2 border-zinc-900 bg-zinc-50">
           <button
             onClick={() => setActiveTab('WORD')}
-            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'WORD' ? 'bg-white text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'
-              }`}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${
+              activeTab === 'WORD' ? 'bg-white text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'
+            }`}
           >
             单词 (Word)
           </button>
           <div className="w-[2px] bg-zinc-900" />
           <button
             onClick={() => setActiveTab('SENTENCE')}
-            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'SENTENCE'
-              ? 'bg-white text-zinc-900'
-              : 'text-zinc-500 hover:text-zinc-700'
-              }`}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${
+              activeTab === 'SENTENCE'
+                ? 'bg-white text-zinc-900'
+                : 'text-zinc-500 hover:text-zinc-700'
+            }`}
           >
             句子 (Sentence)
           </button>
           <div className="w-[2px] bg-zinc-900" />
           <button
             onClick={() => setActiveTab('ARTICLE')}
-            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${activeTab === 'ARTICLE'
-              ? 'bg-white text-zinc-900'
-              : 'text-zinc-500 hover:text-zinc-700'
-              }`}
+            className={`flex-1 py-4 text-center font-bold text-sm uppercase tracking-wide transition-colors ${
+              activeTab === 'ARTICLE'
+                ? 'bg-white text-zinc-900'
+                : 'text-zinc-500 hover:text-zinc-700'
+            }`}
           >
             长文 (Article)
           </button>
