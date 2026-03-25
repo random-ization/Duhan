@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Search, Loader2, ExternalLink } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,12 +8,15 @@ import { cleanDictionaryText } from '../../utils/dictionaryMeaning';
 import { Button } from '../ui';
 import { Input } from '../ui';
 import { DropdownMenu, DropdownMenuAnchor, DropdownMenuContent } from '../ui';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui';
 
 type DictionaryEntry = {
   targetCode: string;
   word: string;
   pronunciation?: string;
+  wordGrade?: string;
   pos?: string;
+  link?: string;
   senses: Array<{
     order: number;
     definition: string;
@@ -36,6 +39,12 @@ const DictionarySearchDropdown: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const searchRequestRef = useRef(0);
+  const detailRequestRef = useRef(0);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailEntry, setDetailEntry] = useState<DictionaryEntry | null>(null);
 
   const searchDictionary = useAction(
     aRef<
@@ -51,6 +60,12 @@ const DictionarySearchDropdown: React.FC = () => {
     >('dictionary:searchDictionary')
   );
 
+  const getWordDetail = useAction(
+    aRef<{ targetCode: string; translationLang?: string }, DictionaryEntry | null>(
+      'dictionary:getWordDetail'
+    )
+  );
+
   const translationLang = useMemo(() => {
     if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
       return language;
@@ -61,6 +76,9 @@ const DictionarySearchDropdown: React.FC = () => {
   const runSearch = useCallback(
     async (q: string) => {
       const trimmed = q.trim();
+      const requestId = searchRequestRef.current + 1;
+      searchRequestRef.current = requestId;
+
       if (trimmed.length < 2) {
         setResults(null);
         setError(null);
@@ -71,19 +89,33 @@ const DictionarySearchDropdown: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await searchDictionary({
+        const baseArgs = {
           query: trimmed,
           translationLang,
           num: 8,
-          sort: 'popular',
-        });
+          part: 'word' as const,
+          sort: 'popular' as const,
+        };
+
+        let res = await searchDictionary(baseArgs);
+        if (!res.entries.length) {
+          res = await searchDictionary({ ...baseArgs, sort: 'dict' });
+        }
+        if (!res.entries.length) {
+          res = await searchDictionary({ ...baseArgs, part: undefined, sort: 'dict' });
+        }
+
+        if (searchRequestRef.current !== requestId) return;
         setResults(res);
       } catch (e: unknown) {
+        if (searchRequestRef.current !== requestId) return;
         const msg = e instanceof Error ? e.message : String(e);
         setResults(null);
         setError(msg || t('dashboard.dictionary.error', { defaultValue: 'Search failed' }));
       } finally {
-        setLoading(false);
+        if (searchRequestRef.current === requestId) {
+          setLoading(false);
+        }
       }
     },
     [searchDictionary, t, translationLang]
@@ -98,6 +130,44 @@ const DictionarySearchDropdown: React.FC = () => {
   }, [open, query, runSearch]);
 
   const entries = results?.entries ?? [];
+
+  const detailSenses = useMemo(() => {
+    if (!detailEntry?.senses?.length) return [];
+    return detailEntry.senses
+      .slice()
+      .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
+  }, [detailEntry]);
+
+  const handleOpenDetail = useCallback(
+    async (entry: DictionaryEntry) => {
+      setDetailOpen(true);
+      setDetailLoading(true);
+      setDetailError(null);
+      setDetailEntry(entry);
+
+      const requestId = detailRequestRef.current + 1;
+      detailRequestRef.current = requestId;
+
+      try {
+        const full = await getWordDetail({ targetCode: entry.targetCode, translationLang });
+        if (detailRequestRef.current !== requestId) return;
+        if (full) {
+          setDetailEntry(full);
+          return;
+        }
+        setDetailError(t('dashboard.dictionary.noResults', { defaultValue: 'No results found' }));
+      } catch (e: unknown) {
+        if (detailRequestRef.current !== requestId) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        setDetailError(msg || t('dashboard.dictionary.error', { defaultValue: 'Search failed' }));
+      } finally {
+        if (detailRequestRef.current === requestId) {
+          setDetailLoading(false);
+        }
+      }
+    },
+    [getWordDetail, t, translationLang]
+  );
 
   const renderDropdownContent = () => {
     if (error) {
@@ -124,26 +194,41 @@ const DictionarySearchDropdown: React.FC = () => {
           const meaning = cleanDictionaryText(rawMeaning);
           return (
             <li key={entry.targetCode}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => {
-                  setQuery(entry.word);
-                  setOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-accent"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="font-black text-foreground">{entry.word}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {entry.pos || entry.pronunciation || ''}
+              <div className="px-3 py-2 hover:bg-accent">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => {
+                    setQuery(entry.word);
+                    setOpen(false);
+                  }}
+                  className="w-full text-left p-0"
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="font-black text-foreground">{entry.word}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {entry.pos || entry.pronunciation || ''}
+                    </div>
                   </div>
+                  {meaning && (
+                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      {meaning}
+                    </div>
+                  )}
+                </Button>
+                <div className="mt-1 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => void handleOpenDetail(entry)}
+                    className="h-6 px-2 rounded-md border border-border bg-muted text-[11px] font-bold"
+                  >
+                    {t('common.details', { defaultValue: 'Details' })}
+                  </Button>
                 </div>
-                {meaning && (
-                  <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{meaning}</div>
-                )}
-              </Button>
+              </div>
             </li>
           );
         })}
@@ -186,6 +271,91 @@ const DictionarySearchDropdown: React.FC = () => {
           {renderDropdownContent()}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="w-[min(92vw,700px)] max-h-[85vh] overflow-hidden p-0">
+          <div className="border-b border-border px-5 py-4">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-foreground">
+                {detailEntry?.word ||
+                  t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground font-semibold">
+                {[detailEntry?.pronunciation, detailEntry?.pos, detailEntry?.wordGrade]
+                  .filter(Boolean)
+                  .join(' · ') ||
+                  t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="px-5 py-4 overflow-y-auto max-h-[calc(85vh-110px)]">
+            {detailLoading && (
+              <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm font-semibold">
+                  {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
+                </span>
+              </div>
+            )}
+
+            {!detailLoading && detailError && (
+              <div className="rounded-xl border border-rose-200 dark:border-rose-300/35 bg-rose-50 dark:bg-rose-400/12 p-4 text-sm font-semibold text-rose-700 dark:text-rose-200">
+                {detailError}
+              </div>
+            )}
+
+            {!detailLoading && !detailError && detailSenses.length > 0 && (
+              <div className="space-y-3">
+                {detailSenses.map((sense, idx) => (
+                  <section
+                    key={`${detailEntry?.targetCode || 'detail'}-${sense.order}-${idx}`}
+                    className="rounded-xl border border-border bg-muted/30 p-4"
+                  >
+                    <div className="text-xs font-black text-muted-foreground mb-2">
+                      {t('dashboard.dictionary.sense', { defaultValue: 'Sense' })}{' '}
+                      {sense.order || idx + 1}
+                    </div>
+                    {sense.translation?.word && (
+                      <p className="text-sm font-bold text-foreground">{sense.translation.word}</p>
+                    )}
+                    <p className="text-sm text-foreground leading-relaxed mt-1">
+                      {cleanDictionaryText(
+                        sense.translation?.definition ||
+                          sense.definition ||
+                          sense.translation?.word ||
+                          ''
+                      ) ||
+                        t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
+                    </p>
+                    {sense.definition && (
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                        {cleanDictionaryText(sense.definition)}
+                      </p>
+                    )}
+                  </section>
+                ))}
+              </div>
+            )}
+
+            {!detailLoading && !detailError && detailEntry?.link && (
+              <div className="mt-4">
+                <a
+                  href={detailEntry.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                >
+                  {t('dashboard.dictionary.viewSource', {
+                    defaultValue: 'Open official dictionary source',
+                  })}
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

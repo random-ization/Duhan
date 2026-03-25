@@ -365,6 +365,11 @@
   "documentNotFound": "文档未找到",
   "documentNotFoundDesc": "请求的文档无法找到。",
   "lastUpdated": "最后更新",
+  "relativeTime": {
+    "justNow": "刚刚更新",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
+  },
   "preview": "预览",
   "markdownTip": "格式提示：使用 # 表示标题（# H1，## H2，### H3），- 或 * 表示列表，1. 表示编号列表，空行表示段落",
   "enterTitle": "输入文档标题",
@@ -452,7 +457,9 @@
     "viewAll": "查看全部",
     "noGrammar": "暂无语法数据",
     "status": {
-      "mastered": "已掌握",
+      "dueCount": "{{count}} 待复习",
+      "mastered": "已掌握单词",
+      "masteredCount": "{{count}} 已掌握",
       "learning": "学习中",
       "notStarted": "未学习"
     }
@@ -780,8 +787,9 @@
     "vocab": {
       "label": "生词本",
       "title": "我的生词",
-      "subtitle": "收藏的单词和释义",
       "count": "{count} 个生词",
+      "dueCount": "{{count}} 待复习",
+      "masteredCount": "{{count}} 已掌握",
       "currentScope": "当前范围",
       "allUnits": "全册单词",
       "mastery": "掌握程度",

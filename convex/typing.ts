@@ -25,25 +25,37 @@ export const listTexts = query({
       q = ctx.db.query('typing_texts').withIndex('by_createdAt');
     }
 
-    // Filter by public status if requested
-    if (args.onlyPublic && !args.type && !args.category) {
-      // If no other specific index is used, we can potentially use by_public,
-      // but we already chose by_createdAt above.
-      // To use by_public more effectively we would need to restructure.
-      // For now, let's just stick to the index chosen above and filter in memory if mixed,
-      // or if it was the default path, we could have chosen by_public.
-      // However, let's keep it simple and filter results page for safety, or use filter() if Query supports it (Convex Query supports .filter() but only for full table scans or after index).
-      // Note: .filter() in Convex is powerful.
+    if (args.onlyPublic) {
       q = q.filter(q => q.eq(q.field('isPublic'), true));
     }
 
     const results = await q.order('desc').paginate(args.paginationOpts);
 
+    if (args.type === 'SENTENCE' && results.page.length === 0) {
+      let articleQuery = ctx.db
+        .query('typing_texts')
+        .withIndex('by_type', q => q.eq('type', 'ARTICLE'));
+      if (args.onlyPublic) {
+        articleQuery = articleQuery.filter(q => q.eq(q.field('isPublic'), true));
+      }
+      const articleResults = await articleQuery.order('desc').paginate(args.paginationOpts);
+      return args.onlyPublic
+        ? {
+            ...articleResults,
+            page: (articleResults.page as Array<{ isPublic?: boolean }>).filter(
+              (text: { isPublic?: boolean }) => text.isPublic === true
+            ),
+          }
+        : articleResults;
+    }
+
     // In-memory filter for combinations that might be missed by simple .filter() or if complex
     if (args.onlyPublic) {
       return {
         ...results,
-        page: results.page.filter(text => text.isPublic === true),
+        page: (results.page as Array<{ isPublic?: boolean }>).filter(
+          (text: { isPublic?: boolean }) => text.isPublic === true
+        ),
       };
     }
 

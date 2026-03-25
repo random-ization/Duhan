@@ -541,11 +541,23 @@ const SELECT_BOX_CLASS =
 const SENTENCE_SELECT_CLASS =
   'h-auto w-full appearance-none bg-card rounded-2xl p-3 pl-12 pr-8 border border-border shadow-sm text-xs font-bold text-muted-foreground outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-300/40 cursor-pointer';
 
-const splitTypingSentences = (content: string): string[] =>
-  content
+const splitTypingSentences = (content: string): string[] => {
+  const lines = content
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean);
+  if (lines.length > 1) return lines;
+
+  const normalized = content.replace(/\s+/g, ' ').trim();
+  if (!normalized) return [];
+
+  const sentenceLike = normalized
+    .split(/(?<=[.!?。！？])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  return sentenceLike.length > 0 ? sentenceLike : [normalized];
+};
 
 type TargetChar = {
   char: string;
@@ -1529,12 +1541,12 @@ const DesktopTypingPage: React.FC = () => {
   );
   const sentenceTextsResult = useQuery(api.typing.listTexts, {
     type: 'SENTENCE',
-    onlyPublic: true,
+    onlyPublic: user?.role === 'ADMIN' ? undefined : true,
     paginationOpts: { numItems: 200, cursor: null },
   });
   const articleTextsResult = useQuery(api.typing.listTexts, {
     type: 'ARTICLE',
-    onlyPublic: true,
+    onlyPublic: user?.role === 'ADMIN' ? undefined : true,
     paginationOpts: { numItems: 200, cursor: null },
   });
 
@@ -1583,11 +1595,11 @@ const DesktopTypingPage: React.FC = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   const sentenceCategories = useMemo<PracticeCategory[]>(() => {
-    const page = (sentenceTextsResult?.page ?? []) as TypingTextRecord[];
-    if (page.length === 0) return PRACTICE_CATEGORIES;
+    const sentencePage = (sentenceTextsResult?.page ?? []) as TypingTextRecord[];
+    const articlePage = (articleTextsResult?.page ?? []) as TypingTextRecord[];
 
     const grouped = new Map<string, PracticeCategory>();
-    page.forEach(text => {
+    sentencePage.forEach(text => {
       const rawCategory = text.category?.trim() || 'Custom';
       const key = rawCategory.toLowerCase();
       const sentences = splitTypingSentences(text.content);
@@ -1607,9 +1619,27 @@ const DesktopTypingPage: React.FC = () => {
       item.sentences.push(...sentences);
     });
 
-    const built = Array.from(grouped.values()).filter(category => category.sentences.length > 0);
-    return built.length > 0 ? built : PRACTICE_CATEGORIES;
-  }, [sentenceTextsResult]);
+    const sentenceCategoriesBuilt = Array.from(grouped.values()).filter(
+      category => category.sentences.length > 0
+    );
+
+    const articleCategoriesBuilt = articlePage
+      .map(text => {
+        const sentences = splitTypingSentences(text.content);
+        if (sentences.length === 0) return null;
+        return {
+          id: `article-${text._id}`,
+          title: text.title || 'Article Sentences',
+          description: text.description || 'Sentences extracted from article content',
+          icon: '📰',
+          sentences,
+        } as PracticeCategory;
+      })
+      .filter((item): item is PracticeCategory => Boolean(item));
+
+    const merged = [...sentenceCategoriesBuilt, ...articleCategoriesBuilt];
+    return merged.length > 0 ? merged : PRACTICE_CATEGORIES;
+  }, [sentenceTextsResult, articleTextsResult]);
 
   const practiceParagraphs = useMemo<PracticeParagraph[]>(() => {
     const page = (articleTextsResult?.page ?? []) as TypingTextRecord[];
@@ -1626,6 +1656,16 @@ const DesktopTypingPage: React.FC = () => {
 
     return built.length > 0 ? built : PRACTICE_PARAGRAPHS;
   }, [articleTextsResult]);
+
+  const effectiveSelectedCategory =
+    selectedCategory && sentenceCategories.some(item => item.id === selectedCategory.id)
+      ? selectedCategory
+      : sentenceCategories[0] || null;
+
+  const effectiveSelectedParagraph =
+    selectedParagraph && practiceParagraphs.some(item => item.id === selectedParagraph.id)
+      ? selectedParagraph
+      : practiceParagraphs[0] || null;
 
   // Hide main app sidebar when playing, show when in lobby
   // Hide main app sidebar AND footer when playing/on page
@@ -1663,7 +1703,7 @@ const DesktopTypingPage: React.FC = () => {
   };
 
   const nextSentence = useCallback(() => {
-    if (!selectedCategory) return;
+    if (!effectiveSelectedCategory) return;
 
     // Track completed sentence
     setSentencesCompleted(prev => prev + 1);
@@ -1671,7 +1711,9 @@ const DesktopTypingPage: React.FC = () => {
 
     // Remove first, add one new
     const newSentence =
-      selectedCategory.sentences[Math.floor(Math.random() * selectedCategory.sentences.length)];
+      effectiveSelectedCategory.sentences[
+        Math.floor(Math.random() * effectiveSelectedCategory.sentences.length)
+      ];
     const nextQueue = [...sentenceQueue.slice(1), newSentence];
 
     setSentenceQueue(nextQueue);
@@ -1682,7 +1724,7 @@ const DesktopTypingPage: React.FC = () => {
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
-  }, [selectedCategory, sentenceQueue, targetText, reset, inputRef]);
+  }, [effectiveSelectedCategory, sentenceQueue, targetText, reset, inputRef]);
 
   // End session and show results
   const endSession = useCallback(async () => {
@@ -1697,10 +1739,10 @@ const DesktopTypingPage: React.FC = () => {
 
     // Save to database
     try {
-      if (selectedCategory) {
+      if (effectiveSelectedCategory) {
         await saveTypingRecord({
           practiceMode,
-          categoryId: selectedCategory.id,
+          categoryId: effectiveSelectedCategory.id,
           wpm: finalStats.wpm,
           accuracy: finalStats.accuracy,
           errorCount: finalStats.errorCount,
@@ -1717,7 +1759,7 @@ const DesktopTypingPage: React.FC = () => {
   }, [
     stats,
     elapsedTime,
-    selectedCategory,
+    effectiveSelectedCategory,
     practiceMode,
     saveTypingRecord,
     totalCharactersTyped,
@@ -1728,8 +1770,8 @@ const DesktopTypingPage: React.FC = () => {
   // Handle modal actions
   const handleRetry = () => {
     setShowResultsModal(false);
-    if (selectedCategory) {
-      startGame(selectedCategory);
+    if (effectiveSelectedCategory) {
+      startGame(effectiveSelectedCategory);
     }
   };
 
@@ -1883,7 +1925,7 @@ const DesktopTypingPage: React.FC = () => {
       setElapsedTime,
       setSentencesCompleted,
       setTotalCharactersTyped,
-      selectedCategory,
+      selectedCategory: effectiveSelectedCategory,
       setSelectedCategory,
       sentenceQueue,
       setSentenceQueue,
@@ -1900,7 +1942,7 @@ const DesktopTypingPage: React.FC = () => {
       setElapsedTime,
       setSentencesCompleted,
       setTotalCharactersTyped,
-      selectedParagraph,
+      selectedParagraph: effectiveSelectedParagraph,
       setSelectedParagraph,
       setTargetText,
       paragraphs: practiceParagraphs,
@@ -1984,11 +2026,11 @@ const DesktopTypingPage: React.FC = () => {
         selectedUnitId={selectedUnitId}
         onUnitChange={handleUnitChange}
         paragraphs={practiceParagraphs}
-        selectedParagraphId={selectedParagraph?.id || ''}
+        selectedParagraphId={effectiveSelectedParagraph?.id || ''}
         onParagraphChange={handleParagraphChange}
         sentenceCategories={sentenceCategories}
-        selectedCategoryId={selectedCategory?.id || ''}
-        selectedCategoryIcon={selectedCategory?.icon || '📝'}
+        selectedCategoryId={effectiveSelectedCategory?.id || ''}
+        selectedCategoryIcon={effectiveSelectedCategory?.icon || '📝'}
         onCategoryChange={handleCategoryChange}
         elapsedTime={elapsedTime}
         formatTime={formatTime}
@@ -2006,7 +2048,7 @@ const DesktopTypingPage: React.FC = () => {
         userInput={userInput}
         isFocused={isFocused}
         onFocusInput={() => inputRef.current?.focus()}
-        selectedParagraphTitle={selectedParagraph?.title}
+        selectedParagraphTitle={effectiveSelectedParagraph?.title}
         sentenceQueue={sentenceQueue}
         nextJamo={nextJamo}
         currentTargetChar={currentTargetChar}

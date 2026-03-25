@@ -365,6 +365,11 @@
   "documentNotFound": "Document Not Found",
   "documentNotFoundDesc": "The requested document could not be found.",
   "lastUpdated": "Last updated",
+  "relativeTime": {
+    "justNow": "Just now",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago"
+  },
   "preview": "Preview",
   "markdownTip": "Formatting tips: Use # for headings (# H1, ## H2, ### H3), - or * for bullet lists, 1. for numbered lists, blank lines for paragraphs",
   "enterTitle": "Enter document title",
@@ -781,8 +786,9 @@
     "vocab": {
       "label": "Vocab",
       "title": "My Vocab",
-      "subtitle": "Saved words and meanings",
       "count": "{count} saved words",
+      "dueCount": "{{count}} due",
+      "masteredCount": "{{count}} mastered",
       "currentScope": "Current Scope",
       "allUnits": "All Units",
       "mastery": "Mastery",
