@@ -53,7 +53,7 @@ describe('GrammarDirectorySidebar', () => {
     expect(screen.getByText('New')).toBeInTheDocument();
 
     const selected = screen.getByText('~하기에').closest('button');
-    expect(selected?.className).toContain('bg-blue-50');
+    expect(selected?.className).toContain('from-indigo-600');
   });
 
   it('filters grammar list by search query', () => {

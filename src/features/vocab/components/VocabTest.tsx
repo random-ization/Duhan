@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';
 import type { Language } from '../../../types';
 import { getLabels, Labels } from '../../../utils/i18n';
@@ -82,8 +82,24 @@ type Props = Readonly<{
   scopeTitle: string;
   onClose?: () => void;
   onFsrsReview?: (wordId: string, isCorrect: boolean) => void;
+  onComplete?: () => void;
   showCloseButton?: boolean;
+  resumeSnapshot?: VocabTestSessionSnapshot | null;
+  onSessionSnapshot?: (snapshot: VocabTestSessionSnapshot) => void;
 }>;
+
+export type VocabTestSessionSnapshot = {
+  stage: 'RUNNING';
+  answerLanguage: AnswerLanguage;
+  enabledTypes: EnabledTypes;
+  questionCount: number;
+  cards: TestCard[];
+  activeCardIndex: number;
+  answers: Partial<Record<string, TestCardAnswer>>;
+  startedAt: number | null;
+  submitAttempted: boolean;
+  timestamp: number;
+};
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   const arr = [...array];
@@ -856,21 +872,32 @@ export default function VocabTest({
   scopeTitle,
   onClose,
   onFsrsReview,
+  onComplete,
   showCloseButton = true,
+  resumeSnapshot,
+  onSessionSnapshot,
 }: Props) {
+  const initialResume =
+    resumeSnapshot && resumeSnapshot.stage === 'RUNNING' ? resumeSnapshot : null;
   const labels = useMemo(() => getLabels(language), [language]);
   const maxQuestions = words.length;
 
-  const [stage, setStage] = useState<TestStage>('SETTINGS');
-  const [answerLanguage, setAnswerLanguage] = useState<AnswerLanguage>('KOREAN');
-  const [enabledTypes, setEnabledTypes] = useState<EnabledTypes>({
-    TRUE_FALSE: false,
-    MULTIPLE_CHOICE: true,
-    FILL_10: false,
-    WRITTEN: false,
-  });
+  const [stage, setStage] = useState<TestStage>(initialResume ? 'RUNNING' : 'SETTINGS');
+  const [answerLanguage, setAnswerLanguage] = useState<AnswerLanguage>(
+    initialResume?.answerLanguage ?? 'KOREAN'
+  );
+  const [enabledTypes, setEnabledTypes] = useState<EnabledTypes>(
+    initialResume?.enabledTypes ?? {
+      TRUE_FALSE: false,
+      MULTIPLE_CHOICE: true,
+      FILL_10: false,
+      WRITTEN: false,
+    }
+  );
 
-  const [questionCount, setQuestionCount] = useState(() => Math.min(30, Math.max(1, maxQuestions)));
+  const [questionCount, setQuestionCount] = useState(
+    () => initialResume?.questionCount ?? Math.min(30, Math.max(1, maxQuestions))
+  );
   const effectiveQuestionCount = useMemo(() => {
     return Math.min(Math.max(1, questionCount), Math.max(1, maxQuestions));
   }, [maxQuestions, questionCount]);
@@ -1072,12 +1099,14 @@ export default function VocabTest({
     wordsWithNative,
   ]);
 
-  const [cards, setCards] = useState<TestCard[]>([]);
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [answers, setAnswers] = useState<Partial<Record<string, TestCardAnswer>>>({});
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [cards, setCards] = useState<TestCard[]>(initialResume?.cards ?? []);
+  const [activeCardIndex, setActiveCardIndex] = useState(initialResume?.activeCardIndex ?? 0);
+  const [answers, setAnswers] = useState<Partial<Record<string, TestCardAnswer>>>(
+    initialResume?.answers ?? {}
+  );
+  const [startedAt, setStartedAt] = useState<number | null>(initialResume?.startedAt ?? null);
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(initialResume?.submitAttempted ?? false);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -1101,7 +1130,8 @@ export default function VocabTest({
   const toResult = useCallback(() => {
     setFinishedAt(Date.now());
     setStage('RESULT');
-  }, []);
+    onComplete?.();
+  }, [onComplete]);
 
   const goToCard = useCallback(
     (idx: number) => {
@@ -1169,6 +1199,55 @@ export default function VocabTest({
   const onSetCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     cardRefs.current[id] = el;
   }, []);
+
+  const buildSnapshot = useCallback((): VocabTestSessionSnapshot | null => {
+    if (stage !== 'RUNNING' || cards.length === 0) return null;
+    return {
+      stage: 'RUNNING',
+      answerLanguage,
+      enabledTypes,
+      questionCount,
+      cards,
+      activeCardIndex,
+      answers,
+      startedAt,
+      submitAttempted,
+      timestamp: Date.now(),
+    };
+  }, [
+    stage,
+    cards,
+    answerLanguage,
+    enabledTypes,
+    questionCount,
+    activeCardIndex,
+    answers,
+    startedAt,
+    submitAttempted,
+  ]);
+
+  useEffect(() => {
+    if (!onSessionSnapshot) return;
+    const timer = setTimeout(() => {
+      const snapshot = buildSnapshot();
+      if (snapshot) onSessionSnapshot(snapshot);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [onSessionSnapshot, buildSnapshot]);
+
+  useEffect(() => {
+    if (!onSessionSnapshot) return;
+    const onLeave = () => {
+      const snapshot = buildSnapshot();
+      if (snapshot) onSessionSnapshot(snapshot);
+    };
+    window.addEventListener('pagehide', onLeave);
+    window.addEventListener('beforeunload', onLeave);
+    return () => {
+      window.removeEventListener('pagehide', onLeave);
+      window.removeEventListener('beforeunload', onLeave);
+    };
+  }, [onSessionSnapshot, buildSnapshot]);
 
   const renderStage = () => {
     switch (stage) {

@@ -648,6 +648,21 @@ export default defineSchema({
     .index('by_user_course', ['userId', 'courseId'])
     .index('by_user', ['userId']),
 
+  // User vocab learning sessions (resume support)
+  vocab_learning_sessions: defineTable({
+    userId: v.id('users'),
+    instituteId: v.string(),
+    unitId: v.number(), // ALL is represented by -1
+    mode: v.union(v.literal('LEARN'), v.literal('TEST')),
+    status: v.union(v.literal('ACTIVE'), v.literal('COMPLETED'), v.literal('ABANDONED')),
+    snapshot: v.optional(v.any()),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index('by_user_status_updatedAt', ['userId', 'status', 'updatedAt'])
+    .index('by_user_scope_mode', ['userId', 'instituteId', 'unitId', 'mode']),
+
   // Notebooks (User Notes)
   notebooks: defineTable({
     userId: v.id('users'),

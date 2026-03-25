@@ -2288,3 +2288,156 @@ export const updateVocab = mutation({
     return { success: true, wordId };
   },
 });
+
+const learningSessionModeValidator = v.union(v.literal('LEARN'), v.literal('TEST'));
+
+const learningSessionSnapshotValidator = v.object({
+  wordIds: v.array(v.string()),
+  questionIndex: v.number(),
+  wrongWordIds: v.array(v.string()),
+  correctCount: v.number(),
+  totalAnswered: v.number(),
+  currentBatchNum: v.number(),
+  settings: v.object({
+    multipleChoice: v.boolean(),
+    writingMode: v.boolean(),
+    mcDirection: v.union(v.literal('KR_TO_NATIVE'), v.literal('NATIVE_TO_KR')),
+    writingDirection: v.union(v.literal('KR_TO_NATIVE'), v.literal('NATIVE_TO_KR')),
+    autoTTS: v.boolean(),
+    soundEffects: v.boolean(),
+  }),
+  pendingAdvanceReason: v.optional(v.union(v.literal('WRONG'), v.literal('DONT_KNOW'))),
+  timestamp: v.number(),
+});
+
+export const getActiveLearningSession = query({
+  args: {
+    instituteId: v.string(),
+    unitId: v.number(),
+    mode: learningSessionModeValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return null;
+
+    const sessions = await ctx.db
+      .query('vocab_learning_sessions')
+      .withIndex('by_user_scope_mode', q =>
+        q
+          .eq('userId', userId)
+          .eq('instituteId', args.instituteId)
+          .eq('unitId', args.unitId)
+          .eq('mode', args.mode)
+      )
+      .collect();
+
+    const active = sessions
+      .filter(session => session.status === 'ACTIVE')
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+
+    if (!active) return null;
+
+    return {
+      id: active._id,
+      instituteId: active.instituteId,
+      unitId: active.unitId,
+      mode: active.mode,
+      status: active.status,
+      snapshot: active.snapshot,
+      startedAt: active.startedAt,
+      updatedAt: active.updatedAt,
+      completedAt: active.completedAt,
+    };
+  },
+});
+
+export const upsertLearningSession = mutation({
+  args: {
+    instituteId: v.string(),
+    unitId: v.number(),
+    mode: learningSessionModeValidator,
+    snapshot: learningSessionSnapshotValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const now = Date.now();
+
+    const sessions = await ctx.db
+      .query('vocab_learning_sessions')
+      .withIndex('by_user_scope_mode', q =>
+        q
+          .eq('userId', userId)
+          .eq('instituteId', args.instituteId)
+          .eq('unitId', args.unitId)
+          .eq('mode', args.mode)
+      )
+      .collect();
+
+    const active = sessions
+      .filter(session => session.status === 'ACTIVE')
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0];
+
+    if (active) {
+      await ctx.db.patch(active._id, {
+        snapshot: args.snapshot,
+        updatedAt: now,
+      });
+      return { success: true, sessionId: active._id, action: 'updated' as const };
+    }
+
+    const sessionId = await ctx.db.insert('vocab_learning_sessions', {
+      userId,
+      instituteId: args.instituteId,
+      unitId: args.unitId,
+      mode: args.mode,
+      status: 'ACTIVE',
+      snapshot: args.snapshot,
+      startedAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true, sessionId, action: 'created' as const };
+  },
+});
+
+export const completeLearningSession = mutation({
+  args: {
+    sessionId: v.id('vocab_learning_sessions'),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session || session.userId !== userId) {
+      return { success: false, reason: 'not_found' as const };
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.sessionId, {
+      status: 'COMPLETED',
+      completedAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  },
+});
+
+export const abandonLearningSession = mutation({
+  args: {
+    sessionId: v.id('vocab_learning_sessions'),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session || session.userId !== userId) {
+      return { success: false, reason: 'not_found' as const };
+    }
+
+    await ctx.db.patch(args.sessionId, {
+      status: 'ABANDONED',
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});

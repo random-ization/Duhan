@@ -3,6 +3,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   lazy,
   Suspense,
   type Dispatch,
@@ -34,8 +35,10 @@ const VocabMatch = lazy(() => import('../features/vocab/components/VocabMatch'))
 import MobileVocabView from '../components/mobile/MobileVocabView';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../components/ui';
-import { Button } from '../components/ui';
+import { Button, Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import type { LearningSessionSnapshot } from '../features/vocab/components/VocabQuiz';
+import type { VocabTestSessionSnapshot } from '../features/vocab/components/VocabTest';
 
 export interface ExtendedVocabItem extends VocabularyItem {
   id: string;
@@ -56,6 +59,7 @@ export interface ExtendedVocabItem extends VocabularyItem {
 
 type ViewMode = 'flashcard' | 'match';
 type TabId = ViewMode | 'learn' | 'test';
+type SessionMode = 'LEARN' | 'TEST';
 type LevelConfig = { level: number; units: number };
 type ViewState = {
   mode: ViewMode;
@@ -89,6 +93,29 @@ type InstituteLite = {
 };
 type LocalizedLanguageArg = Parameters<typeof getLocalizedContent>[2];
 
+const ALL_UNIT_SESSION_ID = -1;
+
+type ActiveLearningSession = {
+  id: string;
+  instituteId: string;
+  unitId: number;
+  mode: SessionMode;
+  status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+  snapshot?: unknown;
+  startedAt: number;
+  updatedAt: number;
+  completedAt?: number;
+};
+
+type ResumeCandidate = {
+  mode: SessionMode;
+  sessionId: string;
+  completed: number;
+  remaining: number;
+  total: number;
+  progressPercent: number;
+};
+
 const fallbackString = (value: string | undefined, fallback: string): string => value ?? fallback;
 
 const getReviewDeckArgs = (instituteId: string | undefined) =>
@@ -99,6 +126,36 @@ const getFsrsPersistKey = (instituteId: string | undefined): string =>
 
 const isWordsLoading = (queryResult: unknown, institutesLoading: boolean): boolean =>
   queryResult === undefined || institutesLoading;
+
+const normalizeUnitForSession = (unitId: number | 'ALL'): number =>
+  unitId === 'ALL' ? ALL_UNIT_SESSION_ID : unitId;
+
+const isLearningSessionSnapshot = (value: unknown): value is LearningSessionSnapshot => {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Partial<LearningSessionSnapshot>;
+  return (
+    Array.isArray(snapshot.wordIds) &&
+    typeof snapshot.questionIndex === 'number' &&
+    Array.isArray(snapshot.wrongWordIds) &&
+    typeof snapshot.correctCount === 'number' &&
+    typeof snapshot.totalAnswered === 'number' &&
+    typeof snapshot.currentBatchNum === 'number' &&
+    !!snapshot.settings &&
+    typeof snapshot.timestamp === 'number'
+  );
+};
+
+const isVocabTestSessionSnapshot = (value: unknown): value is VocabTestSessionSnapshot => {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Partial<VocabTestSessionSnapshot>;
+  return (
+    snapshot.stage === 'RUNNING' &&
+    typeof snapshot.questionCount === 'number' &&
+    typeof snapshot.activeCardIndex === 'number' &&
+    Array.isArray(snapshot.cards) &&
+    typeof snapshot.timestamp === 'number'
+  );
+};
 
 function buildTabs(
   labels: ReturnType<typeof getLabels>
@@ -260,6 +317,26 @@ export default function VocabModulePage() {
   const [redSheetActive, setRedSheetActive] = useState(true);
   const [learnOpen, setLearnOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const [resumeModePrompt, setResumeModePrompt] = useState<SessionMode | null>(null);
+  const [resumeCandidate, setResumeCandidate] = useState<ResumeCandidate | null>(null);
+  const [pendingUnitSwitch, setPendingUnitSwitch] = useState<number | 'ALL' | null>(null);
+
+  const [learnResumeSnapshotOverride, setLearnResumeSnapshotOverride] = useState<
+    LearningSessionSnapshot | null | undefined
+  >(undefined);
+  const [testResumeSnapshotOverride, setTestResumeSnapshotOverride] = useState<
+    VocabTestSessionSnapshot | null | undefined
+  >(undefined);
+  const [learnSessionIdOverride, setLearnSessionIdOverride] = useState<string | null | undefined>(
+    undefined
+  );
+  const [testSessionIdOverride, setTestSessionIdOverride] = useState<string | null | undefined>(
+    undefined
+  );
+  const latestLearnSnapshotRef = useRef<LearningSessionSnapshot | null>(null);
+  const latestTestSnapshotRef = useRef<VocabTestSessionSnapshot | null>(null);
+
+  const selectedSessionUnitId = normalizeUnitForSession(selectedUnitId);
 
   // Flashcard settings
 
@@ -273,6 +350,17 @@ export default function VocabModulePage() {
       unknown
     >('user:updateLearningProgress')
   );
+  const upsertLearningSessionMutation = useMutation(VOCAB.upsertLearningSession);
+  const completeLearningSessionMutation = useMutation(VOCAB.completeLearningSession);
+  const abandonLearningSessionMutation = useMutation(VOCAB.abandonLearningSession);
+  const activeLearnSession = useQuery(
+    VOCAB.getActiveLearningSession,
+    instituteId ? { instituteId, unitId: selectedSessionUnitId, mode: 'LEARN' } : 'skip'
+  ) as ActiveLearningSession | null | undefined;
+  const activeTestSession = useQuery(
+    VOCAB.getActiveLearningSession,
+    instituteId ? { instituteId, unitId: selectedSessionUnitId, mode: 'TEST' } : 'skip'
+  ) as ActiveLearningSession | null | undefined;
   const { enqueueReview, flushQueue, optimisticProgressMap } = useFSRSBatchProgress({
     maxBatchSize: 10,
     flushDebounceMs: 4000,
@@ -533,6 +621,183 @@ export default function VocabModulePage() {
     [speakTTS]
   );
 
+  const queriedLearnSnapshot = useMemo(() => {
+    const maybeSnapshot = activeLearnSession?.snapshot;
+    return isLearningSessionSnapshot(maybeSnapshot) ? maybeSnapshot : null;
+  }, [activeLearnSession]);
+
+  const queriedTestSnapshot = useMemo(() => {
+    const maybeSnapshot = activeTestSession?.snapshot;
+    return isVocabTestSessionSnapshot(maybeSnapshot) ? maybeSnapshot : null;
+  }, [activeTestSession]);
+
+  const learnResumeSnapshot =
+    learnResumeSnapshotOverride !== undefined ? learnResumeSnapshotOverride : queriedLearnSnapshot;
+  const testResumeSnapshot =
+    testResumeSnapshotOverride !== undefined ? testResumeSnapshotOverride : queriedTestSnapshot;
+  const learnSessionId =
+    learnSessionIdOverride !== undefined
+      ? learnSessionIdOverride
+      : (activeLearnSession?.id ?? null);
+  const testSessionId =
+    testSessionIdOverride !== undefined ? testSessionIdOverride : (activeTestSession?.id ?? null);
+
+  const persistLearningSnapshot = useCallback(
+    async (mode: SessionMode, snapshot: LearningSessionSnapshot | VocabTestSessionSnapshot) => {
+      if (!instituteId) return;
+      const result = await upsertLearningSessionMutation({
+        instituteId,
+        unitId: selectedSessionUnitId,
+        mode,
+        snapshot,
+      });
+      if (mode === 'LEARN') {
+        if (!isLearningSessionSnapshot(snapshot)) return;
+        latestLearnSnapshotRef.current = snapshot;
+        setLearnSessionIdOverride(result.sessionId);
+      } else {
+        if (!isVocabTestSessionSnapshot(snapshot)) return;
+        latestTestSnapshotRef.current = snapshot;
+        setTestSessionIdOverride(result.sessionId);
+      }
+    },
+    [instituteId, selectedSessionUnitId, upsertLearningSessionMutation]
+  );
+
+  const completeSessionForMode = useCallback(
+    async (mode: SessionMode) => {
+      const sessionId = mode === 'LEARN' ? learnSessionId : testSessionId;
+      if (!sessionId) return;
+      await completeLearningSessionMutation({ sessionId });
+      if (mode === 'LEARN') {
+        setLearnSessionIdOverride(null);
+        setLearnResumeSnapshotOverride(null);
+        latestLearnSnapshotRef.current = null;
+      } else {
+        setTestSessionIdOverride(null);
+        setTestResumeSnapshotOverride(null);
+        latestTestSnapshotRef.current = null;
+      }
+    },
+    [completeLearningSessionMutation, learnSessionId, testSessionId]
+  );
+
+  const requestOpenSessionMode = useCallback(
+    (mode: SessionMode) => {
+      if (mode === 'LEARN' && learnResumeSnapshot && learnResumeSnapshot.wordIds.length >= 4) {
+        const total = Math.max(learnResumeSnapshot.wordIds.length, 1);
+        const completed = Math.max(0, Math.min(learnResumeSnapshot.totalAnswered, total));
+        const remaining = Math.max(0, total - completed);
+        const progressPercent = Math.round((completed / total) * 100);
+        setResumeCandidate({
+          mode,
+          sessionId: learnSessionId || '',
+          completed,
+          remaining,
+          total,
+          progressPercent,
+        });
+        setResumeModePrompt(mode);
+        return;
+      }
+      if (mode === 'TEST' && testResumeSnapshot && testResumeSnapshot.cards.length > 0) {
+        const total = Math.max(testResumeSnapshot.cards.length, 1);
+        const answered = Object.keys(testResumeSnapshot.answers || {}).length;
+        const completed = Math.max(0, Math.min(answered, total));
+        const remaining = Math.max(0, total - completed);
+        const progressPercent = Math.round((completed / total) * 100);
+        setResumeCandidate({
+          mode,
+          sessionId: testSessionId || '',
+          completed,
+          remaining,
+          total,
+          progressPercent,
+        });
+        setResumeModePrompt(mode);
+        return;
+      }
+      if (mode === 'LEARN') {
+        setLearnOpen(true);
+      } else {
+        setTestOpen(true);
+      }
+    },
+    [learnResumeSnapshot, testResumeSnapshot, learnSessionId, testSessionId]
+  );
+
+  const requestUnitSwitch = useCallback(
+    (nextUnit: number | 'ALL') => {
+      if (nextUnit === selectedUnitId) {
+        setDropdownOpen(false);
+        return;
+      }
+      if (learnOpen || testOpen) {
+        setPendingUnitSwitch(nextUnit);
+        setDropdownOpen(false);
+        return;
+      }
+      setSelectedUnitId(nextUnit);
+      setDropdownOpen(false);
+    },
+    [learnOpen, testOpen, selectedUnitId]
+  );
+
+  const confirmUnitSwitchWithSave = useCallback(async () => {
+    const nextUnit = pendingUnitSwitch;
+    if (nextUnit === null) return;
+
+    try {
+      if (learnOpen && latestLearnSnapshotRef.current) {
+        await persistLearningSnapshot('LEARN', latestLearnSnapshotRef.current);
+      }
+      if (testOpen && latestTestSnapshotRef.current) {
+        await persistLearningSnapshot('TEST', latestTestSnapshotRef.current);
+      }
+    } catch (error) {
+      console.warn('Failed to persist session before switching unit:', error);
+    }
+
+    setLearnOpen(false);
+    setTestOpen(false);
+    setSelectedUnitId(nextUnit);
+    setPendingUnitSwitch(null);
+  }, [learnOpen, testOpen, pendingUnitSwitch, persistLearningSnapshot]);
+
+  const continueFromResumePrompt = useCallback(() => {
+    if (!resumeModePrompt) return;
+    if (resumeModePrompt === 'LEARN') {
+      setLearnOpen(true);
+    } else {
+      setTestOpen(true);
+    }
+    setResumeModePrompt(null);
+    setResumeCandidate(null);
+  }, [resumeModePrompt]);
+
+  const restartFromResumePrompt = useCallback(async () => {
+    if (!resumeModePrompt) return;
+    if (resumeModePrompt === 'LEARN') {
+      if (learnSessionId) {
+        await abandonLearningSessionMutation({ sessionId: learnSessionId });
+      }
+      setLearnResumeSnapshotOverride(null);
+      latestLearnSnapshotRef.current = null;
+      setLearnSessionIdOverride(null);
+      setLearnOpen(true);
+    } else {
+      if (testSessionId) {
+        await abandonLearningSessionMutation({ sessionId: testSessionId });
+      }
+      setTestResumeSnapshotOverride(null);
+      latestTestSnapshotRef.current = null;
+      setTestSessionIdOverride(null);
+      setTestOpen(true);
+    }
+    setResumeModePrompt(null);
+    setResumeCandidate(null);
+  }, [abandonLearningSessionMutation, resumeModePrompt, learnSessionId, testSessionId]);
+
   const scopeTitle = (() => {
     if (selectedUnitId === 'ALL') {
       const localizedCourseName = course ? getLocalizedContent(course, 'name', language) : '';
@@ -634,8 +899,7 @@ export default function VocabModulePage() {
                   variant="ghost"
                   size="auto"
                   onClick={() => {
-                    setSelectedUnitId('ALL');
-                    setDropdownOpen(false);
+                    requestUnitSwitch('ALL');
                   }}
                   className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25' : 'hover:bg-muted text-muted-foreground'}`}
                 >
@@ -658,8 +922,7 @@ export default function VocabModulePage() {
                       size="auto"
                       onClick={() => {
                         if (disabled) return;
-                        setSelectedUnitId(u);
-                        setDropdownOpen(false);
+                        requestUnitSwitch(u);
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${(() => {
                         if (selectedUnitId === u)
@@ -714,11 +977,11 @@ export default function VocabModulePage() {
 
   const handleTabClick = (tabId: TabId) => {
     if (tabId === 'learn') {
-      setLearnOpen(true);
+      requestOpenSessionMode('LEARN');
       return;
     }
     if (tabId === 'test') {
-      setTestOpen(true);
+      requestOpenSessionMode('TEST');
       return;
     }
     setViewState(prev => ({ ...prev, mode: tabId }));
@@ -771,6 +1034,9 @@ export default function VocabModulePage() {
       <VocabLearnOverlay
         open={learnOpen}
         onClose={() => {
+          if (latestLearnSnapshotRef.current) {
+            void persistLearningSnapshot('LEARN', latestLearnSnapshotRef.current);
+          }
           void flushQueue();
           setLearnOpen(false);
         }}
@@ -787,6 +1053,7 @@ export default function VocabModulePage() {
               onComplete={stats => {
                 console.log('Learn completed:', stats);
                 void flushQueue();
+                void completeSessionForMode('LEARN');
               }}
               hasNextUnit={
                 typeof selectedUnitId === 'number' &&
@@ -808,6 +1075,10 @@ export default function VocabModulePage() {
               userId={user?.id}
               language={language}
               variant="learn"
+              resumeSnapshot={learnResumeSnapshot}
+              onSessionSnapshot={snapshot => {
+                void persistLearningSnapshot('LEARN', snapshot);
+              }}
               onFsrsReview={(wordId, isCorrect) => {
                 const w = wordById.get(wordId);
                 if (w) handleReview(w, isCorrect);
@@ -820,6 +1091,9 @@ export default function VocabModulePage() {
       <VocabLearnOverlay
         open={testOpen}
         onClose={() => {
+          if (latestTestSnapshotRef.current) {
+            void persistLearningSnapshot('TEST', latestTestSnapshotRef.current);
+          }
           void flushQueue();
           setTestOpen(false);
         }}
@@ -828,10 +1102,20 @@ export default function VocabModulePage() {
         variant="fullscreen"
       >
         <VocabTest
+          key={`test-${selectedUnitId}-${testResumeSnapshot?.timestamp ?? 'fresh'}`}
           words={filteredWords}
           language={language}
           scopeTitle={scopeTitle}
-          onClose={() => setTestOpen(false)}
+          resumeSnapshot={testResumeSnapshot}
+          onSessionSnapshot={snapshot => {
+            void persistLearningSnapshot('TEST', snapshot);
+          }}
+          onComplete={() => {
+            void completeSessionForMode('TEST');
+          }}
+          onClose={() => {
+            setTestOpen(false);
+          }}
           showCloseButton={false}
           onFsrsReview={(wordId, isCorrect) => {
             const w = wordById.get(wordId);
@@ -1049,6 +1333,144 @@ export default function VocabModulePage() {
       {renderContent()}
 
       {renderOverlays()}
+
+      <Dialog
+        open={resumeModePrompt !== null}
+        onOpenChange={open => {
+          if (!open) {
+            setResumeModePrompt(null);
+            setResumeCandidate(null);
+          }
+        }}
+      >
+        <DialogPortal>
+          <DialogOverlay unstyled className="fixed inset-0 z-50 bg-black/45" />
+          <DialogContent
+            unstyled
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-[51] flex items-center justify-center p-4"
+          >
+            <div className="w-full max-w-5xl rounded-[2rem] border-2 border-foreground bg-card shadow-[10px_10px_0px_0px_rgba(15,23,42,1)] p-8 sm:p-10">
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <h3 className="text-5xl font-black text-foreground tracking-tight">
+                    欢迎回到今天的课堂！
+                  </h3>
+                  <p className="mt-2 text-5xl font-black text-foreground/90 tracking-tight">
+                    准备好继续了吗？
+                  </p>
+                </div>
+                <div className="w-16 h-16 rounded-full border-4 border-blue-500/30 flex items-center justify-center text-blue-600 text-2xl shrink-0">
+                  ↻
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <div className="text-3xl font-black text-foreground">
+                  学习集总进度:
+                  <span className="text-emerald-600 ml-2">
+                    {resumeCandidate?.progressPercent ?? 0}%
+                  </span>
+                </div>
+                <div className="mt-4 w-full h-8 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, resumeCandidate?.progressPercent ?? 0))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="rounded-[1.75rem] bg-emerald-100/70 border border-emerald-200 p-8">
+                  <div className="text-4xl font-black text-foreground">已完成的问题</div>
+                  <div className="mt-5 text-8xl leading-none font-black text-emerald-700">
+                    {resumeCandidate?.completed ?? 0}
+                  </div>
+                </div>
+                <div className="rounded-[1.75rem] bg-slate-100 border border-slate-200 p-8">
+                  <div className="text-4xl font-black text-foreground">下次检查前剩余的问题</div>
+                  <div className="mt-5 text-8xl leading-none font-black text-slate-500">
+                    {resumeCandidate?.remaining ?? 0}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => {
+                    void restartFromResumePrompt();
+                  }}
+                  className="px-8 py-4 rounded-2xl border-2 border-border text-slate-500 font-black text-3xl hover:bg-muted"
+                >
+                  重新开始学习模式
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={continueFromResumePrompt}
+                  className="px-10 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-3xl hover:from-blue-700 hover:to-indigo-600"
+                >
+                  继续练习
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
+
+      <Dialog
+        open={pendingUnitSwitch !== null}
+        onOpenChange={open => {
+          if (!open) setPendingUnitSwitch(null);
+        }}
+      >
+        <DialogPortal>
+          <DialogOverlay unstyled className="fixed inset-0 z-50 bg-black/45" />
+          <DialogContent
+            unstyled
+            closeOnEscape={false}
+            lockBodyScroll={false}
+            className="fixed inset-0 z-[51] flex items-center justify-center p-4"
+          >
+            <div className="w-full max-w-md rounded-2xl border-2 border-foreground bg-card shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-6">
+              <h3 className="text-xl font-black text-foreground mb-2">Switch unit?</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Your current learning session is in progress. Save your progress before switching to
+                another unit.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => setPendingUnitSwitch(null)}
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-border text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => {
+                    void confirmUnitSwitchWithSave();
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700"
+                >
+                  Save and switch
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
 
       <style>{`
                 .perspective-1000 { perspective: 1000px; }

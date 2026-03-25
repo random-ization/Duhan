@@ -280,13 +280,12 @@ function normalizeNestedExampleTranslations(input: string): string {
 
     const headingMatch = trimmed.match(/^(\s{0,3})(#{1,6})\s+(.*)$/);
     if (headingMatch) {
-      const headingText = stripMarkdownFormatting(headingMatch[3]).trim();
-      const isExampleHeading = EXAMPLE_SECTION_HEADING_RE.test(
-        `${headingMatch[1]}${headingMatch[2]} ${headingText}`
-      );
-
-      // Always update inExampleSection for any heading
-      inExampleSection = isExampleHeading;
+      const level = headingMatch[2].length;
+      if (EXAMPLE_SECTION_HEADING_RE.test(trimmed)) {
+        inExampleSection = true;
+      } else if (level <= 2) {
+        inExampleSection = false;
+      }
 
       output.push(line);
       previousPrimaryLine = '';
@@ -340,11 +339,10 @@ function normalizeInlineExampleTranslations(input: string): string {
 
     if (headingMatch) {
       const level = headingMatch[2].length;
-      stripMarkdownFormatting(headingMatch[3]).trim();
-      if (level <= 2) {
-        inExampleSection = EXAMPLE_SECTION_HEADING_RE.test(trimmed);
-      } else if (EXAMPLE_SECTION_HEADING_RE.test(trimmed)) {
+      if (EXAMPLE_SECTION_HEADING_RE.test(trimmed)) {
         inExampleSection = true;
+      } else if (level <= 2) {
+        inExampleSection = false;
       }
       output.push(line);
       continue;

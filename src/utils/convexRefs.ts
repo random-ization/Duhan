@@ -301,6 +301,20 @@ export const VOCAB = {
   getReviewSummary: qRef<{ savedByUserOnly?: boolean }, VocabReviewSummaryDto>(
     'vocab:getReviewSummary'
   ),
+  getActiveLearningSession: qRef<
+    { instituteId: string; unitId: number; mode: 'LEARN' | 'TEST' },
+    {
+      id: string;
+      instituteId: string;
+      unitId: number;
+      mode: 'LEARN' | 'TEST';
+      status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+      snapshot?: unknown;
+      startedAt: number;
+      updatedAt: number;
+      completedAt?: number;
+    } | null
+  >('vocab:getActiveLearningSession'),
   // Mutations
   updateProgress: mRef<
     { wordId: string; quality: number },
@@ -326,6 +340,21 @@ export const VOCAB = {
     },
     { success: boolean; processed: number; updated: number; inserted: number }
   >('vocab:updateProgressBatch'),
+  upsertLearningSession: mRef<
+    {
+      instituteId: string;
+      unitId: number;
+      mode: 'LEARN' | 'TEST';
+      snapshot: unknown;
+    },
+    { success: boolean; sessionId: string; action: 'created' | 'updated' }
+  >('vocab:upsertLearningSession'),
+  completeLearningSession: mRef<{ sessionId: string }, { success: boolean; reason?: 'not_found' }>(
+    'vocab:completeLearningSession'
+  ),
+  abandonLearningSession: mRef<{ sessionId: string }, { success: boolean; reason?: 'not_found' }>(
+    'vocab:abandonLearningSession'
+  ),
   getAllPaginated: qRef<
     { paginationOpts: PaginationOptions; courseId?: string },
     PaginationResult<unknown>

@@ -30,6 +30,18 @@ interface QuizSettings {
   readonly soundEffects: boolean;
 }
 
+export interface LearningSessionSnapshot {
+  wordIds: string[];
+  questionIndex: number;
+  wrongWordIds: string[];
+  correctCount: number;
+  totalAnswered: number;
+  currentBatchNum: number;
+  settings: QuizSettings;
+  pendingAdvanceReason?: Exclude<PendingAdvanceReason, null>;
+  timestamp: number;
+}
+
 interface VocabQuizProps {
   readonly words: readonly VocabItem[];
   readonly courseId?: string;
@@ -43,6 +55,8 @@ interface VocabQuizProps {
   readonly variant?: 'quiz' | 'learn';
   readonly presetSettings?: Partial<QuizSettings>;
   readonly settingsLocked?: boolean;
+  readonly resumeSnapshot?: LearningSessionSnapshot | null;
+  readonly onSessionSnapshot?: (snapshot: LearningSessionSnapshot) => void;
 }
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
@@ -1684,6 +1698,8 @@ function VocabQuizComponent({
   variant = 'quiz',
   presetSettings,
   settingsLocked = false,
+  resumeSnapshot,
+  onSessionSnapshot,
 }: VocabQuizProps) {
   const labels = getLabels(language);
   const isLearn = variant === 'learn';
@@ -1719,6 +1735,7 @@ function VocabQuizComponent({
     gameState,
     questions,
     questionIndex,
+    setQuestionIndex,
     optionStates,
     isLocked,
     correctCount,
@@ -1727,6 +1744,8 @@ function VocabQuizComponent({
     writingState,
     currentBatchNum,
     totalQuestionsAnswered,
+    wrongWords,
+    pendingAdvanceReason,
     currentQuestion,
     totalQuestions,
     pendingAdvance,
@@ -1738,7 +1757,13 @@ function VocabQuizComponent({
     inputRef,
     nextQuestionRef,
     setQuestions,
+    setGameState,
+    setCorrectCount,
+    setTotalQuestionsAnswered,
+    setCurrentBatchNum,
+    setWrongWords,
     setPendingAdvanceReason,
+    generateQuestionsFromWords,
     generateQuestions,
   } = useQuizGame({
     words,
@@ -1775,12 +1800,129 @@ function VocabQuizComponent({
     }
   }, [questionIndex, questions, settings.autoTTS, gameState, speakWord, currentQuestion]);
 
-  // Initial load
-  const [hasInit, setHasInit] = useState(false);
-  if (!hasInit && words.length >= 4) {
-    setHasInit(true);
-    setQuestions(generateQuestions(settings));
-  }
+  const hasInitRef = useRef(false);
+  useEffect(() => {
+    if (hasInitRef.current) return;
+    if (words.length < 4) return;
+
+    const applyDefault = () => {
+      setQuestions(generateQuestions(settings));
+      hasInitRef.current = true;
+    };
+
+    if (!resumeSnapshot) {
+      applyDefault();
+      return;
+    }
+
+    const mapById = new Map(words.map(word => [word.id, word]));
+    const restoredWords = resumeSnapshot.wordIds
+      .map(id => mapById.get(id))
+      .filter((word): word is VocabItem => Boolean(word));
+
+    if (restoredWords.length < 4) {
+      applyDefault();
+      return;
+    }
+
+    const restoredQuestions = generateQuestionsFromWords(restoredWords, resumeSnapshot.settings);
+    if (restoredQuestions.length === 0) {
+      applyDefault();
+      return;
+    }
+
+    setQuestions(restoredQuestions);
+    setQuestionIndex(
+      Math.max(0, Math.min(resumeSnapshot.questionIndex, restoredQuestions.length - 1))
+    );
+    setCorrectCount(Math.max(0, resumeSnapshot.correctCount));
+    setTotalQuestionsAnswered(Math.max(0, resumeSnapshot.totalAnswered));
+    setCurrentBatchNum(Math.max(1, resumeSnapshot.currentBatchNum));
+    setWrongWords(
+      resumeSnapshot.wrongWordIds
+        .map(id => mapById.get(id))
+        .filter((word): word is VocabItem => Boolean(word))
+    );
+    setPendingAdvanceReason(resumeSnapshot.pendingAdvanceReason ?? null);
+    setGameState('PLAYING');
+    hasInitRef.current = true;
+  }, [
+    words,
+    resumeSnapshot,
+    generateQuestions,
+    generateQuestionsFromWords,
+    settings,
+    setQuestions,
+    setQuestionIndex,
+    setCorrectCount,
+    setTotalQuestionsAnswered,
+    setCurrentBatchNum,
+    setWrongWords,
+    setPendingAdvanceReason,
+    setGameState,
+  ]);
+
+  const buildSessionSnapshot = useCallback((): LearningSessionSnapshot | null => {
+    if (questions.length === 0) return null;
+    const dedupedWordIds: string[] = [];
+    const seen = new Set<string>();
+    for (const question of questions) {
+      const id = question.targetWord.id;
+      if (!seen.has(id)) {
+        seen.add(id);
+        dedupedWordIds.push(id);
+      }
+    }
+
+    return {
+      wordIds: dedupedWordIds,
+      questionIndex,
+      wrongWordIds: wrongWords.map(word => word.id),
+      correctCount,
+      totalAnswered: totalQuestionsAnswered,
+      currentBatchNum,
+      settings,
+      pendingAdvanceReason: pendingAdvanceReason ?? undefined,
+      timestamp: Date.now(),
+    };
+  }, [
+    questions,
+    questionIndex,
+    wrongWords,
+    correctCount,
+    totalQuestionsAnswered,
+    currentBatchNum,
+    settings,
+    pendingAdvanceReason,
+  ]);
+
+  useEffect(() => {
+    if (!onSessionSnapshot) return;
+    if (!hasInitRef.current || gameState !== 'PLAYING') return;
+
+    const timer = setTimeout(() => {
+      const snapshot = buildSessionSnapshot();
+      if (snapshot) onSessionSnapshot(snapshot);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [onSessionSnapshot, gameState, buildSessionSnapshot]);
+
+  useEffect(() => {
+    if (!onSessionSnapshot) return;
+
+    const saveBeforeLeave = () => {
+      const snapshot = buildSessionSnapshot();
+      if (snapshot) onSessionSnapshot(snapshot);
+    };
+
+    window.addEventListener('pagehide', saveBeforeLeave);
+    window.addEventListener('beforeunload', saveBeforeLeave);
+    return () => {
+      window.removeEventListener('pagehide', saveBeforeLeave);
+      window.removeEventListener('beforeunload', saveBeforeLeave);
+    };
+  }, [buildSessionSnapshot, onSessionSnapshot]);
 
   // Not enough words
   if (words.length < 4) {
