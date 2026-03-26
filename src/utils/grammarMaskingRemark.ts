@@ -29,7 +29,8 @@ const QUIZ_SECTION_HEADING_RE =
   /^(?:\d+\.\s*)?(?:快速复习测验|练习测验|实战演练|quick review quiz(?:zes)?|practice quiz(?:zes)?)\s*$/i;
 const EXPLICIT_EXAMPLE_PREFIX_RE = /(?:^|[\s>*-])(?:例[:：]|示例[:：]|example[:：])\s*/i;
 const DIALOGUE_RE = /^\s*[A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ]\s*:\s*/;
-const INLINE_TRANSLATION_PAREN_RE = /([（(][^()\n\r]*(?:\p{Script=Han}|[A-Za-z])[^()\n\r]*[）)])\s*$/u;
+const INLINE_TRANSLATION_PAREN_RE =
+  /([（(][^()\n\r]*(?:\p{Script=Han}|[A-Za-z])[^()\n\r]*[）)])\s*$/u;
 const ANSWER_LABEL_RE =
   /^(?:参考答案|测验参考答案|示例答案|答案|改正|修正|reference answers?|answers?|correction|correct answer)\s*[:：]?/i;
 
@@ -67,7 +68,9 @@ function isKoreanExampleText(input: string): boolean {
   const clean = stripExampleLead(input);
   const hangulChars = clean.match(/[\u3131-\u318E\uAC00-\uD7A3]/g) ?? [];
   if (hangulChars.length < 4) return false;
-  return DIALOGUE_RE.test(clean) || KOREAN_SENTENCE_END_RE.test(clean) || /[?!.。！？]$/.test(clean);
+  return (
+    DIALOGUE_RE.test(clean) || KOREAN_SENTENCE_END_RE.test(clean) || /[?!.。！？]$/.test(clean)
+  );
 }
 
 function hasMaskToken(input: string): boolean {
@@ -84,22 +87,15 @@ function markNodeMask(node: MarkdownNode, kind: 'translation' | 'answer'): void 
   node.data.hProperties['data-grammar-mask'] = kind;
 }
 
-function _prependTokenToFirstText(node: MarkdownNode, token: string): boolean {
-  if (node.type === 'text') {
-    node.value = `${token}${node.value || ''}`;
-    return true;
-  }
-
-  for (const child of node.children || []) {
-    if (_prependTokenToFirstText(child, token)) return true;
-  }
-
-  return false;
-}
-
-function splitTrailingTranslationInValue(value: string): { leading: string; translation: string } | null {
+function splitTrailingTranslationInValue(
+  value: string
+): { leading: string; translation: string } | null {
   const punctuationMatch = value.match(/^(.*?[?!.。！？])(\s+)(.+)$/u);
-  if (punctuationMatch && isKoreanExampleText(punctuationMatch[1]) && isTranslationOnlyText(punctuationMatch[3])) {
+  if (
+    punctuationMatch &&
+    isKoreanExampleText(punctuationMatch[1]) &&
+    isTranslationOnlyText(punctuationMatch[3])
+  ) {
     return {
       leading: `${punctuationMatch[1]}${punctuationMatch[2]}`,
       translation: punctuationMatch[3],
@@ -139,7 +135,12 @@ function maskInlineTranslationInParagraph(paragraph: MarkdownNode): void {
       }
 
       const parentheticalMatch = raw.match(INLINE_TRANSLATION_PAREN_RE);
-      if (parentheticalMatch && parentheticalMatch[1] && seenExampleLead && isTranslationOnlyText(parentheticalMatch[1])) {
+      if (
+        parentheticalMatch &&
+        parentheticalMatch[1] &&
+        seenExampleLead &&
+        isTranslationOnlyText(parentheticalMatch[1])
+      ) {
         const translation = parentheticalMatch[1];
         const startIndex = raw.lastIndexOf(translation);
         if (startIndex >= 0) {
@@ -183,7 +184,8 @@ function processListItem(item: MarkdownNode, section: SectionMode): void {
   const children = item.children || [];
   const firstParagraph = children.find(child => child.type === 'paragraph');
   const firstParagraphText = getNodeText(firstParagraph);
-  const exampleContext = section === 'example' || EXPLICIT_EXAMPLE_PREFIX_RE.test(stripFormatting(firstParagraphText));
+  const exampleContext =
+    section === 'example' || EXPLICIT_EXAMPLE_PREFIX_RE.test(stripFormatting(firstParagraphText));
   const exampleLead = exampleContext && isKoreanExampleText(firstParagraphText);
 
   if (firstParagraph && exampleContext) {
