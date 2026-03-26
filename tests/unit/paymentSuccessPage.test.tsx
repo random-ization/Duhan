@@ -91,6 +91,17 @@ describe('PaymentSuccessPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 
+  it('redirects back to the preserved return target after successful activation', async () => {
+    renderPage('/payment/success?provider=lemonsqueezy&returnTo=%2Ftopik');
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
+    expect(navigateMock).toHaveBeenCalledWith('/topik');
+  });
+
   it('handles missing session id by checking activation status before success', async () => {
     renderPage('/payment/success');
 

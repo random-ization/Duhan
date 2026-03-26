@@ -13,4 +13,14 @@ describe('buildPricingDetailsPath', () => {
   it('appends annual plan query', () => {
     expect(buildPricingDetailsPath('ANNUAL')).toBe('/pricing/details?plan=ANNUAL');
   });
+
+  it('appends source and return target when provided', () => {
+    expect(
+      buildPricingDetailsPath({
+        plan: 'ANNUAL',
+        source: 'dashboard_banner',
+        returnTo: '/topik',
+      })
+    ).toBe('/pricing/details?plan=ANNUAL&source=dashboard_banner&returnTo=%2Ftopik');
+  });
 });

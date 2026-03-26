@@ -37,6 +37,7 @@ interface TopikModuleProps {
   onSaveAnnotation: (annotation: Annotation) => void;
   canAccessContent?: (content: any) => boolean;
   onShowUpgradePrompt?: () => void;
+  upgradePromptLoading?: boolean;
   onDeleteHistory?: (id: string) => void;
   initialView?: 'LIST' | 'HISTORY_LIST';
 }
@@ -114,6 +115,8 @@ const TopikViewRenderer = ({
   onToggleHistory,
   onReviewAttempt,
   canAccessContent,
+  onShowUpgradePrompt,
+  upgradePromptLoading,
   onDeleteHistory,
   onStartExam,
   onResetExam,
@@ -151,6 +154,8 @@ const TopikViewRenderer = ({
   onToggleHistory: () => void;
   onReviewAttempt: (attempt?: ExamAttempt) => void;
   canAccessContent?: (content: any) => boolean;
+  onShowUpgradePrompt?: () => void;
+  upgradePromptLoading?: boolean;
   onDeleteHistory?: (id: string) => void;
   onStartExam: () => void;
   onResetExam: () => void;
@@ -176,6 +181,8 @@ const TopikViewRenderer = ({
         onViewHistory={onToggleHistory}
         onReviewAttempt={onReviewAttempt}
         canAccessContent={canAccessContent}
+        onShowUpgradePrompt={onShowUpgradePrompt}
+        upgradeLoading={upgradePromptLoading}
         onDeleteAttempt={onDeleteHistory}
       />
     );
@@ -193,6 +200,8 @@ const TopikViewRenderer = ({
         showHistoryView={true}
         onBack={onToggleHistory}
         canAccessContent={canAccessContent}
+        onShowUpgradePrompt={onShowUpgradePrompt}
+        upgradeLoading={upgradePromptLoading}
         onDeleteAttempt={onDeleteHistory}
       />
     );
@@ -313,6 +322,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   onSaveAnnotation,
   canAccessContent,
   onShowUpgradePrompt,
+  upgradePromptLoading,
   onDeleteHistory,
   initialView = 'LIST',
 }) => {
@@ -716,6 +726,8 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       onToggleHistory={handleToggleHistory}
       onReviewAttempt={reviewExam}
       canAccessContent={canAccessContent}
+      onShowUpgradePrompt={onShowUpgradePrompt}
+      upgradePromptLoading={upgradePromptLoading}
       onDeleteHistory={onDeleteHistory}
       onStartExam={startExam}
       onResetExam={resetExam}

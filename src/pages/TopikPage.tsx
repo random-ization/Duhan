@@ -27,6 +27,7 @@ import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import {
   ContextualCountBadge,
   ContextualEmptyState,
@@ -83,15 +84,17 @@ const getReminderMessage = (
 };
 
 const TopikPage: React.FC = () => {
-  const { user, language, canAccessContent, setShowUpgradePrompt } = useAuth();
+  const { user, language, canAccessContent } = useAuth();
   const { saveExamAttempt, saveAnnotation, deleteExamAttempt } = useUserActions();
   const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const location = useLocation();
+  const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
   const [now] = React.useState(() => Date.now());
   const [filterType, setFilterType] = useState<'READING' | 'LISTENING' | 'WRITING'>('READING');
+  const [expandedLockedExamId, setExpandedLockedExamId] = useState<string | null>(null);
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
     user ? {} : 'skip'
@@ -109,7 +112,13 @@ const TopikPage: React.FC = () => {
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
     user && examId ? { prefix: `TOPIK-${examId}`, limit: 4000 } : 'skip'
   );
-  const onShowUpgradePrompt = useCallback(() => setShowUpgradePrompt(true), [setShowUpgradePrompt]);
+  const onShowUpgradePrompt = useCallback(() => {
+    startUpgradeFlow({
+      plan: 'ANNUAL',
+      source: 'topik_locked',
+      returnTo: `${location.pathname}${location.search}`,
+    });
+  }, [location.pathname, location.search, startUpgradeFlow]);
 
   // Compute top score from exam history
   const topScore = getTopHistoryScore(examHistory);
@@ -207,6 +216,10 @@ const TopikPage: React.FC = () => {
 
   // Let's just implement the UI. If the user clicks "Start", we can navigate or set state.
   // Assuming the route `/topik/:examId` exists and maps to this page, we can read it.
+  React.useEffect(() => {
+    setExpandedLockedExamId(null);
+  }, [filterType]);
+
   if (!user) {
     return <Navigate to="/" replace />;
   }
@@ -225,6 +238,7 @@ const TopikPage: React.FC = () => {
         onSaveAnnotation={saveAnnotation}
         canAccessContent={canAccessContent}
         onShowUpgradePrompt={onShowUpgradePrompt}
+        upgradePromptLoading={upgradeFlowLoading}
         onDeleteHistory={deleteExamAttempt}
         initialView={isHistoryRoute ? 'HISTORY_LIST' : 'LIST'}
       />
@@ -676,77 +690,187 @@ const TopikPage: React.FC = () => {
               })()
             ) : filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredExams.map(exam => (
-                  <Button
-                    key={exam.id}
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() => navigate(`/topik/${exam.id}`)}
-                    className="!flex !items-stretch !justify-start bg-card rounded-2xl p-0 border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
-                  >
-                    <div
-                      className={clsx(
-                        'p-4 flex flex-col items-center justify-center text-primary-foreground w-full md:w-32 shrink-0 relative overflow-hidden',
-                        exam.type === 'READING' ? 'bg-primary' : 'bg-blue-800 dark:bg-blue-700'
-                      )}
+                {filteredExams.map(exam => {
+                  const isLocked = canAccessContent != null && !canAccessContent(exam);
+                  const showLockedUpgradeCard = isLocked && expandedLockedExamId === exam.id;
+
+                  return (
+                    <Button
+                      key={exam.id}
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => {
+                        if (isLocked) {
+                          setExpandedLockedExamId(exam.id);
+                          return;
+                        }
+                        setExpandedLockedExamId(null);
+                        navigate(`/topik/${exam.id}`);
+                      }}
+                      className="!flex !items-stretch !justify-start bg-card rounded-2xl p-0 border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
                     >
                       <div
-                        className="absolute inset-0 opacity-20"
-                        style={{
-                          backgroundImage:
-                            'repeating-linear-gradient(45deg, hsl(var(--primary-foreground)) 0, hsl(var(--primary-foreground)) 2px, transparent 2px, transparent 10px)',
-                        }}
-                      ></div>
-                      <div className="text-3xl font-black text-yellow-400 dark:text-amber-300 font-display z-10">
-                        {exam.round}
+                        className={clsx(
+                          'p-4 flex flex-col items-center justify-center text-primary-foreground w-full md:w-32 shrink-0 relative overflow-hidden',
+                          exam.type === 'READING' ? 'bg-primary' : 'bg-blue-800 dark:bg-blue-700'
+                        )}
+                      >
+                        <div
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            backgroundImage:
+                              'repeating-linear-gradient(45deg, hsl(var(--primary-foreground)) 0, hsl(var(--primary-foreground)) 2px, transparent 2px, transparent 10px)',
+                          }}
+                        ></div>
+                        <div className="text-3xl font-black text-yellow-400 dark:text-amber-300 font-display z-10">
+                          {exam.round}
+                        </div>
+                        <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
+                          {exam.type === 'READING'
+                            ? `TOPIK II ${t('dashboard.topik.reading')}`
+                            : `TOPIK II ${t('dashboard.topik.listening')}`}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                        {exam.type === 'READING'
-                          ? `TOPIK II ${t('dashboard.topik.reading')}`
-                          : `TOPIK II ${t('dashboard.topik.listening')}`}
-                      </div>
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-black text-lg text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition">
-                            {exam.title}
-                          </h4>
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-1 gap-2">
+                            <h4 className="font-black text-lg text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition">
+                              {exam.title}
+                            </h4>
+                            <span
+                              className={clsx(
+                                'text-[10px] font-black px-2 py-0.5 rounded border',
+                                isLocked
+                                  ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-400/40'
+                                  : exam.type === 'READING'
+                                    ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-400/40'
+                                    : 'bg-rose-100 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/40'
+                              )}
+                            >
+                              {isLocked
+                                ? t('pricingDetails.upgradeGuide.badge', {
+                                    defaultValue: 'Premium only',
+                                  })
+                                : exam.type === 'READING'
+                                  ? t('dashboard.topik.reading')
+                                  : t('dashboard.topik.listening')}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs font-bold">
+                            {t('topikLobby.roundTitle', { round: exam.round })}
+                          </p>
+                          <div className="flex gap-4 mt-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                              <Clock size={12} />{' '}
+                              {t('topikLobby.timeLimit', { count: exam.timeLimit })}
+                            </div>
+                          </div>
+                          {showLockedUpgradeCard ? (
+                            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                              <div className="flex items-center gap-2 text-amber-700">
+                                <Archive size={14} />
+                                <span className="text-[11px] font-black uppercase tracking-wide">
+                                  {t('pricingDetails.upgradeGuide.badge', {
+                                    defaultValue: 'Premium only',
+                                  })}
+                                </span>
+                              </div>
+                              <h5 className="mt-2 text-sm font-black text-slate-900">
+                                {t('pricingDetails.upgradeGuide.title', {
+                                  defaultValue: 'This section is part of Premium',
+                                })}
+                              </h5>
+                              <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
+                                {t('pricingDetails.upgradeGuide.signedIn', {
+                                  defaultValue:
+                                    'You are already signed in. After payment we will return you to this page automatically.',
+                                })}
+                              </p>
+                              <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
+                                <li>
+                                  {t('pricingDetails.upgradeGuide.unlockCurrent', {
+                                    defaultValue: 'Unlock this content instantly',
+                                  })}
+                                </li>
+                                <li>
+                                  {t('pricingDetails.upgradeGuide.returnToPage', {
+                                    defaultValue: 'Return to this page after payment',
+                                  })}
+                                </li>
+                                <li>
+                                  {t('pricingDetails.upgradeGuide.bindAccount', {
+                                    defaultValue: 'Bind access to your current account',
+                                  })}
+                                </li>
+                              </ul>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={event => {
+                                  event.stopPropagation();
+                                  onShowUpgradePrompt();
+                                }}
+                                loading={upgradeFlowLoading}
+                                loadingText={t('common.loading', { defaultValue: 'Loading...' })}
+                                disabled={upgradeFlowLoading}
+                                className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
+                              >
+                                {t('pricingDetails.upgradeGuide.cta', {
+                                  defaultValue: 'View plans and continue',
+                                })}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={event => {
+                                  event.stopPropagation();
+                                  setExpandedLockedExamId(current =>
+                                    current === exam.id ? null : current
+                                  );
+                                }}
+                                className="mt-2 rounded-xl border-amber-300 bg-white px-4 py-2 text-sm text-slate-700"
+                              >
+                                {t('pricingDetails.upgradeGuide.dismiss', {
+                                  defaultValue: 'Maybe later',
+                                })}
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            {isLocked
+                              ? showLockedUpgradeCard
+                                ? t('pricingDetails.upgradeGuide.unlockToContinue', {
+                                    defaultValue: 'Unlock to continue',
+                                  })
+                                : t('pricingDetails.upgradeGuide.previewCta', {
+                                    defaultValue: 'Tap to view upgrade options',
+                                  })
+                              : t('dashboard.topik.clickStart')}
+                          </span>
                           <span
                             className={clsx(
-                              'text-[10px] font-black px-2 py-0.5 rounded border',
-                              exam.type === 'READING'
-                                ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-400/40'
-                                : 'bg-rose-100 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/40'
+                              'px-3 py-1.5 rounded-lg font-bold text-xs shadow-md inline-flex items-center gap-1 transition',
+                              isLocked
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-primary text-primary-foreground group-hover:scale-105'
                             )}
                           >
-                            {exam.type === 'READING'
-                              ? t('dashboard.topik.reading')
-                              : t('dashboard.topik.listening')}
+                            {isLocked
+                              ? t('pricingDetails.upgradeGuide.badge', {
+                                  defaultValue: 'Premium only',
+                                })
+                              : t('dashboard.topik.startNow')}{' '}
+                            <ArrowRight size={12} />
                           </span>
                         </div>
-                        <p className="text-muted-foreground text-xs font-bold">
-                          {t('topikLobby.roundTitle', { round: exam.round })}
-                        </p>
-                        <div className="flex gap-4 mt-2">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                            <Clock size={12} />{' '}
-                            {t('topikLobby.timeLimit', { count: exam.timeLimit })}
-                          </div>
-                        </div>
                       </div>
-                      <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                        <span className="text-[10px] font-bold text-muted-foreground">
-                          {t('dashboard.topik.clickStart')}
-                        </span>
-                        <span className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
-                          {t('dashboard.topik.startNow')} <ArrowRight size={12} />
-                        </span>
-                      </div>
-                    </div>
-                  </Button>
-                ))}
+                    </Button>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-card rounded-[2rem] p-8 border-2 border-border text-center">

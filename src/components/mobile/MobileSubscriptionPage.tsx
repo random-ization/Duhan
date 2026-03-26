@@ -19,7 +19,7 @@ import { Button } from '../ui';
 export const MobileSubscriptionPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState<{
@@ -35,6 +35,9 @@ export const MobileSubscriptionPage: React.FC = () => {
         userEmail?: string;
         userName?: string;
         region?: string;
+        locale?: string;
+        source?: string;
+        returnTo?: string;
       },
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
@@ -86,6 +89,10 @@ export const MobileSubscriptionPage: React.FC = () => {
   }, [getVariantPrices]);
 
   const handleSubscribe = async () => {
+    if (authLoading) {
+      return;
+    }
+
     trackEvent('checkout_start', {
       language: i18n.language,
       plan: billingInterval,
@@ -93,7 +100,15 @@ export const MobileSubscriptionPage: React.FC = () => {
     });
 
     if (!user) {
-      navigate(`/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(billingInterval))}`);
+      navigate(
+        `/auth?redirect=${encodeURIComponent(
+          buildPricingDetailsPath({
+            plan: billingInterval,
+            source: 'mobile_subscription',
+            returnTo: '/dashboard',
+          })
+        )}`
+      );
       return;
     }
 
@@ -107,6 +122,9 @@ export const MobileSubscriptionPage: React.FC = () => {
           userEmail: user.email || '',
           userName: user.name || '',
           region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+          locale: i18n.language,
+          source: 'mobile_subscription',
+          returnTo: '/dashboard',
         },
         { retries: 1, initialDelayMs: 250 }
       );
@@ -339,8 +357,9 @@ export const MobileSubscriptionPage: React.FC = () => {
           variant="ghost"
           size="auto"
           onClick={handleSubscribe}
-          loading={loading}
+          loading={authLoading || loading}
           loadingText={t('loading', { defaultValue: 'Loading...' })}
+          disabled={authLoading || loading}
           className="w-full bg-slate-900 text-white py-4 rounded-xl font-black shadow-lg shadow-slate-200 active:scale-95 transition-transform disabled:opacity-70"
         >
           {t('pricingDetails.plans.pro.cta', { defaultValue: 'Upgrade to Pro' })}

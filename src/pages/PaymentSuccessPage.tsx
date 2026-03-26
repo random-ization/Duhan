@@ -7,6 +7,8 @@ import { aRef, NoArgs } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Button } from '../components/ui';
 import { trackEvent } from '../utils/analytics';
+import { resolveSafeReturnTo } from '../utils/navigation';
+import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
 
 const ACTIVATION_POLL_INTERVAL_MS = 2500;
 const ACTIVATION_POLL_MAX_ATTEMPTS = 12;
@@ -18,6 +20,9 @@ const PaymentSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const provider = searchParams.get('provider');
   const sessionId = searchParams.get('session_id');
+  const source = searchParams.get('source') || 'pricing_details';
+  const returnTo = resolveSafeReturnTo(searchParams.get('returnTo'), '/dashboard');
+  const isReturningToDashboard = returnTo === '/dashboard';
   const navigate = useLocalizedNavigate();
   const [status, setStatus] = useState<'loading' | 'pending' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState(
@@ -53,7 +58,7 @@ const PaymentSuccessPage: React.FC = () => {
         clearTimeout(redirectTimerRef.current);
       }
       redirectTimerRef.current = window.setTimeout(() => {
-        navigate('/dashboard');
+        navigate(returnTo);
       }, 2500);
     };
 
@@ -193,6 +198,7 @@ const PaymentSuccessPage: React.FC = () => {
     };
   }, [
     provider,
+    returnTo,
     sessionId,
     navigate,
     verifyPaymentSession,
@@ -223,7 +229,11 @@ const PaymentSuccessPage: React.FC = () => {
             </h2>
             <p className="text-gray-600 mb-6">{message}</p>
             <p className="text-sm text-gray-500">
-              {t('payment.redirecting', { defaultValue: 'Redirecting to dashboard...' })}
+              {isReturningToDashboard
+                ? t('payment.redirecting', { defaultValue: 'Redirecting to dashboard...' })
+                : t('payment.redirectingBack', {
+                    defaultValue: 'Redirecting you back to your lesson...',
+                  })}
             </p>
           </div>
         )}
@@ -245,12 +255,14 @@ const PaymentSuccessPage: React.FC = () => {
                 {t('payment.checkAgain', { defaultValue: 'Check Again' })}
               </Button>
               <Button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(returnTo)}
                 variant="ghost"
                 size="auto"
                 className="flex-1 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
               >
-                {t('payment.goDashboard', { defaultValue: 'Go to Dashboard' })}
+                {isReturningToDashboard
+                  ? t('payment.goDashboard', { defaultValue: 'Go to Dashboard' })
+                  : t('payment.goBack', { defaultValue: 'Go Back' })}
               </Button>
             </div>
           </div>
@@ -264,7 +276,14 @@ const PaymentSuccessPage: React.FC = () => {
             </h2>
             <p className="text-gray-600 mb-6">{message}</p>
             <Button
-              onClick={() => navigate('/pricing/details')}
+              onClick={() =>
+                navigate(
+                  buildPricingDetailsPath({
+                    source,
+                    returnTo,
+                  })
+                )
+              }
               variant="ghost"
               size="auto"
               className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"

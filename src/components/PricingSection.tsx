@@ -3,17 +3,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
+import { type CheckoutPlan } from '../utils/subscriptionPlan';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 
 interface PricingSectionProps {
-  onSubscribe?: (planId: string) => void;
+  onSubscribe?: (planId: CheckoutPlan) => void;
+  source?: string;
 }
 
-const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
+const PricingSection: React.FC<PricingSectionProps> = ({
+  onSubscribe,
+  source = 'desktop_subscription',
+}) => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
-  const navigate = useLocalizedNavigate();
+  const { startUpgradeFlow, authLoading } = useUpgradeFlow();
 
   const PRICING_MAP: Record<
     string,
@@ -52,9 +57,17 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
   const language = i18n.language;
   const priceConfig = PRICING_MAP[language] || PRICING_MAP['en'];
 
-  const handleSubscribe = (planId: string) => {
+  const handleSubscribe = (planId: CheckoutPlan) => {
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
-      navigate('/auth?redirect=/pricing/details');
+      startUpgradeFlow({
+        plan: planId,
+        source,
+        returnTo: '/dashboard',
+      });
       return;
     }
 
@@ -212,7 +225,10 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
                   <Button
                     type="button"
                     size="auto"
-                    onClick={() => handleSubscribe(plan.id)}
+                    onClick={() => handleSubscribe(plan.id as CheckoutPlan)}
+                    disabled={authLoading}
+                    loading={authLoading}
+                    loadingText={t('common.loading', { defaultValue: 'Loading...' })}
                     className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${
                       plan.highlight
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-400 dark:to-violet-400 dark:hover:from-indigo-300 dark:hover:to-violet-300 text-white dark:text-primary-foreground shadow-indigo-500/30 dark:shadow-indigo-400/25'

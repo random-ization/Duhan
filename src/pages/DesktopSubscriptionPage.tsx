@@ -12,7 +12,7 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
-import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
+import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { trackEvent } from '../utils/analytics';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 
@@ -31,6 +31,7 @@ const DesktopSubscriptionPage: React.FC = () => {
         userEmail?: string;
         userName?: string;
         region?: string;
+        locale?: string;
       },
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
@@ -314,9 +315,6 @@ const DesktopSubscriptionPage: React.FC = () => {
               source: 'desktop_subscription',
             });
             if (!user) {
-              navigate(
-                `/auth?redirect=${encodeURIComponent(buildPricingDetailsPath(checkoutPlan))}`
-              );
               return;
             }
             try {
@@ -329,6 +327,9 @@ const DesktopSubscriptionPage: React.FC = () => {
                   userEmail: user.email || '',
                   userName: user.name || '',
                   region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+                  locale: i18n.language,
+                  source: 'desktop_subscription',
+                  returnTo: '/dashboard',
                 },
                 { retries: 0 }
               );
@@ -350,6 +351,7 @@ const DesktopSubscriptionPage: React.FC = () => {
               setCheckoutPendingPlan(null);
             }
           }}
+          source="desktop_subscription"
         />
       </div>
     </div>

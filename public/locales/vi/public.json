@@ -676,6 +676,23 @@
       "paypal": "PayPal",
       "copyright": "© 2026 DuHan Inc. All rights reserved."
     },
+    "accountNote": {
+      "title": "Gói thành viên này sẽ được kích hoạt cho tài khoản hiện tại của bạn",
+      "currentAccount": "Tài khoản hiện tại: {{email}}",
+      "returnTo": "Sau khi thanh toán bạn sẽ quay lại: {{destination}}"
+    },
+    "upgradeGuide": {
+      "badge": "Chỉ dành cho Premium",
+      "title": "Phần này thuộc gói Premium",
+      "signedIn": "Bạn đã đăng nhập. Sau khi thanh toán xong, chúng tôi sẽ tự động đưa bạn quay lại trang này.",
+      "unlockCurrent": "Mở khóa nội dung này ngay",
+      "returnToPage": "Quay lại trang này sau khi thanh toán",
+      "bindAccount": "Gắn quyền truy cập vào tài khoản hiện tại",
+      "cta": "Xem gói và tiếp tục",
+      "dismiss": "Để lần sau",
+      "previewCta": "Chạm để xem cách mở khóa",
+      "unlockToContinue": "Mở khóa để tiếp tục"
+    },
     "originalLabel": "Giá gốc",
     "promo": {
       "activated": "Ưu đãi khu vực đã kích hoạt",
@@ -695,6 +712,16 @@
         "cta": "Đăng ký ngay"
       }
     }
+  },
+  "payment": {
+    "returnTo": {
+      "topik": "trang thi thử TOPIK",
+      "dashboard": "Trang chủ",
+      "course": "trang khóa học",
+      "pricing": "trang giá"
+    },
+    "redirectingBack": "Đang đưa bạn quay lại bài học...",
+    "goBack": "Quay lại"
   },
   "phoneVerifyModal": {
     "title": "Kiểm tra số điện thoại",
@@ -1322,6 +1349,13 @@
     "premiumBadge": "Cao cấp",
     "upgrade": {
       "premium": "Cao cấp →"
+    },
+    "upgradeBanner": {
+      "badge": "Premium",
+      "title": "Tiếp tục học với trải nghiệm DuHan đầy đủ hơn",
+      "description": "Mở khóa giáo trình, đề thi thử TOPIK đầy đủ và công cụ AI bằng chính tài khoản bạn đang dùng: {{email}}",
+      "primaryCta": "Xem gói đề xuất",
+      "dismissCta": "Để lần sau"
     },
     "member": "Thành viên",
     "tiger": {

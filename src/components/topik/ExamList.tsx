@@ -41,6 +41,8 @@ interface ExamListProps {
   onBack?: () => void;
   canAccessContent?: (exam: TopikExam) => boolean;
   onDeleteAttempt?: (attemptId: string) => void;
+  onShowUpgradePrompt?: () => void;
+  upgradeLoading?: boolean;
 }
 
 type LabelsShape = ReturnType<typeof getLabels>;
@@ -225,11 +227,22 @@ export const ExamList: React.FC<ExamListProps> = ({
   onBack,
   canAccessContent,
   onDeleteAttempt,
+  onShowUpgradePrompt,
+  upgradeLoading = false,
 }) => {
   const labels = getLabels(language);
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingDeleteAttemptId, setPendingDeleteAttemptId] = useState<string | null>(null);
+  const [expandedLockedExamId, setExpandedLockedExamId] = useState<string | null>(null);
+  const handleFilterTypeChange = (nextFilter: 'ALL' | 'READING' | 'LISTENING') => {
+    setExpandedLockedExamId(null);
+    setFilterType(nextFilter);
+  };
+  const handleSearchQueryChange = (nextQuery: string) => {
+    setExpandedLockedExamId(null);
+    setSearchQuery(nextQuery);
+  };
   const format = (template: string, vars: Record<string, string | number>) =>
     template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
@@ -317,7 +330,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => setFilterType('ALL')}
+            onClick={() => handleFilterTypeChange('ALL')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
               filterType === 'ALL'
                 ? 'bg-card text-indigo-600 shadow-sm'
@@ -330,7 +343,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => setFilterType('READING')}
+            onClick={() => handleFilterTypeChange('READING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'READING'
                 ? 'bg-card text-blue-600 shadow-sm'
@@ -344,7 +357,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => setFilterType('LISTENING')}
+            onClick={() => handleFilterTypeChange('LISTENING')}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
               filterType === 'LISTENING'
                 ? 'bg-card text-violet-600 shadow-sm'
@@ -365,7 +378,7 @@ export const ExamList: React.FC<ExamListProps> = ({
               'Search by round or title...'
             }
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => handleSearchQueryChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 h-full bg-transparent text-sm font-medium placeholder:text-muted-foreground border-none shadow-none focus-visible:ring-0"
           />
         </div>
@@ -377,6 +390,7 @@ export const ExamList: React.FC<ExamListProps> = ({
           const attemptCount = getAttemptCount(exam.id);
           const bestScore = getBestScore(exam.id);
           const isLocked = canAccessContent != null && !canAccessContent(exam);
+          const showLockedUpgradeCard = isLocked && expandedLockedExamId === exam.id;
           const isReading = exam.type === 'READING';
 
           return (
@@ -385,8 +399,14 @@ export const ExamList: React.FC<ExamListProps> = ({
               type="button"
               size="auto"
               variant="ghost"
-              onClick={() => !isLocked && onSelectExam(exam)}
-              disabled={isLocked}
+              onClick={() => {
+                if (isLocked) {
+                  setExpandedLockedExamId(exam.id);
+                  return;
+                }
+                setExpandedLockedExamId(null);
+                onSelectExam(exam);
+              }}
               className={`group relative bg-card rounded-3xl p-6 border border-border shadow-sm hover:shadow-xl hover:border-indigo-200 hover:-translate-y-1 transition-all text-left w-full ${isLocked ? 'opacity-90 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden flex flex-col h-full outline-none focus:ring-2 focus:ring-indigo-500/50`}
             >
               {/* Top Decor */}
@@ -420,7 +440,9 @@ export const ExamList: React.FC<ExamListProps> = ({
                   </span>
                   {isLocked && (
                     <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-200 text-xs font-bold rounded-lg flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> Premium
+                      <Lock className="w-3 h-3" />{' '}
+                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'badge']) ||
+                        'Premium only'}
                     </span>
                   )}
                 </div>
@@ -448,43 +470,113 @@ export const ExamList: React.FC<ExamListProps> = ({
               </div>
 
               {/* Footer / Stats */}
-              <div className="relative z-10 mt-6 pt-4 border-t border-border flex items-center justify-between">
-                {attemptCount > 0 ? (
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
-                        (bestScore || 0) >= 60
-                          ? 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-200'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <Trophy className="w-3 h-3" />
-                      {format(getLabel(labels, ['topikExamList', 'bestScore']) || 'Best: {score}', {
-                        score: bestScore ? bestScore.toFixed(0) : '0',
-                      })}
+              <div className="relative z-10 mt-6 pt-4 border-t border-border">
+                {showLockedUpgradeCard ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <Lock className="h-4 w-4" />
+                      <span className="text-[11px] font-black uppercase tracking-wide">
+                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'badge']) ||
+                          'Premium only'}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {format(
-                        getLabel(labels, ['topikExamList', 'attempts']) || '{count} attempts',
-                        { count: attemptCount }
-                      )}
-                    </span>
+                    <h4 className="mt-2 text-sm font-black text-slate-900">
+                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'title']) ||
+                        'This section is part of Premium'}
+                    </h4>
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
+                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'signedIn']) ||
+                        'You are already signed in. After payment we will return you to this page automatically.'}
+                    </p>
+                    <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
+                      <li>
+                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'unlockCurrent']) ||
+                          'Unlock this content instantly'}
+                      </li>
+                      <li>
+                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'returnToPage']) ||
+                          'Return to this page after payment'}
+                      </li>
+                      <li>
+                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'bindAccount']) ||
+                          'Bind access to your current account'}
+                      </li>
+                    </ul>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onShowUpgradePrompt?.();
+                      }}
+                      loading={upgradeLoading}
+                      loadingText={getLabel(labels, ['common', 'continue']) || 'Continue'}
+                      disabled={upgradeLoading}
+                      className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
+                    >
+                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'cta']) ||
+                        'View plans and continue'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={event => {
+                        event.stopPropagation();
+                        setExpandedLockedExamId(current => (current === exam.id ? null : current));
+                      }}
+                      className="mt-2 w-full rounded-xl border-amber-300 bg-white px-4 py-2 text-sm text-slate-700"
+                    >
+                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'dismiss']) ||
+                        'Maybe later'}
+                    </Button>
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {getLabel(labels, ['topikExamList', 'notStarted']) || 'Not started'}
-                  </span>
-                )}
+                  <div className="flex items-center justify-between">
+                    {attemptCount > 0 ? (
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg ${
+                            (bestScore || 0) >= 60
+                              ? 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-200'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          <Trophy className="w-3 h-3" />
+                          {format(
+                            getLabel(labels, ['topikExamList', 'bestScore']) || 'Best: {score}',
+                            {
+                              score: bestScore ? bestScore.toFixed(0) : '0',
+                            }
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {format(
+                            getLabel(labels, ['topikExamList', 'attempts']) || '{count} attempts',
+                            { count: attemptCount }
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {isLocked
+                          ? getLabel(labels, ['pricingDetails', 'upgradeGuide', 'previewCta']) ||
+                            'Tap to view upgrade options'
+                          : getLabel(labels, ['topikExamList', 'notStarted']) || 'Not started'}
+                      </span>
+                    )}
 
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    isReading
-                      ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 group-hover:bg-blue-600 group-hover:text-white'
-                      : 'bg-violet-50 dark:bg-violet-500/15 text-violet-600 dark:text-violet-300 group-hover:bg-violet-600 group-hover:text-white'
-                  }`}
-                >
-                  <PlayCircle className="w-5 h-5 fill-current" />
-                </div>
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                        isReading
+                          ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 group-hover:bg-blue-600 group-hover:text-white'
+                          : 'bg-violet-50 dark:bg-violet-500/15 text-violet-600 dark:text-violet-300 group-hover:bg-violet-600 group-hover:text-white'
+                      }`}
+                    >
+                      <PlayCircle className="w-5 h-5 fill-current" />
+                    </div>
+                  </div>
+                )}
               </div>
             </Button>
           );
@@ -504,6 +596,7 @@ export const ExamList: React.FC<ExamListProps> = ({
             variant="ghost"
             size="auto"
             onClick={() => {
+              setExpandedLockedExamId(null);
               setFilterType('ALL');
               setSearchQuery('');
             }}

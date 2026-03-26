@@ -715,6 +715,23 @@
       "paypal": "PayPal",
       "copyright": "© 2026 DuHan Inc. All rights reserved."
     },
+    "accountNote": {
+      "title": "This membership will be activated for your current account",
+      "currentAccount": "Current account: {{email}}",
+      "returnTo": "After payment you will return to: {{destination}}"
+    },
+    "upgradeGuide": {
+      "badge": "Premium only",
+      "title": "This section is part of Premium",
+      "signedIn": "You are already signed in. After payment we will return you to this page automatically.",
+      "unlockCurrent": "Unlock this content instantly",
+      "returnToPage": "Return to this page after payment",
+      "bindAccount": "Bind access to your current account",
+      "cta": "View plans and continue",
+      "dismiss": "Maybe later",
+      "previewCta": "Tap to view upgrade options",
+      "unlockToContinue": "Unlock to continue"
+    },
     "originalLabel": "Original",
     "promo": {
       "activated": "Regional discount active",
@@ -734,6 +751,16 @@
         "cta": "Subscribe now"
       }
     }
+  },
+  "payment": {
+    "returnTo": {
+      "topik": "TOPIK mock exam page",
+      "dashboard": "Dashboard",
+      "course": "Course page",
+      "pricing": "Pricing page"
+    },
+    "redirectingBack": "Redirecting you back to your lesson...",
+    "goBack": "Go Back"
   },
   "phoneVerifyModal": {
     "title": "Phone number check",
@@ -1354,6 +1381,13 @@
     "premium": "Premium",
     "upgrade": {
       "premium": "Premium →"
+    },
+    "upgradeBanner": {
+      "badge": "Premium",
+      "title": "Keep learning with the full DuHan experience",
+      "description": "Unlock textbooks, full TOPIK mock exams, and AI study tools with the account you are using now: {{email}}",
+      "primaryCta": "View recommended plan",
+      "dismissCta": "Maybe later"
     },
     "member": "Member",
     "tiger": {

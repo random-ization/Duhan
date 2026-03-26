@@ -86,6 +86,9 @@ export const createCheckoutSession = action({
     plan: v.string(), // "MONTHLY" | "ANNUAL" | "LIFETIME"
     userId: v.optional(v.string()),
     userEmail: v.optional(v.string()),
+    locale: v.optional(v.string()),
+    source: v.optional(v.string()),
+    returnTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const productId = PRODUCT_MAP[args.plan];
@@ -96,6 +99,10 @@ export const createCheckoutSession = action({
     }
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
+    const successParams = new URLSearchParams();
+    if (args.source) successParams.set('source', args.source);
+    if (args.returnTo) successParams.set('returnTo', args.returnTo);
+    const successUrl = `${appUrl}/payment/success${successParams.size > 0 ? `?${successParams.toString()}` : ''}`;
     const isTestMode =
       process.env.CREEM_API_KEY?.startsWith('creem_test_') ||
       process.env.CREEM_TEST_MODE === 'true';
@@ -104,7 +111,7 @@ export const createCheckoutSession = action({
       const creem = await getCreemClient();
       const checkout = await creem.checkouts.create({
         productId,
-        successUrl: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        successUrl: `${successUrl}${successParams.size > 0 ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`,
         customer: args.userEmail ? { email: args.userEmail } : undefined,
         metadata: {
           userId: args.userId || '',

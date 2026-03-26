@@ -10,6 +10,7 @@ import { getRouteMeta } from '../seo/publicRoutes';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { trackEvent } from '../utils/analytics';
+import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
 import {
   ArrowRight,
   PlayCircle,
@@ -1612,7 +1613,7 @@ const LandingPricing = ({
   const lifetimePriceDisplay = getPrice('LIFETIME', 'GLOBAL');
 
   return (
-    <section id="pricing" className="py-16 md:py-32 bg-white">
+    <section id="pricing" className="py-16 md:py-32 bg-[#F8FAFF]">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="text-center mb-10 md:mb-16">
           <motion.h2
@@ -1629,7 +1630,7 @@ const LandingPricing = ({
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-500"
+            className="text-slate-600"
           >
             {t('landing.pricing.subtitle')}
           </motion.p>
@@ -1640,10 +1641,10 @@ const LandingPricing = ({
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-xl mx-auto bg-emerald-50 dark:bg-emerald-400/12 border-2 border-brand-green dark:border-emerald-300/50 rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
+            className="max-w-xl mx-auto bg-[#FFF7D6] border-2 border-[#F2C94C] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
           >
             <div className="flex items-start gap-4 min-w-0">
-              <div className="w-12 h-12 bg-brand-green dark:bg-emerald-400 rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-[#F2C94C] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
                 <Gift className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="min-w-0">
@@ -1655,7 +1656,7 @@ const LandingPricing = ({
                     {t('pricingDetails.promo.card.badge')}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-800 mt-1">
                   {t('pricingDetails.promo.card.description')}
                 </p>
               </div>
@@ -1667,11 +1668,15 @@ const LandingPricing = ({
               onClick={() =>
                 navigateWithLandingCta(
                   'promo_annual',
-                  '/pricing/details?plan=ANNUAL&source=landing',
+                  buildPricingDetailsPath({
+                    plan: 'ANNUAL',
+                    source: 'landing',
+                    returnTo: '/dashboard',
+                  }),
                   'landing_pricing_promo'
                 )
               }
-              className="bg-white text-slate-900 border-2 border-black rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
+              className="bg-slate-900 text-white border-2 border-black rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
             >
               {t('pricingDetails.promo.card.cta')}
             </Button>
@@ -1687,21 +1692,25 @@ const LandingPricing = ({
         >
           <motion.div
             variants={fadeInUp}
-            className="p-6 md:p-8 border border-slate-200 rounded-3xl"
+            className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
           >
-            <div className="font-bold text-lg mb-2">{t('landing.pricing.free.title')}</div>
-            <div className="text-4xl font-extrabold mb-6">{t('landing.pricing.free.price')}</div>
-            <ul className="space-y-4 text-sm text-slate-500 mb-8">
+            <div className="font-bold text-lg mb-2 text-slate-900">
+              {t('landing.pricing.free.title')}
+            </div>
+            <div className="text-4xl font-extrabold mb-6 text-slate-900">
+              {t('landing.pricing.free.price')}
+            </div>
+            <ul className="space-y-4 text-sm text-slate-700 mb-8">
               <li className="flex gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-emerald-600" />
                 {t('landing.pricing.free.feature1')}
               </li>
               <li className="flex gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-emerald-600" />
                 {t('landing.pricing.free.feature2')}
               </li>
               <li className="flex gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-emerald-600" />
                 {t('landing.pricing.free.feature3')}
               </li>
             </ul>
@@ -1712,7 +1721,7 @@ const LandingPricing = ({
               onClick={() =>
                 navigateWithLandingCta('pricing_free_register', '/register', 'landing_pricing_free')
               }
-              className="w-full py-3 rounded-xl border border-slate-200 font-bold hover:bg-slate-50"
+              className="w-full py-3 rounded-xl border-2 border-slate-900 bg-white text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors"
             >
               {t('landing.pricing.free.cta')}
             </Button>
@@ -1720,12 +1729,12 @@ const LandingPricing = ({
 
           <motion.div
             variants={fadeInUp}
-            className={`p-8 text-primary-foreground dark:text-primary-foreground rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-brand-yellow dark:border-amber-300 overflow-hidden ${
-              showLocalizedPromo ? 'bg-brand-dark' : 'bg-slate-900'
+            className={`p-8 text-white rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-brand-yellow overflow-hidden ${
+              showLocalizedPromo ? 'bg-[#0B2545]' : 'bg-slate-900'
             }`}
           >
             {showLocalizedPromo ? (
-              <div className="absolute top-5 right-5 bg-brand-green dark:bg-emerald-400 text-slate-900 border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
+              <div className="absolute top-5 right-5 bg-[#F2C94C] text-slate-900 border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
                 {t('pricingDetails.promo.activated')}
               </div>
             ) : (
@@ -1747,11 +1756,11 @@ const LandingPricing = ({
                   <span className="text-6xl font-extrabold text-brand-green dark:text-emerald-300">
                     {proPriceDisplay}
                   </span>
-                  <span className="text-slate-300 text-sm">
+                  <span className="text-slate-100 text-sm">
                     {t('pricingDetails.period.month', '/mo')}
                   </span>
                 </div>
-                <div className="text-slate-300 font-bold text-sm mb-6">
+                <div className="text-slate-100 font-bold text-sm mb-6">
                   {t('pricingDetails.originalLabel', 'Original')}{' '}
                   <span className="line-through decoration-red-500 decoration-wavy decoration-2">
                     $6.90
@@ -1761,11 +1770,11 @@ const LandingPricing = ({
             ) : (
               <>
                 <div className="text-5xl font-extrabold mb-1">${proPriceDisplay}</div>
-                <div className="text-slate-300 text-sm mb-6">{t('landing.pricing.pro.period')}</div>
+                <div className="text-slate-100 text-sm mb-6">{t('landing.pricing.pro.period')}</div>
               </>
             )}
 
-            <ul className="space-y-4 text-sm text-primary-foreground/85 mb-8">
+            <ul className="space-y-4 text-sm text-slate-100 mb-8">
               <li className="flex gap-2">
                 <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
                 {t('landing.pricing.pro.feature1')}
@@ -1790,11 +1799,15 @@ const LandingPricing = ({
               onClick={() =>
                 navigateWithLandingCta(
                   'pricing_pro_checkout',
-                  '/pricing/details?plan=ANNUAL&source=landing',
+                  buildPricingDetailsPath({
+                    plan: 'ANNUAL',
+                    source: 'landing',
+                    returnTo: '/dashboard',
+                  }),
                   'landing_pricing_pro'
                 )
               }
-              className="w-full py-4 bg-brand-yellow dark:bg-amber-300 text-slate-900 rounded-xl font-bold shadow-lg hover:bg-yellow-300 dark:hover:bg-amber-200 transition-colors"
+              className="w-full py-4 bg-[#F2C94C] text-slate-900 rounded-xl font-bold border-2 border-[#0F172A] shadow-lg hover:bg-[#FFD95A] transition-colors"
             >
               {showLocalizedPromo
                 ? t('pricingDetails.promo.subscribe')
@@ -1804,17 +1817,21 @@ const LandingPricing = ({
 
           <motion.div
             variants={fadeInUp}
-            className="p-6 md:p-8 border border-slate-200 rounded-3xl bg-slate-50"
+            className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
           >
-            <div className="font-bold text-lg mb-2">{t('landing.pricing.lifetime.title')}</div>
-            <div className="text-4xl font-extrabold mb-6">${lifetimePriceDisplay}</div>
-            <ul className="space-y-4 text-sm text-slate-500 mb-8">
+            <div className="font-bold text-lg mb-2 text-slate-900">
+              {t('landing.pricing.lifetime.title')}
+            </div>
+            <div className="text-4xl font-extrabold mb-6 text-slate-900">
+              ${lifetimePriceDisplay}
+            </div>
+            <ul className="space-y-4 text-sm text-slate-700 mb-8">
               <li className="flex gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-emerald-600" />
                 {t('landing.pricing.lifetime.feature1')}
               </li>
               <li className="flex gap-2">
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-emerald-600" />
                 {t('landing.pricing.lifetime.feature2')}
               </li>
             </ul>
@@ -1825,11 +1842,15 @@ const LandingPricing = ({
               onClick={() =>
                 navigateWithLandingCta(
                   'pricing_lifetime_checkout',
-                  '/pricing/details?plan=LIFETIME&source=landing',
+                  buildPricingDetailsPath({
+                    plan: 'LIFETIME',
+                    source: 'landing',
+                    returnTo: '/dashboard',
+                  }),
                   'landing_pricing_lifetime'
                 )
               }
-              className="w-full py-3 rounded-xl border border-slate-200 font-bold hover:bg-white"
+              className="w-full py-3 rounded-xl border-2 border-slate-900 bg-white text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors"
             >
               {t('landing.pricing.lifetime.cta')}
             </Button>

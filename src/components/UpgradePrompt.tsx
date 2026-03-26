@@ -5,6 +5,9 @@ import { Sparkles, X, Check } from 'lucide-react';
 import { Button } from './ui';
 import { Card, CardContent } from './ui';
 import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal } from './ui';
+import { useAuth } from '../contexts/AuthContext';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { useTranslation } from 'react-i18next';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -14,6 +17,9 @@ interface UpgradePromptProps {
 
 const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language }) => {
   const labels = getLabels(language);
+  const { user } = useAuth();
+  const { startUpgradeFlow, authLoading } = useUpgradeFlow();
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 
@@ -24,9 +30,10 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
   ];
 
   const handleUpgrade = () => {
-    if (globalThis.window !== undefined) {
-      globalThis.window.location.href = `/${language}/pricing/details`;
-    }
+    startUpgradeFlow({
+      plan: 'ANNUAL',
+      source: 'upgrade_prompt',
+    });
     onClose();
   };
 
@@ -100,6 +107,14 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
                   <div className="text-sm text-muted-foreground">
                     {labels.perMonth || 'per month'}
                   </div>
+                  {user?.email ? (
+                    <div className="mt-3 text-xs font-semibold text-muted-foreground">
+                      {t('pricingDetails.accountNote.currentAccount', {
+                        defaultValue: 'Current account: {{email}}',
+                        email: user.email,
+                      })}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -117,6 +132,9 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
                   onClick={handleUpgrade}
                   type="button"
                   size="auto"
+                  loading={authLoading}
+                  loadingText={labels.upgradeNow || 'Upgrade Now'}
+                  disabled={authLoading}
                   className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-amber-400 dark:to-orange-400 dark:hover:from-amber-300 dark:hover:to-orange-300 text-white dark:text-primary-foreground font-bold shadow-lg shadow-amber-500/20 dark:shadow-amber-400/25 flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Sparkles size={16} className="mr-2" />

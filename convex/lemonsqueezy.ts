@@ -101,6 +101,60 @@ const VARIANT_MAP: Record<string, Record<string, string>> = {
 
 const LEMONSQUEEZY_API_URL = 'https://api.lemonsqueezy.com/v1';
 
+const LEMONSQUEEZY_SUPPORTED_LOCALES = new Set<string>([
+  'bg',
+  'hr',
+  'cs',
+  'da',
+  'nl',
+  'en',
+  'et',
+  'fil',
+  'fi',
+  'fr',
+  'de',
+  'el',
+  'hu',
+  'id',
+  'it',
+  'ja',
+  'ko',
+  'lv',
+  'lt',
+  'ms',
+  'mt',
+  'pl',
+  'pt',
+  'ro',
+  'ru',
+  'zh-CN',
+  'sk',
+  'sl',
+  'es',
+  'sv',
+  'th',
+  'tr',
+  'vi',
+] as const);
+
+const normalizeCheckoutLocale = (input?: string): string => {
+  const raw = (input || '').trim();
+  if (!raw) return 'en';
+
+  const lower = raw.toLowerCase();
+  if (lower.startsWith('zh')) return 'zh-CN';
+  if (lower.startsWith('vi')) return 'vi';
+  if (lower.startsWith('mn')) return 'en';
+  if (lower.startsWith('en')) return 'en';
+
+  const base = lower.split(/[-_]/)[0];
+  if (LEMONSQUEEZY_SUPPORTED_LOCALES.has(base)) {
+    return base;
+  }
+
+  return 'en';
+};
+
 const parseVariantPrices = (value: unknown): VariantPrice[] => {
   const data = getPath(value, ['data']);
   if (!Array.isArray(data)) return [];
@@ -142,6 +196,9 @@ export const createCheckout = action({
     userEmail: v.optional(v.string()),
     userName: v.optional(v.string()),
     region: v.optional(v.string()), // "GLOBAL" | "REGIONAL"
+    locale: v.optional(v.string()),
+    source: v.optional(v.string()),
+    returnTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env[API_KEY_ENV];
@@ -162,11 +219,19 @@ export const createCheckout = action({
     }
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
+    const successParams = new URLSearchParams({ provider: 'lemonsqueezy' });
+    if (args.source) successParams.set('source', args.source);
+    if (args.returnTo) successParams.set('returnTo', args.returnTo);
+
+    const checkoutLocale = normalizeCheckoutLocale(args.locale);
 
     const requestBody = {
       data: {
         type: 'checkouts',
         attributes: {
+          checkout_options: {
+            locale: checkoutLocale,
+          },
           checkout_data: {
             email: args.userEmail || undefined,
             name: args.userName || undefined,
@@ -176,7 +241,7 @@ export const createCheckout = action({
             },
           },
           product_options: {
-            redirect_url: `${appUrl}/payment/success?provider=lemonsqueezy`,
+            redirect_url: `${appUrl}/payment/success?${successParams.toString()}`,
           },
         },
         relationships: {

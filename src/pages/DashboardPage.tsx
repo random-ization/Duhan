@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GripVertical, FileText } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -19,6 +19,12 @@ import { useTTS } from '../hooks/useTTS';
 import { Skeleton } from '../components/common';
 import { ReviewWordsCard } from '../features/vocab/components/ReviewWordsCard';
 import { trackEvent } from '../utils/analytics';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import {
+  DASHBOARD_UPGRADE_BANNER_INTERVAL_MS,
+  dismissDashboardUpgradeBanner,
+  shouldShowDashboardUpgradeBanner,
+} from '../utils/upgradeReminder';
 
 interface DailyPhraseData {
   id: string;
@@ -610,6 +616,7 @@ export default function DashboardPage() {
     }
   );
   const isMobile = useIsMobile();
+  const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearningSelection();
   const { isEditing, cardOrder } = useLayoutDashboardState();
@@ -617,6 +624,7 @@ export default function DashboardPage() {
   const { institutes, isLoading: institutesLoading } = useData(); // Get institutes data
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
+  const [upgradeBannerRefreshKey, setUpgradeBannerRefreshKey] = useState(0);
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
 
   useEffect(() => {
@@ -643,6 +651,29 @@ export default function DashboardPage() {
     });
     globalThis.window.localStorage.setItem(dedupeKey, '1');
   }, [language, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
+
+  useEffect(() => {
+    if (!user?.id || getIsPremiumUser(user)) {
+      return;
+    }
+
+    const intervalId = globalThis.window.setInterval(
+      () => setUpgradeBannerRefreshKey(current => current + 1),
+      Math.min(DASHBOARD_UPGRADE_BANNER_INTERVAL_MS, 60_000)
+    );
+
+    return () => {
+      globalThis.window.clearInterval(intervalId);
+    };
+  }, [user]);
+
+  const isPremiumUser = getIsPremiumUser(user);
+  const showUpgradeBanner = Boolean(
+    user?.id &&
+    !isPremiumUser &&
+    upgradeBannerRefreshKey >= 0 &&
+    shouldShowDashboardUpgradeBanner(user.id)
+  );
 
   // Card groups
   const PRACTICE_CARDS = useMemo(() => new Set(['vocab', 'notes', 'typing']), []);
@@ -700,7 +731,6 @@ export default function DashboardPage() {
   );
   const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
   const greeting = getGreetingMessage(t);
-  const isPremiumUser = getIsPremiumUser(user);
   const learnerName = getLearnerName(user);
   const gridClassName = getDashboardGridClassName(isEditing);
   const onSpeakDailyPhrase = () => {
@@ -782,6 +812,63 @@ export default function DashboardPage() {
           )}
         </div>
       </header>
+
+      {!isPremiumUser && user && showUpgradeBanner ? (
+        <section className="rounded-[2rem] border-2 border-slate-900 bg-gradient-to-r from-[#FFF4C7] via-[#FFE3A3] to-[#FFD369] p-6 shadow-pop">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-slate-900">
+                {t('dashboard.upgradeBanner.badge', { defaultValue: 'Premium' })}
+              </div>
+              <h3 className="mt-4 text-2xl font-black text-slate-900">
+                {t('dashboard.upgradeBanner.title', {
+                  defaultValue: 'Keep learning with the full DuHan experience',
+                })}
+              </h3>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">
+                {t('dashboard.upgradeBanner.description', {
+                  defaultValue:
+                    'Unlock textbooks, full TOPIK mock exams, and AI study tools with the account you are using now: {{email}}',
+                  email: user.email,
+                })}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={() =>
+                  startUpgradeFlow({
+                    plan: 'ANNUAL',
+                    source: 'dashboard_banner',
+                    returnTo: '/dashboard',
+                  })
+                }
+                loading={upgradeFlowLoading}
+                loadingText={t('common.loading', { defaultValue: 'Loading...' })}
+                disabled={upgradeFlowLoading}
+                className="rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white"
+              >
+                {t('dashboard.upgradeBanner.primaryCta', {
+                  defaultValue: 'View recommended plan',
+                })}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  dismissDashboardUpgradeBanner(user.id);
+                  setUpgradeBannerRefreshKey(current => current + 1);
+                }}
+                className="rounded-2xl border-2 border-slate-900 bg-white px-5 py-3 text-sm text-slate-900"
+              >
+                {t('dashboard.upgradeBanner.dismissCta', {
+                  defaultValue: 'Maybe later',
+                })}
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* 2. Hero Stats (learning view only) */}
       {dashboardView !== 'practice' && <LearnerSummaryCard />}

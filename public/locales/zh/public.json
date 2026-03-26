@@ -715,6 +715,23 @@
       "paypal": "PayPal",
       "copyright": "© 2026 DuHan Inc. All rights reserved."
     },
+    "accountNote": {
+      "title": "会员将开通到你当前登录的账号",
+      "currentAccount": "当前账号：{{email}}",
+      "returnTo": "支付完成后将返回：{{destination}}"
+    },
+    "upgradeGuide": {
+      "badge": "仅限 Premium",
+      "title": "这部分内容属于 Premium 会员",
+      "signedIn": "你已经登录，支付完成后我们会自动带你回到当前页面。",
+      "unlockCurrent": "立即解锁当前内容",
+      "returnToPage": "支付完成后返回当前页面",
+      "bindAccount": "权益绑定到当前账号",
+      "cta": "查看套餐并继续",
+      "dismiss": "下次再说",
+      "previewCta": "点击查看解锁方式",
+      "unlockToContinue": "解锁后继续"
+    },
     "originalLabel": "原价",
     "promo": {
       "activated": "地区优惠激活",
@@ -734,6 +751,16 @@
         "cta": "立即订阅"
       }
     }
+  },
+  "payment": {
+    "returnTo": {
+      "topik": "TOPIK 模考页",
+      "dashboard": "主页",
+      "course": "课程页",
+      "pricing": "价格页"
+    },
+    "redirectingBack": "正在返回你刚才的学习页面...",
+    "goBack": "返回原页面"
   },
   "phoneVerifyModal": {
     "title": "手机号码校验",
@@ -1355,6 +1382,13 @@
     "premiumBadge": "高级会员",
     "upgrade": {
       "premium": "高级版 →"
+    },
+    "upgradeBanner": {
+      "badge": "Premium",
+      "title": "继续学习，解锁更完整的学习体验",
+      "description": "使用当前账号即可解锁教材、完整 TOPIK 模考和 AI 学习工具：{{email}}",
+      "primaryCta": "查看推荐套餐",
+      "dismissCta": "下次再说"
     },
     "member": "会员",
     "tiger": {

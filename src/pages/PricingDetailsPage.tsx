@@ -14,6 +14,7 @@ import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptio
 import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import { trackEvent } from '../utils/analytics';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import {
   Check,
   ChevronDown,
@@ -52,15 +53,20 @@ function parseSelectedPlanFromSearch(search: string): {
 }
 
 export default function PricingDetailsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const meta = getRouteMeta(location.pathname);
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const checkoutSource = useMemo(() => {
-    const source = new URLSearchParams(location.search).get('source');
+    const source = searchParams.get('source');
     return source || 'pricing_details';
-  }, [location.search]);
+  }, [searchParams]);
+  const returnToPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/dashboard'),
+    [searchParams]
+  );
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
     const { cycle, plan } = parseSelectedPlanFromSearch(location.search);
@@ -81,6 +87,9 @@ export default function PricingDetailsPage() {
         userEmail?: string;
         userName?: string;
         region?: string;
+        locale?: string;
+        source?: string;
+        returnTo?: string;
       },
       { checkoutUrl: string }
     >('lemonsqueezy:createCheckout')
@@ -188,7 +197,32 @@ export default function PricingDetailsPage() {
     navigate(`/auth?redirect=${encoded}`);
   };
 
+  const describeReturnTo = useMemo(() => {
+    if (returnToPath.startsWith('/topik')) {
+      return t('payment.returnTo.topik', { defaultValue: 'TOPIK mock exam page' });
+    }
+    if (returnToPath.startsWith('/dashboard')) {
+      return t('payment.returnTo.dashboard', { defaultValue: 'Dashboard' });
+    }
+    if (returnToPath.startsWith('/course/')) {
+      return t('payment.returnTo.course', { defaultValue: 'Course page' });
+    }
+    if (returnToPath.startsWith('/pricing')) {
+      return t('payment.returnTo.pricing', { defaultValue: 'Pricing page' });
+    }
+    return returnToPath;
+  }, [returnToPath, t]);
+
+  const isPaidUser =
+    user?.tier === 'PAID' ||
+    user?.tier === 'PREMIUM' ||
+    Boolean(user?.subscriptionType && user.subscriptionType !== SubscriptionType.FREE);
+
   const startCheckout = async (plan: CheckoutPlan) => {
+    if (authLoading) {
+      return;
+    }
+
     trackEvent('checkout_start', {
       language: i18n.language,
       plan,
@@ -196,7 +230,13 @@ export default function PricingDetailsPage() {
     });
 
     if (!user) {
-      redirectTo(buildPricingDetailsPath(plan));
+      redirectTo(
+        buildPricingDetailsPath({
+          plan,
+          source: checkoutSource,
+          returnTo: returnToPath,
+        })
+      );
       return;
     }
 
@@ -210,6 +250,9 @@ export default function PricingDetailsPage() {
           userEmail: user.email,
           userName: user.name,
           region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+          locale: i18n.language,
+          source: checkoutSource,
+          returnTo: returnToPath,
         },
         { retries: 1, initialDelayMs: 250 }
       );
@@ -235,7 +278,7 @@ export default function PricingDetailsPage() {
     : t('pricingDetails.plans.pro.cta');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-landing antialiased selection:bg-[#FFDE59] selection:text-black">
+    <div className="min-h-screen bg-[#F8FAFF] text-slate-900 font-landing antialiased selection:bg-[#F2C94C] selection:text-black">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -244,15 +287,15 @@ export default function PricingDetailsPage() {
       />
 
       {showLocalizedPromo && (
-        <div className="w-full bg-[#EC4899] border-b-2 border-black h-12 sticky top-0 z-50">
+        <div className="w-full bg-[#0B2545] border-b-2 border-black h-12 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 h-full flex items-center gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-7 h-7 bg-white rounded-lg border-2 border-black flex items-center justify-center flex-shrink-0">
-                <Gift className="w-4 h-4 text-[#EC4899]" />
+                <Gift className="w-4 h-4 text-[#0B2545]" />
               </div>
               <div className="text-white text-sm font-bold truncate">
                 {t('pricingDetails.promo.banner.prefix')}
-                <span className="text-[#FFDE59]">{t('pricingDetails.promo.banner.highlight')}</span>
+                <span className="text-[#F2C94C]">{t('pricingDetails.promo.banner.highlight')}</span>
                 {t('pricingDetails.promo.banner.suffix')}
               </div>
             </div>
@@ -278,9 +321,9 @@ export default function PricingDetailsPage() {
       {showLocalizedPromo && (
         <section className="pt-10 px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="max-w-xl mx-auto bg-[#E9FBF4] border-2 border-[#10B981] rounded-2xl shadow-pop p-6">
+            <div className="max-w-xl mx-auto bg-[#FFF7D6] border-2 border-[#F2C94C] rounded-2xl shadow-pop p-6">
               <div className="flex items-start gap-4 min-w-0">
-                <div className="w-12 h-12 bg-[#10B981] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-[#F2C94C] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
                   <Gift className="w-6 h-6 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -292,7 +335,7 @@ export default function PricingDetailsPage() {
                       {t('pricingDetails.promo.card.badge')}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-slate-800 mt-1">
                     {t('pricingDetails.promo.card.description')}
                   </p>
                 </div>
@@ -377,7 +420,9 @@ export default function PricingDetailsPage() {
               type="button"
               variant="ghost"
               size="auto"
-              disabled={!user || isCurrentPlan(SubscriptionType.FREE)}
+              disabled={authLoading || !user || isCurrentPlan(SubscriptionType.FREE)}
+              loading={authLoading}
+              loadingText={t('common.loading', { defaultValue: 'Loading...' })}
               onClick={() => navigate('/dashboard')}
               className="w-full py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-500 mb-8 hover:border-black hover:text-black transition-all disabled:opacity-70 disabled:hover:border-slate-200 disabled:hover:text-slate-500"
             >
@@ -409,11 +454,11 @@ export default function PricingDetailsPage() {
 
           <div
             className={`rounded-3xl border-2 border-black p-6 md:p-8 flex flex-col relative shadow-pop transform md:-translate-y-4 z-10 text-white order-1 md:order-2 ${
-              showLocalizedPromo ? 'bg-[#173C41]' : 'bg-[#0F172A]'
+              showLocalizedPromo ? 'bg-[#0B2545]' : 'bg-[#0F172A]'
             }`}
           >
             {showLocalizedPromo ? (
-              <div className="absolute top-4 right-4 bg-brand-green text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
+              <div className="absolute top-4 right-4 bg-[#F2C94C] text-black border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
                 {t('pricingDetails.promo.activated')}
               </div>
             ) : (
@@ -422,18 +467,34 @@ export default function PricingDetailsPage() {
               </div>
             )}
             <div className="mb-4">
-              <h3 className="text-xl font-bold text-brand-yellow">
+              <h3 className="text-xl font-bold text-[#F2C94C]">
                 {t('pricingDetails.plans.pro.title')}
               </h3>
               <p className="text-sm text-slate-400 mt-1">
                 {t('pricingDetails.plans.pro.subtitle')}
               </p>
             </div>
+            {user && !isPaidUser && (
+              <div className="mb-6 rounded-2xl border border-white/20 bg-white/10 p-4 text-left">
+                <p className="text-sm font-black text-white">
+                  {t('pricingDetails.accountNote.title', {
+                    defaultValue: 'This membership will be activated for your current account',
+                  })}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#FDE68A]">{user.email}</p>
+                <p className="mt-2 text-xs font-medium text-slate-200">
+                  {t('pricingDetails.accountNote.returnTo', {
+                    defaultValue: 'After payment you will return to: {{destination}}',
+                    destination: describeReturnTo,
+                  })}
+                </p>
+              </div>
+            )}
             {showLocalizedPromo ? (
               <div className="mb-8">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-brand-green">$</span>
-                  <span className="text-7xl font-heading font-extrabold text-brand-green">
+                  <span className="text-3xl font-black text-[#F2C94C]">$</span>
+                  <span className="text-7xl font-heading font-extrabold text-[#F2C94C]">
                     {proPrice.amount}
                   </span>
                   <span className="text-slate-400 font-medium">{proPrice.period}</span>
@@ -463,13 +524,15 @@ export default function PricingDetailsPage() {
               variant="ghost"
               size="auto"
               onClick={() => startCheckout(proPlanId)}
-              disabled={checkoutPendingPlan !== null}
-              loading={checkoutPendingPlan === proPlanId}
-              loadingText={buttonLabel}
+              disabled={authLoading || checkoutPendingPlan !== null}
+              loading={authLoading || checkoutPendingPlan === proPlanId}
+              loadingText={
+                authLoading ? t('common.loading', { defaultValue: 'Loading...' }) : buttonLabel
+              }
               loadingIconClassName="w-5 h-5"
               className={`w-full py-4 rounded-xl font-bold text-lg mb-8 hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all border-2 border-black flex justify-center items-center gap-2 ${
                 showLocalizedPromo
-                  ? 'bg-brand-green text-white shadow-[4px_4px_0px_0px_#ffffff]'
+                  ? 'bg-[#F2C94C] text-black shadow-[4px_4px_0px_0px_#ffffff]'
                   : 'bg-brand-yellow text-black shadow-[4px_4px_0px_0px_#ffffff]'
               }`}
             >
@@ -490,7 +553,7 @@ export default function PricingDetailsPage() {
                 t('pricingDetails.plans.pro.features.f5'),
               ].map(item => (
                 <li key={item} className="flex gap-3 items-start">
-                  <div className="bg-brand-green/20 p-0.5 rounded text-brand-green flex-shrink-0">
+                  <div className="bg-[#F2C94C]/20 p-0.5 rounded text-[#F2C94C] flex-shrink-0">
                     <Check className="w-4 h-4" />
                   </div>
                   <span>{item}</span>
@@ -517,9 +580,13 @@ export default function PricingDetailsPage() {
               variant="ghost"
               size="auto"
               onClick={() => startCheckout('LIFETIME')}
-              disabled={checkoutPendingPlan !== null}
-              loading={checkoutPendingPlan === 'LIFETIME'}
-              loadingText={t('pricingDetails.plans.lifetime.cta')}
+              disabled={authLoading || checkoutPendingPlan !== null}
+              loading={authLoading || checkoutPendingPlan === 'LIFETIME'}
+              loadingText={
+                authLoading
+                  ? t('common.loading', { defaultValue: 'Loading...' })
+                  : t('pricingDetails.plans.lifetime.cta')
+              }
               loadingIconClassName="w-4 h-4"
               className="w-full py-3 rounded-xl border-2 border-black bg-slate-100 font-bold text-slate-900 mb-8 hover:bg-white transition-all"
             >

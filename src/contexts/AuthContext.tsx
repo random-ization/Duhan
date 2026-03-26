@@ -14,6 +14,7 @@ import { User, Language, TextbookContent, TopikExam } from '../types';
 import { NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
 import { normalizeLanguage } from '../utils/languageUtils';
+import { clearDashboardUpgradeBannerSession } from '../utils/upgradeReminder';
 
 import i18n from '../utils/i18next-config';
 
@@ -119,6 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     await signOut();
+    clearDashboardUpgradeBannerSession();
     localStorage.removeItem('token'); // cleanup legacy
     localStorage.removeItem('userId'); // cleanup legacy
   }, [signOut]);
