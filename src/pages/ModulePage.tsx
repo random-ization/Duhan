@@ -325,6 +325,7 @@ const ModulePage: React.FC = () => {
     t,
   });
   const moduleLabel = resolveModuleLabel(currentModule, t);
+  const isReadingModule = currentModule === LearningModuleType.READING;
 
   const isCustomList = listParam === 'saved' || listParam === 'mistakes';
 
@@ -380,6 +381,10 @@ const ModulePage: React.FC = () => {
     t,
     handleBack,
   });
+
+  if (isReadingModule) {
+    return <div className="p-0">{moduleContent}</div>;
+  }
 
   return (
     <div className="p-6">

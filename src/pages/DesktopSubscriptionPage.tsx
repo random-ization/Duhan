@@ -14,6 +14,7 @@ import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
 import { trackEvent } from '../utils/analytics';
+import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 
 const DesktopSubscriptionPage: React.FC = () => {
   const { user } = useAuth();
@@ -40,6 +41,17 @@ const DesktopSubscriptionPage: React.FC = () => {
     i18n.language === 'vi' ||
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
+
+  const [checkoutPendingPlan, setCheckoutPendingPlan] = React.useState<CheckoutPlan | null>(null);
+
+  const isCheckoutUrlSafe = (value: string) => {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' || url.protocol === 'http:';
+    } catch {
+      return false;
+    }
+  };
 
   return (
     <div
@@ -295,6 +307,7 @@ const DesktopSubscriptionPage: React.FC = () => {
         <PricingSection
           onSubscribe={async plan => {
             const checkoutPlan = plan as CheckoutPlan;
+            if (checkoutPendingPlan) return;
             trackEvent('checkout_start', {
               language: i18n.language,
               plan: checkoutPlan,
@@ -307,24 +320,34 @@ const DesktopSubscriptionPage: React.FC = () => {
               return;
             }
             try {
-              const { checkoutUrl } = await createCheckoutSession({
-                plan: checkoutPlan,
-                userId: user.id?.toString() || '',
-                userEmail: user.email || '',
-                userName: user.name || '',
-                region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-              });
+              setCheckoutPendingPlan(checkoutPlan);
+              const { checkoutUrl } = await runConvexActionWithRetry(
+                createCheckoutSession,
+                {
+                  plan: checkoutPlan,
+                  userId: user.id?.toString() || '',
+                  userEmail: user.email || '',
+                  userName: user.name || '',
+                  region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+                },
+                { retries: 0 }
+              );
+              if (!isCheckoutUrlSafe(checkoutUrl)) {
+                throw new Error('Invalid checkout URL returned by provider');
+              }
               trackEvent('checkout_success', {
                 language: i18n.language,
                 plan: checkoutPlan,
                 source: 'desktop_subscription',
               });
-              globalThis.location.href = checkoutUrl;
+              globalThis.location.assign(checkoutUrl);
             } catch (error) {
               const err = error as Error;
               logger.error('Checkout failed:', err);
               const msg = err.message || 'Unknown error';
               notify.error(`Failed to start checkout session: ${msg}`);
+            } finally {
+              setCheckoutPendingPlan(null);
             }
           }}
         />

@@ -1108,18 +1108,26 @@ export const analyzeSentence = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_sentence');
-    const apiKey = process.env.OPENAI_API_KEY;
+    const mimoApiKey = process.env.MIMO_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const apiKey = mimoApiKey || openaiApiKey;
     if (!apiKey) {
-      console.warn('OPENAI_API_KEY not set');
+      console.warn('MIMO_API_KEY / OPENAI_API_KEY not set');
       return null;
     }
 
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({
+      apiKey,
+      ...(mimoApiKey
+        ? { baseURL: process.env.MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1' }
+        : {}),
+    });
     const responseLanguage = resolveAiOutputLanguage(args.language);
+    const model = mimoApiKey ? process.env.MIMO_CHAT_MODEL || 'mimo-v2-flash' : 'gpt-5-nano';
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
+        model,
         messages: [
           {
             role: 'system',
@@ -1152,7 +1160,7 @@ Return a JSON object with:
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_sentence',
-        model: 'gpt-5-nano',
+        model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,

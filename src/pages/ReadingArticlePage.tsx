@@ -1,7 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams } from 'react-router-dom';
-import { BookOpen, Check, ChevronLeft, Languages, Sparkles, Star, Volume2, VolumeX } from 'lucide-react';
+import {
+  BookOpen,
+  Check,
+  ChevronLeft,
+  Languages,
+  Sparkles,
+  Star,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { AI, DICTIONARY, NEWS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
@@ -27,7 +36,6 @@ import AnnotationToolbar from '../features/annotation-kit/components/AnnotationT
 import { useScopedAnnotations } from '../features/annotation-kit/hooks/useScopedAnnotations';
 import type { AnnotationSelectionKind } from '../features/annotation-kit/types';
 import { classifySelectionKind } from '../features/annotation-kit/utils/selection';
-import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import {
   ContextualCountBadge,
   ContextualSection,
@@ -1586,13 +1594,13 @@ const ReadingSelectionToolbar: React.FC<{
         labels={{
           addNote: t('readingArticle.toolbar.note', { defaultValue: 'Note' }),
           sentenceNote: t('readingArticle.toolbar.saveAsQuoteNote', {
-            defaultValue: '作为句子笔记保存',
+            defaultValue: 'Save as sentence note',
           }),
           saveToVocab: t('readingArticle.toolbar.saveToVocab', {
-            defaultValue: '保存到生词本',
+            defaultValue: 'Save to vocab book',
           }),
           lookup: t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' }),
-          close: t('dashboard.common.close', { defaultValue: 'Close' }),
+          close: t('readingArticle.toolbar.close', { defaultValue: 'Close' }),
         }}
         onAddNote={startNoteFromSelection}
         onLookup={onLookupSelection}
@@ -2427,7 +2435,7 @@ export default function ReadingArticlePage() {
     });
   }, []);
 
-  const contextualSidebarContent = useMemo(
+  const readingSidebarContent = useMemo(
     () => (
       <ReadingArticleSidebar
         panelTab={panelTab}
@@ -2497,14 +2505,6 @@ export default function ReadingArticlePage() {
       vocabulary,
     ]
   );
-
-  useContextualSidebar({
-    id: 'reading-article-context',
-    title: t('readingArticle.backToDiscovery', { defaultValue: 'Reading' }),
-    subtitle: t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' }),
-    content: contextualSidebarContent,
-    enabled: Boolean(article && articleId),
-  });
 
   const stateView = renderReadingArticleState({
     articleId,
@@ -2584,54 +2584,68 @@ export default function ReadingArticlePage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12" ref={contentRef}>
-          <div className="mx-auto w-full max-w-4xl">
-            <h1 className="mb-6 text-3xl font-black leading-tight text-foreground">
-              {resolvedArticle.title}
-            </h1>
-            <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
-              <span>{new Date(resolvedArticle.publishedAt).toLocaleDateString(dateLocale)}</span>
-              <span>{sourceLabel(resolvedArticle.sourceKey)}</span>
-              <span>
-                {t('readingArticle.meta.words', {
-                  defaultValue: '{{count}} chars',
-                  count: wordCount.toLocaleString(),
-                })}
-              </span>
-              <span>
-                {t('readingArticle.meta.translationTarget', {
-                  defaultValue: 'Translation: {{language}}',
-                  language: translationLabel,
-                })}
-              </span>
-            </div>
-            {ttsError && (
-              <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/35 dark:text-rose-300">
-                {t('readingArticle.tts.status', { defaultValue: 'TTS status' })}: {ttsError}
-              </div>
-            )}
-            {translationError && (
-              <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-300">
-                {t('readingArticle.translation.status', { defaultValue: 'Translation status' })}:{' '}
-                {translationError}
-              </div>
-            )}
+        <div className="flex-1 overflow-hidden">
+          <div className="flex h-full min-h-0">
+            <div
+              className="min-w-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12"
+              ref={contentRef}
+            >
+              <div className="mx-auto w-full max-w-4xl">
+                <h1 className="mb-6 text-3xl font-black leading-tight text-foreground">
+                  {resolvedArticle.title}
+                </h1>
+                <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
+                  <span>
+                    {new Date(resolvedArticle.publishedAt).toLocaleDateString(dateLocale)}
+                  </span>
+                  <span>{sourceLabel(resolvedArticle.sourceKey)}</span>
+                  <span>
+                    {t('readingArticle.meta.words', '{{count}} chars', {
+                      count: Number(wordCount),
+                    })}
+                  </span>
+                  <span>
+                    {t('readingArticle.meta.translationTarget', {
+                      defaultValue: 'Translation: {{language}}',
+                      language: translationLabel,
+                    })}
+                  </span>
+                </div>
+                {ttsError && (
+                  <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/35 dark:text-rose-300">
+                    {t('readingArticle.tts.status', { defaultValue: 'TTS status' })}: {ttsError}
+                  </div>
+                )}
+                {translationError && (
+                  <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-300">
+                    {t('readingArticle.translation.status', { defaultValue: 'Translation status' })}
+                    : {translationError}
+                  </div>
+                )}
 
-            <div style={{ lineHeight: 2.2, fontSize }}>
-              <ReadingParagraphBlocks
-                t={t}
-                paragraphs={paragraphs}
-                translations={translations}
-                translationEnabled={translationEnabled}
-                translationLoading={translationLoading}
-                translationError={translationError}
-                draftNote={draftNote}
-                notes={notes}
-                getNoteVisualState={getNoteVisualState}
-                focusNote={focusNote}
-                setHoveredNoteId={setHoveredNoteId}
-              />
+                <div style={{ lineHeight: 2.2, fontSize }}>
+                  <ReadingParagraphBlocks
+                    t={t}
+                    paragraphs={paragraphs}
+                    translations={translations}
+                    translationEnabled={translationEnabled}
+                    translationLoading={translationLoading}
+                    translationError={translationError}
+                    draftNote={draftNote}
+                    notes={notes}
+                    getNoteVisualState={getNoteVisualState}
+                    focusNote={focusNote}
+                    setHoveredNoteId={setHoveredNoteId}
+                  />
+                </div>
+              </div>
             </div>
+
+            {!isMobile && (
+              <aside className="hidden w-[360px] shrink-0 border-l border-border bg-muted/20 p-4 lg:block xl:w-[380px]">
+                <div className="h-full overflow-y-auto pr-1">{readingSidebarContent}</div>
+              </aside>
+            )}
           </div>
         </div>
 
@@ -2651,19 +2665,16 @@ export default function ReadingArticlePage() {
             <Sheet>
               <SheetTrigger asChild>
                 <Button className="rounded-full shadow-2xl px-6 py-6 font-bold bg-primary text-primary-foreground border-2 border-primary/20 hover:scale-105 transition-transform flex items-center gap-2">
-                  <Sparkles size={18} /> {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
+                  <Sparkles size={18} />{' '}
+                  {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
                 </Button>
               </SheetTrigger>
               <SheetPortal>
                 <SheetOverlay className="z-[60] bg-black/60 backdrop-blur-sm" />
-                <SheetContent
-                  className="fixed inset-x-0 bottom-0 z-[60] mt-10 h-[85dvh] rounded-t-3xl border-border px-4 py-6 shadow-2xl"
-                >
+                <SheetContent className="fixed inset-x-0 bottom-0 z-[60] mt-10 h-[85dvh] rounded-t-3xl border-border px-4 py-6 shadow-2xl">
                   <SheetTitle className="sr-only">AI and Dictionary</SheetTitle>
                   <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20" />
-                  <div className="h-full overflow-y-auto pb-10 pr-2">
-                    {contextualSidebarContent}
-                  </div>
+                  <div className="h-full overflow-y-auto pb-10 pr-2">{readingSidebarContent}</div>
                 </SheetContent>
               </SheetPortal>
             </Sheet>

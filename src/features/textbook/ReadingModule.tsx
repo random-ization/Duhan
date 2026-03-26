@@ -973,10 +973,10 @@ const ReadingReaderPanel: React.FC<ReadingReaderPanelProps> = ({
   );
 
   return (
-    <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-3 sm:p-4 md:p-8">
+    <div className="w-full md:w-[65%] md:border-r-2 border-foreground overflow-y-auto p-0">
       <div
         ref={readerRef}
-        className={`bg-card dark:bg-slate-900 border-2 border-foreground rounded-xl shadow-[6px_6px_0px_0px_#18181B] dark:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.22)] p-4 sm:p-6 md:p-8 max-w-full sm:max-w-2xl mx-auto ${isSerif ? 'font-serif' : 'font-sans'}`}
+        className={`bg-card dark:bg-slate-900 border-0 md:border-r-0 rounded-none shadow-none p-4 sm:p-6 md:p-8 max-w-full sm:max-w-none mx-0 ${isSerif ? 'font-serif' : 'font-sans'}`}
         style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
         aria-label={readerLabel}
       >
@@ -1182,7 +1182,7 @@ const ReadingDesktopStudyHub: React.FC<ReadingDesktopStudyHubProps> = ({
   setAiInput,
   sendAiMessage,
 }) => (
-  <div className="hidden md:flex w-[35%] bg-card dark:bg-slate-900 flex-col overflow-hidden">
+  <div className="hidden md:flex w-[35%] bg-card dark:bg-slate-900 flex-col overflow-hidden border-l-2 border-foreground">
     <div className="flex border-b-2 border-foreground shrink-0">
       {(
         [
@@ -2402,7 +2402,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   ]);
 
   return (
-    <div className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col overflow-x-hidden bg-zinc-100 bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-slate-950 dark:bg-[radial-gradient(rgba(148,163,184,0.20)_1px,transparent_1px)] dark:bg-[length:20px_20px]">
+    <div className="h-[calc(100vh-48px)] h-[calc(100dvh-48px)] flex flex-col overflow-x-hidden bg-card dark:bg-slate-900">
       {isLoading && <ListeningModuleSkeleton />}
       {error && !isLoading && <ReadingErrorState labels={labels} onBack={onBack} />}
       {!isLoading && !error && (

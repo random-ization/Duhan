@@ -68,9 +68,14 @@ const PaymentSuccessPage: React.FC = () => {
 
     const pollUntilActivated = async () => {
       for (let attempt = 1; attempt <= ACTIVATION_POLL_MAX_ATTEMPTS; attempt += 1) {
-        const activation = await getSubscriptionActivationStatus({});
-        if (cancelled) return false;
-        if (activation.isActive) return true;
+        try {
+          const activation = await getSubscriptionActivationStatus({});
+          if (cancelled) return false;
+          if (activation.isActive) return true;
+        } catch (error) {
+          console.error('Activation status check failed:', error);
+          if (cancelled) return false;
+        }
 
         setStatus('pending');
         setMessage(
@@ -90,53 +95,53 @@ const PaymentSuccessPage: React.FC = () => {
       setStatus('loading');
       setMessage(t('payment.verifying', { defaultValue: 'Verifying payment...' }));
 
-      if (provider === 'lemonsqueezy') {
-        const activated = await pollUntilActivated();
-        if (cancelled) return;
-        if (!activated) {
-          setStatus('pending');
-          setMessage(
-            t('payment.activationDelayed', {
-              defaultValue:
-                'Your payment is complete, but activation is taking longer than expected.',
-            })
-          );
-          return;
-        }
-
-        setStatus('success');
-        markPaymentActivationSuccess();
-        setMessage(
-          t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
-        );
-        scheduleRedirect();
-        return;
-      }
-
-      if (!sessionId) {
-        const activated = await pollUntilActivated();
-        if (cancelled) return;
-        if (!activated) {
-          setStatus('pending');
-          setMessage(
-            t('payment.activationPendingNoSession', {
-              defaultValue:
-                'We are confirming your subscription status. If you just paid, activation may take a moment.',
-            })
-          );
-          return;
-        }
-
-        setStatus('success');
-        markPaymentActivationSuccess();
-        setMessage(
-          t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
-        );
-        scheduleRedirect();
-        return;
-      }
-
       try {
+        if (provider === 'lemonsqueezy') {
+          const activated = await pollUntilActivated();
+          if (cancelled) return;
+          if (!activated) {
+            setStatus('pending');
+            setMessage(
+              t('payment.activationDelayed', {
+                defaultValue:
+                  'Your payment is complete, but activation is taking longer than expected.',
+              })
+            );
+            return;
+          }
+
+          setStatus('success');
+          markPaymentActivationSuccess();
+          setMessage(
+            t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
+          );
+          scheduleRedirect();
+          return;
+        }
+
+        if (!sessionId) {
+          const activated = await pollUntilActivated();
+          if (cancelled) return;
+          if (!activated) {
+            setStatus('pending');
+            setMessage(
+              t('payment.activationPendingNoSession', {
+                defaultValue:
+                  'We are confirming your subscription status. If you just paid, activation may take a moment.',
+              })
+            );
+            return;
+          }
+
+          setStatus('success');
+          markPaymentActivationSuccess();
+          setMessage(
+            t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
+          );
+          scheduleRedirect();
+          return;
+        }
+
         const verifyResult = await verifyPaymentSession({ sessionId });
         if (verifyResult.success === false) {
           const statusLabel = verifyResult.status ? ` (${verifyResult.status})` : '';

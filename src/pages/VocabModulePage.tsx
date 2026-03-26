@@ -1497,10 +1497,11 @@ export default function VocabModulePage() {
               <div className="flex items-start justify-between gap-6">
                 <div>
                   <h3 className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
-                    欢迎回到今天的课堂！
+                    {getLabel(labels, ['vocab', 'resumePrompt', 'welcome']) ||
+                      "Welcome back to today's session!"}
                   </h3>
                   <p className="mt-1 text-3xl sm:text-4xl font-black text-foreground/90 tracking-tight">
-                    准备好继续了吗？
+                    {getLabel(labels, ['vocab', 'resumePrompt', 'ready']) || 'Ready to continue?'}
                   </p>
                 </div>
                 <div className="relative w-12 h-12 shrink-0" aria-hidden="true">
@@ -1513,7 +1514,8 @@ export default function VocabModulePage() {
 
               <div className="mt-7">
                 <div className="text-xl sm:text-2xl font-black text-foreground">
-                  学习集总进度:
+                  {getLabel(labels, ['vocab', 'resumePrompt', 'overallProgress']) ||
+                    'Overall session progress:'}
                   <span className="text-emerald-600 ml-2">
                     {resumeCandidate?.progressPercent ?? 0}%
                   </span>
@@ -1530,14 +1532,18 @@ export default function VocabModulePage() {
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-[1.1rem] bg-emerald-100/70 border border-emerald-200 p-5">
-                  <div className="text-xl sm:text-2xl font-black text-foreground">已完成的问题</div>
+                  <div className="text-xl sm:text-2xl font-black text-foreground">
+                    {getLabel(labels, ['vocab', 'resumePrompt', 'completed']) ||
+                      'Completed questions'}
+                  </div>
                   <div className="mt-3 text-6xl leading-none font-black text-emerald-700">
                     {resumeCandidate?.completed ?? 0}
                   </div>
                 </div>
                 <div className="rounded-[1.1rem] bg-slate-100 border border-slate-200 p-5">
                   <div className="text-xl sm:text-2xl font-black text-foreground">
-                    下次检查前剩余的问题
+                    {getLabel(labels, ['vocab', 'resumePrompt', 'remaining']) ||
+                      'Remaining before next check'}
                   </div>
                   <div className="mt-3 text-6xl leading-none font-black text-slate-500">
                     {resumeCandidate?.remaining ?? 0}
@@ -1555,7 +1561,8 @@ export default function VocabModulePage() {
                   }}
                   className="px-6 py-3 rounded-xl border-2 border-border text-slate-500 font-black text-xl hover:bg-muted"
                 >
-                  重新开始学习模式
+                  {getLabel(labels, ['vocab', 'resumePrompt', 'restart']) ||
+                    'Restart learning mode'}
                 </Button>
                 <Button
                   type="button"
@@ -1564,7 +1571,7 @@ export default function VocabModulePage() {
                   onClick={continueFromResumePrompt}
                   className="px-7 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-xl hover:from-blue-700 hover:to-indigo-600"
                 >
-                  继续练习
+                  {getLabel(labels, ['vocab', 'resumePrompt', 'continue']) || 'Continue practice'}
                 </Button>
               </div>
             </div>

@@ -206,8 +206,7 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
               {charCount}
             </span>
             {' / '}
-            {maxLength}{' '}
-            {t('topikWriting.session.characterCount', { count: '', defaultValue: 'chars' }).trim()}
+            {maxLength} {t('topikWriting.session.characterCount', 'chars').trim()}
           </span>
           <div className="flex items-center gap-3">
             <div className="w-32 h-1.5 bg-muted rounded-full overflow-hidden">

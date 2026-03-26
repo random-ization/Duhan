@@ -731,12 +731,10 @@ const AnalysisDialog: React.FC<{
       <DialogPortal>
         <DialogOverlay
           unstyled
-          forceMount
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
         />
         <DialogContent
           unstyled
-          forceMount
           closeOnEscape={false}
           lockBodyScroll={false}
           className="fixed inset-0 z-[101] flex items-end md:items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
@@ -1776,7 +1774,7 @@ const PodcastPlayerPage: React.FC = () => {
         if (currentTime >= transcript[i].end) return i;
       }
     }
-    
+
     return currentIndex;
   }, [currentTime, transcript]);
 

@@ -73,14 +73,15 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitleDefault: 'Courses',
   }),
   course: segments => {
-    const isGrammarWorkspace = segments[2] === 'grammar';
+    const moduleSegment = segments[2];
+    const isImmersiveWorkspace = moduleSegment === 'grammar' || moduleSegment === 'reading';
     return {
       hasFooter: false,
       hasHeader: false,
-      usePatternBackground: !isGrammarWorkspace,
-      useDesktopContainerPadding: !isGrammarWorkspace,
-      useDesktopMaxWidth: !isGrammarWorkspace,
-      lockMainScroll: isGrammarWorkspace,
+      usePatternBackground: !isImmersiveWorkspace,
+      useDesktopContainerPadding: !isImmersiveWorkspace,
+      useDesktopMaxWidth: !isImmersiveWorkspace,
+      lockMainScroll: isImmersiveWorkspace,
       headerType: 'detail',
       headerAction: 'more',
       headerTitle: 'course.title',

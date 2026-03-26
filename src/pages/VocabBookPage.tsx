@@ -639,7 +639,11 @@ const VocabBookPage: React.FC = () => {
         return next;
       });
       setSelectedWordIds(new Set());
-      notify.success(mastered ? 'Marked as mastered' : 'Moved back to learning');
+      notify.success(
+        mastered
+          ? labels.vocabBook?.markedMastered || 'Marked as mastered'
+          : labels.vocabBook?.movedBackToLearning || 'Moved back to learning'
+      );
     } catch {
       notify.error(labels.vocabBook?.saveFailed || 'Failed to save word status. Please retry.');
     } finally {
@@ -662,9 +666,9 @@ const VocabBookPage: React.FC = () => {
         return next;
       });
       setSelectedWordIds(new Set());
-      notify.success('Removed from vocab book');
+      notify.success(labels.vocabBook?.removedFromBook || 'Removed from vocab book');
     } catch {
-      notify.error('Failed to remove selected words');
+      notify.error(labels.vocabBook?.removeFailed || 'Failed to remove selected words');
     } finally {
       setBulkPending(false);
     }
@@ -800,9 +804,16 @@ const VocabBookPage: React.FC = () => {
             ) : (
               <Square className="w-4 h-4 mr-1.5" />
             )}
-            {allVisibleSelected ? '取消全选' : '全选当前列表'}
+            {allVisibleSelected
+              ? labels.vocabBook?.deselectAllVisible || 'Deselect all in view'
+              : labels.vocabBook?.selectAllVisible || 'Select all in view'}
           </Button>
-          <span className="text-xs font-semibold text-slate-500">已选 {selectedCount} 个单词</span>
+          <span className="text-xs font-semibold text-slate-500">
+            {(labels.vocabBook?.selectedCount || 'Selected {{count}} words').replace(
+              '{{count}}',
+              String(selectedCount)
+            )}
+          </span>
         </div>
       </div>
     </div>
@@ -930,7 +941,11 @@ const VocabBookPage: React.FC = () => {
                           ? 'bg-teal-50 border-teal-300 text-teal-600'
                           : 'bg-white border-slate-200 text-slate-500'
                       }`}
-                      aria-label={isSelected ? 'Deselect word' : 'Select word'}
+                      aria-label={
+                        isSelected
+                          ? labels.vocabBook?.deselectWord || 'Deselect word'
+                          : labels.vocabBook?.selectWord || 'Select word'
+                      }
                     >
                       {isSelected ? (
                         <CheckSquare className="w-5 h-5" />
@@ -949,7 +964,7 @@ const VocabBookPage: React.FC = () => {
                         pronounceWord(word);
                       }}
                       className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:text-teal-600 group-hover:bg-teal-50 flex items-center justify-center transition-colors shrink-0"
-                      aria-label={`Play ${word.word}`}
+                      aria-label={`${labels.vocabBook?.playWord || 'Play'} ${word.word}`}
                     >
                       <Volume2 className="w-4 h-4" />
                     </Button>
@@ -967,7 +982,7 @@ const VocabBookPage: React.FC = () => {
                             {word.word}
                           </div>
                           <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md uppercase shrink-0">
-                            {word.partOfSpeech || 'Word'}
+                            {word.partOfSpeech || labels.vocabBook?.wordPosFallback || 'Word'}
                           </span>
                         </div>
                         <div className="text-sm font-medium text-slate-600 truncate mt-0.5">
@@ -1154,7 +1169,7 @@ const VocabBookPage: React.FC = () => {
               disabled={bulkPending}
               className="py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold"
             >
-              设为已掌握
+              {labels.vocabBook?.bulkMarkMastered || 'Mark selected as mastered'}
             </Button>
             <Button
               type="button"
@@ -1167,7 +1182,7 @@ const VocabBookPage: React.FC = () => {
               className="py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold inline-flex items-center justify-center gap-1"
             >
               <Trash2 className="w-4 h-4" />
-              移除单词
+              {labels.vocabBook?.bulkRemoveWords || 'Remove selected words'}
             </Button>
           </div>
         )}

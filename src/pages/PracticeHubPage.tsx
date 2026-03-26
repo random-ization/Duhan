@@ -149,21 +149,25 @@ export default function PracticeHubPage() {
     <section className="mx-auto w-full max-w-7xl">
       <header className="mb-6 flex items-end justify-between gap-4 px-1">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">
             {t('nav.practice', { defaultValue: 'Practice Hub' })}
           </h1>
-          <p className="mt-2 text-sm font-semibold text-muted-foreground">
+          <p className="mt-2 text-sm font-semibold text-slate-600 dark:text-slate-300/90">
             {t('dashboard.practice.subtitle', {
               defaultValue: 'Organize your resources and start today challenge',
             })}
           </p>
         </div>
         {!isMobile && (
-          <div className="inline-flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2 shadow-sm">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <span className="text-xs font-black text-foreground">{streakLikeValue}</span>
-            <span className="mx-1 text-border">•</span>
-            <span className="text-xs font-bold text-muted-foreground">TOPIK {topikBadge}</span>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-slate-900/70 border border-slate-300/70 dark:border-slate-500/60 px-4 py-2 shadow-sm">
+            <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-300" />
+            <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+              {streakLikeValue}
+            </span>
+            <span className="mx-1 text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+              TOPIK {topikBadge}
+            </span>
           </div>
         )}
       </header>
@@ -176,27 +180,31 @@ export default function PracticeHubPage() {
             variant="ghost"
             size="auto"
             onClick={() => navigate(card.path)}
-            className={`group relative ${isMobile ? 'w-full' : 'flex-1 hover:flex-[1.35]'} overflow-hidden rounded-[2rem] border bg-card text-left transition-all duration-500 ease-out p-6 sm:p-7 !block !whitespace-normal shadow-xl shadow-slate-200/45 dark:shadow-none`}
+            className={`group relative ${isMobile ? 'w-full' : 'flex-1 hover:flex-[1.35]'} overflow-hidden rounded-[2rem] border text-left transition-all duration-500 ease-out p-6 sm:p-7 !block !whitespace-normal shadow-xl shadow-slate-200/45 dark:shadow-[0_20px_50px_rgba(2,6,23,0.55)] bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-700/80`}
           >
             <div
-              className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${card.accentClass} opacity-70 group-hover:opacity-100 transition-opacity duration-500`}
+              className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${card.accentClass} opacity-75 dark:opacity-25 group-hover:opacity-95 dark:group-hover:opacity-35 transition-opacity duration-500`}
             />
+
+            <div className="pointer-events-none absolute inset-0 hidden dark:block bg-[radial-gradient(circle_at_20%_15%,rgba(148,163,184,0.16),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.14),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.58),rgba(15,23,42,0.85))]" />
 
             <div className="relative z-10 flex h-full flex-col justify-between">
               <div>
                 <div className="mb-6 flex items-start justify-between gap-3">
-                  <div className="w-14 h-14 rounded-2xl bg-card/90 border border-border flex items-center justify-center shadow-sm">
+                  <div className="w-14 h-14 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-600 flex items-center justify-center shadow-sm">
                     {card.icon}
                   </div>
                   {card.meta ? (
-                    <span className="text-[11px] font-semibold text-muted-foreground/90 hidden md:inline">
+                    <span className="text-[11px] font-semibold text-slate-600/90 dark:text-slate-300/90 hidden md:inline">
                       {card.meta}
                     </span>
                   ) : null}
                 </div>
 
-                <h2 className="text-2xl font-black text-foreground mb-1">{card.title}</h2>
-                <p className="text-sm font-semibold text-muted-foreground max-w-[88%] leading-relaxed">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-1">
+                  {card.title}
+                </h2>
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 max-w-[88%] leading-relaxed">
                   {card.subtitle}
                 </p>
               </div>
@@ -206,13 +214,13 @@ export default function PracticeHubPage() {
                   {card.stats.map(stat => (
                     <div
                       key={stat.label}
-                      className="rounded-2xl border border-border bg-card/85 p-3.5"
+                      className="rounded-2xl border border-slate-200 dark:border-slate-600/80 bg-white/85 dark:bg-slate-950/45 p-3.5"
                     >
-                      <p className="text-[10px] tracking-wider font-bold text-muted-foreground uppercase">
+                      <p className="text-[10px] tracking-wider font-bold text-slate-500 dark:text-slate-400 uppercase">
                         {stat.label}
                       </p>
                       <p
-                        className={`mt-1 text-xl font-black text-foreground ${stat.highlight || ''}`}
+                        className={`mt-1 text-xl font-black text-slate-900 dark:text-slate-100 ${stat.highlight || ''}`}
                       >
                         {stat.value}
                       </p>
@@ -220,7 +228,7 @@ export default function PracticeHubPage() {
                   ))}
                 </div>
 
-                <div className="w-full rounded-2xl border border-border bg-card/90 px-4 py-3.5 font-black text-foreground transition-all duration-300 group-hover:bg-foreground group-hover:text-card flex items-center justify-center gap-2">
+                <div className="w-full rounded-2xl border border-slate-300 dark:border-slate-500/70 bg-slate-900 text-slate-100 dark:bg-slate-100 dark:text-slate-900 px-4 py-3.5 font-black transition-all duration-300 group-hover:brightness-110 flex items-center justify-center gap-2">
                   <span>{card.ctaLabel}</span>
                   <ChevronRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </div>

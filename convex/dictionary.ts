@@ -570,7 +570,8 @@ export const getWordDetail = action({
   handler: async (_ctx, args) => {
     const apiKey = process.env.KRDICT_API_KEY;
     if (!apiKey) {
-      throw new Error('Missing KRDICT_API_KEY environment variable');
+      console.warn('[KRDICT] Missing KRDICT_API_KEY environment variable for getWordDetail');
+      return null;
     }
 
     const params = new URLSearchParams({
@@ -592,9 +593,17 @@ export const getWordDetail = action({
     console.log('[KRDICT] Getting detail for:', args.targetCode);
 
     try {
-      const response = await fetch(url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      let response: Response;
+      try {
+        response = await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!response.ok) {
-        throw new Error(`KRDICT API error: ${response.status}`);
+        console.error(`[KRDICT] Detail API error status: ${response.status}`);
+        return null;
       }
 
       const xmlText = await response.text();
@@ -603,14 +612,15 @@ export const getWordDetail = action({
       if (xmlText.includes('<error>')) {
         const errorCode = /<error_code>(\d+)<\/error_code>/.exec(xmlText)?.[1];
         const errorMsg = /<message>([^<]+)<\/message>/.exec(xmlText)?.[1];
-        throw new Error(`KRDICT Error ${errorCode}: ${errorMsg}`);
+        console.error(`[KRDICT] Detail error ${errorCode}: ${errorMsg ?? 'Unknown error'}`);
+        return null;
       }
 
       const result = parseSearchXML(xmlText);
       return result.entries[0] || null;
     } catch (error: unknown) {
       console.error('[KRDICT] Error:', toErrorMessage(error));
-      throw error;
+      return null;
     }
   },
 });
