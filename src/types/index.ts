@@ -304,6 +304,7 @@ export interface TopikExam {
   audioUrl?: string; // New: For Listening exams
   questions: TopikQuestion[];
   isPaid?: boolean; // Whether this exam requires paid subscription
+  accessLevel?: 'FREE_SAMPLE' | 'PRO';
 }
 
 // Legal Documents

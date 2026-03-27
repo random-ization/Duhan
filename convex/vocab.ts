@@ -1,9 +1,14 @@
 import { mutation, query, type QueryCtx } from './_generated/server';
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { DEFAULT_VOCAB_LIMIT } from './queryLimits';
 import type { Doc, Id } from './_generated/dataModel';
 import { toErrorMessage } from './errors';
+import {
+  consumeDailyFeatureUsage,
+  evaluateCourseUnitAccess,
+  getViewerEntitlementSnapshot,
+} from './entitlements';
 import {
   mapFsrsStateToStatus,
   buildWordUpdates,
@@ -683,6 +688,9 @@ export const getReviewDeck = query({
   handler: async (ctx, args): Promise<VocabReviewDeckDto[]> => {
     try {
       const userId = await getOptionalAuthUserId(ctx);
+      const viewer = userId ? await ctx.db.get(userId) : null;
+      const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+      const isAdmin = viewer?.role === 'ADMIN';
       let effectiveCourseId = args.courseId;
       let institute: Doc<'institutes'> | null = null;
       const instituteId = ctx.db.normalizeId('institutes', args.courseId);
@@ -708,6 +716,12 @@ export const getReviewDeck = query({
         return [];
       }
       const targetUnitId = resolveTargetUnitId(institute, normalizedUnitId);
+      if (!isAdmin && typeof targetUnitId === 'number') {
+        const access = evaluateCourseUnitAccess(snapshot.plan, targetUnitId);
+        if (!access.allowed) {
+          return [];
+        }
+      }
 
       let appearances;
       if (typeof targetUnitId === 'number') {
@@ -722,6 +736,11 @@ export const getReviewDeck = query({
           .query('vocabulary_appearances')
           .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
           .take(limit);
+      }
+      if (!isAdmin) {
+        appearances = appearances.filter(
+          app => evaluateCourseUnitAccess(snapshot.plan, app.unitId).allowed
+        );
       }
 
       if (appearances.length === 0) {
@@ -1895,6 +1914,7 @@ export const addToReview = mutation({
     const userId = await getAuthUserId(ctx);
     const now = Date.now();
     console.log(`[addToReview] User ID: ${userId}`);
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
 
     // 1. Check if word exists in master dictionary
     const existingWord = await ctx.db
@@ -1931,6 +1951,23 @@ export const addToReview = mutation({
       }
       await ctx.db.patch(existingProgress._id, patch);
       return { success: true, wordId, action: 'updated' };
+    }
+
+    const quotaResult = await consumeDailyFeatureUsage(ctx, {
+      userId,
+      plan: snapshot.plan,
+      feature: 'vocab_new_words_daily',
+      amount: 1,
+      resourceKey: `${args.source || 'manual'}:${args.word}`,
+      upgradeSource: 'vocab_limit',
+    });
+    if (!quotaResult.allowed) {
+      throw new ConvexError({
+        code: 'DAILY_LIMIT_REACHED',
+        feature: 'vocab_new_words_daily',
+        upgradeSource: 'vocab_limit',
+        remaining: quotaResult.remaining,
+      });
     }
 
     // 3. Create new progress entry

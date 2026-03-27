@@ -21,13 +21,16 @@ import { useTTS } from '../hooks/useTTS';
 import { getLabel, getLabels } from '../utils/i18n';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { VocabModuleSkeleton } from '../components/common';
-import { VOCAB, mRef } from '../utils/convexRefs';
+import { ENTITLEMENTS, VOCAB, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import type { Id } from '../../convex/_generated/dataModel';
 import VocabProgressSections from '../features/vocab/components/VocabProgressSections';
 import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
 import VocabTest from '../features/vocab/components/VocabTest';
 import { useFSRSBatchProgress } from '../features/vocab/hooks/useVocabProgress';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../utils/entitlements';
+import { notify } from '../utils/notify';
 
 const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
@@ -302,6 +305,7 @@ export default function VocabModulePage() {
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user, language } = useAuth();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const { selectedLevel } = useLearningSelection();
   const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
   const { institutes, isLoading: institutesLoading } = useData();
@@ -376,6 +380,7 @@ export default function VocabModulePage() {
   const upsertLearningSessionMutation = useMutation(VOCAB.upsertLearningSession);
   const completeLearningSessionMutation = useMutation(VOCAB.completeLearningSession);
   const abandonLearningSessionMutation = useMutation(VOCAB.abandonLearningSession);
+  const consumeVocabTestAttemptMutation = useMutation(ENTITLEMENTS.consumeVocabTestAttempt);
   const activeLearnSession = useQuery(
     VOCAB.getActiveLearningSession,
     instituteId ? { instituteId, unitId: selectedSessionUnitId, mode: 'LEARN' } : 'skip'
@@ -636,9 +641,26 @@ export default function VocabModulePage() {
         meaning,
         partOfSpeech: w.partOfSpeech,
         source: 'TEXTBOOK',
+      }).catch(error => {
+        const entitlementError = getEntitlementErrorData(error);
+        if (entitlementError?.upgradeSource) {
+          startUpgradeFlow({
+            plan: 'ANNUAL',
+            source: entitlementError.upgradeSource,
+          });
+          return;
+        }
+        notify.error(labels.vocab?.saveWordFailed || 'Unable to save this word right now.');
       });
     },
-    [addToReviewMutation, language, starredIds, wordById]
+    [
+      addToReviewMutation,
+      labels.vocab?.saveWordFailed,
+      language,
+      starredIds,
+      startUpgradeFlow,
+      wordById,
+    ]
   );
 
   const speakWord = useCallback(
@@ -738,8 +760,26 @@ export default function VocabModulePage() {
     [completeLearningSessionMutation, flashcardSessionId, learnSessionId, testSessionId]
   );
 
+  const requestFreshVocabTestAttempt = useCallback(async (): Promise<boolean> => {
+    try {
+      await consumeVocabTestAttemptMutation({});
+      return true;
+    } catch (error) {
+      const entitlementError = getEntitlementErrorData(error);
+      if (entitlementError?.upgradeSource) {
+        startUpgradeFlow({
+          plan: 'ANNUAL',
+          source: entitlementError.upgradeSource,
+        });
+        return false;
+      }
+      notify.error(labels.vocab?.testStartFailed || 'Unable to start test mode right now.');
+      return false;
+    }
+  }, [consumeVocabTestAttemptMutation, labels.vocab?.testStartFailed, startUpgradeFlow]);
+
   const requestOpenSessionMode = useCallback(
-    (mode: SessionMode) => {
+    async (mode: SessionMode) => {
       if (
         mode === 'FLASHCARD' &&
         flashcardResumeSnapshot &&
@@ -793,6 +833,12 @@ export default function VocabModulePage() {
         setResumeModePrompt(mode);
         return;
       }
+      if (mode === 'TEST') {
+        const allowed = await requestFreshVocabTestAttempt();
+        if (!allowed) {
+          return;
+        }
+      }
       if (mode === 'FLASHCARD') {
         setViewState(prev => ({ ...prev, mode: 'flashcard' }));
       } else if (mode === 'LEARN') {
@@ -808,6 +854,7 @@ export default function VocabModulePage() {
       flashcardSessionId,
       learnSessionId,
       testSessionId,
+      requestFreshVocabTestAttempt,
     ]
   );
 
@@ -960,6 +1007,7 @@ export default function VocabModulePage() {
         instituteId={instituteId || ''}
         language={language}
         userId={user?.id}
+        onRequestTestMode={requestFreshVocabTestAttempt}
       />
     );
   }

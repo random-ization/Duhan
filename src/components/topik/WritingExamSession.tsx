@@ -44,6 +44,7 @@ export interface WritingExamSessionProps {
   /** Pre-loaded draft answers from the session doc */
   initialAnswers?: Record<string, string>;
   onSubmitted?: (answers: Record<string, string>) => void;
+  onSubmitError?: (error: unknown) => void;
   onExit?: (answers: Record<string, string>) => void | Promise<void>;
 }
 
@@ -800,6 +801,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
   questions,
   initialAnswers = {},
   onSubmitted,
+  onSubmitError,
   onExit,
 }) => {
   const { t, i18n } = useTranslation();
@@ -905,7 +907,8 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
         await submitSession({ sessionId, language: i18n.language });
         setIsSubmitted(true);
         onSubmitted?.(answersRecord);
-      } catch {
+      } catch (error) {
+        onSubmitError?.(error);
         setIsSubmitting(false);
       }
     },
@@ -919,6 +922,7 @@ export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
       submitSession,
       i18n.language,
       onSubmitted,
+      onSubmitError,
     ]
   );
 

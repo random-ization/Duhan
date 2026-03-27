@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { SubscriptionType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocalizedNavigate } from './useLocalizedNavigate';
 import { resolveSafeReturnTo } from '../utils/navigation';
@@ -61,7 +60,7 @@ export function getUpgradeFlowDecision(
 export function useUpgradeFlow() {
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  const { user, loading } = useAuth();
+  const { user, loading, viewerAccess } = useAuth();
 
   const defaultReturnTo = useMemo(
     () =>
@@ -69,14 +68,7 @@ export function useUpgradeFlow() {
     [location.hash, location.pathname, location.search]
   );
 
-  const isPremiumUser =
-    user?.tier === 'PAID' ||
-    user?.tier === 'PREMIUM' ||
-    Boolean(
-      user?.subscriptionType &&
-      user.subscriptionType !== SubscriptionType.FREE &&
-      user.subscriptionType.trim() !== ''
-    );
+  const isPremiumUser = Boolean(viewerAccess?.isPremium);
 
   const startUpgradeFlow = useCallback(
     (args: UpgradeFlowArgs) => {

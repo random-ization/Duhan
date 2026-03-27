@@ -2,14 +2,14 @@
 import { action, type ActionCtx } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { api, internal } from './_generated/api';
+import { makeFunctionReference } from 'convex/server';
+import type { FunctionReference } from 'convex/server';
 import OpenAI from 'openai';
 import { createClient } from '@deepgram/sdk';
 import { createHash } from 'node:crypto';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Doc, Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
-import { hasActiveSubscription } from './subscription';
-import { FREE_DAILY_AI_CALL_LIMIT, SUBSCRIBER_DAILY_AI_CALL_LIMIT } from './queryLimits';
 import { assertProductionRuntimeEnv } from './env';
 
 assertProductionRuntimeEnv();
@@ -19,15 +19,53 @@ const logAI = (msg: string) => console.log(`[AI] ${msg}`);
 
 const logUsageMutation = internal.aiUsageLogs.logUsage;
 const logInvocationMutation = internal.aiUsageLogs.logInvocation;
-const countRecentUsageQuery = internal.aiUsageLogs.countRecentByUser;
 const getAiCacheByKeyQuery = internal.aiCache.getByKey;
 const upsertAiCacheMutation = internal.aiCache.upsert;
+const getViewerAccessInternalQuery = makeFunctionReference<
+  'query',
+  { userId: Id<'users'> },
+  {
+    plan: 'FREE' | 'PRO' | 'LIFETIME';
+    remaining: { aiCreditsDaily: number | null };
+  }
+>('entitlements:getViewerAccessInternal') as unknown as FunctionReference<
+  'query',
+  'internal',
+  { userId: Id<'users'> },
+  {
+    plan: 'FREE' | 'PRO' | 'LIFETIME';
+    remaining: { aiCreditsDaily: number | null };
+  }
+>;
+const consumeFeatureUsageInternalMutation = makeFunctionReference<
+  'mutation',
+  {
+    userId: Id<'users'>;
+    plan: 'FREE' | 'PRO' | 'LIFETIME';
+    feature: 'ai_credits_daily';
+    amount?: number;
+    resourceKey?: string;
+    dedupeByResource?: boolean;
+    upgradeSource?: string;
+  },
+  { allowed: boolean; remaining: number | null; reason?: string; upgradeSource?: string | null }
+>('entitlements:consumeFeatureUsageInternal') as unknown as FunctionReference<
+  'mutation',
+  'internal',
+  {
+    userId: Id<'users'>;
+    plan: 'FREE' | 'PRO' | 'LIFETIME';
+    feature: 'ai_credits_daily';
+    amount?: number;
+    resourceKey?: string;
+    dedupeByResource?: boolean;
+    upgradeSource?: string;
+  },
+  { allowed: boolean; remaining: number | null; reason?: string; upgradeSource?: string | null }
+>;
 
 const AI_CACHE_VERSION = 'v1';
 const READING_ANALYSIS_PROMPT_VERSION = 'v2';
-const DAY_MS = 24 * 60 * 60 * 1000;
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const AI_DAILY_LIMIT_TIMEZONE = process.env.AI_DAILY_LIMIT_TIMEZONE === 'UTC' ? 'UTC' : 'KST';
 type SupportedTranslationLanguage = 'zh' | 'en' | 'vi' | 'mn';
 
 // Minimal error formatter
@@ -44,40 +82,41 @@ async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Id<'users'>> {
   return userId as Id<'users'>;
 }
 
-function resolveDayWindow(nowMs: number) {
-  const offsetMs = AI_DAILY_LIMIT_TIMEZONE === 'KST' ? KST_OFFSET_MS : 0;
-  const shiftedNow = nowMs + offsetMs;
-  const dayStartShifted = Math.floor(shiftedNow / DAY_MS) * DAY_MS;
-  const dayStartMs = dayStartShifted - offsetMs;
-  return {
-    dayStartMs,
-    dayEndMs: dayStartMs + DAY_MS,
-  };
-}
-
-async function enforceAiDailyLimit(ctx: ActionCtx, userId: Id<'users'>, feature: string) {
-  const nowMs = Date.now();
-  const { dayStartMs } = resolveDayWindow(nowMs);
-  const subscription = await ctx.runQuery(api.users.viewer, {});
-  const maxCalls = hasActiveSubscription(subscription, nowMs)
-    ? SUBSCRIBER_DAILY_AI_CALL_LIMIT
-    : FREE_DAILY_AI_CALL_LIMIT;
-
-  const { count } = await ctx.runQuery(countRecentUsageQuery, {
+async function enforceAiDailyLimit(
+  ctx: ActionCtx,
+  userId: Id<'users'>,
+  feature: string,
+  cost: number = 1
+) {
+  const snapshot = await ctx.runQuery(getViewerAccessInternalQuery, { userId });
+  const result = await ctx.runMutation(consumeFeatureUsageInternalMutation, {
     userId,
-    windowMs: Math.max(1_000, nowMs - dayStartMs + 1),
+    plan: snapshot.plan,
+    feature: 'ai_credits_daily',
+    amount: cost,
+    resourceKey: feature,
+    upgradeSource: 'ai_limit',
   });
 
-  if (count >= maxCalls) {
-    throw new ConvexError('DAILY_LIMIT_REACHED');
+  if (!result.allowed) {
+    throw new ConvexError({
+      code: 'DAILY_LIMIT_REACHED',
+      feature: 'ai_credits_daily',
+      upgradeSource: 'ai_limit',
+      remaining: result.remaining,
+    });
   }
 
   await ctx.runMutation(logInvocationMutation, { userId, feature });
 }
 
-async function guardAiAction(ctx: ActionCtx, feature: string): Promise<Id<'users'>> {
+async function guardAiAction(
+  ctx: ActionCtx,
+  feature: string,
+  cost: number = 1
+): Promise<Id<'users'>> {
   const userId = await requireAuthenticatedUser(ctx);
-  await enforceAiDailyLimit(ctx, userId, feature);
+  await enforceAiDailyLimit(ctx, userId, feature, cost);
   return userId;
 }
 

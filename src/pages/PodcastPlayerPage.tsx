@@ -46,6 +46,9 @@ import { useFileUpload } from '../hooks/useFileUpload';
 import { useAuth } from '../contexts/AuthContext';
 import { getLanguageLabel } from '../utils/languageUtils';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../utils/entitlements';
+import { ENTITLEMENTS } from '../utils/convexRefs';
 
 // Types
 interface TranscriptLine {
@@ -1262,10 +1265,12 @@ async function resolveTranscriptAudioUrlWithUpload(args: {
 }
 
 const PodcastPlayerPage: React.FC = () => {
-  const { state } = useLocation();
+  const location = useLocation();
+  const { state } = location;
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
-  const { language, user } = useAuth();
+  const { language, user, viewerAccess } = useAuth();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const uiLang: UiLang = language;
   const copy = UI_COPY[uiLang];
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
@@ -1399,7 +1404,9 @@ const PodcastPlayerPage: React.FC = () => {
       { success: boolean; isSubscribed: boolean }
     >('podcasts:toggleSubscription')
   );
+  const consumeMediaPlay = useMutation(ENTITLEMENTS.consumeMediaPlay);
   const [subscriptionPending, setSubscriptionPending] = useState(false);
+  const [playbackUnlocked, setPlaybackUnlocked] = useState(false);
   const { uploadFile } = useFileUpload();
 
   // --- Helpers ---
@@ -1430,6 +1437,18 @@ const PodcastPlayerPage: React.FC = () => {
     () => getHistoryBaseRecord(episodeKey, episode, channel),
     [episodeKey, episode, channel]
   );
+
+  useEffect(() => {
+    setPlaybackUnlocked(false);
+  }, [episodeKey]);
+
+  useEffect(() => {
+    if (viewerAccess?.flags.mediaSpeedControl) return;
+    setSpeed(1);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = 1;
+    }
+  }, [viewerAccess?.flags.mediaSpeedControl, episodeKey]);
 
   const retryLoadTranscriptFromS3 = useCallback(
     async (episodeId: string) => waitForTranscriptFromS3WithDelays(episodeId, [4000, 6000, 8000]),
@@ -1802,9 +1821,46 @@ const PodcastPlayerPage: React.FC = () => {
 
   const togglePlay = () => {
     if (!audioRef.current) return;
-    if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play();
-    setIsPlaying(!isPlaying);
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    void (async () => {
+      if (viewerAccess?.isPremium || playbackUnlocked) {
+        await audioRef.current?.play();
+        setIsPlaying(true);
+        return;
+      }
+
+      if (!user) {
+        startUpgradeFlow({
+          plan: 'ANNUAL',
+          source: 'media_limit',
+          returnTo: `${location.pathname}${location.search}`,
+        });
+        return;
+      }
+
+      try {
+        await consumeMediaPlay({ resourceKey: `podcast:${episodeKey}` });
+        setPlaybackUnlocked(true);
+        await audioRef.current?.play();
+        setIsPlaying(true);
+      } catch (error) {
+        const entitlementError = getEntitlementErrorData(error);
+        if (entitlementError?.upgradeSource) {
+          startUpgradeFlow({
+            plan: 'ANNUAL',
+            source: entitlementError.upgradeSource,
+            returnTo: `${location.pathname}${location.search}`,
+          });
+          return;
+        }
+        notify.error('Playback is unavailable right now.');
+      }
+    })();
   };
 
   const seekTo = (time: number) => {
@@ -1819,6 +1875,14 @@ const PodcastPlayerPage: React.FC = () => {
   const skip = (sec: number) => seekTo(currentTime + sec);
 
   const changeSpeed = () => {
+    if (!viewerAccess?.flags.mediaSpeedControl) {
+      startUpgradeFlow({
+        plan: 'ANNUAL',
+        source: 'media_limit',
+        returnTo: `${location.pathname}${location.search}`,
+      });
+      return;
+    }
     const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
     const next = speeds[(speeds.indexOf(speed) + 1) % speeds.length];
     setSpeed(next);
@@ -2265,7 +2329,12 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={changeSpeed}
-                      className="text-[10px] font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-muted transition-colors w-8 h-auto"
+                      className="text-[10px] font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-muted transition-colors w-8 h-auto disabled:opacity-60 disabled:cursor-pointer"
+                      title={
+                        viewerAccess?.flags.mediaSpeedControl
+                          ? undefined
+                          : 'Upgrade to unlock playback speed control'
+                      }
                     >
                       {speed}x
                     </Button>

@@ -34,6 +34,8 @@ import { MobileVocabDashboard } from '../components/mobile/MobileVocabDashboard'
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../utils/entitlements';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Id } from '../../convex/_generated/dataModel';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
@@ -257,7 +259,8 @@ const VocabExportModal: React.FC<{
 
 const VocabBookPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
-  const { language, user } = useAuth();
+  const { language, user, viewerAccess } = useAuth();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const labels = getLabels(language);
@@ -579,8 +582,16 @@ const VocabBookPage: React.FC = () => {
       const filename = `vocab-book-${categoryLabel}-${modeLabel}.pdf`;
       await downloadFile(url, filename);
       setExportOpen(false);
-    } catch {
-      notify.error(labels.vocabBook?.exportFailed || 'Export failed. Please try again.');
+    } catch (error) {
+      const entitlementError = getEntitlementErrorData(error);
+      if (entitlementError?.upgradeSource) {
+        startUpgradeFlow({
+          plan: 'ANNUAL',
+          source: entitlementError.upgradeSource,
+        });
+      } else {
+        notify.error(labels.vocabBook?.exportFailed || 'Export failed. Please try again.');
+      }
     } finally {
       globalThis.setTimeout(() => setExporting(false), 250);
     }
@@ -724,7 +735,16 @@ const VocabBookPage: React.FC = () => {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => setExportOpen(true)}
+              onClick={() => {
+                if (!viewerAccess?.flags.pdfExport) {
+                  startUpgradeFlow({
+                    plan: 'ANNUAL',
+                    source: 'pdf_locked',
+                  });
+                  return;
+                }
+                setExportOpen(true);
+              }}
               disabled={visibleItems.length === 0 || loading}
               loading={loading}
               loadingText={labels.vocabBook?.exportPdf || 'Export PDF'}

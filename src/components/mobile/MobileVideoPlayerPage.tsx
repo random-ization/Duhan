@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Video, Loader2, Eye, Languages } from 'lucide-react';
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
-import { aRef, qRef } from '../../utils/convexRefs';
+import { aRef, ENTITLEMENTS, qRef } from '../../utils/convexRefs';
 // Use existing MobileDictionarySheet
 import { MobileDictionarySheet } from './MobileDictionarySheet';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
@@ -14,6 +14,9 @@ import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryM
 import { useUserActions } from '../../hooks/useUserActions';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
+import { useUpgradeFlow } from '../../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../../utils/entitlements';
+import { notify } from '../../utils/notify';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -66,7 +69,8 @@ export const MobileVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
-  const { language } = useAuth();
+  const { language, user, viewerAccess } = useAuth();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const { saveWord } = useUserActions();
   const labels = getLabels(language);
   // Refs
@@ -89,6 +93,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
       SearchResult
     >('dictionary:searchDictionary')
   );
+  const consumeMediaPlay = useMutation(ENTITLEMENTS.consumeMediaPlay);
 
   const convexVideo = useQuery(
     qRef<{ id: string }, ConvexVideoDoc | null>('videos:get'),
@@ -103,6 +108,10 @@ export const MobileVideoPlayerPage: React.FC = () => {
     null
   );
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
+  const [unlockedPlaybackKey, setUnlockedPlaybackKey] = useState<string | null>(null);
+  const playbackResourceKey = id ? `video:${id}` : null;
+  const playbackUnlocked =
+    playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
 
   // Memoized Data
   const video = useMemo<VideoData | null>(() => {
@@ -149,6 +158,44 @@ export const MobileVideoPlayerPage: React.FC = () => {
     if (playerRef.current) {
       playerRef.current.currentTime = time;
       playerRef.current.play();
+    }
+  };
+
+  const ensurePlaybackAccess = async (): Promise<boolean> => {
+    if (viewerAccess?.isPremium) return true;
+    if (playbackUnlocked) return true;
+
+    if (!user) {
+      startUpgradeFlow({
+        plan: 'ANNUAL',
+        source: 'media_limit',
+        returnTo: id ? `/videos/${id}` : '/videos',
+      });
+      return false;
+    }
+
+    try {
+      if (!playbackResourceKey) return false;
+      await consumeMediaPlay({ resourceKey: playbackResourceKey });
+      setUnlockedPlaybackKey(playbackResourceKey);
+      return true;
+    } catch (error) {
+      const entitlementError = getEntitlementErrorData(error);
+      if (playerRef.current) {
+        playerRef.current.pause();
+      }
+      if (entitlementError?.upgradeSource) {
+        startUpgradeFlow({
+          plan: 'ANNUAL',
+          source: entitlementError.upgradeSource,
+          returnTo: id ? `/videos/${id}` : '/videos',
+        });
+        return false;
+      }
+      notify.error(
+        t('dashboard.video.playbackLocked', { defaultValue: 'Playback is unavailable.' })
+      );
+      return false;
     }
   };
 
@@ -225,6 +272,10 @@ export const MobileVideoPlayerPage: React.FC = () => {
             poster={video.thumbnailUrl}
             className="w-full h-full"
             onTimeUpdate={handleTimeUpdate}
+            onPlay={() => {
+              void ensurePlaybackAccess();
+            }}
+            playbackRates={viewerAccess?.flags.mediaSpeedControl ? undefined : [1]}
           />
         </Suspense>
       </div>

@@ -107,7 +107,7 @@ const buildProfileDerived = ({
 };
 
 const Profile: React.FC<ProfileProps> = ({ language }) => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, viewerAccess } = useAuth();
   const navigate = useLocalizedNavigate();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
@@ -364,6 +364,7 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
       <ProfileHeader
         user={user}
         labels={labels}
+        viewerAccess={viewerAccess}
         displayName={displayName}
         isEditingName={isEditingName}
         setIsEditingName={setIsEditingName}

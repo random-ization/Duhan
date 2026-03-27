@@ -837,6 +837,7 @@
     "loginFailed": "Authentication failed",
     "signupFailed": "Signup failed",
     "invalidCredentials": "Invalid email or password",
+    "tooManyAttempts": "Too many attempts. Please try again later.",
     "emailExists": "An account with this email already exists",
     "emailNotVerified": "Please verify your email before logging in",
     "userNotFound": "User not found",

@@ -14,6 +14,7 @@ import { resolveSafeReturnTo } from '../../utils/navigation';
 import { Button } from '../ui';
 import { Input } from '../ui';
 import { trackEvent } from '../../utils/analytics';
+import { resolveAuthErrorMessage } from '../../utils/authErrors';
 
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
@@ -65,14 +66,18 @@ export const MobileAuthPage: React.FC = () => {
   };
 
   const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message === 'AUTH_REQUEST_TIMEOUT') {
-      return t('auth.loginFailed');
-    }
-    const translated = t(`errors.${message}`, { defaultValue: '' });
-    if (translated) return translated;
-    if (message && !message.startsWith('errors.')) return message;
-    return t(fallbackKey);
+    return resolveAuthErrorMessage(err, {
+      fallback: t(fallbackKey),
+      invalidCredentials: t('auth.invalidCredentials'),
+      tooManyAttempts: t('auth.tooManyAttempts', {
+        defaultValue: 'Too many attempts. Please try again later.',
+      }),
+      emailRequired: t('errors.EMAIL_REQUIRED'),
+      accountExistsLinkRequired: t('errors.ACCOUNT_EXISTS_LINK_REQUIRED'),
+      kakaoEmailRequired: t('errors.KAKAO_EMAIL_REQUIRED'),
+      emailAlreadyExists: t('errors.EMAIL_ALREADY_EXISTS'),
+      timeout: t('auth.loginFailed'),
+    });
   };
 
   const handleSocialLogin = async (provider: 'google' | 'kakao', fallbackKey: string) => {

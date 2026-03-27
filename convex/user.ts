@@ -3,6 +3,7 @@ import { v, ConvexError } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 
 import { getAuthUserId } from './utils';
+import { getViewerEntitlementSnapshot } from './entitlements';
 import { asId } from './id';
 import { normalizeAnswerMap, normalizeFiniteNumberMap } from './validation';
 import {
@@ -59,7 +60,9 @@ export const getSavedWords = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    const limit = args.limit ?? 200;
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const requestedLimit = args.limit ?? 200;
+    const limit = snapshot.flags.historyAnalytics ? requestedLimit : Math.min(requestedLimit, 1);
 
     const rows = await ctx.db
       .query('saved_words')

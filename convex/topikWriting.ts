@@ -4,6 +4,12 @@ import { getAuthUserId, requireAdmin } from './utils';
 import type { Id } from './_generated/dataModel';
 import { api } from './_generated/api';
 import {
+  consumeDailyFeatureUsage,
+  evaluateTopikExamAccess,
+  getViewerEntitlementSnapshot,
+  resolveEntitlementPlan,
+} from './entitlements';
+import {
   WRITING_ANSWER_MAP_VALIDATOR,
   WRITING_GRADING_CRITERIA_VALIDATOR,
   WRITING_QUESTION_TYPE_VALIDATOR,
@@ -24,6 +30,7 @@ export const saveWritingExam = mutation({
     timeLimit: v.number(),
     description: v.optional(v.string()),
     isPaid: v.optional(v.boolean()),
+    accessLevel: v.optional(v.string()),
     questions: v.array(
       v.object({
         number: v.number(),
@@ -41,6 +48,13 @@ export const saveWritingExam = mutation({
     await requireAdmin(ctx);
 
     const { id, questions, ...examData } = args;
+    const accessLevel = (examData.accessLevel || '').trim().toUpperCase();
+    const normalizedAccessLevel =
+      accessLevel === 'FREE_SAMPLE' || accessLevel === 'PRO'
+        ? accessLevel
+        : examData.isPaid
+          ? 'PRO'
+          : 'FREE_SAMPLE';
 
     const existingExam = await ctx.db
       .query('topik_exams')
@@ -52,7 +66,8 @@ export const saveWritingExam = mutation({
       await ctx.db.patch(existingExam._id, {
         ...examData,
         type: 'WRITING',
-        isPaid: examData.isPaid ?? false,
+        isPaid: normalizedAccessLevel === 'PRO',
+        accessLevel: normalizedAccessLevel,
       });
       examId = existingExam._id;
 
@@ -73,7 +88,8 @@ export const saveWritingExam = mutation({
         legacyId: id,
         ...examData,
         type: 'WRITING',
-        isPaid: examData.isPaid ?? false,
+        isPaid: normalizedAccessLevel === 'PRO',
+        accessLevel: normalizedAccessLevel,
         createdAt: Date.now(),
       });
     }
@@ -158,6 +174,22 @@ export const startSession = mutation({
   }> => {
     const userId = await getAuthUserId(ctx);
     const now = Date.now();
+    const user = await ctx.db.get(userId);
+    const exam = await ctx.db.get(examId);
+
+    if (!exam) {
+      throw new ConvexError({ code: 'EXAM_NOT_FOUND' });
+    }
+
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: 'writing_locked',
+      });
+    }
 
     // Check for an existing in-progress session
     const existing = await ctx.db
@@ -245,6 +277,38 @@ export const submitSession = mutation({
       return { submitted: true, alreadySubmitted: true };
     }
 
+    const user = await ctx.db.get(userId);
+    const exam = await ctx.db.get(session.examId);
+    if (!exam) throw new ConvexError({ code: 'EXAM_NOT_FOUND' });
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: 'writing_locked',
+      });
+    }
+
+    const entitlementSnapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const creditResult = await consumeDailyFeatureUsage(ctx, {
+      userId,
+      plan: entitlementSnapshot.plan,
+      feature: 'ai_credits_daily',
+      amount: 2,
+      resourceKey: `topik_writing:${sessionId}`,
+      dedupeByResource: true,
+      upgradeSource: 'ai_limit',
+    });
+    if (!creditResult.allowed) {
+      throw new ConvexError({
+        code: 'DAILY_LIMIT_REACHED',
+        feature: 'ai_credits_daily',
+        upgradeSource: 'ai_limit',
+        remaining: creditResult.remaining,
+      });
+    }
+
     await ctx.db.patch(sessionId, {
       status: 'EVALUATING',
       completedAt: now,
@@ -286,6 +350,20 @@ export const getWritingQuestions = query({
     examId: v.id('topik_exams'),
   },
   handler: async (ctx, { examId }) => {
+    const userId = await getAuthUserId(ctx);
+    const user = await ctx.db.get(userId);
+    const exam = await ctx.db.get(examId);
+    if (!exam) return [];
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: 'writing_locked',
+      });
+    }
+
     const questions = await ctx.db
       .query('topik_writing_questions')
       .withIndex('by_exam', q => q.eq('examId', examId))
@@ -306,7 +384,9 @@ export const getUserSessions = query({
     const userId = await getAuthUserId(ctx).catch(() => null);
     if (userId === null) return [];
 
-    const limit = args.limit ?? 200;
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const requestedLimit = args.limit ?? 200;
+    const limit = snapshot.flags.historyAnalytics ? requestedLimit : Math.min(requestedLimit, 1);
 
     const sessions = await ctx.db
       .query('topik_writing_sessions')

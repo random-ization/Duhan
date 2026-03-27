@@ -1,6 +1,7 @@
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
+import { evaluateCourseUnitAccess, getViewerEntitlementSnapshot } from './entitlements';
 import { toErrorMessage } from './errors';
 import type { Id } from './_generated/dataModel';
 
@@ -569,6 +570,9 @@ export const getByCourse = query({
   },
   handler: async (ctx, args): Promise<GrammarItemDto[]> => {
     const userId = await getOptionalAuthUserId(ctx);
+    const viewer = userId ? await ctx.db.get(userId) : null;
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const isAdmin = viewer?.role === 'ADMIN';
     const language = resolveSupportedLanguage(args.language);
     let effectiveCourseId = args.courseId;
 
@@ -593,16 +597,19 @@ export const getByCourse = query({
       .query('course_grammars')
       .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
       .collect();
+    const visibleLinks = isAdmin
+      ? links
+      : links.filter(link => evaluateCourseUnitAccess(snapshot.plan, link.unitId).allowed);
 
     // OPTIMIZATION: Batch fetch all grammars and progress
-    const grammarIds = uniqueGrammarIds(links.map(link => link.grammarId));
+    const grammarIds = uniqueGrammarIds(visibleLinks.map(link => link.grammarId));
     const grammarsArray = await Promise.all(grammarIds.map(id => ctx.db.get(id)));
     const grammarsMap = new Map(grammarsArray.filter(Boolean).map(g => [g!._id.toString(), g!]));
 
     const progressMap = await getProgressMapForGrammarIds(ctx, userId, grammarIds);
 
     // Assemble data in memory
-    const results = links.map(link => {
+    const results = visibleLinks.map(link => {
       const grammar = grammarsMap.get(link.grammarId.toString());
       if (!grammar) return null;
 
@@ -683,6 +690,9 @@ export const getUnitGrammar = query({
   handler: async (ctx, args): Promise<UnitGrammarDto[]> => {
     try {
       const userId = await getOptionalAuthUserId(ctx);
+      const viewer = userId ? await ctx.db.get(userId) : null;
+      const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+      const isAdmin = viewer?.role === 'ADMIN';
       const language = resolveSupportedLanguage(args.language);
 
       // RESOLVE COURSE ID: Support both Convex ID and Legacy ID
@@ -720,6 +730,13 @@ export const getUnitGrammar = query({
         args.unitId <= 10
       ) {
         effectiveUnitId = args.unitId + 10;
+      }
+
+      if (!isAdmin) {
+        const access = evaluateCourseUnitAccess(snapshot.plan, effectiveUnitId);
+        if (!access.allowed) {
+          return [];
+        }
       }
 
       // 1. Get links

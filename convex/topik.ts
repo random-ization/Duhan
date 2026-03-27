@@ -5,7 +5,11 @@ import type { FunctionReference } from 'convex/server';
 import { getAuthUserId, requireAdmin } from './utils';
 import type { Doc, Id } from './_generated/dataModel';
 import { normalizeAnswerMap } from './validation';
-import { hasActiveSubscription } from './subscription';
+import {
+  evaluateTopikExamAccess,
+  resolveEntitlementPlan,
+  resolveExamAccessLevel,
+} from './entitlements';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
 const DEFAULT_TOPIK_EXAMS_LIMIT = 200;
@@ -75,6 +79,7 @@ export type TopikExamDto = {
   audioUrl?: string;
   description?: string;
   isPaid?: boolean;
+  accessLevel?: 'FREE_SAMPLE' | 'PRO';
   createdAt: number;
   questions: TopikQuestionDto[];
 };
@@ -117,6 +122,7 @@ const toTopikExamDto = async (
   audioUrl: await resolveUrl(ctx, exam.audioUrl),
   description: exam.description,
   isPaid: exam.isPaid,
+  accessLevel: resolveExamAccessLevel(exam),
   createdAt: exam.createdAt ?? exam._creationTime,
   // Metadata query keeps payload small while satisfying frontend TopikExam shape.
   questions: [],
@@ -189,11 +195,15 @@ export const getExamQuestions = query({
       .first();
 
     if (!exam) return [];
-    if (exam.isPaid) {
-      const user = await ctx.db.get(userId);
-      if (!hasActiveSubscription(user)) {
-        throw new ConvexError('SUBSCRIPTION_REQUIRED');
-      }
+    const user = await ctx.db.get(userId);
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: access.upgradeSource,
+      });
     }
 
     // Get all questions for this exam
@@ -249,11 +259,15 @@ export const startExam = mutation({
     if (!exam) {
       throw new ConvexError({ code: 'EXAM_NOT_FOUND' });
     }
-    if (exam.isPaid) {
-      const user = await ctx.db.get(userId);
-      if (!hasActiveSubscription(user)) {
-        throw new ConvexError('SUBSCRIPTION_REQUIRED');
-      }
+    const user = await ctx.db.get(userId);
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: access.upgradeSource,
+      });
     }
 
     // Check if an active session already exists for this user+exam
@@ -321,11 +335,15 @@ export const getSession = query({
       .withIndex('by_legacy_id', q => q.eq('legacyId', args.examId))
       .first();
     if (!exam) return null;
-    if (exam.isPaid) {
-      const user = await ctx.db.get(userId);
-      if (!hasActiveSubscription(user)) {
-        throw new ConvexError('SUBSCRIPTION_REQUIRED');
-      }
+    const user = await ctx.db.get(userId);
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateTopikExamAccess(plan, exam);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: access.upgradeSource,
+      });
     }
 
     // Find session
@@ -534,6 +552,7 @@ export const saveExam = mutation({
     audioUrl: v.optional(v.string()),
     description: v.optional(v.string()),
     isPaid: v.optional(v.boolean()),
+    accessLevel: v.optional(v.string()),
     questions: v.array(
       v.object({
         id: v.number(),
@@ -556,11 +575,19 @@ export const saveExam = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const { id, questions, ...examData } = args;
+    const accessLevel = (examData.accessLevel || '').trim().toUpperCase();
+    const normalizedAccessLevel =
+      accessLevel === 'FREE_SAMPLE' || accessLevel === 'PRO'
+        ? accessLevel
+        : examData.isPaid
+          ? 'PRO'
+          : 'FREE_SAMPLE';
     const normalizedExamData = {
       ...examData,
       type: normalizeTopikExamType(examData.type),
       paperType: normalizeTopikPaperType(examData.paperType),
-      isPaid: examData.isPaid ?? false,
+      isPaid: normalizedAccessLevel === 'PRO',
+      accessLevel: normalizedAccessLevel,
     };
 
     // Check if exam exists

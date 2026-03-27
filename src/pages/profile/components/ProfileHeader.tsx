@@ -4,10 +4,12 @@ import { User } from '../../../types';
 import type { ProfileLabels } from '../types';
 import { Button } from '../../../components/ui';
 import { Input } from '../../../components/ui';
+import type { ViewerAccessSnapshot } from '../../../utils/entitlements';
 
 interface ProfileHeaderProps {
   user: User;
   labels: ProfileLabels;
+  viewerAccess: ViewerAccessSnapshot | null;
   displayName: string;
   isEditingName: boolean;
   setIsEditingName: (val: boolean) => void;
@@ -29,6 +31,7 @@ interface ProfileHeaderProps {
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   labels,
+  viewerAccess,
   displayName,
   isEditingName,
   setIsEditingName,
@@ -122,7 +125,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </svg>
             </Button>
           )}
-          {(user.tier === 'PAID' || user.tier === 'PREMIUM') && (
+          {viewerAccess?.isPremium && (
             <span className="px-3 py-1 bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200 text-xs font-bold rounded-full flex items-center gap-1">
               <Crown size={12} className="fill-current" />{' '}
               {labels.profile?.premiumBadge || 'Premium'}

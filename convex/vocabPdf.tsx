@@ -4,9 +4,11 @@ import { v, ConvexError } from 'convex/values';
 import crypto from 'node:crypto';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
+import type { Id } from './_generated/dataModel';
 import { Document, Page, View, Text, Image, Font } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { assertPremiumFeature } from './entitlements';
 import {
   getLabels,
   shuffleInPlace,
@@ -58,6 +60,17 @@ const getVocabBookForUserQuery = makeFunctionReference<
   }>
 >;
 
+const getViewerAccessInternalQuery = makeFunctionReference<
+  'query',
+  { userId: Id<'users'> },
+  { plan: 'FREE' | 'PRO' | 'LIFETIME' }
+>('entitlements:getViewerAccessInternal') as unknown as FunctionReference<
+  'query',
+  'internal',
+  { userId: Id<'users'> },
+  { plan: 'FREE' | 'PRO' | 'LIFETIME' }
+>;
+
 export const exportVocabBookPdf = action({
   args: {
     origin: v.string(),
@@ -74,6 +87,10 @@ export const exportVocabBookPdf = action({
     if (!userId) {
       throw new ConvexError({ code: 'UNAUTHORIZED' });
     }
+    const snapshot = await ctx.runQuery(getViewerAccessInternalQuery, {
+      userId: userId as Id<'users'>,
+    });
+    assertPremiumFeature(snapshot.plan, 'pdf_locked');
 
     const {
       PDF_FONT_LATIN_URL: fontLatinUrl,

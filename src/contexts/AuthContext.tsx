@@ -11,10 +11,15 @@ import React, {
 import { useQuery, useConvexAuth, useMutation } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { User, Language, TextbookContent, TopikExam } from '../types';
-import { NoArgs, mRef, qRef } from '../utils/convexRefs';
+import { ENTITLEMENTS, NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
 import { normalizeLanguage } from '../utils/languageUtils';
 import { clearDashboardUpgradeBannerSession } from '../utils/upgradeReminder';
+import {
+  canAccessLegacyContent,
+  canAccessTopikExam,
+  type ViewerAccessSnapshot,
+} from '../utils/entitlements';
 
 import i18n from '../utils/i18next-config';
 
@@ -35,6 +40,7 @@ interface AuthContextType {
 
   // Permission Checking
   canAccessContent: (content: TextbookContent | TopikExam) => boolean;
+  viewerAccess: ViewerAccessSnapshot | null;
   showUpgradePrompt: boolean;
   setShowUpgradePrompt: (show: boolean) => void;
 }
@@ -74,6 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'), isAuthenticated ? {} : 'skip');
+  const viewerAccessQuery = useQuery(ENTITLEMENTS.viewerAccess, {});
   const attemptedSessionRepairRef = useRef(false);
 
   useEffect(() => {
@@ -92,7 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authLoading, isAuthenticated, viewer, signOut]);
 
-  const loading = authLoading || (isAuthenticated && viewer === undefined);
+  const loading =
+    authLoading || viewerAccessQuery === undefined || (isAuthenticated && viewer === undefined);
 
   const user = useMemo<User | null>(() => {
     if (!isAuthenticated) return null;
@@ -102,6 +110,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const resolvedId = baseWithId.id ?? baseWithId._id;
     return resolvedId ? { ...baseWithId, id: resolvedId } : baseWithId;
   }, [isAuthenticated, viewer]);
+
+  const viewerAccess = useMemo<ViewerAccessSnapshot | null>(
+    () => (viewerAccessQuery === undefined ? null : viewerAccessQuery),
+    [viewerAccessQuery]
+  );
 
   // Legacy manual loadUser effect removed
   /*
@@ -143,12 +156,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const canAccessContent = useCallback(
     (content: TextbookContent | TopikExam): boolean => {
-      if (!user) return false;
-      if (user.tier === 'PAID' || user.tier === 'PREMIUM' || !!user.subscriptionType) return true;
-      if (!content.isPaid) return true;
-      return false; // Default safe
+      if ('accessLevel' in content) {
+        return canAccessTopikExam(content, viewerAccess);
+      }
+      return canAccessLegacyContent(content, viewerAccess);
     },
-    [user]
+    [viewerAccess]
   );
 
   const value = useMemo<AuthContextType>(
@@ -163,6 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLanguage,
 
       canAccessContent,
+      viewerAccess,
       showUpgradePrompt,
       setShowUpgradePrompt,
     }),
@@ -176,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       refreshUser,
       setLanguage,
       canAccessContent,
+      viewerAccess,
       showUpgradePrompt,
     ]
   );

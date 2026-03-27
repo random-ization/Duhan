@@ -13,12 +13,12 @@ import {
   BookOpen,
   List,
 } from 'lucide-react';
-import { useQuery, useAction } from 'convex/react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabel, getLabels } from '../utils/i18n';
 import type { Language } from '../types';
 import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
-import { aRef, qRef } from '../utils/convexRefs';
+import { aRef, ENTITLEMENTS, qRef } from '../utils/convexRefs';
 import { MobileSheet } from '../components/mobile/MobileSheet';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTTS } from '../hooks/useTTS';
@@ -27,6 +27,9 @@ import { useUserActions } from '../hooks/useUserActions';
 import { Popover, PopoverContent, PopoverPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../utils/entitlements';
+import { notify } from '../utils/notify';
 
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileVideoPlayerPage } from '../components/mobile/MobileVideoPlayerPage';
@@ -399,7 +402,8 @@ const TranscriptPanelContent: React.FC<TranscriptPanelContentProps> = ({
 const DesktopVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useLocalizedNavigate();
-  const { language } = useAuth();
+  const { language, user, viewerAccess } = useAuth();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const { saveWord } = useUserActions();
   const labels = getLabels(language);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
@@ -418,8 +422,13 @@ const DesktopVideoPlayerPage: React.FC = () => {
       SearchResult
     >('dictionary:searchDictionary')
   );
+  const consumeMediaPlay = useMutation(ENTITLEMENTS.consumeMediaPlay);
   const dictionaryRequestRef = useRef(0);
   const translationLang = useMemo(() => resolveTranslationLang(language), [language]);
+  const [unlockedPlaybackKey, setUnlockedPlaybackKey] = useState<string | null>(null);
+  const playbackResourceKey = id ? `video:${id}` : null;
+  const playbackUnlocked =
+    playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
 
   useEffect(() => stopTTS, [stopTTS]);
 
@@ -469,6 +478,45 @@ const DesktopVideoPlayerPage: React.FC = () => {
     if (playerRef.current) {
       playerRef.current.currentTime = time;
       playerRef.current.play();
+    }
+  };
+
+  const ensurePlaybackAccess = async (): Promise<boolean> => {
+    if (viewerAccess?.isPremium) return true;
+    if (playbackUnlocked) return true;
+
+    if (!user) {
+      startUpgradeFlow({
+        plan: 'ANNUAL',
+        source: 'media_limit',
+        returnTo: id ? `/videos/${id}` : '/videos',
+      });
+      return false;
+    }
+
+    try {
+      if (!playbackResourceKey) return false;
+      await consumeMediaPlay({ resourceKey: playbackResourceKey });
+      setUnlockedPlaybackKey(playbackResourceKey);
+      return true;
+    } catch (error) {
+      const entitlementError = getEntitlementErrorData(error);
+      if (playerRef.current) {
+        playerRef.current.pause();
+      }
+      if (entitlementError?.upgradeSource) {
+        startUpgradeFlow({
+          plan: 'ANNUAL',
+          source: entitlementError.upgradeSource,
+          returnTo: id ? `/videos/${id}` : '/videos',
+        });
+        return false;
+      }
+      notify.error(
+        getLabel(labels, ['dashboard', 'video', 'playbackLocked']) ||
+          'Playback is unavailable right now.'
+      );
+      return false;
     }
   };
 
@@ -627,6 +675,10 @@ const DesktopVideoPlayerPage: React.FC = () => {
                 poster={video.thumbnailUrl}
                 className="w-full h-full"
                 onTimeUpdate={handleTimeUpdate}
+                onPlay={() => {
+                  void ensurePlaybackAccess();
+                }}
+                playbackRates={viewerAccess?.flags.mediaSpeedControl ? undefined : [1]}
               />
             </Suspense>
           )}

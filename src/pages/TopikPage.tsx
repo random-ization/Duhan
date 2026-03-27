@@ -28,6 +28,7 @@ import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getUpgradeBenefitCopy } from '../utils/upgradeCopy';
 import {
   ContextualCountBadge,
   ContextualEmptyState,
@@ -92,6 +93,7 @@ const TopikPage: React.FC = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
+  const upgradeCopy = getUpgradeBenefitCopy(language);
   const [now] = React.useState(() => Date.now());
   const [filterType, setFilterType] = useState<'READING' | 'LISTENING' | 'WRITING'>('READING');
   const [expandedLockedExamId, setExpandedLockedExamId] = useState<string | null>(null);
@@ -777,33 +779,19 @@ const TopikPage: React.FC = () => {
                                 </span>
                               </div>
                               <h5 className="mt-2 text-sm font-black text-slate-900">
-                                {t('pricingDetails.upgradeGuide.title', {
-                                  defaultValue: 'This section is part of Premium',
-                                })}
+                                {upgradeCopy.lockedTitle}
                               </h5>
                               <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
-                                {t('pricingDetails.upgradeGuide.signedIn', {
-                                  defaultValue:
-                                    'You are already signed in. After payment we will return you to this page automatically.',
-                                })}
+                                {upgradeCopy.lockedNote}
                               </p>
                               <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
-                                <li>
-                                  {t('pricingDetails.upgradeGuide.unlockCurrent', {
-                                    defaultValue: 'Unlock this content instantly',
-                                  })}
-                                </li>
-                                <li>
-                                  {t('pricingDetails.upgradeGuide.returnToPage', {
-                                    defaultValue: 'Return to this page after payment',
-                                  })}
-                                </li>
-                                <li>
-                                  {t('pricingDetails.upgradeGuide.bindAccount', {
-                                    defaultValue: 'Bind access to your current account',
-                                  })}
-                                </li>
+                                {upgradeCopy.bullets.slice(0, 3).map(item => (
+                                  <li key={item}>{item}</li>
+                                ))}
                               </ul>
+                              <p className="mt-3 text-[11px] font-bold text-slate-500">
+                                {upgradeCopy.lockedCtaHint}
+                              </p>
                               <Button
                                 type="button"
                                 size="sm"

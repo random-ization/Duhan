@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal } from 
 import { useAuth } from '../contexts/AuthContext';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { useTranslation } from 'react-i18next';
+import { getUpgradeBenefitCopy } from '../utils/upgradeCopy';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -20,14 +21,9 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
   const { user } = useAuth();
   const { startUpgradeFlow, authLoading } = useUpgradeFlow();
   const { t } = useTranslation();
+  const upgradeCopy = getUpgradeBenefitCopy(language);
 
   if (!isOpen) return null;
-
-  const features = [
-    labels.upgradeFeaturesList?.allTextbooksUnits || labels.allTextbooks || 'All textbook lessons',
-    labels.upgradeFeaturesList?.allExamsAccess || labels.allExams || 'All TOPIK practice exams',
-    labels.upgradeFeaturesList?.unlimitedLearning || labels.unlimitedAccess || 'Unlimited learning',
-  ];
 
   const handleUpgrade = () => {
     startUpgradeFlow({
@@ -68,12 +64,8 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
                 <div className="w-16 h-16 bg-card/20 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Sparkles size={32} />
                 </div>
-                <h2 className="text-2xl font-bold mb-2">
-                  {labels.upgradeTitle || labels.upgradeToPremium || 'Upgrade to Premium'}
-                </h2>
-                <p className="text-white/90 text-sm">
-                  {labels.upgradeDescription || 'Unlock all textbook content and TOPIK exams'}
-                </p>
+                <h2 className="text-2xl font-bold mb-2">{upgradeCopy.title}</h2>
+                <p className="text-white/90 text-sm">{upgradeCopy.subtitle}</p>
               </div>
             </div>
 
@@ -84,7 +76,7 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
                   {labels.premiumFeatures || 'Premium Features'}
                 </h3>
                 <ul className="space-y-2">
-                  {features.map(feature => (
+                  {upgradeCopy.bullets.map(feature => (
                     <li
                       key={feature}
                       className="flex items-center gap-2 text-sm text-muted-foreground"

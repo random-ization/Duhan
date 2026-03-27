@@ -106,7 +106,7 @@ const buildProfileDerived = ({
 
 export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
   const navigate = useLocalizedNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, viewerAccess } = useAuth();
   const labels = getLabels(language);
   const success = toast.success;
   const error = toast.error;
@@ -357,6 +357,7 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
       <ProfileHeader
         user={user}
         labels={labels}
+        viewerAccess={viewerAccess}
         displayName={displayName}
         isEditingName={isEditingName}
         setIsEditingName={setIsEditingName}

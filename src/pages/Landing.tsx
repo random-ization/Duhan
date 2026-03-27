@@ -46,6 +46,14 @@ type VariantPrices = {
 };
 type LandingFaqItem = { question: string; answer: string };
 type LandingSeoLanguage = 'en' | 'zh' | 'vi' | 'mn';
+type LandingPricingCopy = {
+  freeFeatures: string[];
+  proFeatures: string[];
+  lifetimeFeatures: string[];
+  rightsTitle: string;
+  rightsSubtitle: string;
+  rightsRows: Array<{ label: string; free: string; pro: string }>;
+};
 
 const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
 
@@ -67,6 +75,99 @@ function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
       url: `https://koreanstudy.me${path}`,
     };
   });
+}
+
+function resolveLandingPricingCopy(language: LandingSeoLanguage): LandingPricingCopy {
+  if (language === 'zh') {
+    return {
+      freeFeatures: [
+        '每门课前 2 单元可学，先判断课程是否适合你',
+        '单词基础练习可用，新增入库 20 个/天',
+        'TOPIK / 写作开放公开样本卷',
+        '媒体每日完整播放 2 个，AI Credit 5 点/天',
+      ],
+      proFeatures: [
+        '全部教材、全部课程、全部单元完整开放',
+        '全部 TOPIK / 写作真题、错题聚合与长期报告',
+        '媒体无限播放，支持倍速，AI Credit 100 点/天',
+        'PDF 导出、历史分析、深度学习工具全部开放',
+      ],
+      lifetimeFeatures: [
+        '当前全部 Pro 权益完全包含',
+        '未来新增 Pro 功能继续包含',
+        '一次买断，不再续费',
+      ],
+      rightsTitle: '首页快速看差异',
+      rightsSubtitle: 'Free 负责让用户开始学，Pro / Lifetime 负责让用户持续学、深度学。',
+      rightsRows: [
+        {
+          label: '教材',
+          free: '前 2 单元',
+          pro: '全部课程 / 单元',
+        },
+        {
+          label: '单词系统',
+          free: '20 新词/天 + Test 1 次/天',
+          pro: '新增无限 + 测试无限 + 历史分析',
+        },
+        {
+          label: 'TOPIK / 写作',
+          free: '公开样本卷',
+          pro: '完整真题库 + 长期报告',
+        },
+        {
+          label: '媒体 / AI',
+          free: '2 次播放/天 + 5 AI Credit',
+          pro: '无限播放 + 倍速 + 100 AI Credit',
+        },
+      ],
+    };
+  }
+
+  return {
+    freeFeatures: [
+      'First 2 units of every course are open',
+      'Core vocab drills with 20 new saves per day',
+      'Public sample TOPIK and writing papers',
+      '2 full media plays per day and a small daily AI credit',
+    ],
+    proFeatures: [
+      'All textbooks, all units, and the full learning path',
+      'Full TOPIK and writing archive with long-term reports',
+      'Unlimited media playback, speed control, and higher AI credits',
+      'PDF export, analytics, and the full study toolkit',
+    ],
+    lifetimeFeatures: [
+      'Includes every current Pro entitlement',
+      'Future Pro features stay included',
+      'One-time payment with no renewal',
+    ],
+    rightsTitle: 'Quick comparison',
+    rightsSubtitle:
+      'Free helps learners start. Pro and Lifetime unlock the full depth of the platform.',
+    rightsRows: [
+      {
+        label: 'Courses',
+        free: 'First 2 units',
+        pro: 'All courses and units',
+      },
+      {
+        label: 'Vocabulary',
+        free: '20 new words/day + 1 test/day',
+        pro: 'Unlimited saves, tests, and analytics',
+      },
+      {
+        label: 'TOPIK / Writing',
+        free: 'Public sample papers',
+        pro: 'Full archive and reports',
+      },
+      {
+        label: 'Media / AI',
+        free: '2 plays/day + limited AI credits',
+        pro: 'Unlimited playback + speed + 100 AI credits',
+      },
+    ],
+  };
 }
 
 const fadeInUp = {
@@ -1574,6 +1675,7 @@ const LandingPricing = ({
 }) => {
   const { t, i18n } = useTranslation();
   const language = normalizeLandingSeoLanguage(i18n.language);
+  const pricingCopy = resolveLandingPricingCopy(language);
 
   const navigateWithLandingCta = (ctaId: string, target: string, placement: string) => {
     trackEvent('landing_cta_click', {
@@ -1701,18 +1803,12 @@ const LandingPricing = ({
               {t('landing.pricing.free.price')}
             </div>
             <ul className="space-y-4 text-sm text-slate-700 mb-8">
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                {t('landing.pricing.free.feature1')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                {t('landing.pricing.free.feature2')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                {t('landing.pricing.free.feature3')}
-              </li>
+              {pricingCopy.freeFeatures.map(feature => (
+                <li key={feature} className="flex gap-2">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  {feature}
+                </li>
+              ))}
             </ul>
             <Button
               type="button"
@@ -1775,22 +1871,12 @@ const LandingPricing = ({
             )}
 
             <ul className="space-y-4 text-sm text-slate-100 mb-8">
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
-                {t('landing.pricing.pro.feature1')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
-                {t('landing.pricing.pro.feature2')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
-                {t('landing.pricing.pro.feature3')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
-                {t('landing.pricing.pro.feature4')}
-              </li>
+              {pricingCopy.proFeatures.map(feature => (
+                <li key={feature} className="flex gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
+                  {feature}
+                </li>
+              ))}
             </ul>
 
             <motion.button
@@ -1826,14 +1912,12 @@ const LandingPricing = ({
               ${lifetimePriceDisplay}
             </div>
             <ul className="space-y-4 text-sm text-slate-700 mb-8">
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                {t('landing.pricing.lifetime.feature1')}
-              </li>
-              <li className="flex gap-2">
-                <Check className="w-4 h-4 text-emerald-600" />
-                {t('landing.pricing.lifetime.feature2')}
-              </li>
+              {pricingCopy.lifetimeFeatures.map(feature => (
+                <li key={feature} className="flex gap-2">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  {feature}
+                </li>
+              ))}
             </ul>
             <Button
               type="button"
@@ -1855,6 +1939,48 @@ const LandingPricing = ({
               {t('landing.pricing.lifetime.cta')}
             </Button>
           </motion.div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="mt-8 md:mt-10 rounded-[2rem] border-2 border-black bg-white shadow-pop overflow-hidden"
+        >
+          <div className="bg-[#FFF7D6] border-b-2 border-black px-5 md:px-6 py-4">
+            <h3 className="text-xl md:text-2xl font-heading font-extrabold text-slate-900">
+              {pricingCopy.rightsTitle}
+            </h3>
+            <p className="mt-1 text-sm md:text-base text-slate-700">{pricingCopy.rightsSubtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1.15fr]">
+            {pricingCopy.rightsRows.map(row => (
+              <div key={row.label} className="contents">
+                <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4">
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Feature
+                  </div>
+                  <div className="mt-1 text-base font-black text-slate-900">{row.label}</div>
+                </div>
+                <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4 bg-slate-50">
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Free
+                  </div>
+                  <div className="mt-1 text-sm leading-6 text-slate-600">{row.free}</div>
+                </div>
+                <div className="border-t md:border-t-0 border-black px-5 py-4 bg-[#FFFDF3]">
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Pro / Lifetime
+                  </div>
+                  <div className="mt-1 text-sm leading-6 font-semibold text-slate-900">
+                    {row.pro}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </section>

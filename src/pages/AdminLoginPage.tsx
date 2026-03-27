@@ -3,8 +3,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { ShieldCheck, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
-
-import { toErrorMessage } from '../utils/errors';
+import { resolveAuthErrorMessage } from '../utils/authErrors';
 
 const AdminLoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -38,8 +37,17 @@ const AdminLoginPage: React.FC = () => {
         redirectTo: postAuthRedirectUrl,
       });
     } catch (err: unknown) {
-      console.error('Login error:', toErrorMessage(err));
-      setError(toErrorMessage(err) || '服务器内部错误，请稍后再试');
+      setError(
+        resolveAuthErrorMessage(err, {
+          fallback: '登录失败，请稍后再试',
+          invalidCredentials: '邮箱或密码错误',
+          tooManyAttempts: '尝试次数过多，请稍后再试',
+          emailRequired: '缺少邮箱信息，请重试',
+          accountExistsLinkRequired: '该邮箱已注册，请先使用原登录方式进入后台',
+          kakaoEmailRequired: '请在 Kakao 授权中同意提供邮箱',
+          emailAlreadyExists: '该邮箱已注册',
+        })
+      );
     } finally {
       setLoading(false);
     }
@@ -93,7 +101,10 @@ const AdminLoginPage: React.FC = () => {
 
             {/* Password */}
             <div>
-              <label htmlFor="admin-password" className="block text-sm font-bold text-zinc-700 mb-2">
+              <label
+                htmlFor="admin-password"
+                className="block text-sm font-bold text-zinc-700 mb-2"
+              >
                 密码
               </label>
               <div className="relative">

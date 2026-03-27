@@ -47,6 +47,7 @@ interface MobileVocabViewProps {
   readonly instituteId: string;
   readonly language: Language;
   readonly userId?: string;
+  readonly onRequestTestMode?: () => Promise<boolean>;
 }
 
 type TabId = 'flashcard' | 'match' | 'learn' | 'test';
@@ -70,6 +71,7 @@ export default function MobileVocabView({
   instituteId,
   language,
   userId,
+  onRequestTestMode,
 }: MobileVocabViewProps) {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
@@ -146,6 +148,23 @@ export default function MobileVocabView({
       ? t('vocab.allUnits', { defaultValue: 'All Units' })
       : `${t('vocab.unit', { defaultValue: 'Unit' })} ${currentUnitId}`;
 
+  const handleSelectTab = (tabId: TabId) => {
+    if (tabId === 'test' && onRequestTestMode) {
+      void (async () => {
+        const allowed = await onRequestTestMode();
+        if (!allowed) return;
+        setActiveTab(tabId);
+        setModeMenuOpen(false);
+        setFocusOpen(true);
+      })();
+      return;
+    }
+
+    setActiveTab(tabId);
+    setModeMenuOpen(false);
+    setFocusOpen(true);
+  };
+
   const focusHeader = (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
       <div className="relative">
@@ -173,8 +192,7 @@ export default function MobileVocabView({
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  setActiveTab(item.id as TabId);
-                  setModeMenuOpen(false);
+                  handleSelectTab(item.id as TabId);
                 }}
                 className="w-full text-left px-3 py-2 font-black text-sm text-muted-foreground hover:bg-muted"
               >
@@ -374,10 +392,7 @@ export default function MobileVocabView({
                 variant="ghost"
                 size="auto"
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as TabId);
-                  setFocusOpen(true);
-                }}
+                onClick={() => handleSelectTab(tab.id as TabId)}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all ${
                   isActive
                     ? 'bg-card shadow-sm text-foreground'

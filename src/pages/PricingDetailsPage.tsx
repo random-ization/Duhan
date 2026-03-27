@@ -37,6 +37,208 @@ type VariantPrices = {
   REGIONAL: Record<string, PriceEntry>;
 };
 type ProPrice = { amount: string; period: string; saving: string };
+type PricingOverviewCard = {
+  title: string;
+  badge: string;
+  tone: 'free' | 'pro' | 'lifetime';
+  summary: string;
+  bullets: string[];
+};
+type PricingRightsGroup = {
+  title: string;
+  free: string;
+  pro: string;
+};
+
+function resolvePricingCopy(language: string) {
+  const isZh = language === 'zh' || language.startsWith('zh-');
+  if (isZh) {
+    return {
+      overviewTitle: '\u5148\u770b\u8fd9\u4e09\u6863\u5206\u522b\u9002\u5408\u8c01',
+      overviewSubtitle:
+        '\u5148\u7528\u4e00\u53e5\u8bdd\u8bb2\u6e05\u695a\u5b9a\u4f4d，\u518d\u544a\u8bc9\u7528\u6237\u4ed8\u8d39\u540e\u5230\u5e95\u591a\u4e86\u4ec0\u4e48。',
+      cards: [
+        {
+          title: 'Free',
+          badge: '\u589e\u957f\u5165\u53e3',
+          tone: 'free' as const,
+          summary:
+            '\u9002\u5408\u5148\u4f53\u9a8c\u4ea7\u54c1、\u5efa\u7acb\u5b66\u4e60\u4e60\u60ef\u7684\u7528\u6237。',
+          bullets: [
+            '\u6bcf\u95e8\u8bfe\u524d 2 \u5355\u5143\u53ef\u5b66，\u8db3\u591f\u5224\u65ad\u8bfe\u7a0b\u5185\u5bb9\u662f\u5426\u9002\u5408\u4f60',
+            '\u5355\u8bcd\u95ea\u5361、\u62fc\u5199、\u591a\u9009、dictation \u7b49\u57fa\u7840\u7ec3\u4e60\u53ef\u76f4\u63a5\u4f7f\u7528',
+            '\u5355\u8bcd\u65b0\u589e\u5165\u5e93 20 \u4e2a/\u5929，Test Mode 1 \u6b21/\u5929',
+            'TOPIK / \u5199\u4f5c\u4ec5\u5f00\u653e\u516c\u5f00\u6837\u672c\u5377，\u652f\u6301\u771f\u5b9e\u4f53\u9a8c\u6d41\u7a0b',
+            '\u5a92\u4f53\u5e93\u53ef\u6d4f\u89c8\u5168\u90e8\u5217\u8868，\u4f46\u5b8c\u6574\u64ad\u653e\u9650 2 \u4e2a/\u5929，\u4ec5 1.0x \u500d\u901f',
+            '\u7edf\u4e00 AI Credit \u6bcf\u65e5 5 \u70b9，\u4e0d\u542b PDF \u5bfc\u51fa\u548c\u957f\u671f\u5206\u6790',
+          ],
+        },
+        {
+          title: 'Pro',
+          badge: '\u5b8c\u6574\u5b66\u4e60\u7248',
+          tone: 'pro' as const,
+          summary:
+            '\u9002\u5408\u6b63\u5728\u6301\u7eed\u5907\u8003\u6216\u7cfb\u7edf\u5b66\u97e9\u8bed\u7684\u4e3b\u529b\u7528\u6237。',
+          bullets: [
+            '\u5168\u90e8\u6559\u6750、\u5168\u90e8\u8bfe\u7a0b、\u5168\u90e8\u5355\u5143\u5b8c\u6574\u5f00\u653e',
+            '\u5355\u8bcd\u65b0\u589e\u65e0\u9650，Test Mode \u65e0\u9650，\u5386\u53f2\u6210\u7ee9\u4e0e\u8d8b\u52bf\u5206\u6790\u5f00\u653e',
+            '\u5168\u90e8 TOPIK \u5ba2\u89c2\u9898、\u5199\u4f5c\u9898、\u9519\u9898\u805a\u5408\u4e0e\u957f\u671f\u62a5\u544a\u5f00\u653e',
+            '\u5a92\u4f53\u5b8c\u6574\u64ad\u653e\u65e0\u9650，\u5e76\u5f00\u653e\u500d\u901f\u64ad\u653e',
+            '\u7edf\u4e00 AI Credit \u6bcf\u65e5 100 \u70b9，\u8986\u76d6\u8bed\u6cd5\u79c1\u6559、\u9605\u8bfb\u5206\u6790、\u5199\u4f5c\u8bc4\u5206\u7b49',
+            'PDF \u5168\u683c\u5f0f\u5bfc\u51fa，\u9002\u5408\u81ea\u4e60、\u6253\u5370、\u7ebf\u4e0b\u590d\u4e60',
+          ],
+        },
+        {
+          title: 'Lifetime',
+          badge: '\u4e00\u6b21\u4e70\u65ad',
+          tone: 'lifetime' as const,
+          summary:
+            '\u9002\u5408\u957f\u671f\u5b66\u4e60\u8005，\u6743\u76ca\u4e0e Pro \u76f8\u540c，\u53ea\u662f\u4e0d\u518d\u7eed\u8d39。',
+          bullets: [
+            '\u5f53\u524d\u5168\u90e8 Pro \u6743\u76ca\u5b8c\u5168\u5305\u542b',
+            '\u672a\u6765\u65b0\u589e\u7684 Pro \u529f\u80fd\u9ed8\u8ba4\u7ee7\u7eed\u5305\u542b',
+            '\u4e0d\u9700\u8981\u62c5\u5fc3\u7eed\u8d39、\u4ef7\u683c\u6ce2\u52a8\u6216\u8de8\u5e74\u6210\u672c',
+            '\u9002\u5408\u957f\u671f\u5907\u8003 TOPIK \u6216\u7cfb\u7edf\u5b8c\u6210\u6574\u5957\u6559\u6750\u5b66\u4e60',
+          ],
+        },
+      ] satisfies PricingOverviewCard[],
+      rightsTitle:
+        '\u6309\u529f\u80fd\u770b，\u4ed8\u8d39\u5230\u5e95\u89e3\u9501\u4e86\u4ec0\u4e48',
+      rightsSubtitle:
+        '\u628a\u6700\u5173\u952e\u7684\u4f7f\u7528\u5dee\u5f02\u63d0\u524d\u8bb2\u660e\u767d，\u907f\u514d\u53ea\u770b\u5230\u4ef7\u683c\u6ca1\u770b\u5230\u8fb9\u754c。',
+      rights: [
+        {
+          title: '\u6559\u6750\u8bfe\u7a0b',
+          free: '\u6bcf\u95e8\u8bfe\u524d 2 \u5355\u5143\u514d\u8d39，\u53ef\u771f\u5b9e\u4f53\u9a8c\u8bcd\u6c47、\u8bed\u6cd5、\u9605\u8bfb、\u542c\u529b',
+          pro: '\u5168\u90e8\u8bfe\u7a0b、\u5168\u90e8\u5355\u5143\u5b8c\u6574\u5f00\u653e',
+        },
+        {
+          title: '\u5355\u8bcd\u7cfb\u7edf',
+          free: '20 \u65b0\u8bcd/\u5929，Test Mode 1 \u6b21/\u5929',
+          pro: '\u65b0\u589e\u65e0\u9650、\u6d4b\u8bd5\u65e0\u9650、\u5f00\u653e\u5386\u53f2\u8d8b\u52bf\u5206\u6790',
+        },
+        {
+          title: 'TOPIK / \u5199\u4f5c',
+          free: '\u4ec5\u516c\u5f00\u6837\u672c\u5377，\u652f\u6301\u5b8c\u6574\u8bd5\u505a\u4e0e\u5f53\u524d\u7ed3\u679c\u9875',
+          pro: '\u5168\u90e8\u771f\u9898、\u5199\u4f5c\u8bc4\u5206\u62a5\u544a、\u9519\u9898\u805a\u5408\u4e0e\u957f\u671f\u5386\u53f2',
+        },
+        {
+          title: '\u5a92\u4f53\u5b66\u4e60',
+          free: '\u6bcf\u65e5\u5b8c\u6574\u64ad\u653e 2 \u4e2a\u6761\u76ee，\u4ec5 1.0x \u500d\u901f',
+          pro: '\u5b8c\u6574\u64ad\u653e\u65e0\u9650，\u652f\u6301\u500d\u901f\u63a7\u5236',
+        },
+        {
+          title: 'AI \u80fd\u529b',
+          free: '\u7edf\u4e00 AI Credit 5 \u70b9/\u5929，\u9002\u5408\u8f7b\u91cf\u4f53\u9a8c',
+          pro: '\u7edf\u4e00 AI Credit 100 \u70b9/\u5929，\u8986\u76d6\u5168\u7ad9 AI \u529f\u80fd',
+        },
+        {
+          title: '\u5bfc\u51fa\u4e0e\u5206\u6790',
+          free: '\u65e0 PDF \u5bfc\u51fa，\u4ec5\u4fdd\u7559\u5373\u65f6\u7ed3\u679c\u9875',
+          pro: 'PDF \u5168\u683c\u5f0f\u5bfc\u51fa + \u957f\u671f\u5386\u53f2\u548c\u805a\u5408\u5206\u6790',
+        },
+      ] satisfies PricingRightsGroup[],
+    };
+  }
+
+  return {
+    overviewTitle: 'What each plan is actually for',
+    overviewSubtitle:
+      'Explain the role of each tier first, then show exactly what paid access unlocks.',
+    cards: [
+      {
+        title: 'Free',
+        badge: 'Starter',
+        tone: 'free' as const,
+        summary: 'Best for trying the product and building a daily habit.',
+        bullets: [
+          'First 2 units of every course are open so users can evaluate the curriculum',
+          'Core vocab drills like flashcards, spelling, multiple choice, and dictation stay available',
+          '20 new vocab saves per day and 1 vocab test per day',
+          'TOPIK and writing only include public sample papers',
+          'Media library is browsable, but full playback is limited to 2 items per day at 1.0x',
+          'Unified AI credit is limited and PDF export / long-term analytics stay locked',
+        ],
+      },
+      {
+        title: 'Pro',
+        badge: 'Full access',
+        tone: 'pro' as const,
+        summary: 'Best for serious learners preparing consistently and using the product daily.',
+        bullets: [
+          'All textbooks, all courses, and all units unlocked',
+          'Unlimited vocab saves and tests with history and trend analytics',
+          'Full TOPIK objective + writing archive, mistake clustering, and long-term reports',
+          'Unlimited media playback with speed controls',
+          '100 AI credits per day shared across grammar, reading, and writing tools',
+          'Full PDF export for print and offline review',
+        ],
+      },
+      {
+        title: 'Lifetime',
+        badge: 'One-time payment',
+        tone: 'lifetime' as const,
+        summary: 'Same entitlements as Pro, but without recurring billing.',
+        bullets: [
+          'Includes every current Pro entitlement',
+          'Future Pro features stay included by default',
+          'No renewal risk or pricing changes over time',
+          'Best for long-term learners working through the full platform',
+        ],
+      },
+    ] satisfies PricingOverviewCard[],
+    rightsTitle: 'What paid access changes in practice',
+    rightsSubtitle: 'The key boundaries are easier to understand by feature than by price alone.',
+    rights: [
+      {
+        title: 'Courses',
+        free: 'First 2 units per course',
+        pro: 'All courses and all units',
+      },
+      {
+        title: 'Vocabulary system',
+        free: '20 new words/day and 1 test/day',
+        pro: 'Unlimited saves, tests, and history analytics',
+      },
+      {
+        title: 'TOPIK and writing',
+        free: 'Public sample papers only',
+        pro: 'Full archive, reports, and long-term history',
+      },
+      {
+        title: 'Media study',
+        free: '2 full plays/day at 1.0x only',
+        pro: 'Unlimited playback with speed control',
+      },
+      {
+        title: 'AI features',
+        free: 'Low daily AI credit for light trial usage',
+        pro: '100 daily AI credits shared across the site',
+      },
+      {
+        title: 'Export and analytics',
+        free: 'No PDF export, no long-term dashboards',
+        pro: 'Full PDF export and deeper analytics',
+      },
+    ] satisfies PricingRightsGroup[],
+  };
+}
+
+function getOverviewCardClassName(tone: PricingOverviewCard['tone']) {
+  if (tone === 'pro') {
+    return 'border-black bg-[#0F172A] text-white shadow-pop';
+  }
+  if (tone === 'lifetime') {
+    return 'border-black bg-white shadow-pop';
+  }
+  return 'border-slate-200 bg-white';
+}
+
+function getOverviewBadgeClassName(tone: PricingOverviewCard['tone']) {
+  if (tone === 'pro') return 'bg-[#F2C94C] text-black border-black';
+  if (tone === 'lifetime') return 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+}
 
 function parseSelectedPlanFromSearch(search: string): {
   cycle?: BillingCycle;
@@ -53,7 +255,7 @@ function parseSelectedPlanFromSearch(search: string): {
 }
 
 export default function PricingDetailsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, viewerAccess } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
@@ -213,10 +415,10 @@ export default function PricingDetailsPage() {
     return returnToPath;
   }, [returnToPath, t]);
 
-  const isPaidUser =
-    user?.tier === 'PAID' ||
-    user?.tier === 'PREMIUM' ||
-    Boolean(user?.subscriptionType && user.subscriptionType !== SubscriptionType.FREE);
+  const isPaidUser = Boolean(viewerAccess?.isPremium);
+  const activeSubscriptionType = viewerAccess?.isPremium
+    ? (user?.subscriptionType ?? SubscriptionType.ANNUAL)
+    : SubscriptionType.FREE;
 
   const startCheckout = async (plan: CheckoutPlan) => {
     if (authLoading) {
@@ -270,12 +472,12 @@ export default function PricingDetailsPage() {
     }
   };
 
-  const isCurrentPlan = (type: SubscriptionType) =>
-    (user?.subscriptionType || SubscriptionType.FREE) === type;
+  const isCurrentPlan = (type: SubscriptionType) => activeSubscriptionType === type;
 
   const buttonLabel = showLocalizedPromo
     ? t('pricingDetails.promo.subscribe')
     : t('pricingDetails.plans.pro.cta');
+  const pricingCopy = useMemo(() => resolvePricingCopy(i18n.language), [i18n.language]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFF] text-slate-900 font-landing antialiased selection:bg-[#F2C94C] selection:text-black">
@@ -606,6 +808,104 @@ export default function PricingDetailsPage() {
                 {t('pricingDetails.plans.lifetime.features.f3')}
               </li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 md:pb-20 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900">
+              {pricingCopy.overviewTitle}
+            </h2>
+            <p className="mt-3 text-base md:text-lg text-slate-600">
+              {pricingCopy.overviewSubtitle}
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {pricingCopy.cards.map(card => (
+              <div
+                key={card.title}
+                className={`rounded-3xl border-2 p-6 md:p-7 ${getOverviewCardClassName(card.tone)}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-2xl font-black">{card.title}</h3>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${getOverviewBadgeClassName(card.tone)}`}
+                  >
+                    {card.badge}
+                  </span>
+                </div>
+                <p
+                  className={`mt-4 text-sm leading-6 ${card.tone === 'pro' ? 'text-slate-200' : 'text-slate-600'}`}
+                >
+                  {card.summary}
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {card.bullets.map(item => (
+                    <li key={item} className="flex items-start gap-3">
+                      <div
+                        className={`mt-0.5 rounded-full p-1 ${card.tone === 'pro' ? 'bg-[#F2C94C]/15 text-[#F2C94C]' : 'bg-slate-100 text-slate-700'}`}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                      <span
+                        className={`text-sm leading-6 ${card.tone === 'pro' ? 'text-slate-100' : 'text-slate-700'}`}
+                      >
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-12 md:pb-20 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto rounded-[2rem] border-2 border-black bg-white shadow-pop overflow-hidden">
+          <div className="border-b-2 border-black bg-[#FFF7D6] px-6 py-5">
+            <h2 className="text-2xl md:text-3xl font-heading font-extrabold text-slate-900">
+              {pricingCopy.rightsTitle}
+            </h2>
+            <p className="mt-2 text-sm md:text-base text-slate-700">{pricingCopy.rightsSubtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr_1fr]">
+            <div className="hidden md:block border-r-2 border-black bg-slate-50 px-6 py-4 font-black text-slate-500">
+              Feature
+            </div>
+            <div className="hidden md:block border-r-2 border-black bg-slate-50 px-6 py-4 text-center font-black text-slate-500">
+              Free
+            </div>
+            <div className="hidden md:block bg-[#FFF8DC] px-6 py-4 text-center font-black text-slate-900">
+              Pro / Lifetime
+            </div>
+
+            {pricingCopy.rights.map(item => (
+              <div key={item.title} className="contents">
+                <div className="border-t md:border-t-0 md:border-r-2 border-black px-6 py-5">
+                  <div className="text-sm font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Feature
+                  </div>
+                  <div className="mt-1 text-lg font-black text-slate-900">{item.title}</div>
+                </div>
+                <div className="border-t md:border-t-0 md:border-r-2 border-black px-6 py-5 bg-white">
+                  <div className="text-sm font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Free
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{item.free}</p>
+                </div>
+                <div className="border-t md:border-t-0 border-black px-6 py-5 bg-[#FFFDF3]">
+                  <div className="text-sm font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
+                    Pro / Lifetime
+                  </div>
+                  <p className="mt-1 text-sm leading-6 font-semibold text-slate-900">{item.pro}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

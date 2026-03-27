@@ -1,7 +1,11 @@
 import { mutation, query } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId, requireAdmin } from './utils';
-import { hasActiveSubscription } from './subscription';
+import {
+  evaluateVideoAccess,
+  resolveEntitlementPlan,
+  resolveVideoAccessLevel,
+} from './entitlements';
 import { transcriptInputValidator } from './transcriptSchema';
 import {
   deleteVideoTranscriptChunks,
@@ -41,6 +45,7 @@ function mapVideoListItem(video: {
   views: number;
   youtubeId?: string;
   createdAt: number;
+  accessLevel?: string;
 }) {
   return {
     id: video._id,
@@ -53,6 +58,7 @@ function mapVideoListItem(video: {
     views: video.views,
     youtubeId: video.youtubeId,
     createdAt: video.createdAt,
+    accessLevel: resolveVideoAccessLevel(video),
   };
 }
 
@@ -67,6 +73,7 @@ function mapAdminVideoListItem(video: {
   views: number;
   youtubeId?: string;
   createdAt: number;
+  accessLevel?: string;
 }) {
   return {
     ...mapVideoListItem(video),
@@ -130,11 +137,15 @@ export const get = query({
     const video = await ctx.db.get(args.id);
     if (!video) return null;
 
-    if (isPremiumVideoLevel(video.level)) {
-      const user = await ctx.db.get(userId);
-      if (!hasActiveSubscription(user)) {
-        throw new ConvexError('SUBSCRIPTION_REQUIRED');
-      }
+    const user = await ctx.db.get(userId);
+    const plan = resolveEntitlementPlan(user);
+    const access = evaluateVideoAccess(plan, video);
+    if (!access.allowed) {
+      throw new ConvexError({
+        code: 'SUBSCRIPTION_REQUIRED',
+        reason: access.reason,
+        upgradeSource: access.upgradeSource,
+      });
     }
 
     const transcriptData = await loadVideoTranscript(ctx, video);
@@ -154,18 +165,28 @@ export const create = mutation({
     videoUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     level: v.string(),
+    accessLevel: v.optional(v.string()),
     duration: v.optional(v.number()),
     transcriptData: v.optional(transcriptInputValidator),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const now = Date.now();
+    const normalizedAccessLevel =
+      (args.accessLevel || '').trim().toUpperCase() === 'FREE'
+        ? 'FREE'
+        : (args.accessLevel || '').trim().toUpperCase() === 'PRO'
+          ? 'PRO'
+          : isPremiumVideoLevel(args.level)
+            ? 'PRO'
+            : 'FREE';
     const id = await ctx.db.insert('videos', {
       title: args.title,
       description: args.description,
       videoUrl: args.videoUrl ?? '',
       thumbnailUrl: args.thumbnailUrl,
       level: args.level,
+      accessLevel: normalizedAccessLevel,
       duration: args.duration,
       transcriptData: [],
       transcriptStorage: 'inline',
@@ -200,6 +221,7 @@ export const update = mutation({
     videoUrl: v.optional(v.string()),
     thumbnailUrl: v.optional(v.string()),
     level: v.optional(v.string()),
+    accessLevel: v.optional(v.string()),
     duration: v.optional(v.number()),
     transcriptData: v.optional(transcriptInputValidator),
   },
@@ -208,15 +230,22 @@ export const update = mutation({
     const { id, transcriptData, ...rest } = args;
     const existing = await ctx.db.get(id);
     if (!existing) throw new ConvexError({ code: 'VIDEO_NOT_FOUND' });
+    const normalizedAccessLevel =
+      args.accessLevel === undefined
+        ? existing.accessLevel
+        : (args.accessLevel || '').trim().toUpperCase() === 'FREE'
+          ? 'FREE'
+          : 'PRO';
 
     if (transcriptData === undefined) {
-      await ctx.db.patch(id, rest);
+      await ctx.db.patch(id, { ...rest, accessLevel: normalizedAccessLevel });
       return { id };
     }
 
     const transcriptWrite = await replaceVideoTranscriptChunks(ctx, id, transcriptData ?? null);
     await ctx.db.patch(id, {
       ...rest,
+      accessLevel: normalizedAccessLevel,
       transcriptData: [],
       transcriptStorage: transcriptWrite.chunkCount > 0 ? 'chunked' : 'inline',
       transcriptChunkCount: transcriptWrite.chunkCount,

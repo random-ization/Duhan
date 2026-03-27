@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 import { trackEvent } from '../utils/analytics';
+import { resolveAuthErrorMessage } from '../utils/authErrors';
 
 // Google OAuth Config - Removed legacy config
 // const GOOGLE_CLIENT_ID ...
@@ -66,11 +67,17 @@ export default function DesktopAuthPage() {
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   const toAuthErrorMessage = (err: unknown, fallbackKey: string) => {
-    const message = err instanceof Error ? err.message : String(err);
-    const translated = t(`errors.${message}`, { defaultValue: '' });
-    if (translated) return translated;
-    if (message && !message.startsWith('errors.')) return message;
-    return t(fallbackKey);
+    return resolveAuthErrorMessage(err, {
+      fallback: t(fallbackKey),
+      invalidCredentials: t('auth.invalidCredentials'),
+      tooManyAttempts: t('auth.tooManyAttempts', {
+        defaultValue: 'Too many attempts. Please try again later.',
+      }),
+      emailRequired: t('errors.EMAIL_REQUIRED'),
+      accountExistsLinkRequired: t('errors.ACCOUNT_EXISTS_LINK_REQUIRED'),
+      kakaoEmailRequired: t('errors.KAKAO_EMAIL_REQUIRED'),
+      emailAlreadyExists: t('errors.EMAIL_ALREADY_EXISTS'),
+    });
   };
 
   const handleGoogleLogin = async () => {

@@ -220,10 +220,6 @@ function getWordsToReview(vocabBookCount: { count: number } | null | undefined) 
   return vocabBookCount.count;
 }
 
-function getIsPremiumUser(user: DashboardUserLite) {
-  return user?.tier === 'PAID' || user?.tier === 'PREMIUM' || !!user?.subscriptionType;
-}
-
 function getLearnerName(user: DashboardUserLite) {
   const firstName = user?.name?.split(' ')[0];
   if (firstName) return firstName;
@@ -607,7 +603,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
 }
 
 export default function DashboardPage() {
-  const { user, language } = useAuth();
+  const { user, language, viewerAccess } = useAuth();
   const { speak, isLoading: isSpeaking } = useTTS();
   const dailyPhrase = useQuery(
     qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'),
@@ -653,7 +649,7 @@ export default function DashboardPage() {
   }, [language, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
 
   useEffect(() => {
-    if (!user?.id || getIsPremiumUser(user)) {
+    if (!user?.id || viewerAccess?.isPremium) {
       return;
     }
 
@@ -665,9 +661,9 @@ export default function DashboardPage() {
     return () => {
       globalThis.window.clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user, viewerAccess?.isPremium]);
 
-  const isPremiumUser = getIsPremiumUser(user);
+  const isPremiumUser = Boolean(viewerAccess?.isPremium);
   const showUpgradeBanner = Boolean(
     user?.id &&
     !isPremiumUser &&

@@ -487,6 +487,7 @@ export default defineSchema({
     thumbnailUrl: v.optional(v.string()),
 
     level: v.string(), // Beginner, Intermediate, Advanced
+    accessLevel: v.optional(v.string()), // "FREE" | "PRO"
     duration: v.optional(v.number()),
     views: v.number(),
 
@@ -781,6 +782,7 @@ export default defineSchema({
     audioUrl: v.optional(v.string()), // S3 URL for listening exams
     description: v.optional(v.string()),
     isPaid: v.boolean(),
+    accessLevel: v.optional(v.string()), // "FREE_SAMPLE" | "PRO"
     createdAt: v.number(),
   })
     .index('by_legacy_id', ['legacyId'])
@@ -856,6 +858,18 @@ export default defineSchema({
     .index('by_feature', ['feature'])
     .index('by_user_createdAt', ['userId', 'createdAt'])
     .index('by_user_model_createdAt', ['userId', 'model', 'createdAt']),
+
+  entitlement_usage: defineTable({
+    userId: v.id('users'),
+    feature: v.string(),
+    windowStart: v.number(),
+    resourceKey: v.optional(v.string()),
+    amount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user_feature_window', ['userId', 'feature', 'windowStart'])
+    .index('by_user_feature_window_resource', ['userId', 'feature', 'windowStart', 'resourceKey']),
 
   // One-time tokens for account recovery and email verification
   auth_email_tokens: defineTable({

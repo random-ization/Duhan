@@ -6,6 +6,7 @@ import type { Id } from '../../convex/_generated/dataModel';
 import type { GrammarStatsDto, GrammarItemDto, UnitGrammarDto } from '../../convex/grammars';
 import type { InstituteClientDto } from '../../convex/institutes';
 import type { SearchResult } from '../../convex/dictionary';
+import type { ViewerAccessSnapshot } from './entitlements';
 
 export type NoArgs = Record<string, never>;
 
@@ -433,6 +434,26 @@ export const VOCAB = {
   ),
 };
 
+export const ENTITLEMENTS = {
+  viewerAccess: qRef<NoArgs, ViewerAccessSnapshot>('entitlements:viewerAccess'),
+  consumeVocabTestAttempt: mRef<
+    NoArgs,
+    { allowed: boolean; remaining: number | null; consumed: boolean }
+  >('entitlements:consumeVocabTestAttempt'),
+  consumeMediaPlay: mRef<
+    { resourceKey: string },
+    {
+      allowed: boolean;
+      remaining: number | null;
+      consumed: boolean;
+      speedAllowed: boolean;
+    }
+  >('entitlements:consumeMediaPlay'),
+  assertHistoryAnalytics: qRef<NoArgs, { allowed: boolean; plan: ViewerAccessSnapshot['plan'] }>(
+    'entitlements:assertHistoryAnalytics'
+  ),
+};
+
 export const VOCAB_PDF = {
   exportVocabBookPdf: aRef<
     {
@@ -540,6 +561,7 @@ export type TopikSaveExamArgs = {
   audioUrl?: string;
   description?: string;
   isPaid?: boolean;
+  accessLevel?: 'FREE_SAMPLE' | 'PRO';
   questions: TopikSaveQuestionInput[];
 };
 

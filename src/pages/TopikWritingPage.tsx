@@ -18,6 +18,9 @@ import { WritingExamSession } from '../components/topik/WritingExamSession';
 import { WritingEvaluationReport } from '../components/topik/WritingEvaluationReport';
 import { Navigate } from 'react-router-dom';
 import type { Id } from '../../convex/_generated/dataModel';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { getEntitlementErrorData } from '../utils/entitlements';
+import { notify } from '../utils/notify';
 
 import { api } from '../../convex/_generated/api';
 
@@ -56,6 +59,7 @@ const TopikWritingPage: React.FC = () => {
   const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
+  const { startUpgradeFlow } = useUpgradeFlow();
 
   const startSession = useMutation(api.topikWriting.startSession);
   // Find the exam in context
@@ -82,10 +86,24 @@ const TopikWritingPage: React.FC = () => {
       })
       .catch(err => {
         console.error('Failed to start writing session', err);
+        const entitlementError = getEntitlementErrorData(err);
+        if (entitlementError?.upgradeSource) {
+          startUpgradeFlow({
+            plan: 'ANNUAL',
+            source: entitlementError.upgradeSource,
+            returnTo: `/topik/writing/${examId}`,
+          });
+          return;
+        }
+        notify.error(
+          t('topikWriting.session.startFailed', {
+            defaultValue: 'Unable to start this writing exam right now.',
+          })
+        );
         navigate('/topik');
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, user, exam]);
+  }, [examId, user, exam, navigate, startUpgradeFlow, t]);
 
   if (!user) return <Navigate to="/" replace />;
   if (!examId) return <Navigate to="/topik" replace />;
@@ -182,6 +200,22 @@ const TopikWritingPage: React.FC = () => {
       endTime={state.endTime}
       questions={resolvedQuestions}
       initialAnswers={state.initialAnswers}
+      onSubmitError={error => {
+        const entitlementError = getEntitlementErrorData(error);
+        if (entitlementError?.upgradeSource) {
+          startUpgradeFlow({
+            plan: 'ANNUAL',
+            source: entitlementError.upgradeSource,
+            returnTo: `/topik/writing/${examId}`,
+          });
+          return;
+        }
+        notify.error(
+          t('topikWriting.session.submitFailed', {
+            defaultValue: 'Unable to submit this writing exam right now.',
+          })
+        );
+      }}
       onSubmitted={submittedAnswers => {
         setPageState({
           phase: 'report',

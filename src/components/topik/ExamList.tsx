@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { TopikExam, ExamAttempt, Language } from '../../types';
 import { getLabel, getLabels } from '../../utils/i18n';
+import { getUpgradeBenefitCopy } from '../../utils/upgradeCopy';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -231,6 +232,7 @@ export const ExamList: React.FC<ExamListProps> = ({
   upgradeLoading = false,
 }) => {
   const labels = getLabels(language);
+  const upgradeCopy = getUpgradeBenefitCopy(language);
   const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingDeleteAttemptId, setPendingDeleteAttemptId] = useState<string | null>(null);
@@ -481,27 +483,19 @@ export const ExamList: React.FC<ExamListProps> = ({
                       </span>
                     </div>
                     <h4 className="mt-2 text-sm font-black text-slate-900">
-                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'title']) ||
-                        'This section is part of Premium'}
+                      {upgradeCopy.lockedTitle}
                     </h4>
                     <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
-                      {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'signedIn']) ||
-                        'You are already signed in. After payment we will return you to this page automatically.'}
+                      {upgradeCopy.lockedNote}
                     </p>
                     <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
-                      <li>
-                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'unlockCurrent']) ||
-                          'Unlock this content instantly'}
-                      </li>
-                      <li>
-                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'returnToPage']) ||
-                          'Return to this page after payment'}
-                      </li>
-                      <li>
-                        {getLabel(labels, ['pricingDetails', 'upgradeGuide', 'bindAccount']) ||
-                          'Bind access to your current account'}
-                      </li>
+                      {upgradeCopy.bullets.slice(0, 3).map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
                     </ul>
+                    <p className="mt-3 text-[11px] font-bold text-slate-500">
+                      {upgradeCopy.lockedCtaHint}
+                    </p>
                     <Button
                       type="button"
                       size="sm"

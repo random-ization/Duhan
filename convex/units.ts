@@ -2,6 +2,7 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { toErrorMessage } from './errors';
 import { getOptionalAuthUserId, requireAdmin } from './utils';
+import { evaluateCourseUnitAccess, getViewerEntitlementSnapshot } from './entitlements';
 import { transcriptInputValidator } from './transcriptSchema';
 import {
   loadTextbookUnitTranscript,
@@ -12,13 +13,22 @@ import {
 export const getByCourse = query({
   args: { courseId: v.string() },
   handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    const viewer = userId ? await ctx.db.get(userId) : null;
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const isAdmin = viewer?.role === 'ADMIN';
+
     const units = await ctx.db
       .query('textbook_units')
       .withIndex('by_course_unit_article', q => q.eq('courseId', args.courseId))
       .collect();
 
     // Return all fields for admin editing, exclude archived
-    const visibleUnits = units.filter(u => u.isArchived !== true);
+    const visibleUnits = units.filter(u => {
+      if (u.isArchived === true) return false;
+      if (isAdmin) return true;
+      return evaluateCourseUnitAccess(snapshot.plan, u.unitIndex).allowed;
+    });
     return Promise.all(
       visibleUnits.map(async u => ({
         _id: u._id,
@@ -48,6 +58,16 @@ export const getDetails = query({
   handler: async (ctx, args) => {
     // Resolve user via JWT auth
     const convexUserId = await getOptionalAuthUserId(ctx);
+    const viewer = convexUserId ? await ctx.db.get(convexUserId) : null;
+    const snapshot = await getViewerEntitlementSnapshot(ctx, convexUserId);
+    const isAdmin = viewer?.role === 'ADMIN';
+
+    if (!isAdmin) {
+      const access = evaluateCourseUnitAccess(snapshot.plan, args.unitIndex);
+      if (!access.allowed) {
+        return { unit: null, articles: [], vocabList: [], grammarList: [], annotations: [] };
+      }
+    }
 
     // RESOLVE COURSE ID: Support both Convex ID and Legacy ID
     // The frontend might pass a Convex ID, but data (units, grammars) might be linked via Legacy ID.

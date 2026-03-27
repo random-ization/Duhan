@@ -7,6 +7,47 @@ import { notify } from '../utils/notify';
 import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 
+function resolvePlanHighlights(language: string) {
+  const isZh = language === 'zh' || language.startsWith('zh-');
+  if (isZh) {
+    return {
+      monthly: [
+        '\u5168\u90e8\u6559\u6750\u8bfe\u7a0b',
+        '\u5168\u90e8 TOPIK / \u5199\u4f5c\u771f\u9898',
+        '\u5a92\u4f53\u65e0\u9650\u64ad\u653e + AI Credit \u63d0\u5347',
+      ],
+      annual: [
+        '\u5305\u542b\u6708\u4ed8\u5168\u90e8\u6743\u76ca',
+        '\u66f4\u4f4e\u957f\u671f\u6210\u672c，\u9002\u5408\u6301\u7eed\u5907\u8003',
+        '\u5386\u53f2\u5206\u6790、PDF \u5bfc\u51fa、\u5168\u7ad9 AI \u6df1\u5ea6\u4f7f\u7528',
+      ],
+      lifetime: [
+        '\u6743\u76ca\u4e0e Pro \u76f8\u540c',
+        '\u672a\u6765\u65b0\u589e Pro \u529f\u80fd\u7ee7\u7eed\u5305\u542b',
+        '\u4e00\u6b21\u4e70\u65ad，\u4e0d\u518d\u7eed\u8d39',
+      ],
+    };
+  }
+
+  return {
+    monthly: [
+      'Full course access',
+      'Full TOPIK and writing archive',
+      'Unlimited media + higher AI credits',
+    ],
+    annual: [
+      'Everything in monthly',
+      'Lower long-term cost for active learners',
+      'History analytics, PDF export, and deeper AI usage',
+    ],
+    lifetime: [
+      'Same entitlements as Pro',
+      'Future Pro features stay included',
+      'One-time payment, no renewal',
+    ],
+  };
+}
+
 interface PricingSectionProps {
   onSubscribe?: (planId: CheckoutPlan) => void;
   source?: string;
@@ -16,7 +57,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   onSubscribe,
   source = 'desktop_subscription',
 }) => {
-  const { user } = useAuth();
+  const { user, viewerAccess } = useAuth();
   const { t, i18n } = useTranslation();
   const { startUpgradeFlow, authLoading } = useUpgradeFlow();
 
@@ -56,6 +97,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
 
   const language = i18n.language;
   const priceConfig = PRICING_MAP[language] || PRICING_MAP['en'];
+  const planHighlights = resolvePlanHighlights(language);
 
   const handleSubscribe = (planId: CheckoutPlan) => {
     if (authLoading) {
@@ -87,7 +129,9 @@ const PricingSection: React.FC<PricingSectionProps> = ({
     return undefined;
   };
 
-  const currentPlan = user?.subscriptionType || SubscriptionType.FREE;
+  const currentPlan = viewerAccess?.isPremium
+    ? (user?.subscriptionType ?? SubscriptionType.ANNUAL)
+    : SubscriptionType.FREE;
 
   const plans = [
     {
@@ -95,11 +139,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
       title: t('plan.monthly', 'Monthly'),
       price: `${priceConfig.symbol}${priceConfig.monthly}`,
       period: t('period.per_month', '/ month'),
-      features: [
-        t('feature.textbook_access', 'Full Textbook Access'),
-        t('feature.topik_access', 'Unlimited TOPIK Exams'),
-        t('pricing.features.monthly.cloudSync'),
-      ],
+      features: [...planHighlights.monthly],
       highlight: false,
       type: SubscriptionType.MONTHLY,
     },
@@ -110,11 +150,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
       period: t('period.per_year', '/ year'),
       originalPrice: getOriginalPrice(language),
       discount: t('pricing.discount', '70% OFF'),
-      features: [
-        t('pricing.features.annual.allMonthly'),
-        t('pricing.features.annual.bestValue'),
-        t('pricing.features.annual.prioritySupport'),
-      ],
+      features: [...planHighlights.annual],
       highlight: true,
       type: SubscriptionType.ANNUAL,
     },
@@ -123,11 +159,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({
       title: t('plan.lifetime', 'Lifetime'),
       price: `${priceConfig.symbol}${priceConfig.lifetime}`,
       period: t('period.once', 'one-time'),
-      features: [
-        t('pricing.features.lifetime.oneTime'),
-        t('pricing.features.lifetime.foreverAccess'),
-        t('pricing.features.lifetime.futureUpdates'),
-      ],
+      features: [...planHighlights.lifetime],
       highlight: false,
       type: SubscriptionType.LIFETIME,
     },

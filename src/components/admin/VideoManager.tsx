@@ -26,6 +26,7 @@ interface VideoLesson {
   videoUrl?: string;
   thumbnailUrl?: string;
   level: string;
+  accessLevel?: 'FREE' | 'PRO';
   duration?: number;
   transcriptData?: unknown;
   views: number;
@@ -33,6 +34,10 @@ interface VideoLesson {
 }
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const ACCESS_LEVELS: Array<{ value: 'FREE' | 'PRO'; label: string }> = [
+  { value: 'FREE', label: '免费可看' },
+  { value: 'PRO', label: '仅 Pro / Lifetime' },
+];
 
 export default function VideoManager() {
   // Convex hooks
@@ -66,6 +71,7 @@ export default function VideoManager() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [level, setLevel] = useState('Beginner');
+  const [accessLevel, setAccessLevel] = useState<'FREE' | 'PRO'>('FREE');
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [duration, setDuration] = useState(0);
@@ -88,6 +94,7 @@ export default function VideoManager() {
     setTitle('');
     setDescription('');
     setLevel('Beginner');
+    setAccessLevel('FREE');
     setVideoUrl('');
     setThumbnailUrl('');
     setDuration(0);
@@ -107,6 +114,7 @@ export default function VideoManager() {
     setTitle(video.title);
     setDescription(video.description || '');
     setLevel(video.level);
+    setAccessLevel(video.accessLevel || 'FREE');
     setVideoUrl(video.videoUrl || '');
     setThumbnailUrl(video.thumbnailUrl || '');
     setDuration(video.duration || 0);
@@ -295,6 +303,7 @@ export default function VideoManager() {
           title,
           description,
           level,
+          accessLevel,
           videoUrl,
           thumbnailUrl,
           duration,
@@ -305,6 +314,7 @@ export default function VideoManager() {
           title,
           description,
           level,
+          accessLevel,
           videoUrl,
           thumbnailUrl,
           duration,
@@ -383,14 +393,21 @@ export default function VideoManager() {
                 <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs font-mono rounded">
                   {formatDuration(video.duration)}
                 </div>
-                <div
-                  className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${(() => {
-                    if (video.level === 'Beginner') return 'bg-green-100 text-green-700';
-                    if (video.level === 'Intermediate') return 'bg-yellow-100 text-yellow-700';
-                    return 'bg-red-100 text-red-700';
-                  })()}`}
-                >
-                  {video.level}
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  <div
+                    className={`px-2 py-1 text-xs font-bold rounded ${(() => {
+                      if (video.level === 'Beginner') return 'bg-green-100 text-green-700';
+                      if (video.level === 'Intermediate') return 'bg-yellow-100 text-yellow-700';
+                      return 'bg-red-100 text-red-700';
+                    })()}`}
+                  >
+                    {video.level}
+                  </div>
+                  <div
+                    className={`px-2 py-1 text-[11px] font-bold rounded ${video.accessLevel === 'PRO' ? 'bg-slate-900 text-white' : 'bg-white/90 text-slate-700'}`}
+                  >
+                    {video.accessLevel === 'PRO' ? 'PRO' : 'FREE'}
+                  </div>
                 </div>
               </div>
 
@@ -493,6 +510,27 @@ export default function VideoManager() {
                   {LEVELS.map(l => (
                     <option key={l} value={l}>
                       {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="video-access-level"
+                  className="block text-sm font-bold text-zinc-700 mb-2"
+                >
+                  访问权限 *
+                </label>
+                <select
+                  id="video-access-level"
+                  value={accessLevel}
+                  onChange={e => setAccessLevel(e.target.value as 'FREE' | 'PRO')}
+                  className="w-full px-4 py-3 border-2 border-zinc-200 rounded-xl focus:border-indigo-500 focus:outline-none transition"
+                >
+                  {ACCESS_LEVELS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>

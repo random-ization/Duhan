@@ -767,6 +767,7 @@
     "loginFailed": "Đăng nhập thất bại",
     "signupFailed": "Đăng ký thất bại",
     "invalidCredentials": "Email hoặc mật khẩu không đúng",
+    "tooManyAttempts": "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
     "emailExists": "Email đã được đăng ký",
     "emailNotVerified": "Vui lòng xác minh email trước khi đăng nhập",
     "userNotFound": "Người dùng không tồn tại",
