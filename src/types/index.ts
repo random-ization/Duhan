@@ -96,8 +96,15 @@ export interface User {
   avatar?: string; // URL to avatar image
   tier: UserTier;
   role: UserRole;
+  accountStatus?: 'ACTIVE' | 'DISABLED';
+  disabledReason?: string;
+  disabledAt?: number;
+  lastLoginAt?: number;
+  lastActivityAt?: number;
+  lastActivityType?: string;
   subscriptionType?: SubscriptionType; // New field
   subscriptionExpiry?: string; // New field
+  emailVerificationTime?: number;
   phoneRegion?: 'CN' | 'VN' | 'MN' | 'OTHER';
   isRegionalPromoEligible?: boolean;
   phoneVerifiedAt?: string;

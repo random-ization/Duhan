@@ -1,15 +1,40 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import type { Doc, Id } from './_generated/dataModel';
 import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator } from 'convex/server';
-import { MAX_USER_SEARCH_SCAN, MAX_INSTITUTES_FALLBACK } from './queryLimits';
+import { MAX_INSTITUTES_FALLBACK } from './queryLimits';
 import { requireAdmin } from './utils';
 import {
   buildExamScoreInfo,
   countCorrectAnswers,
   normalizeExamAttemptAnswers,
 } from './examAttemptMetrics';
+import {
+  buildManagedPlanPatch,
+  canExposeViewerRecord,
+  compareAdminUsers,
+  isEmailVerified,
+  matchesAdminUserFilters,
+  normalizeAccountStatus,
+  resolveAdminPlan,
+  resolveSubscriptionStatus,
+  type AdminUserAccountStatus,
+  type AdminUserActivityWindow,
+  type AdminUserBillingCycle,
+  type AdminUserEmailVerificationFilter,
+  type AdminUserListFilters,
+  type AdminUserManagedPlan,
+  type AdminUserResolvedPlan,
+  type AdminUserSortBy,
+} from './adminUserUtils';
 
 const SCAN_PAGE_SIZE = 500;
+const ADMIN_USER_LIST_SCAN_LIMIT = 5000;
+const ADMIN_USER_SCAN_BATCH_SIZE = 250;
+const ADMIN_USER_ACTIVITY_PREVIEW_LIMIT = 10;
+const ADMIN_USER_NOTE_PREVIEW_LIMIT = 20;
+const ADMIN_USER_AUDIT_PREVIEW_LIMIT = 20;
+const AI_USAGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const ADMIN_OVERVIEW_USERS_LIMIT = 5000;
 const ADMIN_OVERVIEW_GRAMMAR_LIMIT = 2000;
 const ADMIN_OVERVIEW_UNITS_LIMIT = 2000;
@@ -20,132 +45,776 @@ const ADMIN_BACKFILL_BATCH_LIMIT = 25;
 const formatCappedCount = (count: number, limit: number): number | string =>
   count > limit ? `${limit}+` : count;
 
-const toAdminUserListItem = (u: {
-  _id: unknown;
-  email?: string;
+const adminUserRoleValidator = v.union(v.literal('ADMIN'), v.literal('STUDENT'));
+const adminUserAccountStatusValidator = v.union(v.literal('ACTIVE'), v.literal('DISABLED'));
+const adminUserPlanValidator = v.union(v.literal('FREE'), v.literal('PRO'), v.literal('LIFETIME'));
+const adminUserEmailVerifiedValidator = v.union(v.literal('VERIFIED'), v.literal('UNVERIFIED'));
+const adminUserKycValidator = v.union(v.literal('NONE'), v.literal('VERIFIED'));
+const adminUserActivityWindowValidator = v.union(
+  v.literal('ACTIVE_7_DAYS'),
+  v.literal('INACTIVE_30_DAYS')
+);
+const adminUserSortByValidator = v.union(
+  v.literal('NEWEST'),
+  v.literal('OLDEST'),
+  v.literal('LAST_ACTIVE_DESC'),
+  v.literal('LAST_LOGIN_DESC'),
+  v.literal('TOTAL_STUDY_DESC')
+);
+const adminUserBillingCycleValidator = v.union(
+  v.literal('MONTHLY'),
+  v.literal('QUARTERLY'),
+  v.literal('SEMIANNUAL'),
+  v.literal('ANNUAL'),
+  v.literal('LIFETIME')
+);
+
+type AdminAuditAction =
+  | 'USER_PROFILE_UPDATED'
+  | 'USER_ROLE_CHANGED'
+  | 'USER_PLAN_CHANGED'
+  | 'USER_EMAIL_VERIFIED_CHANGED'
+  | 'USER_KYC_CHANGED'
+  | 'USER_DISABLED'
+  | 'USER_RESTORED'
+  | 'USER_NOTE_ADDED';
+
+type AuditMetadata = Record<string, string | number | boolean>;
+
+type AdminUserListItem = {
+  id: Id<'users'>;
   name?: string;
-  role?: string;
-  tier?: string;
+  email: string;
   avatar?: string;
-  isVerified?: boolean;
-  createdAt?: number;
+  role: 'ADMIN' | 'STUDENT';
+  accountStatus: AdminUserAccountStatus;
+  resolvedPlan: AdminUserResolvedPlan;
   subscriptionType?: string;
   subscriptionExpiry?: string;
-}) => ({
-  id: u._id,
-  email: u.email,
-  name: u.name,
-  role: u.role,
-  tier: u.tier,
-  avatar: u.avatar,
-  isVerified: u.isVerified,
-  createdAt: u.createdAt,
-  subscriptionType: u.subscriptionType,
-  subscriptionExpiry: u.subscriptionExpiry,
+  subscriptionStatus: string;
+  emailVerified: boolean;
+  kycStatus: 'NONE' | 'VERIFIED';
+  createdAt?: number;
+  lastLoginAt?: number;
+  lastActivityAt?: number;
+  lastActivityType?: string;
+  lastInstitute?: string;
+  lastLevel?: number;
+  lastUnit?: number;
+  lastModule?: string;
+  savedWordsCount: number;
+  mistakesCount: number;
+  totalStudyMinutes: number;
+};
+
+const toAdminUserListItem = (user: Doc<'users'>): AdminUserListItem => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  role: user.role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+  accountStatus: normalizeAccountStatus(user.accountStatus),
+  resolvedPlan: resolveAdminPlan(user),
+  subscriptionType: user.subscriptionType,
+  subscriptionExpiry: user.subscriptionExpiry,
+  subscriptionStatus: resolveSubscriptionStatus(user),
+  emailVerified: isEmailVerified(user),
+  kycStatus: user.kycStatus === 'VERIFIED' ? 'VERIFIED' : 'NONE',
+  createdAt: user.createdAt,
+  lastLoginAt: user.lastLoginAt,
+  lastActivityAt: user.lastActivityAt,
+  lastActivityType: user.lastActivityType,
+  lastInstitute: user.lastInstitute,
+  lastLevel: user.lastLevel,
+  lastUnit: user.lastUnit,
+  lastModule: user.lastModule,
+  savedWordsCount: user.savedWordsCount || 0,
+  mistakesCount: user.mistakesCount || 0,
+  totalStudyMinutes: user.totalStudyMinutes || 0,
 });
 
-// Get all users with real database pagination
+function parseAdminCursor(cursor: string | null): number {
+  if (!cursor) return 0;
+  const parsed = Number.parseInt(cursor, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function compactAuditMetadata(
+  metadata: Record<string, string | number | boolean | null | undefined>
+): AuditMetadata | undefined {
+  const result: AuditMetadata = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value !== null && value !== undefined) {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+async function insertAdminAuditLog(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  actorUserId: Id<'users'>,
+  action: AdminAuditAction,
+  metadata?: AuditMetadata
+) {
+  await ctx.db.insert('admin_user_audit_logs', {
+    userId,
+    actorUserId,
+    action,
+    metadata,
+    createdAt: Date.now(),
+  });
+}
+
+async function collectAdminUsers(ctx: QueryCtx) {
+  const users: Doc<'users'>[] = [];
+  let cursor: string | null = null;
+
+  do {
+    const batch = await ctx.db
+      .query('users')
+      .order('desc')
+      .paginate({ cursor, numItems: ADMIN_USER_SCAN_BATCH_SIZE });
+    users.push(...batch.page);
+    if (batch.isDone || users.length >= ADMIN_USER_LIST_SCAN_LIMIT) {
+      break;
+    }
+    cursor = batch.continueCursor;
+  } while (cursor !== null);
+
+  return users.slice(0, ADMIN_USER_LIST_SCAN_LIMIT);
+}
+
+async function loadUsersById(ctx: QueryCtx | MutationCtx, ids: Id<'users'>[]) {
+  const uniqueIds = [...new Set(ids.map(id => id.toString()))].map(id => id as Id<'users'>);
+  const docs = await Promise.all(uniqueIds.map(id => ctx.db.get(id)));
+  const map = new Map<string, Doc<'users'>>();
+  for (const doc of docs) {
+    if (doc) {
+      map.set(doc._id.toString(), doc);
+    }
+  }
+  return map;
+}
+
+async function loadInstituteNames(ctx: QueryCtx, courseIds: string[]) {
+  const uniqueCourseIds = [...new Set(courseIds.filter(Boolean))];
+  const institutes = await Promise.all(
+    uniqueCourseIds.map(courseId =>
+      ctx.db
+        .query('institutes')
+        .withIndex('by_legacy_id', q => q.eq('id', courseId))
+        .first()
+    )
+  );
+  const map = new Map<string, string>();
+  institutes.forEach(institute => {
+    if (institute) {
+      map.set(institute.id, institute.name);
+    }
+  });
+  return map;
+}
+
+function roundToOneDecimal(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+// Get all users with operational filters and manual pagination.
 export const getUsers = query({
   args: {
     paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+    role: v.optional(adminUserRoleValidator),
+    accountStatus: v.optional(adminUserAccountStatusValidator),
+    plan: v.optional(adminUserPlanValidator),
+    emailVerified: v.optional(adminUserEmailVerifiedValidator),
+    kycStatus: v.optional(adminUserKycValidator),
+    activityWindow: v.optional(adminUserActivityWindowValidator),
+    sortBy: v.optional(adminUserSortByValidator),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const results = await ctx.db.query('users').order('desc').paginate(args.paginationOpts);
+    const now = Date.now();
+    const filters: AdminUserListFilters = {
+      search: args.search,
+      role: args.role,
+      accountStatus: args.accountStatus,
+      plan: args.plan,
+      emailVerified: args.emailVerified as AdminUserEmailVerificationFilter | undefined,
+      kycStatus: args.kycStatus,
+      activityWindow: args.activityWindow as AdminUserActivityWindow | undefined,
+      sortBy: args.sortBy as AdminUserSortBy | undefined,
+    };
+
+    const allUsers = await collectAdminUsers(ctx);
+    const filtered = allUsers
+      .filter(user => matchesAdminUserFilters(user, filters, now))
+      .sort((left, right) => compareAdminUsers(left, right, filters.sortBy || 'NEWEST'))
+      .map(toAdminUserListItem);
+
+    const start = parseAdminCursor(args.paginationOpts.cursor);
+    const end = start + args.paginationOpts.numItems;
 
     return {
-      ...results,
-      page: results.page.map(toAdminUserListItem),
+      page: filtered.slice(start, end),
+      isDone: end >= filtered.length,
+      continueCursor: end >= filtered.length ? null : String(end),
     };
   },
 });
 
-// Search users (separate query for search functionality)
-export const searchUsers = query({
+export const getUserDetail = query({
   args: {
-    search: v.string(),
-    limit: v.optional(v.number()),
+    userId: v.id('users'),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    const limit = args.limit || 20;
-    const searchTerm = args.search.trim();
-    const searchLower = searchTerm.toLowerCase();
-
-    if (searchTerm.includes('@')) {
-      const exactMatches = new Map<string, ReturnType<typeof toAdminUserListItem>>();
-      const exactCandidates = [searchTerm];
-      if (searchLower !== searchTerm) {
-        exactCandidates.push(searchLower);
-      }
-
-      for (const email of exactCandidates) {
-        const exactUser = await ctx.db
-          .query('users')
-          .withIndex('email', q => q.eq('email', email))
-          .unique();
-        if (exactUser) {
-          exactMatches.set(exactUser._id.toString(), toAdminUserListItem(exactUser));
-        }
-      }
-
-      if (exactMatches.size > 0) {
-        return [...exactMatches.values()].slice(0, limit);
-      }
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      return null;
     }
 
-    // OPTIMIZATION: Limit collection to prevent full table scan
-    // Collect with a reasonable maximum to prevent query explosion
-    const allUsers = await ctx.db
-      .query('users')
-      .order('desc') // Get most recent users first
-      .take(MAX_USER_SEARCH_SCAN);
+    const now = Date.now();
+    const aiSince = now - AI_USAGE_WINDOW_MS;
 
-    const filtered = allUsers
-      .filter(
-        u =>
-          (u.email || '').toLowerCase().includes(searchLower) ||
-          (u.name || '').toLowerCase().includes(searchLower)
+    const [
+      vocabProgress,
+      grammarProgress,
+      courseProgress,
+      notePages,
+      noteReviewQueue,
+      annotations,
+      examAttempts,
+      typingRecords,
+      podcastSubscriptions,
+      listeningHistory,
+      recentActivityLogs,
+      recentNotes,
+      recentAuditLogs,
+      badges,
+      aiUsage,
+    ] = await Promise.all([
+      ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('user_grammar_progress')
+        .withIndex('by_user_grammar', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('user_course_progress')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('note_pages')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('note_review_queue')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('annotations')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('exam_attempts')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('typing_records')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('podcast_subscriptions')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('listening_history')
+        .withIndex('by_user_playedAt', q => q.eq('userId', args.userId))
+        .order('desc')
+        .take(5),
+      ctx.db
+        .query('activity_logs')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .order('desc')
+        .take(ADMIN_USER_ACTIVITY_PREVIEW_LIMIT),
+      ctx.db
+        .query('admin_user_notes')
+        .withIndex('by_user_createdAt', q => q.eq('userId', args.userId))
+        .order('desc')
+        .take(ADMIN_USER_NOTE_PREVIEW_LIMIT),
+      ctx.db
+        .query('admin_user_audit_logs')
+        .withIndex('by_user_createdAt', q => q.eq('userId', args.userId))
+        .order('desc')
+        .take(ADMIN_USER_AUDIT_PREVIEW_LIMIT),
+      ctx.db
+        .query('user_badges')
+        .withIndex('by_user', q => q.eq('userId', args.userId))
+        .collect(),
+      ctx.db
+        .query('ai_usage_logs')
+        .withIndex('by_user_createdAt', q => q.eq('userId', args.userId).gte('createdAt', aiSince))
+        .collect(),
+    ]);
+
+    const instituteNames = await loadInstituteNames(
+      ctx,
+      [user.lastInstitute || '', ...courseProgress.map(progress => progress.courseId)].filter(
+        Boolean
       )
-      .slice(0, limit)
-      .map(toAdminUserListItem);
+    );
+    const recentExamAttempts = examAttempts
+      .slice()
+      .sort((left, right) => right.createdAt - left.createdAt)
+      .slice(0, 5);
+    const examDocs = await Promise.all(
+      recentExamAttempts.map(attempt => ctx.db.get(attempt.examId))
+    );
+    const examNameMap = new Map<string, string>();
+    examDocs.forEach(exam => {
+      if (exam) {
+        examNameMap.set(exam._id.toString(), exam.title);
+      }
+    });
 
-    return filtered;
+    let vocabMastered = 0;
+    let vocabDueReviews = 0;
+    let vocabSaved = 0;
+    for (const progress of vocabProgress) {
+      if (progress.status === 'MASTERED') vocabMastered += 1;
+      const dueAt = progress.nextReviewAt || progress.due;
+      if (dueAt && dueAt <= now) vocabDueReviews += 1;
+      if (progress.savedByUser) vocabSaved += 1;
+    }
+
+    let grammarMastered = 0;
+    for (const progress of grammarProgress) {
+      if (progress.status === 'MASTERED') grammarMastered += 1;
+    }
+
+    const totalCompletedUnits = courseProgress.reduce(
+      (sum, progress) => sum + (progress.completedUnits || []).length,
+      0
+    );
+    const recentCourse = courseProgress
+      .slice()
+      .sort((left, right) => (right.lastAccessAt || 0) - (left.lastAccessAt || 0))[0];
+
+    const activeNotePages = notePages.filter(page => !page.isArchived && !page.isTemplate);
+    const archivedNotePages = notePages.filter(page => page.isArchived);
+    const templateNotePages = notePages.filter(page => page.isTemplate);
+    const queuedReviews = noteReviewQueue.filter(item => item.status !== 'done');
+
+    const examAverage =
+      examAttempts.length > 0
+        ? roundToOneDecimal(
+            examAttempts.reduce((sum, attempt) => sum + attempt.score, 0) / examAttempts.length
+          )
+        : 0;
+    const bestTypingWpm = typingRecords.reduce((max, record) => Math.max(max, record.wpm || 0), 0);
+    const averageTypingAccuracy =
+      typingRecords.length > 0
+        ? roundToOneDecimal(
+            typingRecords.reduce((sum, record) => sum + (record.accuracy || 0), 0) /
+              typingRecords.length
+          )
+        : 0;
+    const aiCost = aiUsage.reduce((sum, row) => sum + (row.costUsd || 0), 0);
+    const aiTokens = aiUsage.reduce((sum, row) => sum + (row.totalTokens || 0), 0);
+
+    const actorMap = await loadUsersById(ctx, [
+      ...recentNotes.map(note => note.authorUserId),
+      ...recentAuditLogs.map(log => log.actorUserId),
+      ...(user.disabledBy ? [user.disabledBy] : []),
+    ]);
+
+    return {
+      user: {
+        ...toAdminUserListItem(user),
+        phoneRegion: user.phoneRegion || 'OTHER',
+        isRegionalPromoEligible: Boolean(user.isRegionalPromoEligible),
+        disabledAt: user.disabledAt,
+        disabledReason: user.disabledReason,
+        disabledBy:
+          user.disabledBy && actorMap.get(user.disabledBy.toString())
+            ? {
+                id: user.disabledBy,
+                name: actorMap.get(user.disabledBy.toString())?.name,
+                email: actorMap.get(user.disabledBy.toString())?.email,
+              }
+            : null,
+      },
+      membership: {
+        plan: resolveAdminPlan(user),
+        subscriptionType: user.subscriptionType || null,
+        subscriptionStatus: resolveSubscriptionStatus(user),
+        subscriptionExpiry: user.subscriptionExpiry || null,
+        isViewerAccessible: canExposeViewerRecord(user),
+      },
+      learning: {
+        currentPointer: {
+          instituteId: user.lastInstitute || null,
+          instituteName: user.lastInstitute ? instituteNames.get(user.lastInstitute) || null : null,
+          level: user.lastLevel || null,
+          unit: user.lastUnit || null,
+          module: user.lastModule || null,
+        },
+        vocab: {
+          total: vocabProgress.length,
+          mastered: vocabMastered,
+          dueReviews: vocabDueReviews,
+          savedByUser: vocabSaved,
+        },
+        grammar: {
+          total: grammarProgress.length,
+          mastered: grammarMastered,
+        },
+        courses: {
+          totalCourses: courseProgress.length,
+          totalCompletedUnits,
+          recentCourseId: recentCourse?.courseId || null,
+          recentCourseName: recentCourse
+            ? instituteNames.get(recentCourse.courseId) || recentCourse.courseId
+            : null,
+          recentCourseLastAccessAt: recentCourse?.lastAccessAt || null,
+        },
+        notes: {
+          totalPages: activeNotePages.length,
+          archivedPages: archivedNotePages.length,
+          templates: templateNotePages.length,
+          queuedReviewCount: queuedReviews.length,
+        },
+        annotations: {
+          total: annotations.length,
+        },
+        exams: {
+          totalAttempts: examAttempts.length,
+          averageScore: examAverage,
+          latestAttemptAt: recentExamAttempts[0]?.createdAt || null,
+        },
+        typing: {
+          totalRecords: typingRecords.length,
+          bestWpm: bestTypingWpm,
+          averageAccuracy: averageTypingAccuracy,
+        },
+        podcasts: {
+          subscriptions: podcastSubscriptions.length,
+          listeningSessions: listeningHistory.length,
+          latestPlayedAt: listeningHistory[0]?.playedAt || null,
+        },
+        ai: {
+          callsLast30Days: aiUsage.length,
+          totalTokensLast30Days: aiTokens,
+          totalCostLast30Days: roundToOneDecimal(aiCost),
+        },
+        badges: {
+          total: badges.length,
+          new: badges.filter(badge => badge.isNew).length,
+        },
+      },
+      recentActivity: recentActivityLogs.map(log => ({
+        id: log._id,
+        activityType: log.activityType,
+        duration: log.duration || 0,
+        itemsStudied: log.itemsStudied || 0,
+        createdAt: log.createdAt,
+      })),
+      recentExamAttempts: recentExamAttempts.map(attempt => ({
+        id: attempt._id,
+        examId: attempt.examId,
+        examTitle: examNameMap.get(attempt.examId.toString()) || 'TOPIK',
+        score: attempt.score,
+        maxScore: attempt.maxScore || 0,
+        correctCount: attempt.correctCount || 0,
+        createdAt: attempt.createdAt,
+      })),
+      recentListeningHistory: listeningHistory.map(item => ({
+        id: item._id,
+        episodeTitle: item.episodeTitle,
+        channelName: item.channelName,
+        progress: item.progress,
+        duration: item.duration || 0,
+        playedAt: item.playedAt,
+      })),
+      adminNotes: recentNotes.map(note => ({
+        id: note._id,
+        body: note.body,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        author: actorMap.get(note.authorUserId.toString())
+          ? {
+              id: note.authorUserId,
+              name: actorMap.get(note.authorUserId.toString())?.name,
+              email: actorMap.get(note.authorUserId.toString())?.email,
+            }
+          : null,
+      })),
+      auditLogs: recentAuditLogs.map(log => ({
+        id: log._id,
+        action: log.action,
+        metadata: log.metadata || {},
+        createdAt: log.createdAt,
+        actor: actorMap.get(log.actorUserId.toString())
+          ? {
+              id: log.actorUserId,
+              name: actorMap.get(log.actorUserId.toString())?.name,
+              email: actorMap.get(log.actorUserId.toString())?.email,
+            }
+          : null,
+      })),
+    };
   },
 });
 
-// Update user
-export const updateUser = mutation({
+export const updateUserProfile = mutation({
   args: {
     userId: v.id('users'),
     updates: v.object({
       name: v.optional(v.string()),
-      role: v.optional(v.string()),
-      tier: v.optional(v.string()),
-      isVerified: v.optional(v.boolean()),
-      subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
-      subscriptionExpiry: v.optional(v.string()), // ISO Date string
+      role: v.optional(adminUserRoleValidator),
+      emailVerified: v.optional(v.boolean()),
+      kycStatus: v.optional(adminUserKycValidator),
+      plan: v.optional(adminUserPlanValidator),
+      subscriptionType: v.optional(adminUserBillingCycleValidator),
+      subscriptionExpiry: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const { userId, updates } = args;
+    const actor = await requireAdmin(ctx);
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new ConvexError({ code: 'USER_NOT_FOUND' });
+    }
 
-    await ctx.db.patch(userId, updates);
+    const updates = args.updates;
+    const patch: Partial<Doc<'users'>> = {};
+    const changedFields: string[] = [];
 
-    return { success: true };
+    if (
+      (updates.subscriptionType !== undefined || updates.subscriptionExpiry !== undefined) &&
+      updates.plan === undefined
+    ) {
+      throw new ConvexError({ code: 'INVALID_PLAN_UPDATE' });
+    }
+
+    if (updates.name !== undefined) {
+      const nextName = updates.name.trim() || undefined;
+      if (nextName !== user.name) {
+        patch.name = nextName;
+        changedFields.push('name');
+      }
+    }
+
+    if (updates.role && updates.role !== (user.role === 'ADMIN' ? 'ADMIN' : 'STUDENT')) {
+      patch.role = updates.role;
+      changedFields.push('role');
+      await insertAdminAuditLog(
+        ctx,
+        args.userId,
+        actor._id,
+        'USER_ROLE_CHANGED',
+        compactAuditMetadata({
+          previousRole: user.role || 'STUDENT',
+          nextRole: updates.role,
+        })
+      );
+    }
+
+    if (updates.emailVerified !== undefined) {
+      const currentEmailVerified = isEmailVerified(user);
+      if (currentEmailVerified !== updates.emailVerified) {
+        patch.emailVerificationTime = updates.emailVerified ? Date.now() : undefined;
+        patch.isVerified = updates.emailVerified;
+        changedFields.push('emailVerified');
+        await insertAdminAuditLog(
+          ctx,
+          args.userId,
+          actor._id,
+          'USER_EMAIL_VERIFIED_CHANGED',
+          compactAuditMetadata({
+            previousEmailVerified: currentEmailVerified,
+            nextEmailVerified: updates.emailVerified,
+          })
+        );
+      }
+    }
+
+    if (
+      updates.kycStatus &&
+      updates.kycStatus !== (user.kycStatus === 'VERIFIED' ? 'VERIFIED' : 'NONE')
+    ) {
+      patch.kycStatus = updates.kycStatus;
+      changedFields.push('kycStatus');
+      await insertAdminAuditLog(
+        ctx,
+        args.userId,
+        actor._id,
+        'USER_KYC_CHANGED',
+        compactAuditMetadata({
+          previousKycStatus: user.kycStatus || 'NONE',
+          nextKycStatus: updates.kycStatus,
+        })
+      );
+    }
+
+    if (updates.plan) {
+      let planPatch: {
+        tier: string;
+        subscriptionType: AdminUserBillingCycle | undefined;
+        subscriptionExpiry: string | undefined;
+      };
+      try {
+        planPatch = buildManagedPlanPatch({
+          plan: updates.plan as AdminUserManagedPlan,
+          subscriptionType: updates.subscriptionType,
+          subscriptionExpiry: updates.subscriptionExpiry,
+        });
+      } catch (error) {
+        throw new ConvexError({
+          code: 'INVALID_PLAN_UPDATE',
+          message: (error as Error).message,
+        });
+      }
+
+      const currentPlan = resolveAdminPlan(user);
+      const currentSubscriptionType = user.subscriptionType || undefined;
+      const currentSubscriptionExpiry = user.subscriptionExpiry || undefined;
+      if (
+        currentPlan !== updates.plan ||
+        currentSubscriptionType !== planPatch.subscriptionType ||
+        currentSubscriptionExpiry !== planPatch.subscriptionExpiry ||
+        (user.tier || 'FREE') !== planPatch.tier
+      ) {
+        patch.tier = planPatch.tier;
+        patch.subscriptionType = planPatch.subscriptionType;
+        patch.subscriptionExpiry = planPatch.subscriptionExpiry;
+        changedFields.push('plan');
+        await insertAdminAuditLog(
+          ctx,
+          args.userId,
+          actor._id,
+          'USER_PLAN_CHANGED',
+          compactAuditMetadata({
+            previousPlan: currentPlan,
+            nextPlan: updates.plan,
+            previousSubscriptionType: currentSubscriptionType || 'NONE',
+            nextSubscriptionType: planPatch.subscriptionType || 'NONE',
+          })
+        );
+      }
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.userId, patch);
+      await insertAdminAuditLog(
+        ctx,
+        args.userId,
+        actor._id,
+        'USER_PROFILE_UPDATED',
+        compactAuditMetadata({
+          changedFields: changedFields.join(','),
+        })
+      );
+    }
+
+    return { success: true, changedFields };
   },
 });
 
-// Delete user
-export const deleteUser = mutation({
+export const setUserAccountStatus = mutation({
   args: {
     userId: v.id('users'),
+    status: adminUserAccountStatusValidator,
+    reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    await ctx.db.delete(args.userId);
-    return { success: true };
+    const actor = await requireAdmin(ctx);
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new ConvexError({ code: 'USER_NOT_FOUND' });
+    }
+
+    const currentStatus = normalizeAccountStatus(user.accountStatus);
+    if (currentStatus === args.status) {
+      return { success: true, status: currentStatus };
+    }
+
+    const now = Date.now();
+    if (args.status === 'DISABLED') {
+      const reason = args.reason?.trim();
+      if (!reason) {
+        throw new ConvexError({ code: 'DISABLE_REASON_REQUIRED' });
+      }
+
+      await ctx.db.patch(args.userId, {
+        accountStatus: 'DISABLED',
+        disabledReason: reason,
+        disabledAt: now,
+        disabledBy: actor._id,
+      });
+      await insertAdminAuditLog(
+        ctx,
+        args.userId,
+        actor._id,
+        'USER_DISABLED',
+        compactAuditMetadata({ reason })
+      );
+      return { success: true, status: 'DISABLED' as const };
+    }
+
+    await ctx.db.patch(args.userId, {
+      accountStatus: 'ACTIVE',
+      disabledReason: undefined,
+      disabledAt: undefined,
+      disabledBy: undefined,
+    });
+    await insertAdminAuditLog(ctx, args.userId, actor._id, 'USER_RESTORED');
+
+    return { success: true, status: 'ACTIVE' as const };
+  },
+});
+
+export const addUserNote = mutation({
+  args: {
+    userId: v.id('users'),
+    body: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireAdmin(ctx);
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new ConvexError({ code: 'USER_NOT_FOUND' });
+    }
+
+    const body = args.body.trim();
+    if (!body) {
+      throw new ConvexError({ code: 'NOTE_BODY_REQUIRED' });
+    }
+
+    const now = Date.now();
+    const noteId = await ctx.db.insert('admin_user_notes', {
+      userId: args.userId,
+      authorUserId: actor._id,
+      body,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await insertAdminAuditLog(
+      ctx,
+      args.userId,
+      actor._id,
+      'USER_NOTE_ADDED',
+      compactAuditMetadata({
+        bodyPreview: body.slice(0, 80),
+      })
+    );
+
+    return { success: true, noteId };
   },
 });
 
@@ -430,7 +1099,13 @@ export const backfillCachedMetrics = mutation({
     let usersUpdated = 0;
 
     for (const user of usersBatch.page) {
-      const patch: { savedWordsCount?: number; mistakesCount?: number } = {};
+      const patch: {
+        accountStatus?: 'ACTIVE';
+        savedWordsCount?: number;
+        mistakesCount?: number;
+        lastActivityAt?: number;
+        lastActivityType?: string;
+      } = {};
 
       if (typeof user.savedWordsCount !== 'number') {
         const savedWords = await ctx.db
@@ -446,6 +1121,22 @@ export const backfillCachedMetrics = mutation({
           .withIndex('by_user', q => q.eq('userId', user._id))
           .collect();
         patch.mistakesCount = mistakes.length;
+      }
+
+      if (!user.accountStatus) {
+        patch.accountStatus = 'ACTIVE';
+      }
+
+      if (typeof user.lastActivityAt !== 'number') {
+        const latestActivity = await ctx.db
+          .query('activity_logs')
+          .withIndex('by_user', q => q.eq('userId', user._id))
+          .order('desc')
+          .take(1);
+        if (latestActivity[0]) {
+          patch.lastActivityAt = latestActivity[0].createdAt;
+          patch.lastActivityType = latestActivity[0].activityType;
+        }
       }
 
       if (Object.keys(patch).length > 0) {

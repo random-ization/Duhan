@@ -12,6 +12,11 @@ import {
   normalizeExamAttemptAnswers,
 } from './examAttemptMetrics';
 
+const buildLastActivityPatch = (activityType: string, nowMs: number) => ({
+  lastActivityAt: nowMs,
+  lastActivityType: activityType,
+});
+
 const updateUserCounter = async (
   ctx: MutationCtx,
   userId: Id<'users'>,
@@ -390,6 +395,7 @@ export const logActivity = mutation({
 
     const { activityType, duration, itemsStudied, metadata } = args;
     const minutes = Math.max(0, duration || 0);
+    const now = Date.now();
 
     await ctx.db.insert('activity_logs', {
       userId,
@@ -397,11 +403,12 @@ export const logActivity = mutation({
       duration: minutes,
       itemsStudied,
       metadata,
-      createdAt: Date.now(),
+      createdAt: now,
     });
 
     await ctx.db.patch(userId, {
       totalStudyMinutes: (user.totalStudyMinutes || 0) + minutes,
+      ...buildLastActivityPatch(activityType, now),
     });
 
     return { success: true };

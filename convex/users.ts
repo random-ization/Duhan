@@ -3,6 +3,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import { MetadataJson, parsePhoneNumberWithError } from 'libphonenumber-js/core';
 import phoneMetadata from './phone/metadata.cn-vn-mn';
+import { canExposeViewerRecord } from './adminUserUtils';
 
 export const viewer = query({
   args: {},
@@ -13,6 +14,9 @@ export const viewer = query({
     }
     const user = await ctx.db.get(userId);
     if (!user) {
+      return null;
+    }
+    if (!canExposeViewerRecord(user)) {
       return null;
     }
     return user;

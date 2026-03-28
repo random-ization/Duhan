@@ -293,6 +293,7 @@ async function updateExistingUser(
   if (emailVerified && !user.emailVerificationTime) {
     updates.emailVerificationTime = Date.now();
   }
+  updates.lastLoginAt = Date.now();
 
   if (Object.keys(updates).length > 0) {
     await ctx.db.patch(userId, updates);
@@ -313,6 +314,8 @@ async function createNewUser(
     email,
     ...(emailVerified ? { emailVerificationTime: Date.now() } : null),
     createdAt: Date.now(),
+    accountStatus: 'ACTIVE',
+    lastLoginAt: Date.now(),
     tier: 'FREE',
     savedWordsCount: 0,
     mistakesCount: 0,

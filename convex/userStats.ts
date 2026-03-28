@@ -17,6 +17,11 @@ import {
   startOfWeek,
 } from './userStatsHelpers';
 
+const buildLastActivityPatch = (activityType: string, nowMs: number) => ({
+  lastActivityAt: nowMs,
+  lastActivityType: activityType,
+});
+
 export const getStats = query({
   args: {},
   handler: async ctx => {
@@ -208,6 +213,7 @@ export const logActivity = mutation({
     }
 
     const minutes = Math.max(0, args.duration || 0);
+    const now = Date.now();
 
     await ctx.db.insert('activity_logs', {
       userId,
@@ -215,11 +221,12 @@ export const logActivity = mutation({
       duration: minutes,
       itemsStudied: args.itemsStudied || 0,
       metadata: args.metadata,
-      createdAt: Date.now(),
+      createdAt: now,
     });
 
     await ctx.db.patch(userId, {
       totalStudyMinutes: (user.totalStudyMinutes || 0) + minutes,
+      ...buildLastActivityPatch(args.activityType, now),
     });
 
     return { success: true };

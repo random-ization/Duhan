@@ -126,6 +126,10 @@ export default defineSchema({
     isAnonymous: v.optional(v.boolean()), // Added for Auth compatibility
 
     role: v.optional(v.string()), // "STUDENT" | "ADMIN"
+    accountStatus: v.optional(v.string()), // "ACTIVE" | "DISABLED"
+    disabledReason: v.optional(v.string()),
+    disabledAt: v.optional(v.number()),
+    disabledBy: v.optional(v.id('users')),
     tier: v.optional(v.string()),
     subscriptionType: v.optional(v.string()), // "MONTHLY", "ANNUAL", "LIFETIME"
     subscriptionExpiry: v.optional(v.string()), // ISO Date or timestamp string
@@ -149,6 +153,9 @@ export default defineSchema({
     lastLevel: v.optional(v.number()),
     lastUnit: v.optional(v.number()),
     lastModule: v.optional(v.string()), // Added
+    lastLoginAt: v.optional(v.number()),
+    lastActivityAt: v.optional(v.number()),
+    lastActivityType: v.optional(v.string()),
     postgresId: v.optional(v.string()),
 
     // Regional promo eligibility (CN/VN/MN phone verification)
@@ -894,6 +901,26 @@ export default defineSchema({
     metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     createdAt: v.number(),
   }).index('by_user', ['userId']),
+
+  admin_user_notes: defineTable({
+    userId: v.id('users'),
+    authorUserId: v.id('users'),
+    body: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_author_createdAt', ['authorUserId', 'createdAt']),
+
+  admin_user_audit_logs: defineTable({
+    userId: v.id('users'),
+    actorUserId: v.id('users'),
+    action: v.string(),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    createdAt: v.number(),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_actor_createdAt', ['actorUserId', 'createdAt']),
 
   // Exam Sessions (Active timer tracking)
   exam_sessions: defineTable({
