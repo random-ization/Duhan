@@ -1119,6 +1119,51 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_user', ['userId']),
 
+  reading_books: defineTable({
+    slug: v.string(),
+    title: v.string(),
+    pageTitle: v.optional(v.string()),
+    levelLabel: v.optional(v.string()),
+    coverImageUrl: v.optional(v.string()),
+    pageCount: v.number(),
+    readingMinutes: v.optional(v.number()),
+    sourcePage: v.string(),
+    sourceBookId: v.number(),
+    catimage: v.optional(v.number()),
+    token: v.optional(v.string()),
+    isPublished: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_slug', ['slug'])
+    .index('by_source_book_id', ['sourceBookId'])
+    .index('by_published_source_book_id', ['isPublished', 'sourceBookId']),
+
+  reading_book_pages: defineTable({
+    bookId: v.id('reading_books'),
+    pageIndex: v.number(),
+    imageUrl: v.string(),
+    layoutClass: v.optional(v.string()),
+    sentenceCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_book', ['bookId'])
+    .index('by_book_page', ['bookId', 'pageIndex']),
+
+  reading_book_sentences: defineTable({
+    pageId: v.id('reading_book_pages'),
+    sentenceIndex: v.number(),
+    spanId: v.optional(v.string()),
+    text: v.string(),
+    audioUrl: v.optional(v.string()),
+    clipBeginMs: v.optional(v.number()),
+    clipEndMs: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_page', ['pageId'])
+    .index('by_page_sentence', ['pageId', 'sentenceIndex']),
+
   user_badges: defineTable({
     userId: v.id('users'),
     category: v.string(), // e.g., "STREAK", "VOCAB", "TYPING", "NIGHT_OWL"

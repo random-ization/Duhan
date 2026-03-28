@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { NEWS } from '../utils/convexRefs';
+import { NEWS, READING_BOOKS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui';
+import { PictureBookShelf } from '../components/reading/PictureBookShelf';
+import { cn } from '../lib/utils';
+import type { PictureBook } from '../types';
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -52,6 +55,35 @@ type UserFeedData = {
 };
 
 type DifficultyTranslator = (key: string, options?: Record<string, unknown>) => string;
+type PictureBookLevelFilter = string;
+
+const PICTURE_BOOK_LEVEL_OPTIONS = ['1단계', '2단계', '3단계', '4단계', '5단계', '6단계'] as const;
+
+function normalizePictureBookLevel(levelLabel?: string) {
+  return levelLabel?.trim() || '';
+}
+
+function getPictureBookLevelSortOrder(level: string) {
+  const match = level.match(/(\d+)/);
+  return match ? Number.parseInt(match[1], 10) : 999;
+}
+
+function getPictureBookLevelNumber(levelLabel?: string) {
+  const match = levelLabel?.match(/(\d+)/);
+  return match?.[1] ?? '';
+}
+
+function formatPictureBookLevelLabel(
+  levelLabel: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  const levelNumber = getPictureBookLevelNumber(levelLabel);
+  if (!levelNumber) return levelLabel;
+  return t('readingDiscovery.pictureBooks.levelBadge', {
+    defaultValue: 'Level {{level}}',
+    level: levelNumber,
+  });
+}
 
 function getDifficultyChip(
   level: 'L1' | 'L2' | 'L3',
@@ -539,10 +571,52 @@ export default function ReadingDiscoveryPage() {
   const language = resolveFeedLanguage(i18n.language);
   const userId = user?.id;
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
+  const [pictureBookLevelFilter, setPictureBookLevelFilter] =
+    useState<PictureBookLevelFilter>('1단계');
   const [feedReady, setFeedReady] = useState<boolean>(() => !userId);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string>('');
   const autoRefreshLockRef = useRef(false);
+  const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {}) as PictureBook[] | undefined;
+  const sortedPictureBooks = useMemo(() => {
+    if (!pictureBooks) return undefined;
+
+    return [...pictureBooks].sort((left, right) => {
+      const levelOrderDiff =
+        getPictureBookLevelSortOrder(normalizePictureBookLevel(left.levelLabel)) -
+        getPictureBookLevelSortOrder(normalizePictureBookLevel(right.levelLabel));
+      if (levelOrderDiff !== 0) return levelOrderDiff;
+
+      const sourceBookDiff =
+        (left.sourceBookId ?? Number.MAX_SAFE_INTEGER) -
+        (right.sourceBookId ?? Number.MAX_SAFE_INTEGER);
+      if (sourceBookDiff !== 0) return sourceBookDiff;
+
+      return left.title.localeCompare(right.title, 'ko');
+    });
+  }, [pictureBooks]);
+  const pictureBookLevelOptions = useMemo(() => {
+    if (!sortedPictureBooks) return [];
+
+    const counts = new Map<string, number>();
+    for (const book of sortedPictureBooks) {
+      const level = normalizePictureBookLevel(book.levelLabel);
+      if (!level) continue;
+      counts.set(level, (counts.get(level) ?? 0) + 1);
+    }
+
+    return PICTURE_BOOK_LEVEL_OPTIONS.map(level => ({
+      value: level,
+      count: counts.get(level) ?? 0,
+      label: formatPictureBookLevelLabel(level, t),
+    }));
+  }, [sortedPictureBooks, t]);
+  const filteredPictureBooks = useMemo(() => {
+    if (!sortedPictureBooks) return undefined;
+    return sortedPictureBooks.filter(
+      book => normalizePictureBookLevel(book.levelLabel) === pictureBookLevelFilter
+    );
+  }, [pictureBookLevelFilter, sortedPictureBooks]);
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
   const refreshUserFeedIfEligible = useMutation(NEWS.refreshUserFeedIfEligible);
   const manualRefreshUserFeed = useMutation(NEWS.manualRefreshUserFeed);
@@ -759,6 +833,68 @@ export default function ReadingDiscoveryPage() {
           </div>
         </div>
       </div>
+
+      <section className="mb-14">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-foreground">
+              🎨 {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Picture Books' })}
+            </h2>
+            <p className="mt-1 text-sm font-medium text-muted-foreground">
+              {t('readingDiscovery.pictureBooks.subtitle', {
+                defaultValue:
+                  'Open a storybook, listen line by line, and follow sentence-level highlighting.',
+              })}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground">
+            {pictureBooks?.length ?? 0}/{pictureBooks?.length ?? 0}{' '}
+            {t('readingDiscovery.pictureBooks.count', { defaultValue: 'books ready' })}
+          </div>
+        </div>
+
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {pictureBookLevelOptions.map(option => (
+            <Button
+              key={option.value}
+              type="button"
+              variant="ghost"
+              onClick={() => setPictureBookLevelFilter(option.value)}
+              className={cn(
+                'shrink-0 rounded-full border px-4 py-2 text-left transition',
+                pictureBookLevelFilter === option.value
+                  ? 'border-foreground/20 bg-foreground text-background shadow-sm'
+                  : 'border-border bg-card/80 text-foreground hover:border-foreground/15'
+              )}
+            >
+              <div className="flex min-w-[128px] items-center justify-between gap-3">
+                <div className="text-sm font-black">{option.label}</div>
+                <div
+                  className={cn(
+                    'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-black',
+                    pictureBookLevelFilter === option.value
+                      ? 'bg-background/15 text-background'
+                      : 'bg-muted text-foreground'
+                  )}
+                >
+                  {option.count}
+                </div>
+              </div>
+            </Button>
+          ))}
+        </div>
+
+        <PictureBookShelf
+          books={filteredPictureBooks}
+          loading={pictureBooks === undefined}
+          onOpen={slug => navigate(`/reading/books/${slug}`)}
+          emptyStateText={t('readingDiscovery.pictureBooks.emptyFiltered', {
+            defaultValue: '这个等级下还没有可阅读的画册。左右滑动切换别的等级试试。',
+          })}
+        />
+      </section>
+
+      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <section className="mb-14">
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

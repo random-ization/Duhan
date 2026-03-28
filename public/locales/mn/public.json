@@ -2735,6 +2735,21 @@
       "recommended": "Санал болгосон",
       "sourceWikipedia": "Википедиа"
     },
+    "pictureBooks": {
+      "title": "Зурагт ном",
+      "subtitle": "Зурагт ном нээж, өгүүлбэр бүрээр сонсоод, өгүүлбэрийн түвшний тодруулгыг дагана уу.",
+      "count": "ном бэлэн",
+      "emptyAfterImport": "Импорт хийсний дараа зурагт номууд энд гарч ирнэ.",
+      "emptyFiltered": "Энэ түвшинд зурагт ном алга байна. Өөр түвшин рүү шудраад үзнэ үү.",
+      "shelfLabel": "Тавиур",
+      "shelfCount": "{{count}} ном",
+      "bookTag": "Ном",
+      "open": "Нээх",
+      "sentenceSync": "Өгүүлбэр синк",
+      "pages": "{{count}} хуудас",
+      "minutes": "~{{minutes}} мин",
+      "levelBadge": "{{level}}-р түвшин"
+    },
     "fallback": {
       "wikipediaSource": "Солонгос соёлын нэвтэрхий толь",
       "wikipediaBadge": "B2 Дунд • Танин мэдэхүй",
@@ -2748,6 +2763,31 @@
       "literatureBookmark": "Уран зохиолын тэмдэглэл"
     },
     "footer": "Convex newsIngestion:getUserFeed-ээс өгөгдөл авна (уншсанаас 24 цагийн дараа автоматаар шинэчилнэ, гараар өдөрт 3 хүртэл)"
+  },
+  "pictureBookReader": {
+    "audioErrorPlaybackFailed": "Энэ өгүүлбэрийн аудио тоглуулж чадсангүй.",
+    "audioErrorBlocked": "Аудио тоглуулах боломжгүй эсвэл хаагдсан байна.",
+    "notFoundTitle": "Зурагт ном олдсонгүй",
+    "notFoundBody": "Таны хүссэн өгүүллэг алга эсвэл хараахан нийтлэгдээгүй байна.",
+    "backToReading": "Уншлагын хэсэг рүү буцах",
+    "badge": "Зурагт ном",
+    "pageProgress": "{{current}} / {{total}}-р хуудас",
+    "prev": "Өмнөх",
+    "next": "Дараах",
+    "pageImageAlt": "{{title}} {{page}}-р хуудас",
+    "sentenceLayer": "Өгүүлбэрийн давхарга",
+    "playback": "Тоглуулах",
+    "play": "Тоглуулах",
+    "pause": "Түр зогсоох",
+    "replay": "Дахин тоглуулах",
+    "speed": "Хурд {{rate}}",
+    "autoFlipOn": "Автомат эргүүлэх: Асаалттай",
+    "autoFlipOff": "Автомат эргүүлэх: Унтраалттай",
+    "currentSentence": "Одоогийн өгүүлбэр",
+    "currentSentenceEmpty": "Тоглуулж эхлэхийн тулд өгүүлбэр дээр дарна уу.",
+    "pageOutline": "Хуудасны навигаци",
+    "sentenceList": "Өгүүлбэрийн жагсаалт",
+    "sentenceNumber": "{{number}}-р өгүүлбэр"
   },
   "readingArticle": {
     "difficulty": {

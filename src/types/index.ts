@@ -206,6 +206,39 @@ export interface ReadingContent {
   keyVocabulary: { word: string; meaning: string; pos?: string }[];
 }
 
+export interface PictureBookSentence {
+  _id?: string;
+  sentenceIndex: number;
+  spanId?: string;
+  text: string;
+  audioUrl?: string;
+  clipBeginMs?: number;
+  clipEndMs?: number;
+  durationMs?: number;
+}
+
+export interface PictureBookPage {
+  _id?: string;
+  pageIndex: number;
+  imageUrl: string;
+  layoutClass?: string;
+  sentenceCount: number;
+  sentences: PictureBookSentence[];
+}
+
+export interface PictureBook {
+  _id?: string;
+  slug: string;
+  title: string;
+  pageTitle?: string;
+  levelLabel?: string;
+  coverImageUrl?: string;
+  pageCount: number;
+  readingMinutes?: number;
+  sourceBookId?: number;
+  sourcePage?: string;
+}
+
 export interface GrammarPoint {
   pattern: string;
   explanation: string;

@@ -104,16 +104,20 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
   }),
   reading: segments => {
     const isReadingDetail = segments.length > 1;
+    const isPictureBookReader = segments[1] === 'books';
     return {
       hasFooter: false,
       hasHeader: false,
+      hasBottomNav: !isPictureBookReader,
       usePatternBackground: !isReadingDetail,
       useDesktopContainerPadding: !isReadingDetail,
       useDesktopMaxWidth: !isReadingDetail,
+      lockMainScroll: isPictureBookReader,
       headerType: 'section',
       headerAction: 'none',
       headerTitle: 'nav.reading',
       headerTitleDefault: 'Reading',
+      allowHiddenChrome: isPictureBookReader,
     };
   },
   topik: segments => {

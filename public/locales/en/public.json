@@ -2736,6 +2736,21 @@
       "recommended": "Recommended",
       "sourceWikipedia": "Wikipedia"
     },
+    "pictureBooks": {
+      "title": "Picture Books",
+      "subtitle": "Open a storybook, listen line by line, and follow sentence-level highlighting.",
+      "count": "books ready",
+      "emptyAfterImport": "Picture books will appear here after import.",
+      "emptyFiltered": "No picture books are available in this level yet. Swipe to another level.",
+      "shelfLabel": "Shelf",
+      "shelfCount": "{{count}} books",
+      "bookTag": "Book",
+      "open": "Open",
+      "sentenceSync": "Sentence sync",
+      "pages": "{{count}} pages",
+      "minutes": "~{{minutes}} min",
+      "levelBadge": "Level {{level}}"
+    },
     "fallback": {
       "wikipediaSource": "Korean Culture Encyclopedia",
       "wikipediaBadge": "B2 Intermediate • Expository",
@@ -2749,6 +2764,31 @@
       "literatureBookmark": "Literary Notes"
     },
     "footer": "Powered by Convex newsIngestion:getUserFeed (auto refresh after 24h post-read, manual refresh up to 3/day)"
+  },
+  "pictureBookReader": {
+    "audioErrorPlaybackFailed": "Audio playback failed for this sentence.",
+    "audioErrorBlocked": "Audio playback is blocked or unavailable.",
+    "notFoundTitle": "Picture book not found",
+    "notFoundBody": "The requested story is missing or not published yet.",
+    "backToReading": "Return to Reading",
+    "badge": "Picture Book",
+    "pageProgress": "Page {{current}} of {{total}}",
+    "prev": "Prev",
+    "next": "Next",
+    "pageImageAlt": "{{title}} page {{page}}",
+    "sentenceLayer": "Sentence layer",
+    "playback": "Playback",
+    "play": "Play",
+    "pause": "Pause",
+    "replay": "Replay",
+    "speed": "Speed {{rate}}",
+    "autoFlipOn": "Auto Flip On",
+    "autoFlipOff": "Auto Flip Off",
+    "currentSentence": "Current sentence",
+    "currentSentenceEmpty": "Tap a sentence to start playback.",
+    "pageOutline": "Page outline",
+    "sentenceList": "Sentence list",
+    "sentenceNumber": "Sentence {{number}}"
   },
   "readingArticle": {
     "difficulty": {

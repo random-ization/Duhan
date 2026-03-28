@@ -2747,6 +2747,21 @@
       "recommended": "推荐精读",
       "sourceWikipedia": "维基百科"
     },
+    "pictureBooks": {
+      "title": "画册阅读",
+      "subtitle": "打开一本绘本，逐句跟读，并跟随句子级高亮进入阅读节奏。",
+      "count": "本已就绪",
+      "emptyAfterImport": "导入完成后，这里会显示可阅读的画册。",
+      "emptyFiltered": "这个等级下还没有可阅读的画册。左右滑动切换别的等级试试。",
+      "shelfLabel": "书架",
+      "shelfCount": "{{count}} 本",
+      "bookTag": "画册",
+      "open": "打开",
+      "sentenceSync": "句子同步",
+      "pages": "{{count}} 页",
+      "minutes": "约 {{minutes}} 分钟",
+      "levelBadge": "{{level}} 级"
+    },
     "fallback": {
       "wikipediaSource": "韩国文化百科",
       "wikipediaBadge": "B2 中阶 • 说明文",
@@ -2760,6 +2775,31 @@
       "literatureBookmark": "文学赏析"
     },
     "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）"
+  },
+  "pictureBookReader": {
+    "audioErrorPlaybackFailed": "这句话的音频播放失败。",
+    "audioErrorBlocked": "音频播放被阻止或当前不可用。",
+    "notFoundTitle": "未找到这本画册",
+    "notFoundBody": "你请求的故事不存在，或暂时还没有发布。",
+    "backToReading": "返回阅读发现",
+    "badge": "画册",
+    "pageProgress": "第 {{current}} / {{total}} 页",
+    "prev": "上一页",
+    "next": "下一页",
+    "pageImageAlt": "{{title}} 第 {{page}} 页",
+    "sentenceLayer": "句子层",
+    "playback": "播放控制",
+    "play": "播放",
+    "pause": "暂停",
+    "replay": "重播",
+    "speed": "倍速 {{rate}}",
+    "autoFlipOn": "自动翻页：开",
+    "autoFlipOff": "自动翻页：关",
+    "currentSentence": "当前句子",
+    "currentSentenceEmpty": "点击任意句子开始播放。",
+    "pageOutline": "页面导航",
+    "sentenceList": "句子列表",
+    "sentenceNumber": "第 {{number}} 句"
   },
   "readingArticle": {
     "difficulty": {

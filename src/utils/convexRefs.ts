@@ -593,6 +593,74 @@ export const TOPIK = {
   deleteExam: mRef<{ examId: string }, unknown>('topik:deleteExam'),
 };
 
+export const READING_BOOKS = {
+  listPublishedBooks: qRef<
+    NoArgs,
+    Array<{
+      _id: string;
+      slug: string;
+      title: string;
+      pageTitle?: string;
+      levelLabel?: string;
+      coverImageUrl?: string;
+      pageCount: number;
+      readingMinutes?: number;
+      sourceBookId: number;
+    }>
+  >('readingBooks:listPublishedBooks'),
+  getBookBySlug: qRef<
+    { slug: string },
+    {
+      _id: string;
+      slug: string;
+      title: string;
+      pageTitle?: string;
+      levelLabel?: string;
+      coverImageUrl?: string;
+      pageCount: number;
+      readingMinutes?: number;
+      sourcePage: string;
+      sourceBookId: number;
+    } | null
+  >('readingBooks:getBookBySlug'),
+  getBookPageData: qRef<
+    { slug: string; pageIndex?: number },
+    {
+      book: {
+        _id: string;
+        slug: string;
+        title: string;
+        pageTitle?: string;
+        levelLabel?: string;
+        coverImageUrl?: string;
+        pageCount: number;
+        readingMinutes?: number;
+      };
+      page: {
+        _id: string;
+        pageIndex: number;
+        imageUrl: string;
+        layoutClass?: string;
+        sentenceCount: number;
+        sentences: Array<{
+          _id: string;
+          sentenceIndex: number;
+          spanId?: string;
+          text: string;
+          audioUrl?: string;
+          clipBeginMs?: number;
+          clipEndMs?: number;
+          durationMs?: number;
+        }>;
+      } | null;
+      pageCount: number;
+      pageIndex: number;
+      hasPreviousPage: boolean;
+      hasNextPage: boolean;
+    } | null
+  >('readingBooks:getBookPageData'),
+};
+
 export const NEWS = {
   getById: qRef<
     { articleId: string },

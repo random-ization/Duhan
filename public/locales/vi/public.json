@@ -2735,6 +2735,21 @@
       "recommended": "Đề xuất đọc kỹ",
       "sourceWikipedia": "Wikipedia"
     },
+    "pictureBooks": {
+      "title": "Sách tranh",
+      "subtitle": "Mở truyện tranh, nghe theo từng câu và theo dõi phần tô sáng theo câu.",
+      "count": "sách sẵn sàng",
+      "emptyAfterImport": "Sách tranh sẽ xuất hiện ở đây sau khi import.",
+      "emptyFiltered": "Chưa có sách tranh nào ở cấp độ này. Hãy vuốt sang cấp khác.",
+      "shelfLabel": "Kệ sách",
+      "shelfCount": "{{count}} sách",
+      "bookTag": "Sách",
+      "open": "Mở",
+      "sentenceSync": "Đồng bộ câu",
+      "pages": "{{count}} trang",
+      "minutes": "~{{minutes}} phút",
+      "levelBadge": "Cấp {{level}}"
+    },
     "fallback": {
       "wikipediaSource": "Bách khoa văn hóa Hàn Quốc",
       "wikipediaBadge": "B2 Trung cấp • Thuyết minh",
@@ -2748,6 +2763,31 @@
       "literatureBookmark": "Cảm thụ văn học"
     },
     "footer": "Dữ liệu từ Convex newsIngestion:getUserFeed (tự động làm mới sau 24h kể từ khi đọc, làm mới thủ công tối đa 3 lần/ngày)"
+  },
+  "pictureBookReader": {
+    "audioErrorPlaybackFailed": "Không thể phát âm thanh cho câu này.",
+    "audioErrorBlocked": "Âm thanh bị chặn hoặc hiện không khả dụng.",
+    "notFoundTitle": "Không tìm thấy sách tranh",
+    "notFoundBody": "Câu chuyện bạn yêu cầu không tồn tại hoặc chưa được xuất bản.",
+    "backToReading": "Quay lại mục đọc",
+    "badge": "Sách tranh",
+    "pageProgress": "Trang {{current}} / {{total}}",
+    "prev": "Trước",
+    "next": "Sau",
+    "pageImageAlt": "{{title}} trang {{page}}",
+    "sentenceLayer": "Lớp câu",
+    "playback": "Phát lại",
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "replay": "Phát lại câu",
+    "speed": "Tốc độ {{rate}}",
+    "autoFlipOn": "Tự lật: Bật",
+    "autoFlipOff": "Tự lật: Tắt",
+    "currentSentence": "Câu hiện tại",
+    "currentSentenceEmpty": "Chạm vào một câu để bắt đầu phát.",
+    "pageOutline": "Điều hướng trang",
+    "sentenceList": "Danh sách câu",
+    "sentenceNumber": "Câu {{number}}"
   },
   "readingArticle": {
     "difficulty": {
