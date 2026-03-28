@@ -12,6 +12,7 @@ import type * as accountRecovery from '../accountRecovery.js';
 import type * as accountRecoveryInternal from '../accountRecoveryInternal.js';
 import type * as achievements from '../achievements.js';
 import type * as admin from '../admin.js';
+import type * as adminUserUtils from '../adminUserUtils.js';
 import type * as ai from '../ai.js';
 import type * as aiCache from '../aiCache.js';
 import type * as aiUsageLogs from '../aiUsageLogs.js';
@@ -102,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   accountRecoveryInternal: typeof accountRecoveryInternal;
   achievements: typeof achievements;
   admin: typeof admin;
+  adminUserUtils: typeof adminUserUtils;
   ai: typeof ai;
   aiCache: typeof aiCache;
   aiUsageLogs: typeof aiUsageLogs;
