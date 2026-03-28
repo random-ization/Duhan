@@ -1,5 +1,7 @@
 export type CheckoutPlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
 
+const CHECKOUT_PLANS: CheckoutPlan[] = ['MONTHLY', 'QUARTERLY', 'ANNUAL', 'LIFETIME'];
+
 export type UpgradeFlowSource =
   | 'dashboard_banner'
   | 'upgrade_prompt'
@@ -45,3 +47,6 @@ export const buildPricingDetailsPath = (
   if (returnTo) params.set('returnTo', returnTo);
   return `/pricing/details?${params.toString()}`;
 };
+
+export const isCheckoutPlan = (value: string | null | undefined): value is CheckoutPlan =>
+  typeof value === 'string' && CHECKOUT_PLANS.includes(value as CheckoutPlan);

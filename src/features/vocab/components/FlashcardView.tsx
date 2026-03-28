@@ -18,6 +18,11 @@ import { useLayoutActions, useLayoutChromeState } from '../../../contexts/Layout
 import { useFlashcardKeyboard } from '../hooks/useFlashcardKeyboard';
 import FlashcardSettingsModal from './FlashcardSettingsModal';
 import FlashcardFullscreenOverlay from './FlashcardFullscreenOverlay';
+import {
+  safeGetLocalStorageItem,
+  safeRemoveLocalStorageItem,
+  safeSetLocalStorageItem,
+} from '../../../utils/browserStorage';
 import { Button } from '../../../components/ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../../../components/ui';
 
@@ -172,7 +177,7 @@ const useFlashcardStats = (
 
   const [cardIndex, setCardIndex] = useState(() => {
     if (storageKey) {
-      const saved = localStorage.getItem(storageKey);
+      const saved = safeGetLocalStorageItem(storageKey);
       if (saved) {
         try {
           const { index } = JSON.parse(saved);
@@ -210,7 +215,7 @@ const useFlashcardStats = (
       };
     }
     if (storageKey) {
-      const saved = localStorage.getItem(storageKey);
+      const saved = safeGetLocalStorageItem(storageKey);
       if (saved) {
         try {
           const { stats } = JSON.parse(saved);
@@ -225,7 +230,10 @@ const useFlashcardStats = (
 
   useEffect(() => {
     if (storageKey && trackProgress && cardIndex > 0) {
-      localStorage.setItem(storageKey, JSON.stringify({ index: cardIndex, stats: sessionStats }));
+      safeSetLocalStorageItem(
+        storageKey,
+        JSON.stringify({ index: cardIndex, stats: sessionStats })
+      );
     }
   }, [storageKey, trackProgress, cardIndex, sessionStats]);
 
@@ -260,7 +268,7 @@ const useFlashcardStats = (
         setCardIndex(nextIndex);
         setIsFlipped(false);
       } else {
-        if (storageKey) localStorage.removeItem(storageKey);
+        if (storageKey) safeRemoveLocalStorageItem(storageKey);
         onComplete(nextStats);
       }
     },

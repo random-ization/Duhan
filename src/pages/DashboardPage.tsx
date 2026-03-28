@@ -25,6 +25,7 @@ import {
   dismissDashboardUpgradeBanner,
   shouldShowDashboardUpgradeBanner,
 } from '../utils/upgradeReminder';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 interface DailyPhraseData {
   id: string;
@@ -638,14 +639,14 @@ export default function DashboardPage() {
     if (typeof globalThis.window === 'undefined') return;
 
     const dedupeKey = `duhan:retention:day1:${user.id}`;
-    if (globalThis.window.localStorage.getItem(dedupeKey) === '1') return;
+    if (safeGetLocalStorageItem(dedupeKey) === '1') return;
 
     trackEvent('day1_retention', {
       language: resolveDashboardLanguage(language),
       userTier: user.tier || 'UNKNOWN',
       daysSinceSignup,
     });
-    globalThis.window.localStorage.setItem(dedupeKey, '1');
+    safeSetLocalStorageItem(dedupeKey, '1');
   }, [language, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
 
   useEffect(() => {

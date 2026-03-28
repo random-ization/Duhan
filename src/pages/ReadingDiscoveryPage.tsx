@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { NEWS, READING_BOOKS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +10,13 @@ import { Button } from '../components/ui';
 import { PictureBookShelf } from '../components/reading/PictureBookShelf';
 import { cn } from '../lib/utils';
 import type { PictureBook } from '../types';
+import { buildPictureBookPath, buildReadingArticlePath } from '../utils/readingRoutes';
+import { formatReadingRelativeTime, getReadingSourceLabel } from '../utils/readingMetadata';
+import {
+  buildReadingDiscoveryPath,
+  normalizeReadingDifficultyFilter,
+  resolvePictureBookLevelFilter,
+} from '../utils/readingDiscoveryFilters';
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -110,23 +118,7 @@ function getDifficultyChip(
   };
 }
 
-function getSourceLabel(sourceKey: string) {
-  const map: Record<string, string> = {
-    khan: '경향신문',
-    donga: '동아일보',
-    hankyung: '한국경제',
-    mk: '매일경제',
-    itdonga: 'IT동아',
-    voa_ko: 'VOA 한국어',
-    naver_news_search: 'NAVER News',
-    wiki_ko_featured: '위키백과 알찬 글',
-  };
-  return map[sourceKey] || sourceKey;
-}
-
 function formatRelativeTime(publishedAt: number, language: string) {
-  const diffMs = Date.now() - publishedAt;
-  const diffMinutes = Math.floor(diffMs / 60000);
   const locale =
     language === 'zh'
       ? 'zh-CN'
@@ -135,14 +127,17 @@ function formatRelativeTime(publishedAt: number, language: string) {
         : language === 'mn'
           ? 'mn-MN'
           : 'en-US';
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (diffMinutes < 1) return rtf.format(0, 'minute');
-  if (diffMinutes < 60) return rtf.format(-diffMinutes, 'minute');
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return rtf.format(-diffHours, 'hour');
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return rtf.format(-diffDays, 'day');
-  return new Date(publishedAt).toLocaleDateString(locale);
+  return formatReadingRelativeTime(
+    publishedAt,
+    locale,
+    language === 'zh'
+      ? '最近更新'
+      : language === 'vi'
+        ? 'Mới cập nhật'
+        : language === 'mn'
+          ? 'Саяхан шинэчлэгдсэн'
+          : 'Recently updated'
+  );
 }
 
 function estimateReadingMinutes(bodyText: string) {
@@ -222,7 +217,10 @@ const FeaturedNewsCard: React.FC<{
       <div className="relative z-10 flex h-full flex-col">
         <div className="mb-5 flex items-start justify-between gap-3">
           <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
-            {getSourceLabel(featuredNews.sourceKey)}
+            {getReadingSourceLabel(
+              featuredNews.sourceKey,
+              t('readingDiscovery.sourceFallback', { defaultValue: 'Unknown source' })
+            )}
           </span>
           <span className="text-xs font-semibold text-muted-foreground">
             {formatRelativeTime(featuredNews.publishedAt, language)}
@@ -287,7 +285,10 @@ const SecondaryNewsCard: React.FC<{
       </div>
       <div className="mb-5 flex items-start justify-between gap-2 pr-7">
         <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
-          {getSourceLabel(item.sourceKey)}
+          {getReadingSourceLabel(
+            item.sourceKey,
+            t('readingDiscovery.sourceFallback', { defaultValue: 'Unknown source' })
+          )}
         </span>
         <span className="text-xs font-semibold text-muted-foreground">
           {formatRelativeTime(item.publishedAt, language)}
@@ -475,15 +476,8 @@ const CuratedArticleCard: React.FC<{ item: CuratedArticle; onOpen?: (id: string)
   onOpen,
 }) => {
   const styles = getCardToneStyles(item.tone);
-  return (
-    <Button
-      key={item.id}
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => onOpen?.(item.id)}
-      className={`group !flex h-full !items-stretch !justify-start flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
-    >
+  const content = (
+    <>
       <div className="mb-4 flex items-center gap-3">
         <div
           className={`grid h-10 w-10 place-items-center rounded-full text-xl ${styles.iconClass}`}
@@ -518,6 +512,27 @@ const CuratedArticleCard: React.FC<{ item: CuratedArticle; onOpen?: (id: string)
           🔖 {item.bookmarkText}
         </span>
       </div>
+    </>
+  );
+
+  if (!onOpen) {
+    return (
+      <div className={`flex h-full flex-col rounded-3xl border p-6 ${styles.baseClass}`}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      key={item.id}
+      type="button"
+      variant="ghost"
+      size="auto"
+      onClick={() => onOpen(item.id)}
+      className={`group !flex h-full !items-stretch !justify-start flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
+    >
+      {content}
     </Button>
   );
 };
@@ -528,7 +543,8 @@ const ArchiveContent: React.FC<{
   curatedArticles: CuratedArticle[];
   t: DifficultyTranslator;
   onOpen: (id: string) => void;
-}> = ({ feedReady, featuredArticles, curatedArticles, t, onOpen }) => {
+  showAll: boolean;
+}> = ({ feedReady, featuredArticles, curatedArticles, t, onOpen, showAll }) => {
   if (!feedReady || featuredArticles === undefined) {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -540,9 +556,10 @@ const ArchiveContent: React.FC<{
   }
 
   if (featuredArticles.length > 0) {
+    const visibleArticles = showAll ? featuredArticles : featuredArticles.slice(0, 6);
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {featuredArticles.slice(0, 6).map((item, index) => (
+        {visibleArticles.map((item, index) => (
           <ArticleNewsCard
             key={item._id}
             item={item}
@@ -558,7 +575,7 @@ const ArchiveContent: React.FC<{
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
       {curatedArticles.map(item => (
-        <CuratedArticleCard key={item.id} item={item} onOpen={onOpen} />
+        <CuratedArticleCard key={item.id} item={item} />
       ))}
     </div>
   );
@@ -567,15 +584,15 @@ const ArchiveContent: React.FC<{
 export default function ReadingDiscoveryPage() {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const language = resolveFeedLanguage(i18n.language);
   const userId = user?.id;
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('ALL');
-  const [pictureBookLevelFilter, setPictureBookLevelFilter] =
-    useState<PictureBookLevelFilter>('1단계');
   const [feedReady, setFeedReady] = useState<boolean>(() => !userId);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string>('');
+  const [showAllArchiveArticles, setShowAllArchiveArticles] = useState(false);
   const autoRefreshLockRef = useRef(false);
   const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {}) as PictureBook[] | undefined;
   const sortedPictureBooks = useMemo(() => {
@@ -611,12 +628,45 @@ export default function ReadingDiscoveryPage() {
       label: formatPictureBookLevelLabel(level, t),
     }));
   }, [sortedPictureBooks, t]);
+  const availablePictureBookLevels = useMemo(
+    () => pictureBookLevelOptions.filter(option => option.count > 0).map(option => option.value),
+    [pictureBookLevelOptions]
+  );
+  const difficultyFilter = normalizeReadingDifficultyFilter(searchParams.get('difficulty'));
+  const pictureBookLevelFilter = resolvePictureBookLevelFilter({
+    requestedLevel: searchParams.get('level'),
+    availableLevels: availablePictureBookLevels,
+    fallbackLevel: PICTURE_BOOK_LEVEL_OPTIONS[0],
+  }) as PictureBookLevelFilter;
+  const currentPath = useMemo(
+    () =>
+      buildReadingDiscoveryPath({
+        pathname: location.pathname,
+        difficultyFilter,
+        pictureBookLevelFilter,
+      }),
+    [difficultyFilter, location.pathname, pictureBookLevelFilter]
+  );
   const filteredPictureBooks = useMemo(() => {
     if (!sortedPictureBooks) return undefined;
     return sortedPictureBooks.filter(
       book => normalizePictureBookLevel(book.levelLabel) === pictureBookLevelFilter
     );
   }, [pictureBookLevelFilter, sortedPictureBooks]);
+  const updateFilterParams = useCallback(
+    (updates: Partial<{ difficulty: DifficultyFilter; level: string }>) => {
+      const nextDifficulty = updates.difficulty ?? difficultyFilter;
+      const nextLevel = updates.level ?? pictureBookLevelFilter;
+      const nextPath = buildReadingDiscoveryPath({
+        pathname: location.pathname,
+        difficultyFilter: nextDifficulty,
+        pictureBookLevelFilter: nextLevel,
+      });
+      const nextQuery = nextPath.includes('?') ? nextPath.slice(nextPath.indexOf('?') + 1) : '';
+      setSearchParams(nextQuery);
+    },
+    [difficultyFilter, location.pathname, pictureBookLevelFilter, setSearchParams]
+  );
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
   const refreshUserFeedIfEligible = useMutation(NEWS.refreshUserFeedIfEligible);
   const manualRefreshUserFeed = useMutation(NEWS.manualRefreshUserFeed);
@@ -708,6 +758,7 @@ export default function ReadingDiscoveryPage() {
 
   const news = useMemo(() => feed?.news ?? [], [feed?.news]);
   const featuredArticles = feed?.articles;
+  const hasExpandableArchive = (featuredArticles?.length ?? 0) > 6;
   const filteredNews = useMemo(
     () =>
       difficultyFilter === 'ALL'
@@ -859,7 +910,7 @@ export default function ReadingDiscoveryPage() {
               key={option.value}
               type="button"
               variant="ghost"
-              onClick={() => setPictureBookLevelFilter(option.value)}
+              onClick={() => updateFilterParams({ level: option.value })}
               className={cn(
                 'shrink-0 rounded-full border px-4 py-2 text-left transition',
                 pictureBookLevelFilter === option.value
@@ -887,7 +938,7 @@ export default function ReadingDiscoveryPage() {
         <PictureBookShelf
           books={filteredPictureBooks}
           loading={pictureBooks === undefined}
-          onOpen={slug => navigate(`/reading/books/${slug}`)}
+          onOpen={slug => navigate(buildPictureBookPath(slug, currentPath))}
           emptyStateText={t('readingDiscovery.pictureBooks.emptyFiltered', {
             defaultValue: '这个等级下还没有可阅读的画册。左右滑动切换别的等级试试。',
           })}
@@ -948,7 +999,7 @@ export default function ReadingDiscoveryPage() {
             )}
             <DifficultyFilterButtons
               difficultyFilter={difficultyFilter}
-              onSelect={setDifficultyFilter}
+              onSelect={item => updateFilterParams({ difficulty: item })}
               t={t}
             />
           </div>
@@ -961,7 +1012,7 @@ export default function ReadingDiscoveryPage() {
           secondaryNews={secondaryNews}
           language={language}
           t={t}
-          onOpen={id => navigate(`/reading/${id}`)}
+          onOpen={id => navigate(buildReadingArticlePath(id, currentPath))}
         />
       </section>
 
@@ -980,15 +1031,23 @@ export default function ReadingDiscoveryPage() {
               })}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
-          >
-            {t('readingDiscovery.articles.viewAll', { defaultValue: 'View all articles' })}
-            <ChevronRight size={16} />
-          </Button>
+          {hasExpandableArchive ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => setShowAllArchiveArticles(current => !current)}
+              className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
+            >
+              {showAllArchiveArticles
+                ? t('readingDiscovery.articles.showLess', { defaultValue: 'Show less' })
+                : t('readingDiscovery.articles.viewAll', { defaultValue: 'View all articles' })}
+              <ChevronRight
+                size={16}
+                className={cn('transition-transform', showAllArchiveArticles && 'rotate-90')}
+              />
+            </Button>
+          ) : null}
         </div>
 
         <ArchiveContent
@@ -996,7 +1055,8 @@ export default function ReadingDiscoveryPage() {
           featuredArticles={featuredArticles}
           curatedArticles={curatedArticles}
           t={t}
-          onOpen={id => navigate(`/reading/${id}`)}
+          onOpen={id => navigate(buildReadingArticlePath(id, currentPath))}
+          showAll={showAllArchiveArticles}
         />
       </section>
 

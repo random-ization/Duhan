@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { cn } from '../../lib/utils';
 import type { PictureBook } from '../../types';
+import { getSafeImageSrc } from '../../utils/imageSrc';
 
 type PictureBookShelfProps = {
   books: PictureBook[] | undefined;
@@ -174,53 +175,56 @@ export function PictureBookShelf({
         ref={shelfRef}
         className="flex gap-4 overflow-x-auto pb-3 pr-2 scrollbar-hide snap-x snap-mandatory"
       >
-        {books.map(book => (
-          <Button
-            key={book.slug}
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => onOpen(book.slug)}
-            className="group !flex min-w-[240px] snap-start !items-stretch !justify-start flex-col overflow-hidden rounded-[1.5rem] border border-border bg-card text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop-sm sm:min-w-[258px]"
-          >
-            <div className="relative aspect-[3/4] w-full overflow-hidden border-b border-border bg-gradient-to-br from-[#f7efe3] via-[#e8f1ff] to-[#fff8e6]">
-              {book.coverImageUrl ? (
-                <img
-                  src={book.coverImageUrl}
-                  alt={book.title}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                />
-              ) : (
-                <div className="grid h-full w-full place-items-center text-4xl text-muted-foreground">
-                  <BookOpen className="h-10 w-10" />
+        {books.map(book => {
+          const coverImageSrc = getSafeImageSrc(book.coverImageUrl);
+          return (
+            <Button
+              key={book.slug}
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => onOpen(book.slug)}
+              className="group !flex min-w-[240px] snap-start !items-stretch !justify-start flex-col overflow-hidden rounded-[1.5rem] border border-border bg-card text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop-sm sm:min-w-[258px]"
+            >
+              <div className="relative aspect-[3/4] w-full overflow-hidden border-b border-border bg-gradient-to-br from-[#f7efe3] via-[#e8f1ff] to-[#fff8e6]">
+                {coverImageSrc ? (
+                  <img
+                    src={coverImageSrc}
+                    alt={book.title}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-4xl text-muted-foreground">
+                    <BookOpen className="h-10 w-10" />
+                  </div>
+                )}
+                <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[10px] font-black text-slate-700 shadow-sm backdrop-blur">
+                  <Sparkles className="h-3 w-3" />
+                  {t('readingDiscovery.pictureBooks.bookTag', { defaultValue: 'Book' })}
                 </div>
-              )}
-              <div className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[10px] font-black text-slate-700 shadow-sm backdrop-blur">
-                <Sparkles className="h-3 w-3" />
-                {t('readingDiscovery.pictureBooks.bookTag', { defaultValue: 'Book' })}
               </div>
-            </div>
-            <div className="flex flex-1 flex-col p-4">
-              <div className="mb-2 line-clamp-2 text-[1.05rem] font-black leading-snug text-foreground">
-                {book.title}
+              <div className="flex flex-1 flex-col p-4">
+                <div className="mb-2 line-clamp-2 text-[1.05rem] font-black leading-snug text-foreground">
+                  {book.title}
+                </div>
+                <div className="mb-4 text-xs font-semibold text-muted-foreground">
+                  {formatBookMeta(book, t)}
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3 text-xs font-bold text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Headphones className="h-3.5 w-3.5" />
+                    {t('readingDiscovery.pictureBooks.sentenceSync', {
+                      defaultValue: 'Sentence sync',
+                    })}
+                  </span>
+                  <span className="rounded-full border border-border bg-muted px-2 py-1 text-[11px] text-foreground">
+                    {t('readingDiscovery.pictureBooks.open', { defaultValue: 'Open' })}
+                  </span>
+                </div>
               </div>
-              <div className="mb-4 text-xs font-semibold text-muted-foreground">
-                {formatBookMeta(book, t)}
-              </div>
-              <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3 text-xs font-bold text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Headphones className="h-3.5 w-3.5" />
-                  {t('readingDiscovery.pictureBooks.sentenceSync', {
-                    defaultValue: 'Sentence sync',
-                  })}
-                </span>
-                <span className="rounded-full border border-border bg-muted px-2 py-1 text-[11px] text-foreground">
-                  {t('readingDiscovery.pictureBooks.open', { defaultValue: 'Open' })}
-                </span>
-              </div>
-            </div>
-          </Button>
-        ))}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { ArrowLeft, Eye, EyeOff, ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
@@ -13,11 +13,20 @@ import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { VocabBookImmersiveSkeleton } from '../components/common';
 import { Button } from '../components/ui';
+import { buildVocabBookPath } from '../utils/vocabBookRoutes';
+import {
+  normalizeVocabBookPracticeCategory,
+  type VocabBookPracticeCategory,
+} from '../utils/vocabBookPractice';
+import {
+  buildVocabBookPracticeSessionStorageKey,
+  loadVocabBookImmersiveSessionState,
+  persistVocabBookImmersiveSessionState,
+} from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Language } from '../types';
 import { getPosColorClass } from '../utils/posColors';
 
-type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED' | 'ALL';
 type ImmersiveMode = 'BROWSE' | 'RECALL';
 const SWIPE_DISTANCE_THRESHOLD = 80;
 const SWIPE_VELOCITY_THRESHOLD = 700;
@@ -328,18 +337,6 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
   </div>
 );
 
-const normalizeCategory = (rawCategory: string): VocabBookCategory => {
-  if (
-    rawCategory === 'UNLEARNED' ||
-    rawCategory === 'MASTERED' ||
-    rawCategory === 'DUE' ||
-    rawCategory === 'ALL'
-  ) {
-    return rawCategory as VocabBookCategory;
-  }
-  return 'DUE';
-};
-
 const ImmersiveContent = ({
   loading,
   total,
@@ -375,7 +372,7 @@ const ImmersiveContent = ({
   masteryPending: boolean;
   prev: () => void;
   markCurrentMastered: () => Promise<void>;
-  category: VocabBookCategory;
+  category: VocabBookPracticeCategory;
   setMode: React.Dispatch<React.SetStateAction<ImmersiveMode>>;
   enableSwipe: boolean;
 }) => {
@@ -460,6 +457,15 @@ const VocabBookImmersivePage: React.FC = () => {
   const isMobile = useIsMobile();
   const labels = useMemo(() => getLabels(language), [language]);
   const [params] = useSearchParams();
+  const backPath = useMemo(() => buildVocabBookPath(params), [params]);
+  const sessionStorageKey = useMemo(
+    () => buildVocabBookPracticeSessionStorageKey('immersive', params),
+    [params]
+  );
+  const persistedState = useMemo(
+    () => loadVocabBookImmersiveSessionState(sessionStorageKey),
+    [sessionStorageKey]
+  );
   const { speak, stop } = useTTS();
   const setMastery = useMutation(VOCAB.setMastery);
 
@@ -480,7 +486,7 @@ const VocabBookImmersivePage: React.FC = () => {
     [selected]
   );
 
-  const category = normalizeCategory(categoryParam);
+  const category = normalizeVocabBookPracticeCategory(categoryParam);
 
   const [pageCursor, setPageCursor] = useState<string | null>(null);
   const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
@@ -498,13 +504,14 @@ const VocabBookImmersivePage: React.FC = () => {
   const loading = vocabBookPage === undefined && loadedItems.length === 0;
   const loadingMore = vocabBookPage === undefined && loadedItems.length > 0;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
     setNextCursor(null);
-    setIndex(0);
-    setRevealed(false);
-  }, [category, q, selected]);
+    setIndex(persistedState?.index ?? 0);
+    setRevealed(persistedState?.revealed ?? false);
+    setMode(persistedState?.mode ?? 'BROWSE');
+  }, [persistedState, sessionStorageKey]);
 
   useEffect(() => {
     if (!vocabBookPage) return;
@@ -564,9 +571,9 @@ const VocabBookImmersivePage: React.FC = () => {
     });
   }, [items, category, isWordMastered]);
 
-  const [mode, setMode] = useState<ImmersiveMode>('BROWSE');
-  const [index, setIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [mode, setMode] = useState<ImmersiveMode>(() => persistedState?.mode ?? 'BROWSE');
+  const [index, setIndex] = useState(() => persistedState?.index ?? 0);
+  const [revealed, setRevealed] = useState(() => persistedState?.revealed ?? false);
   const [focusConsumed, setFocusConsumed] = useState(false);
 
   useEffect(() => {
@@ -574,10 +581,7 @@ const VocabBookImmersivePage: React.FC = () => {
   }, [focusId]);
 
   useEffect(() => {
-    if (filtered.length === 0) {
-      setIndex(0);
-      return;
-    }
+    if (filtered.length === 0) return;
     setIndex(prev => Math.min(prev, filtered.length - 1));
   }, [filtered]);
 
@@ -606,6 +610,15 @@ const VocabBookImmersivePage: React.FC = () => {
   const current = filtered[safeIndex];
   const currentLayoutId = current ? `vocab-word-card-${String(current.id)}` : undefined;
   const currentMastered = current ? isWordMastered(current) : false;
+
+  useEffect(() => {
+    persistVocabBookImmersiveSessionState(sessionStorageKey, {
+      index: safeIndex,
+      mode,
+      revealed,
+      timestamp: Date.now(),
+    });
+  }, [mode, revealed, safeIndex, sessionStorageKey]);
 
   const prev = useCallback(() => {
     if (total === 0) return;
@@ -723,7 +736,7 @@ const VocabBookImmersivePage: React.FC = () => {
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/vocab-book')}
+            onClick={() => navigate(backPath)}
             className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 transition-all duration-200"
             aria-label={labels.dashboard?.common?.back || 'Back'}
           >

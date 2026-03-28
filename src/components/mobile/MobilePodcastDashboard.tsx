@@ -4,9 +4,11 @@ import { Search, ArrowLeft, Pause, PlayCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { NoArgs, qRef } from '../../utils/convexRefs';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { resolveSafeReturnTo } from '../../utils/navigation';
+import { buildPodcastChannelPath, buildPodcastSearchPath } from '../../utils/podcastRoutes';
+import { formatSafeDateLabel } from '../../utils/dateLabel';
 import { Button, Input } from '../ui';
 
 interface PodcastChannel {
@@ -46,6 +48,7 @@ const FILTER_OPTIONS = [
 export const MobilePodcastDashboard: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { user } = useAuth();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
@@ -54,6 +57,7 @@ export const MobilePodcastDashboard: React.FC = () => {
   const backPath = useMemo(() => {
     return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=podcasts');
   }, [searchParams]);
+  const currentPath = `${location.pathname}${location.search}`;
 
   // Data Fetching
   type TrendingResult = {
@@ -82,17 +86,11 @@ export const MobilePodcastDashboard: React.FC = () => {
   const latestHistory = history[0];
 
   const navigateToChannel = (channel: PodcastChannel) => {
-    const params = new URLSearchParams();
-    const channelId = channel.itunesId || channel.id || channel._id;
-    if (channelId) params.set('id', String(channelId));
-    if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
-    const queryString = params.toString();
-    const path = queryString ? `/podcasts/channel?${queryString}` : '/podcasts/channel';
-    navigate(path, { state: { channel } });
+    navigate(buildPodcastChannelPath(channel, currentPath), { state: { channel } });
   };
 
   const navigateToEpisode = (item: HistoryItem) => {
-    navigate('/podcasts/player', {
+    navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
       state: {
         episode: {
           guid: item.episodeGuid,
@@ -105,6 +103,12 @@ export const MobilePodcastDashboard: React.FC = () => {
         },
       },
     });
+  };
+
+  const handleSearchSubmit = () => {
+    const target = buildPodcastSearchPath(searchQuery, currentPath);
+    if (!target) return;
+    navigate(target);
   };
 
   return (
@@ -132,9 +136,24 @@ export const MobilePodcastDashboard: React.FC = () => {
             placeholder={t('podcast.searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={event => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              handleSearchSubmit();
+            }}
             className="w-full !h-auto !bg-muted !rounded-lg !py-2.5 !pl-9 !pr-4 text-sm font-medium focus-visible:!ring-2 focus-visible:!ring-primary/30 transition-all !border-0 !shadow-none"
           />
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="auto"
+            onClick={handleSearchSubmit}
+            disabled={!searchQuery.trim()}
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md p-0 text-muted-foreground disabled:opacity-50"
+            aria-label={t('search', { defaultValue: 'Search' })}
+          >
+            <Search className="w-4 h-4" />
+          </Button>
         </div>
       </header>
 
@@ -194,13 +213,6 @@ export const MobilePodcastDashboard: React.FC = () => {
         <section className="pt-2 pb-2">
           <div className="flex items-center justify-between px-5 mb-3">
             <h2 className="font-bold text-foreground text-sm">{t('podcast.mySubscriptions')}</h2>
-            <Button
-              variant="ghost"
-              size="auto"
-              className="text-xs font-bold text-indigo-600 dark:text-indigo-300"
-            >
-              {t('podcast.viewAll')}
-            </Button>
           </div>
           <div
             className="flex gap-3 overflow-x-auto px-5"
@@ -304,13 +316,6 @@ export const MobilePodcastDashboard: React.FC = () => {
         <section className="pt-4 pb-6">
           <div className="flex items-center justify-between px-5 mb-3">
             <h2 className="font-bold text-foreground text-sm">{t('podcast.history')}</h2>
-            <Button
-              variant="ghost"
-              size="auto"
-              className="text-xs font-bold text-indigo-600 dark:text-indigo-300"
-            >
-              {t('podcast.clear')}
-            </Button>
           </div>
           <div className="px-5 space-y-2">
             {history.slice(1, 4).map(item => (
@@ -330,7 +335,12 @@ export const MobilePodcastDashboard: React.FC = () => {
                     {item.episodeTitle}
                   </h4>
                   <p className="text-[10px] text-muted-foreground font-medium">
-                    {item.channelName} · {new Date(item.playedAt).toLocaleDateString()}
+                    {item.channelName} ·{' '}
+                    {formatSafeDateLabel(
+                      item.playedAt,
+                      undefined,
+                      t('common.recently', { defaultValue: 'Recently' })
+                    )}
                   </p>
                 </div>
                 <PlayCircle className="w-6 h-6 text-muted-foreground" />
@@ -339,7 +349,6 @@ export const MobilePodcastDashboard: React.FC = () => {
           </div>
         </section>
       )}
-
     </div>
   );
 };

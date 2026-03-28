@@ -1,9 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const navigateMock = vi.fn();
-const verifyPaymentSessionMock = vi.fn();
 const getSubscriptionActivationStatusMock = vi.fn();
 const tMock = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
 
@@ -23,10 +22,7 @@ vi.mock('../../src/utils/convexRefs', async () => {
 
 vi.mock('convex/react', () => ({
   useAction: (ref: string) => {
-    if (ref === 'payments:verifyPaymentSession') {
-      return verifyPaymentSessionMock;
-    }
-    if (ref === 'payments:getSubscriptionActivationStatus') {
+    if (ref === 'paymentStatus:getSubscriptionActivationStatus') {
       return getSubscriptionActivationStatusMock;
     }
     throw new Error(`Unexpected action ref: ${ref}`);
@@ -64,11 +60,17 @@ const pendingStatus = {
   subscriptionType: null,
 };
 
+const unauthenticatedStatus = {
+  isActive: false,
+  status: 'UNAUTHENTICATED' as const,
+  tier: null,
+  subscriptionType: null,
+};
+
 describe('PaymentSuccessPage', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     navigateMock.mockReset();
-    verifyPaymentSessionMock.mockReset().mockResolvedValue({ success: true });
     getSubscriptionActivationStatusMock.mockReset().mockResolvedValue(activeStatus);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -87,7 +89,6 @@ describe('PaymentSuccessPage', () => {
 
     expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
     expect(getSubscriptionActivationStatusMock).toHaveBeenCalled();
-    expect(verifyPaymentSessionMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 
@@ -102,7 +103,7 @@ describe('PaymentSuccessPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/topik');
   });
 
-  it('handles missing session id by checking activation status before success', async () => {
+  it('activates successfully without relying on a checkout session id', async () => {
     renderPage('/payment/success');
 
     await act(async () => {
@@ -110,12 +111,11 @@ describe('PaymentSuccessPage', () => {
     });
 
     expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
-    expect(verifyPaymentSessionMock).not.toHaveBeenCalled();
     expect(getSubscriptionActivationStatusMock).toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('shows pending copy when session id is missing and activation is delayed', async () => {
+  it('shows pending copy when activation is delayed', async () => {
     getSubscriptionActivationStatusMock.mockResolvedValue(pendingStatus);
     renderPage('/payment/success');
 
@@ -125,28 +125,37 @@ describe('PaymentSuccessPage', () => {
 
     expect(screen.getByText('Payment Received')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'We are confirming your subscription status. If you just paid, activation may take a moment.'
-      )
+      screen.getByText('Your payment is complete, but activation is taking longer than expected.')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check Again' })).toBeInTheDocument();
   });
 
-  it('shows error state when verify payment session fails', async () => {
-    verifyPaymentSessionMock.mockResolvedValue({
-      success: false,
-      error: 'Mock verify failure',
-      status: 'FAILED',
-    });
-    renderPage('/payment/success?session_id=test-session');
+  it('returns to the originally selected pricing plan from the error state', async () => {
+    getSubscriptionActivationStatusMock.mockRejectedValue(new Error('Activation lookup failed'));
+    renderPage('/payment/success?plan=LIFETIME&returnTo=%2Ftopik');
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('Mock verify failure')).toBeInTheDocument();
-    expect(getSubscriptionActivationStatusMock).not.toHaveBeenCalled();
-    expect(navigateMock).not.toHaveBeenCalledWith('/dashboard');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Pricing' }));
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/pricing/details?plan=LIFETIME&source=pricing_details&returnTo=%2Ftopik'
+    );
+  });
+
+  it('redirects to auth when activation status says the user is unauthenticated', async () => {
+    getSubscriptionActivationStatusMock.mockResolvedValue(unauthenticatedStatus);
+    renderPage('/payment/success?plan=ANNUAL&returnTo=%2Ftopik');
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/auth?redirect=%2Fpayment%2Fsuccess%3Fplan%3DANNUAL%26returnTo%3D%252Ftopik',
+      { replace: true }
+    );
   });
 });

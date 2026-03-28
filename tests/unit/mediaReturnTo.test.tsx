@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
+import { useQuery } from 'convex/react';
 
 const navigateMock = vi.fn();
 
@@ -33,6 +34,9 @@ vi.mock('convex/react', () => ({
 
 import MediaHubPage from '../../src/pages/MediaHubPage';
 import VideoLibraryPage from '../../src/pages/VideoLibraryPage';
+import { MobileMediaPage } from '../../src/components/mobile/MobileMediaPage';
+
+const useQueryMock = vi.mocked(useQuery);
 
 const renderWithRouter = (element: ReactElement, path: string) =>
   render(
@@ -46,6 +50,8 @@ const renderWithRouter = (element: ReactElement, path: string) =>
 describe('Media returnTo flow', () => {
   beforeEach(() => {
     navigateMock.mockReset();
+    useQueryMock.mockReset();
+    useQueryMock.mockReturnValue([]);
   });
 
   it('passes returnTo when opening videos and podcasts from media hub', () => {
@@ -77,5 +83,139 @@ describe('Media returnTo flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
     expect(navigateMock).toHaveBeenCalledWith('/media?tab=videos');
+  });
+
+  it('preserves the current video library path when opening a video', () => {
+    useQueryMock.mockReturnValue([
+      {
+        _id: 'video-1',
+        title: 'Intro Video',
+        level: 'Beginner',
+        views: 12,
+        createdAt: 0,
+        duration: 120,
+        description: 'Example video',
+        thumbnailUrl: null,
+      },
+    ]);
+
+    renderWithRouter(<VideoLibraryPage />, '/videos?returnTo=%2Fmedia%3Ftab%3Dvideos');
+
+    fireEvent.click(screen.getByRole('button', { name: /intro video/i }));
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/video/video-1?returnTo=%2Fvideos%3FreturnTo%3D%252Fmedia%253Ftab%253Dvideos'
+    );
+  });
+
+  it('respects the podcast tab query on mobile media page', async () => {
+    useQueryMock
+      .mockImplementationOnce(() => [
+        {
+          _id: 'video-1',
+          title: 'Intro Video',
+          level: 'Beginner',
+          views: 12,
+          createdAt: 0,
+          duration: 120,
+          description: 'Example video',
+          thumbnailUrl: null,
+        },
+      ])
+      .mockImplementationOnce(() => ({
+        internal: [
+          {
+            _id: 'pod-1',
+            title: 'Podcast Channel',
+            author: 'Host',
+            artworkUrl: '',
+          },
+        ],
+        external: [],
+      }))
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => []);
+
+    renderWithRouter(<MobileMediaPage />, '/media?tab=podcast');
+
+    expect(await screen.findByText('Podcast Channel')).toBeInTheDocument();
+    expect(screen.queryByText('Intro Video')).not.toBeInTheDocument();
+  });
+
+  it('preserves mobile media returnTo when reopening a podcast episode', async () => {
+    useQueryMock
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => ({
+        internal: [],
+        external: [],
+      }))
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => [
+        {
+          _id: 'history-1',
+          episodeGuid: 'ep-1',
+          episodeTitle: 'History Episode',
+          episodeUrl: 'https://example.com/episode.mp3',
+          channelName: 'History Channel',
+          channelImage: 'https://example.com/cover.png',
+          playedAt: Date.now(),
+        },
+      ]);
+
+    renderWithRouter(<MobileMediaPage />, '/media?tab=podcast');
+
+    fireEvent.click(await screen.findByRole('button', { name: /history episode/i }));
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/podcasts/player?returnTo=%2Fmedia%3Ftab%3Dpodcast',
+      {
+        state: {
+          episode: {
+            guid: 'ep-1',
+            title: 'History Episode',
+            audioUrl: 'https://example.com/episode.mp3',
+            channel: {
+              title: 'History Channel',
+              artworkUrl: 'https://example.com/cover.png',
+            },
+          },
+        },
+      }
+    );
+  });
+
+  it('shows a fallback label instead of Invalid Date for bad media timestamps', async () => {
+    useQueryMock
+      .mockImplementationOnce(() => [
+        {
+          _id: 'video-1',
+          title: 'Intro Video',
+          level: 'Beginner',
+          views: 12,
+          createdAt: Number.NaN,
+          duration: 120,
+          description: 'Example video',
+          thumbnailUrl: null,
+        },
+      ])
+      .mockImplementationOnce(() => ({
+        internal: [],
+        external: [],
+      }))
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => [
+        {
+          _id: 'history-1',
+          episodeGuid: 'ep-1',
+          episodeTitle: 'History Episode',
+          episodeUrl: 'https://example.com/episode.mp3',
+          channelName: 'History Channel',
+          channelImage: 'https://example.com/cover.png',
+          playedAt: Number.NaN,
+        },
+      ]);
+
+    renderWithRouter(<MobileMediaPage />, '/media?tab=podcast');
+
+    expect(await screen.findByText('History Episode')).toBeInTheDocument();
+    expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
   });
 });

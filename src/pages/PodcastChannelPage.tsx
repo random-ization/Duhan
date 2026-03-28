@@ -8,10 +8,12 @@ import { Button } from '../components/ui';
 import { Card, CardContent } from '../components/ui';
 import { getLabels } from '../utils/i18n';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { getLocalizedPath, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { localeFromLanguage } from '../utils/locale';
+import { buildPodcastChannelPath } from '../utils/podcastRoutes';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import type { Language } from '../types';
 
 interface Episode {
@@ -45,8 +47,6 @@ type StateChannel = Partial<ChannelData> & {
   itunesId?: string;
   id?: string;
 };
-
-type NavigateFn = ReturnType<typeof useLocalizedNavigate>;
 
 interface ChannelCopy {
   missingFeed: string;
@@ -90,6 +90,24 @@ const buildChannelCopy = (labels: ReturnType<typeof getLabels>): ChannelCopy => 
 const resolveChannelImage = (channel?: Partial<ChannelData> | null) =>
   channel?.image || channel?.artworkUrl || channel?.artwork || 'https://placehold.co/400x400';
 
+export function buildPodcastChannelShareUrl({
+  origin,
+  language,
+  channel,
+}: {
+  origin: string;
+  language: string;
+  channel: {
+    _id?: string | number | null;
+    id?: string | number | null;
+    itunesId?: string | number | null;
+    feedUrl?: string | null;
+  };
+}) {
+  const sharePath = getLocalizedPath(buildPodcastChannelPath(channel), language);
+  return new URL(sharePath, origin).toString();
+}
+
 const formatEpisodeDuration = (duration: string | number | undefined, minutesLabel: string) => {
   if (!duration) return '—';
   if (typeof duration === 'number') {
@@ -125,11 +143,11 @@ const LoadingState = ({ loadingLabel }: { loadingLabel: string }) => (
 const ErrorState = ({
   error,
   backLabel,
-  navigate,
+  onBack,
 }: {
   error: string;
   backLabel: string;
-  navigate: NavigateFn;
+  onBack: () => void;
 }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-card space-y-4">
     <p className="text-red-500 dark:text-red-300">{error}</p>
@@ -137,7 +155,7 @@ const ErrorState = ({
       type="button"
       variant="ghost"
       size="sm"
-      onClick={() => navigate(-1)}
+      onClick={onBack}
       className="text-indigo-600 dark:text-indigo-300 hover:underline flex items-center gap-1"
     >
       <ArrowLeft className="w-4 h-4" /> {backLabel}
@@ -148,15 +166,15 @@ const ErrorState = ({
 const MissingChannelState = ({
   message,
   backLabel,
-  navigate,
+  onBack,
 }: {
   message: string;
   backLabel: string;
-  navigate: NavigateFn;
+  onBack: () => void;
 }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-card space-y-4">
     <p className="text-muted-foreground">{message}</p>
-    <Button type="button" variant="ghost" size="sm" onClick={() => navigate(-1)}>
+    <Button type="button" variant="ghost" size="sm" onClick={onBack}>
       {backLabel}
     </Button>
   </div>
@@ -166,12 +184,14 @@ const ChannelHero = ({
   channelImage,
   channel,
   backLabel,
-  navigate,
+  onBack,
+  onShare,
 }: {
   channelImage: string;
   channel: ChannelData | StateChannel;
   backLabel: string;
-  navigate: NavigateFn;
+  onBack: () => void;
+  onShare: () => void;
 }) => (
   <div className="relative h-72 overflow-hidden bg-primary text-primary-foreground">
     <div
@@ -183,7 +203,7 @@ const ChannelHero = ({
     <div className="absolute top-4 left-4 z-20">
       <Button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={onBack}
         variant="ghost"
         size="icon"
         className="w-12 h-12 bg-black/30 backdrop-blur border border-white/20 hover:bg-black/50 rounded-xl"
@@ -197,6 +217,7 @@ const ChannelHero = ({
       type="button"
       variant="ghost"
       size="icon"
+      onClick={onShare}
       className="absolute top-4 right-4 z-20 bg-black/30 backdrop-blur rounded-full hover:bg-black/50 text-white"
     >
       <Share2 className="w-5 h-5" />
@@ -358,7 +379,8 @@ const PodcastChannelLayout = ({
   isSubscribed,
   handleToggleSubscribe,
   handlePlayEpisode,
-  navigate,
+  onBack,
+  handleShareChannel,
 }: {
   displayChannel: ChannelData | StateChannel;
   channelImage: string;
@@ -371,14 +393,16 @@ const PodcastChannelLayout = ({
   isSubscribed: boolean;
   handleToggleSubscribe: () => void;
   handlePlayEpisode: (episode: Episode) => void;
-  navigate: NavigateFn;
+  onBack: () => void;
+  handleShareChannel: () => void;
 }) => (
   <div className="min-h-screen bg-card pb-24">
     <ChannelHero
       channelImage={channelImage}
       channel={displayChannel}
       backLabel={copy.back}
-      navigate={navigate}
+      onBack={onBack}
+      onShare={handleShareChannel}
     />
     <SubscribeBar isSubscribed={isSubscribed} onToggle={handleToggleSubscribe} copy={copy} />
     <ChannelDescriptionCard
@@ -413,6 +437,8 @@ const PodcastChannelPage: React.FC = () => {
     )?.channel ?? null;
   const feedUrl = searchParams.get('feedUrl') || stateChannel?.feedUrl;
   const channelId = searchParams.get('id') || stateChannel?.itunesId || stateChannel?.id;
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const currentPath = `${location.pathname}${location.search}`;
 
   const [data, setData] = useState<FeedData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -528,6 +554,7 @@ const PodcastChannelPage: React.FC = () => {
     if (fullEpisode.guid) params.set('guid', fullEpisode.guid);
     if (fullEpisode.channelTitle) params.set('channelTitle', fullEpisode.channelTitle);
     if (fullEpisode.channelArtwork) params.set('channelArtwork', fullEpisode.channelArtwork);
+    params.set('returnTo', currentPath);
 
     navigate(`/podcasts/player?${params.toString()}`, {
       state: {
@@ -542,17 +569,57 @@ const PodcastChannelPage: React.FC = () => {
     });
   };
 
+  const handleShareChannel = async () => {
+    const shareUrl = buildPodcastChannelShareUrl({
+      origin: globalThis.location.origin,
+      language,
+      channel: {
+        id: channelId,
+        feedUrl,
+      },
+    });
+
+    try {
+      if (globalThis.navigator.share) {
+        await globalThis.navigator.share({
+          title: data?.channel.title || stateChannel?.title || 'Podcast channel',
+          text: data?.channel.author || stateChannel?.author || 'Podcast channel',
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (globalThis.navigator.clipboard?.writeText) {
+        await globalThis.navigator.clipboard.writeText(shareUrl);
+        notify.success('Share link copied');
+        return;
+      }
+
+      notify.info(shareUrl);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      logger.error('Failed to share podcast channel', error);
+      notify.error('Unable to share this channel right now.');
+    }
+  };
+
   if (loading) return <LoadingState loadingLabel={copy.loadingEpisodes} />;
 
   const displayChannel = data?.channel || stateChannel;
 
   if (error && !displayChannel) {
-    return <ErrorState error={error} backLabel={copy.back} navigate={navigate} />;
+    return <ErrorState error={error} backLabel={copy.back} onBack={() => navigate(backPath)} />;
   }
 
   if (!displayChannel) {
     return (
-      <MissingChannelState message={copy.noChannelInfo} backLabel={copy.back} navigate={navigate} />
+      <MissingChannelState
+        message={copy.noChannelInfo}
+        backLabel={copy.back}
+        onBack={() => navigate(backPath)}
+      />
     );
   }
 
@@ -569,7 +636,8 @@ const PodcastChannelPage: React.FC = () => {
       isSubscribed={isSubscribed}
       handleToggleSubscribe={handleToggleSubscribe}
       handlePlayEpisode={handlePlayEpisode}
-      navigate={navigate}
+      onBack={() => navigate(backPath)}
+      handleShareChannel={handleShareChannel}
     />
   );
 };

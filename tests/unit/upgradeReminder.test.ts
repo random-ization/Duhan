@@ -40,4 +40,48 @@ describe('upgradeReminder', () => {
     clearDashboardUpgradeBannerSession();
     expect(shouldShowDashboardUpgradeBanner('user-1', 2_000)).toBe(true);
   });
+
+  it('falls back safely when storage access is blocked', () => {
+    const originalLocalStorage = window.localStorage;
+    const originalSessionStorage = window.sessionStorage;
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+        setItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+      },
+    });
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+        setItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+        removeItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+      },
+    });
+
+    expect(() => dismissDashboardUpgradeBanner('user-1', 1_000)).not.toThrow();
+    expect(shouldShowDashboardUpgradeBanner('user-1', 2_000)).toBe(true);
+    expect(() => clearDashboardUpgradeBannerSession()).not.toThrow();
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: originalSessionStorage,
+    });
+  });
 });

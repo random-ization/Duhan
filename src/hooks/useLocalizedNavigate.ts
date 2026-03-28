@@ -1,30 +1,35 @@
 import { useNavigate, useParams, NavigateOptions, To } from 'react-router-dom';
 import { useCallback } from 'react';
-import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, isValidLanguage } from '../components/LanguageRouter';
+import {
+  SUPPORTED_LANGUAGES,
+  DEFAULT_LANGUAGE,
+  isValidLanguage,
+} from '../components/LanguageRouter';
+import { matchesMediaQuery } from '../utils/mediaQuery';
 
 /**
  * getLocalizedPath - Helper function to add language prefix to a path
  */
 export const getLocalizedPath = (path: string, lang: string): string => {
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
-    // Check if already has language prefix
-    const hasLangPrefix = SUPPORTED_LANGUAGES.some(l =>
-        normalizedPath === `/${l}` || normalizedPath.startsWith(`/${l}/`)
-    );
+  // Check if already has language prefix
+  const hasLangPrefix = SUPPORTED_LANGUAGES.some(
+    l => normalizedPath === `/${l}` || normalizedPath.startsWith(`/${l}/`)
+  );
 
-    if (hasLangPrefix) {
-        return normalizedPath;
-    }
+  if (hasLangPrefix) {
+    return normalizedPath;
+  }
 
-    return `/${lang}${normalizedPath}`;
+  return `/${lang}${normalizedPath}`;
 };
 
 /**
  * useLocalizedNavigate - Custom hook for navigation with language prefix
- * 
+ *
  * Automatically prepends the current language to navigation paths.
- * 
+ *
  * Usage:
  *   const navigate = useLocalizedNavigate();
  *   navigate('/dashboard'); // Will navigate to /en/dashboard (if current lang is 'en')
@@ -44,16 +49,12 @@ export const useLocalizedNavigate = () => {
     };
     if (typeof docWithTransition.startViewTransition !== 'function') return false;
 
-    const displayModeStandalone = globalThis.window.matchMedia?.('(display-mode: standalone)')
-      .matches;
+    const displayModeStandalone = matchesMediaQuery('(display-mode: standalone)');
     const nav = globalThis.navigator as Navigator & { standalone?: boolean };
     const isStandalone = Boolean(displayModeStandalone || nav.standalone === true);
-    const prefersReducedMotion = Boolean(
-      globalThis.window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    );
+    const prefersReducedMotion = matchesMediaQuery('(prefers-reduced-motion: reduce)');
     const isTouchLikeViewport = Boolean(
-      globalThis.window.matchMedia?.('(pointer: coarse)').matches ||
-        globalThis.window.matchMedia?.('(max-width: 1023px)').matches
+      matchesMediaQuery('(pointer: coarse)') || matchesMediaQuery('(max-width: 1023px)')
     );
 
     // In mobile / PWA environments transitions frequently cause navigation jank.
@@ -112,8 +113,8 @@ export const useLocalizedNavigate = () => {
  * useCurrentLanguage - Get the current language from URL
  */
 export const useCurrentLanguage = () => {
-    const { lang } = useParams<{ lang: string }>();
-    return lang && isValidLanguage(lang) ? lang : DEFAULT_LANGUAGE;
+  const { lang } = useParams<{ lang: string }>();
+  return lang && isValidLanguage(lang) ? lang : DEFAULT_LANGUAGE;
 };
 
 export default useLocalizedNavigate;

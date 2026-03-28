@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RouteUiConfig } from '../../src/config/routes.config';
 
 const navigateMock = vi.fn();
+const notifySuccessMock = vi.fn();
+const notifyErrorMock = vi.fn();
+const notifyInfoMock = vi.fn();
 
 vi.mock('../../src/hooks/useLocalizedNavigate', () => ({
   useLocalizedNavigate: () => navigateMock,
@@ -21,6 +24,14 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
   }),
+}));
+
+vi.mock('../../src/utils/notify', () => ({
+  notify: {
+    success: (message: string) => notifySuccessMock(message),
+    error: (message: string) => notifyErrorMock(message),
+    info: (message: string) => notifyInfoMock(message),
+  },
 }));
 
 import { MobileHeader } from '../../src/components/mobile/MobileHeader';
@@ -60,6 +71,9 @@ const renderHeader = ({
 describe('MobileHeader action behavior', () => {
   beforeEach(() => {
     navigateMock.mockReset();
+    notifySuccessMock.mockReset();
+    notifyErrorMock.mockReset();
+    notifyInfoMock.mockReset();
   });
 
   it('hides filter action on non-media section pages', () => {
@@ -97,5 +111,29 @@ describe('MobileHeader action behavior', () => {
     fireEvent.click(searchButton);
 
     expect(navigateMock).toHaveBeenCalledWith('/dictionary/search?returnTo=%2Fcourses%3Flevel%3D1');
+  });
+
+  it('falls back to showing the URL when share APIs are unavailable', async () => {
+    Object.defineProperty(window.navigator, 'share', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    });
+
+    renderHeader({
+      routeUiConfig: { ...baseConfig, headerType: 'page' },
+      path: '/dashboard',
+      pathWithoutLang: '/dashboard',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /more actions/i }));
+    fireEvent.click(screen.getByRole('button', { name: /share/i }));
+
+    await Promise.resolve();
+
+    expect(notifyInfoMock).toHaveBeenCalledWith(window.location.href);
   });
 });

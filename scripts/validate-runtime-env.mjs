@@ -24,11 +24,6 @@ if (!hasValue('DEEPGRAM_API_KEY_ID') && !hasValue('DEEPGRAM_CALLBACK_TOKEN')) {
   missing.push('DEEPGRAM_API_KEY_ID or DEEPGRAM_CALLBACK_TOKEN');
 }
 
-const hasCreem =
-  hasValue('CREEM_API_KEY') &&
-  hasValue('CREEM_WEBHOOK_SECRET') &&
-  hasValue('CREEM_PRODUCT_MONTHLY') &&
-  hasValue('CREEM_PRODUCT_ANNUAL');
 const hasLemon =
   hasValue('LEMONSQUEEZY_API_KEY') &&
   hasValue('LEMONSQUEEZY_WEBHOOK_SECRET') &&
@@ -36,8 +31,8 @@ const hasLemon =
   hasValue('LEMONSQUEEZY_VARIANT_MONTHLY') &&
   hasValue('LEMONSQUEEZY_VARIANT_ANNUAL');
 
-if (!hasCreem && !hasLemon) {
-  missing.push('payment provider configuration (CREEM_* or LEMONSQUEEZY_*)');
+if (!hasLemon) {
+  missing.push('payment provider configuration (LEMONSQUEEZY_*)');
 }
 
 if (missing.length) {

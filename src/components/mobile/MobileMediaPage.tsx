@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Button } from '../ui';
+import { buildVideoPlayerPath } from '../../utils/videoRoutes';
+import { formatSafeDateLabel } from '../../utils/dateLabel';
 
 // --- TYPES ---
 
@@ -67,6 +70,15 @@ const getTrendingList = (
   return trending.internal;
 };
 
+function getArtworkUrl(...candidates: Array<string | undefined | null>): string | null {
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 // --- SUB-COMPONENTS ---
 
 // 1. VIDEO TAB
@@ -75,8 +87,10 @@ const VideoTab: React.FC<{
   language: string;
 }> = ({ active, language }) => {
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [activeLevel, setActiveLevel] = useState('');
+  const currentPath = `${location.pathname}${location.search}`;
 
   const convexVideos = useQuery(
     qRef<{ level?: string }, ConvexVideoItem[]>('videos:list'),
@@ -195,7 +209,7 @@ const VideoTab: React.FC<{
               variant="ghost"
               size="auto"
               key={video.id}
-              onClick={() => navigate(`/video/${video.id}`)}
+              onClick={() => navigate(buildVideoPlayerPath(video.id, currentPath))}
               className="bg-card rounded-2xl border-2 border-foreground dark:border-border overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-left w-full group block"
             >
               <div className="aspect-video bg-muted relative">
@@ -246,10 +260,15 @@ const VideoTab: React.FC<{
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
-                    {new Date(video.createdAt).toLocaleDateString(getLocale(language), {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatSafeDateLabel(
+                      video.createdAt,
+                      getLocale(language),
+                      t('common.recently', { defaultValue: 'Recently' }),
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                      }
+                    )}
                   </span>
                 </div>
               </div>
@@ -268,8 +287,10 @@ const PodcastTab: React.FC<{
   language: string;
 }> = ({ active, user, language }) => {
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
+  const currentPath = `${location.pathname}${location.search}`;
 
   // -- DATA FETCHING --
 
@@ -327,24 +348,16 @@ const PodcastTab: React.FC<{
     <div className="absolute inset-0 overflow-y-auto no-scrollbar pb-32 px-6 pt-4 animate-in fade-in slide-in-from-left-4 duration-300">
       {/* Quick Filters (Mock for visual parity) */}
       <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
-        <Button
-          variant="ghost"
-          size="auto"
-          className="px-4 py-2 bg-primary text-primary-foreground border-2 border-foreground dark:border-border rounded-xl text-xs font-bold whitespace-nowrap"
-        >
+        <span className="inline-flex whitespace-nowrap rounded-xl border-2 border-foreground bg-primary px-4 py-2 text-xs font-bold text-primary-foreground dark:border-border">
           {t('podcast.filterOptions.all', { defaultValue: 'All' })}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          className="px-4 py-2 bg-card text-muted-foreground border-2 border-border rounded-xl text-xs font-bold whitespace-nowrap"
-        >
+        </span>
+        <span className="inline-flex whitespace-nowrap rounded-xl border-2 border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground">
           {t('podcast.filterOptions.beginner', { defaultValue: 'Beginner' })}
-        </Button>
+        </span>
         <Button
           variant="ghost"
           size="auto"
-          onClick={() => navigate('/podcasts/search')}
+          onClick={() => navigate(`/podcasts/search?returnTo=${encodeURIComponent(currentPath)}`)}
           className="ml-auto w-9 h-9 flex items-center justify-center bg-card border-2 border-border rounded-xl text-muted-foreground active:scale-95 transition-transform"
         >
           <Search className="w-4 h-4" />
@@ -367,7 +380,7 @@ const PodcastTab: React.FC<{
             variant="ghost"
             size="auto"
             onClick={() =>
-              navigate('/podcasts/player', {
+              navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
                 state: {
                   episode: {
                     guid: lastPlayed.episodeGuid,
@@ -386,7 +399,12 @@ const PodcastTab: React.FC<{
             </div>
 
             <div className="w-20 h-20 rounded-2xl bg-indigo-500 dark:bg-indigo-400/70 border-2 border-white dark:border-indigo-200/35 shadow-lg overflow-hidden shrink-0 relative z-10">
-              <img src={lastPlayed.channelImage || ''} className="w-full h-full object-cover" />
+              {getArtworkUrl(lastPlayed.channelImage) ? (
+                <img
+                  src={getArtworkUrl(lastPlayed.channelImage) || undefined}
+                  className="w-full h-full object-cover"
+                />
+              ) : null}
               <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                 <Play className="w-8 h-8 text-primary-foreground fill-primary-foreground opacity-90" />
               </div>
@@ -414,6 +432,7 @@ const PodcastTab: React.FC<{
               const cid = featuredChannel?.itunesId || featuredChannel?.id;
               if (cid) params.set('id', String(cid));
               if (featuredChannel?.feedUrl) params.set('feedUrl', featuredChannel.feedUrl);
+              params.set('returnTo', currentPath);
               navigate(`/podcasts/channel?${params.toString()}`, {
                 state: { channel: featuredChannel },
               });
@@ -421,10 +440,14 @@ const PodcastTab: React.FC<{
             className="w-full text-left bg-primary rounded-[2rem] p-6 text-primary-foreground border-2 border-foreground dark:border-border shadow-pop relative overflow-hidden group active:scale-[0.98] transition-all flex items-center gap-5"
           >
             <div className="w-20 h-20 rounded-2xl bg-indigo-500 dark:bg-indigo-400/70 border-2 border-white dark:border-indigo-200/35 shadow-lg overflow-hidden shrink-0 relative z-10">
-              <img
-                src={featuredChannel.artworkUrl || featuredChannel.artwork || ''}
-                className="w-full h-full object-cover"
-              />
+              {getArtworkUrl(featuredChannel.artworkUrl, featuredChannel.artwork) ? (
+                <img
+                  src={
+                    getArtworkUrl(featuredChannel.artworkUrl, featuredChannel.artwork) || undefined
+                  }
+                  className="w-full h-full object-cover"
+                />
+              ) : null}
             </div>
             <div className="flex-1 min-w-0 relative z-10">
               <div className="text-[10px] font-bold text-yellow-400 dark:text-yellow-300 mb-1 flex items-center gap-1 uppercase tracking-wider">
@@ -466,15 +489,18 @@ const PodcastTab: React.FC<{
                   const cid = sub.itunesId || sub.id || sub._id;
                   if (cid) params.set('id', String(cid));
                   if (sub.feedUrl) params.set('feedUrl', sub.feedUrl);
+                  params.set('returnTo', currentPath);
                   navigate(`/podcasts/channel?${params.toString()}`, { state: { channel: sub } });
                 }}
                 className="min-w-[140px] max-w-[140px] bg-card p-3 rounded-2xl border-2 border-foreground shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex flex-col gap-3 text-left active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
               >
                 <div className="aspect-square rounded-xl bg-muted border border-border overflow-hidden">
-                  <img
-                    src={sub.artworkUrl || sub.artwork || ''}
-                    className="w-full h-full object-cover"
-                  />
+                  {getArtworkUrl(sub.artworkUrl, sub.artwork) ? (
+                    <img
+                      src={getArtworkUrl(sub.artworkUrl, sub.artwork) || undefined}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
                 </div>
                 <div>
                   <h4 className="font-bold text-xs text-foreground truncate leading-tight">
@@ -538,6 +564,7 @@ const PodcastTab: React.FC<{
                 const cid = pod.itunesId || pod.id;
                 if (cid) params.set('id', String(cid));
                 if (pod.feedUrl) params.set('feedUrl', pod.feedUrl);
+                params.set('returnTo', currentPath);
                 navigate(`/podcasts/channel?${params.toString()}`, { state: { channel: pod } });
               }}
               className="min-w-[160px] max-w-[160px] snap-start bg-card p-3 rounded-2xl border-2 border-foreground shadow-sm flex flex-col gap-3 text-left relative active:scale-95 transition-transform"
@@ -553,10 +580,12 @@ const PodcastTab: React.FC<{
                 #{idx + 1}
               </span>
               <div className="aspect-square rounded-xl bg-muted border border-border overflow-hidden">
-                <img
-                  src={pod.artworkUrl || pod.artwork || ''}
-                  className="w-full h-full object-cover"
-                />
+                {getArtworkUrl(pod.artworkUrl, pod.artwork) ? (
+                  <img
+                    src={getArtworkUrl(pod.artworkUrl, pod.artwork) || undefined}
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
               </div>
               <div className="min-w-0">
                 <h4 className="font-bold text-xs text-foreground truncate leading-tight">
@@ -587,7 +616,7 @@ const PodcastTab: React.FC<{
                 size="auto"
                 key={record.id}
                 onClick={() =>
-                  navigate('/podcasts/player', {
+                  navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
                     state: {
                       episode: {
                         guid: record.episodeGuid,
@@ -601,7 +630,12 @@ const PodcastTab: React.FC<{
                 className="w-full bg-card p-3 rounded-2xl border-2 border-border shadow-sm flex items-center gap-3 text-left active:bg-muted transition-colors"
               >
                 <div className="w-12 h-12 rounded-xl bg-muted overflow-hidden shrink-0 border border-border">
-                  <img src={record.channelImage || ''} className="w-full h-full object-cover" />
+                  {getArtworkUrl(record.channelImage) ? (
+                    <img
+                      src={getArtworkUrl(record.channelImage) || undefined}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="font-bold text-xs text-foreground truncate">
@@ -609,10 +643,15 @@ const PodcastTab: React.FC<{
                   </h4>
                   <p className="text-[10px] font-bold text-muted-foreground truncate mt-0.5">
                     {record.channelName} •{' '}
-                    {new Date(record.playedAt).toLocaleDateString(getLocale(language), {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatSafeDateLabel(
+                      record.playedAt,
+                      getLocale(language),
+                      t('common.recently', { defaultValue: 'Recently' }),
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                      }
+                    )}
                   </p>
                 </div>
                 <Play className="w-4 h-4 text-indigo-500 dark:text-indigo-300 fill-indigo-500 dark:fill-indigo-300" />
@@ -627,12 +666,22 @@ const PodcastTab: React.FC<{
 
 // --- MAIN PAGE ---
 export const MobileMediaPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'video' | 'podcast'>('video');
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, language } = useAuth();
   const { t } = useTranslation();
-
-  // Auto-update tab based on query param if needed, or simple local state
-  // For now simple local state
+  const activeTab = searchParams.get('tab') === 'podcast' ? 'podcast' : 'video';
+  const updateActiveTab = useCallback(
+    (nextTab: 'video' | 'podcast') => {
+      const nextParams = new URLSearchParams(searchParams);
+      if (nextTab === 'podcast') {
+        nextParams.set('tab', 'podcast');
+      } else {
+        nextParams.delete('tab');
+      }
+      setSearchParams(nextParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   return (
     <div className="flex flex-col h-[100dvh] bg-[#F0F4F8] dark:bg-background text-foreground overflow-hidden relative font-sans">
@@ -658,7 +707,7 @@ export const MobileMediaPage: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => setActiveTab('video')}
+            onClick={() => updateActiveTab('video')}
             className={clsx(
               'flex-1 relative z-10 flex items-center justify-center gap-2 text-sm font-bold transition-colors',
               activeTab === 'video' ? 'text-primary-foreground' : 'text-muted-foreground'
@@ -671,7 +720,7 @@ export const MobileMediaPage: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => setActiveTab('podcast')}
+            onClick={() => updateActiveTab('podcast')}
             className={clsx(
               'flex-1 relative z-10 flex items-center justify-center gap-2 text-sm font-bold transition-colors',
               activeTab === 'podcast' ? 'text-primary-foreground' : 'text-muted-foreground'

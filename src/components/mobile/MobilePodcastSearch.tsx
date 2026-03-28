@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Podcast, Loader2, ArrowLeft, X } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { PodcastChannel } from '../../types';
 import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { buildPodcastChannelPath } from '../../utils/podcastRoutes';
+import { resolveSafeReturnTo } from '../../utils/navigation';
 import { Button } from '../ui';
 import { Input } from '../ui';
 
 export const MobilePodcastSearch: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const query = searchParams.get('q') || '';
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -23,6 +26,8 @@ export const MobilePodcastSearch: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const currentPath = `${location.pathname}${location.search}`;
 
   const searchPodcastsAction = useAction(
     aRef<{ term: string }, PodcastChannel[]>('podcastActions:searchPodcasts')
@@ -52,15 +57,30 @@ export const MobilePodcastSearch: React.FC = () => {
   useEffect(() => {
     if (query) {
       handleSearchRequest(query);
+      return;
     }
+    setResults([]);
+    setError(null);
+    setLoading(false);
   }, [query, handleSearchRequest]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (searchTerm.trim()) {
-      setSearchParams({ q: searchTerm.trim() });
+      const next = new URLSearchParams();
+      next.set('q', searchTerm.trim());
+      next.set('returnTo', backPath);
+      setSearchParams(next);
       inputRef.current?.blur();
     }
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setSearchParams({});
+    setResults([]);
+    setError(null);
+    inputRef.current?.focus();
   };
 
   return (
@@ -70,7 +90,7 @@ export const MobilePodcastSearch: React.FC = () => {
         <Button
           variant="ghost"
           size="auto"
-          onClick={() => navigate('/podcasts')}
+          onClick={() => navigate(backPath)}
           className="w-10 h-10 flex items-center justify-center -ml-2 text-muted-foreground active:scale-90 transition-transform"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -90,10 +110,7 @@ export const MobilePodcastSearch: React.FC = () => {
               variant="ghost"
               size="auto"
               type="button"
-              onClick={() => {
-                setSearchTerm('');
-                inputRef.current?.focus();
-              }}
+              onClick={handleClearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground p-1"
             >
               <X className="w-4 h-4" />
@@ -118,11 +135,7 @@ export const MobilePodcastSearch: React.FC = () => {
                 variant="ghost"
                 size="auto"
                 key={channel.itunesId || channel.id}
-                onClick={() =>
-                  navigate(
-                    `/podcasts/channel?id=${channel.itunesId || channel.id}&feedUrl=${encodeURIComponent(channel.feedUrl)}`
-                  )
-                }
+                onClick={() => navigate(buildPodcastChannelPath(channel, currentPath))}
                 className="w-full flex items-center gap-4 bg-card p-3 rounded-2xl border border-border shadow-sm active:scale-[0.98] transition-all text-left"
               >
                 <img

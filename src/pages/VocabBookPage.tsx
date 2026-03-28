@@ -36,6 +36,7 @@ import { Button } from '../components/ui';
 import { Input } from '../components/ui';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
+import { buildVocabBookModePath } from '../utils/vocabBookRoutes';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Id } from '../../convex/_generated/dataModel';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
@@ -535,6 +536,16 @@ const VocabBookPage: React.FC = () => {
   const expandMeaningLabel = labels.vocabBook?.expandMeaning || 'Expand meaning';
   const collapseMeaningLabel = labels.vocabBook?.collapseMeaning || 'Collapse meaning';
 
+  const openDownloadFallback = (url: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const downloadFile = async (url: string, filename: string) => {
     try {
       const res = await fetch(url);
@@ -549,7 +560,7 @@ const VocabBookPage: React.FC = () => {
       a.remove();
       URL.revokeObjectURL(objectUrl);
     } catch {
-      globalThis.open(url, '_blank', 'noopener,noreferrer');
+      openDownloadFallback(url);
     }
   };
 
@@ -603,12 +614,12 @@ const VocabBookPage: React.FC = () => {
     // default to a category that has items or allow learning from all.
     // Here we prioritize the active category if it has items, otherwise we use 'all'.
     const currentCategoryHasItems = visibleItems.length > 0;
-    params.set('category', currentCategoryHasItems ? activeCategory : 'all');
+    params.set('category', currentCategoryHasItems ? activeCategory : 'ALL');
     if (trimmedSearch) params.set('q', trimmedSearch);
     if (selectedCount > 0) {
       params.set('selected', Array.from(selectedWordIds).join(','));
     }
-    navigate(`/vocab-book/${mode}?${params.toString()}`);
+    navigate(buildVocabBookModePath(mode, params));
   };
 
   const toggleSelectWord = (wordId: string) => {
@@ -848,7 +859,7 @@ const VocabBookPage: React.FC = () => {
     params.set('category', activeCategory);
     params.set('focus', wordId);
     if (trimmedSearch) params.set('q', trimmedSearch);
-    navigate(`/vocab-book/immerse?${params.toString()}`);
+    navigate(buildVocabBookModePath('immerse', params));
   };
 
   const pronounceWord = useCallback((word: VocabBookItemDto) => {

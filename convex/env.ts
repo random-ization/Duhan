@@ -48,12 +48,7 @@ export function assertProductionRuntimeEnv() {
     missing.push('DEEPGRAM_API_KEY_ID or DEEPGRAM_CALLBACK_TOKEN');
   }
 
-  // Payments: at least one provider must be fully configured.
-  const hasCreem =
-    hasValue(process.env.CREEM_API_KEY) &&
-    hasValue(process.env.CREEM_WEBHOOK_SECRET) &&
-    hasValue(process.env.CREEM_PRODUCT_MONTHLY) &&
-    hasValue(process.env.CREEM_PRODUCT_ANNUAL);
+  // Payments
   const hasLemon =
     hasValue(process.env.LEMONSQUEEZY_API_KEY) &&
     hasValue(process.env.LEMONSQUEEZY_WEBHOOK_SECRET) &&
@@ -61,10 +56,8 @@ export function assertProductionRuntimeEnv() {
     hasValue(process.env.LEMONSQUEEZY_VARIANT_MONTHLY) &&
     hasValue(process.env.LEMONSQUEEZY_VARIANT_ANNUAL);
 
-  if (!hasCreem && !hasLemon) {
-    missing.push(
-      'payment provider configuration (CREEM_* or LEMONSQUEEZY_* required for production)'
-    );
+  if (!hasLemon) {
+    missing.push('payment provider configuration (LEMONSQUEEZY_* required for production)');
   }
 
   if (missing.length > 0) {

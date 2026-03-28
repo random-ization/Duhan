@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGlobalModal } from '../../contexts/GlobalModalContext';
+import { safeGetSessionStorageItem } from '../../utils/browserStorage';
 
 const PROFILE_PROMPT_DISMISS_KEY = 'profile_setup_prompt_dismissed';
 
@@ -24,7 +25,7 @@ export function ProfileSetupModalTrigger({
 
     const dismissed =
       typeof window !== 'undefined' &&
-      window.sessionStorage.getItem(PROFILE_PROMPT_DISMISS_KEY) === '1';
+      safeGetSessionStorageItem(PROFILE_PROMPT_DISMISS_KEY) === '1';
     if (dismissed) {
       shownRef.current = true;
       return;

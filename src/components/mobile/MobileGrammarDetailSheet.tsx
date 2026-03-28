@@ -22,6 +22,7 @@ import {
   stripGrammarMaskTokens,
 } from '../../utils/grammarDisplaySanitizer';
 import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { Button } from '../ui';
 import { Input } from '../ui';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
@@ -433,11 +434,11 @@ export default function MobileGrammarDetailSheet({
   const [showConfetti, setShowConfetti] = useState(false);
   const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(RED_EYE_STORAGE_KEY) === '1';
+    return safeGetLocalStorageItem(RED_EYE_STORAGE_KEY) === '1';
   });
 
   useEffect(() => {
-    window.localStorage.setItem(RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
+    safeSetLocalStorageItem(RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
   }, [redEyeEnabled]);
 
   const checkAction = useAction(

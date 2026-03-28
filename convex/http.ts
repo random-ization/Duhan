@@ -4,14 +4,11 @@ import { auth } from './auth';
 import { toErrorMessage } from './errors';
 
 type WebhookResult = { success: boolean; error?: string };
-type WebhookArgs = { body: string; signature: string };
+type LemonWebhookArgs = { body: string; signature: string };
 type DeepgramWebhookArgs = { episodeId: string; language?: string; payloadJson: string };
 const WEBHOOK_ERROR_RESPONSE = 'Webhook processing failed';
 
-const creemWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
-  'payments:handleWebhook'
-);
-const lemonWebhookAction = makeFunctionReference<'action', WebhookArgs, WebhookResult>(
+const lemonWebhookAction = makeFunctionReference<'action', LemonWebhookArgs, WebhookResult>(
   'lemonsqueezy:handleWebhook'
 );
 const deepgramWebhookAction = makeFunctionReference<'action', DeepgramWebhookArgs, WebhookResult>(
@@ -21,39 +18,6 @@ const deepgramWebhookAction = makeFunctionReference<'action', DeepgramWebhookArg
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
-
-// Creem Webhook Handler
-// Note: HTTP handlers cannot use "use node", so we delegate to an action
-http.route({
-  path: '/webhook/creem',
-  method: 'POST',
-  handler: httpAction(async (ctx, request) => {
-    const body = await request.text();
-    const signature = request.headers.get('creem-signature');
-
-    if (!signature) {
-      console.error('Missing creem-signature header');
-      return new Response('Missing signature', { status: 400 });
-    }
-
-    try {
-      // Delegate to Node.js action for actual webhook processing
-      const result = await ctx.runAction(creemWebhookAction, {
-        body,
-        signature,
-      });
-
-      if (result.success) {
-        return new Response('OK', { status: 200 });
-      } else {
-        return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
-      }
-    } catch (error: unknown) {
-      console.error('Webhook error:', toErrorMessage(error));
-      return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
-    }
-  }),
-});
 
 // Health check endpoint
 http.route({

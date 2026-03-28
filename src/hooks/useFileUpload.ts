@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
 import { uploadFileToStorage } from '../utils/storageUpload';
@@ -10,6 +10,7 @@ interface UploadResult {
 
 export const useFileUpload = () => {
   const [uploading, setUploading] = useState(false);
+  const activeUploadsRef = useRef(0);
   // Use S3-compatible storage (DigitalOcean Spaces) via convex/storage.ts
   const getUploadUrl = useAction(
     aRef<
@@ -19,6 +20,7 @@ export const useFileUpload = () => {
   );
 
   const uploadFile = async (file: File, folder: string = 'uploads'): Promise<UploadResult> => {
+    activeUploadsRef.current += 1;
     setUploading(true);
     try {
       const { url } = await uploadFileToStorage({
@@ -35,7 +37,8 @@ export const useFileUpload = () => {
       }
       throw new Error('Unknown upload error occurred');
     } finally {
-      setUploading(false);
+      activeUploadsRef.current = Math.max(0, activeUploadsRef.current - 1);
+      setUploading(activeUploadsRef.current > 0);
     }
   };
 

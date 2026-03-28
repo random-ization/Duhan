@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getMediaQueryList, matchesMediaQuery, subscribeToMediaQuery } from '../utils/mediaQuery';
 
 const MOBILE_BREAKPOINT = 768; // Matching Tailwind's 'md' breakpoint
 
@@ -10,24 +11,19 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     // Initial check (SSR safe)
     if (typeof globalThis.window === 'undefined') return false;
-    return globalThis.window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches;
+    return matchesMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
   });
 
   useEffect(() => {
     if (typeof globalThis.window === 'undefined') return;
 
-    const mediaQuery = globalThis.window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const mediaQuery = getMediaQueryList(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
     const handleChange = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches);
     };
 
-    // Modern API
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleChange);
-    };
+    return subscribeToMediaQuery(mediaQuery, handleChange);
   }, []);
 
   return isMobile;

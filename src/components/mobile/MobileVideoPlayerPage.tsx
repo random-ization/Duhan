@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Video, Loader2, Eye, Languages } from 'lucide-react';
 import { useQuery, useAction, useMutation } from 'convex/react';
@@ -17,6 +17,8 @@ import { Button } from '../ui';
 import { useUpgradeFlow } from '../../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../../utils/entitlements';
 import { notify } from '../../utils/notify';
+import { resolveSafeReturnTo } from '../../utils/navigation';
+import { buildVideoPlayerPath } from '../../utils/videoRoutes';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -67,6 +69,7 @@ import { useTranslation } from 'react-i18next';
 
 export const MobileVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { language, user, viewerAccess } = useAuth();
@@ -112,6 +115,14 @@ export const MobileVideoPlayerPage: React.FC = () => {
   const playbackResourceKey = id ? `video:${id}` : null;
   const playbackUnlocked =
     playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/videos'),
+    [searchParams]
+  );
+  const upgradeReturnTarget = useMemo(() => {
+    if (!id) return '/videos';
+    return buildVideoPlayerPath(id, backPath);
+  }, [id, backPath]);
 
   // Memoized Data
   const video = useMemo<VideoData | null>(() => {
@@ -169,7 +180,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
       startUpgradeFlow({
         plan: 'ANNUAL',
         source: 'media_limit',
-        returnTo: id ? `/videos/${id}` : '/videos',
+        returnTo: upgradeReturnTarget,
       });
       return false;
     }
@@ -188,7 +199,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
         startUpgradeFlow({
           plan: 'ANNUAL',
           source: entitlementError.upgradeSource,
-          returnTo: id ? `/videos/${id}` : '/videos',
+          returnTo: upgradeReturnTarget,
         });
         return false;
       }
@@ -253,7 +264,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
         <Button
           variant="ghost"
           size="auto"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(backPath)}
           className="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full backdrop-blur-md"
         >
           <ArrowLeft className="w-5 h-5" />

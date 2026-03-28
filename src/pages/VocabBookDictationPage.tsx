@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import {
@@ -23,9 +23,19 @@ import { VocabBookDictationSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import { buildVocabBookPath } from '../utils/vocabBookRoutes';
+import {
+  matchesVocabBookPracticeCategory,
+  normalizeVocabBookPracticeCategory,
+  type VocabBookPracticeCategory,
+} from '../utils/vocabBookPractice';
+import {
+  buildVocabBookPracticeSessionStorageKey,
+  loadVocabBookDictationSessionState,
+  persistVocabBookDictationSessionState,
+} from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
 
-type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 
 const KOREAN_VOICE = 'ko-KR-SunHiNeural';
@@ -528,6 +538,15 @@ const VocabBookDictationPage: React.FC = () => {
   const labels = useMemo(() => getLabels(language), [language]);
   const meaningVoice = useMemo(() => resolveMeaningVoice(language), [language]);
   const [params] = useSearchParams();
+  const backPath = useMemo(() => buildVocabBookPath(params), [params]);
+  const sessionStorageKey = useMemo(
+    () => buildVocabBookPracticeSessionStorageKey('dictation', params),
+    [params]
+  );
+  const persistedState = useMemo(
+    () => loadVocabBookDictationSessionState(sessionStorageKey),
+    [sessionStorageKey]
+  );
   const { speak, stop } = useTTS();
 
   useEffect(() => stop, [stop]);
@@ -545,10 +564,7 @@ const VocabBookDictationPage: React.FC = () => {
         : undefined,
     [selected]
   );
-  const category: VocabBookCategory =
-    categoryParam === 'UNLEARNED' || categoryParam === 'MASTERED' || categoryParam === 'DUE'
-      ? (categoryParam as VocabBookCategory)
-      : 'DUE';
+  const category: VocabBookPracticeCategory = normalizeVocabBookPracticeCategory(categoryParam);
 
   const [pageCursor, setPageCursor] = useState<string | null>(null);
   const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
@@ -580,35 +596,36 @@ const VocabBookDictationPage: React.FC = () => {
   const items = useMemo(() => loadedItems, [loadedItems]);
 
   const filtered = useMemo(() => {
-    return items.filter(item => {
-      const p = item.progress;
-      const isMastered = p.status === 'MASTERED';
-      const isUnlearned = p.state === 0 || p.status === 'NEW';
-      if (isMastered) return category === 'MASTERED';
-      if (isUnlearned) return category === 'UNLEARNED';
-      return category === 'DUE';
-    });
+    return items.filter(item => matchesVocabBookPracticeCategory(item.progress, category));
   }, [items, category]);
 
-  const [mode, setMode] = useState<DictationMode>('HEAR_PRONUNCIATION');
+  const [mode, setMode] = useState<DictationMode>(
+    () => persistedState?.mode ?? 'HEAR_PRONUNCIATION'
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [playCount, setPlayCount] = useState<1 | 2 | 3>(2);
-  const [gapSeconds, setGapSeconds] = useState<2 | 4 | 6 | 8>(2);
-  const [autoNext, setAutoNext] = useState(true);
+  const [playCount, setPlayCount] = useState<1 | 2 | 3>(() => persistedState?.playCount ?? 2);
+  const [gapSeconds, setGapSeconds] = useState<2 | 4 | 6 | 8>(
+    () => persistedState?.gapSeconds ?? 2
+  );
+  const [autoNext, setAutoNext] = useState(() => persistedState?.autoNext ?? true);
 
-  const [started, setStarted] = useState(false);
-  const [index, setIndex] = useState(0);
+  const [started, setStarted] = useState(() => persistedState?.started ?? false);
+  const [index, setIndex] = useState(() => persistedState?.index ?? 0);
   const indexRef = useRef(0);
   const totalRef = useRef(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
     setNextCursor(null);
-    setIndex(0);
-    setStarted(false);
-  }, [category, q, selected]);
+    setIndex(persistedState?.index ?? 0);
+    setStarted(persistedState?.started ?? false);
+    setMode(persistedState?.mode ?? 'HEAR_PRONUNCIATION');
+    setPlayCount(persistedState?.playCount ?? 2);
+    setGapSeconds(persistedState?.gapSeconds ?? 2);
+    setAutoNext(persistedState?.autoNext ?? true);
+  }, [persistedState, sessionStorageKey]);
 
   useEffect(() => {
     indexRef.current = index;
@@ -617,8 +634,21 @@ const VocabBookDictationPage: React.FC = () => {
   const total = filtered.length;
   useEffect(() => {
     totalRef.current = total;
-    setIndex(prev => Math.min(prev, Math.max(0, total - 1)));
+    if (total === 0) return;
+    setIndex(prev => Math.min(prev, total - 1));
   }, [total]);
+
+  useEffect(() => {
+    persistVocabBookDictationSessionState(sessionStorageKey, {
+      index,
+      started,
+      mode,
+      playCount,
+      gapSeconds,
+      autoNext,
+      timestamp: Date.now(),
+    });
+  }, [autoNext, gapSeconds, index, mode, playCount, sessionStorageKey, started]);
 
   useEffect(() => {
     if (!nextCursor || loadingMore || total === 0) return;
@@ -725,7 +755,7 @@ const VocabBookDictationPage: React.FC = () => {
   if (loading) {
     return (
       <DictationPageShell>
-        <DictationTopBar labels={labels} progressText="" onBack={() => navigate('/vocab-book')} />
+        <DictationTopBar labels={labels} progressText="" onBack={() => navigate(backPath)} />
         <VocabBookDictationSkeleton />
       </DictationPageShell>
     );
@@ -736,7 +766,7 @@ const VocabBookDictationPage: React.FC = () => {
       <DictationTopBar
         labels={labels}
         progressText={started ? `${index + 1}/${total || 0}` : ''}
-        onBack={() => navigate('/vocab-book')}
+        onBack={() => navigate(backPath)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 

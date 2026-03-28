@@ -21,10 +21,6 @@ const readStringish = (value: unknown, path: readonly string[]): string | undefi
 type GrantAccessArgs = {
   customerEmail: string;
   plan: string;
-  creemCustomerId?: string;
-  creemSubscriptionId?: string;
-  lemonSqueezyCustomerId?: string;
-  lemonSqueezySubscriptionId?: string;
   userId?: string;
 };
 
@@ -37,8 +33,8 @@ type WebhookEventData = {
   userEmail: string | undefined;
   userId: string | undefined;
   planFromCustom: string | undefined;
-  customerId: string | undefined;
-  subscriptionOrOrderId: string | undefined;
+  customerId?: string | undefined;
+  subscriptionOrOrderId?: string | undefined;
   attributes: unknown;
 };
 
@@ -219,7 +215,7 @@ export const createCheckout = action({
     }
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
-    const successParams = new URLSearchParams({ provider: 'lemonsqueezy' });
+    const successParams = new URLSearchParams({ plan: args.plan });
     if (args.source) successParams.set('source', args.source);
     if (args.returnTo) successParams.set('returnTo', args.returnTo);
 
@@ -497,7 +493,6 @@ async function processWebhookEvent(
         customerEmail: userEmail,
         plan: planFromCustom ?? 'LIFETIME',
         userId,
-        lemonSqueezyCustomerId: customerId,
       });
       console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
     }
@@ -519,7 +514,7 @@ async function processWebhookEvent(
 }
 
 async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: WebhookEventData) {
-  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
+  const { userEmail, userId, planFromCustom, attributes } = data;
 
   switch (eventName) {
     case 'subscription_created':
@@ -535,8 +530,6 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
           customerEmail: userEmail,
           plan,
           userId,
-          lemonSqueezyCustomerId: customerId,
-          lemonSqueezySubscriptionId: subscriptionOrOrderId,
         });
         console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
       }
@@ -559,8 +552,6 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
         userEmail,
         userId,
         planFromCustom,
-        customerId,
-        subscriptionOrOrderId,
         attributes,
       });
       break;
@@ -568,7 +559,7 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
 }
 
 async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData) {
-  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
+  const { userEmail, userId, planFromCustom, attributes } = data;
   const status = readString(attributes, ['status']);
 
   if (status === 'active' || status === 'on_trial') {
@@ -577,8 +568,6 @@ async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData)
         customerEmail: userEmail,
         plan: planFromCustom ?? 'MONTHLY',
         userId,
-        lemonSqueezyCustomerId: customerId,
-        lemonSqueezySubscriptionId: subscriptionOrOrderId,
       });
     }
   } else if (status === 'cancelled' || status === 'expired' || status === 'paused') {

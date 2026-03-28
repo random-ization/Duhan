@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Button } from '../components/ui';
 import { trackEvent } from '../utils/analytics';
 import { resolveSafeReturnTo } from '../utils/navigation';
-import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
+import { buildPricingDetailsPath, isCheckoutPlan } from '../utils/subscriptionPlan';
 
 const ACTIVATION_POLL_INTERVAL_MS = 2500;
 const ACTIVATION_POLL_MAX_ATTEMPTS = 12;
@@ -17,9 +17,9 @@ const PaymentSuccessPage: React.FC = () => {
   const translation = useTranslation();
   const { t } = translation;
   const currentLanguage = translation.i18n?.language ?? 'en';
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const provider = searchParams.get('provider');
-  const sessionId = searchParams.get('session_id');
+  const plan = searchParams.get('plan');
   const source = searchParams.get('source') || 'pricing_details';
   const returnTo = resolveSafeReturnTo(searchParams.get('returnTo'), '/dashboard');
   const isReturningToDashboard = returnTo === '/dashboard';
@@ -31,11 +31,6 @@ const PaymentSuccessPage: React.FC = () => {
   const [retryVersion, setRetryVersion] = useState(0);
   const redirectTimerRef = useRef<number | null>(null);
 
-  const verifyPaymentSession = useAction(
-    aRef<{ sessionId: string }, { success?: boolean; status?: string; error?: string }>(
-      'payments:verifyPaymentSession'
-    )
-  );
   const getSubscriptionActivationStatus = useAction(
     aRef<
       NoArgs,
@@ -45,13 +40,16 @@ const PaymentSuccessPage: React.FC = () => {
         tier: string | null;
         subscriptionType: string | null;
       }
-    >('payments:getSubscriptionActivationStatus')
+    >('paymentStatus:getSubscriptionActivationStatus')
   );
 
   useEffect(() => {
     let cancelled = false;
 
     const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const authRedirectTarget = `/auth?redirect=${encodeURIComponent(
+      `${location.pathname}${location.search}${location.hash}`
+    )}`;
 
     const scheduleRedirect = () => {
       if (redirectTimerRef.current) {
@@ -63,37 +61,45 @@ const PaymentSuccessPage: React.FC = () => {
     };
 
     const markPaymentActivationSuccess = () => {
-      const normalizedProvider =
-        provider === 'lemonsqueezy' || provider === 'creem' ? provider : 'unknown';
       trackEvent('payment_activation_success', {
         language: currentLanguage,
-        provider: normalizedProvider,
+        provider: 'lemonsqueezy',
       });
     };
 
-    const pollUntilActivated = async () => {
+    const pollUntilActivated = async (): Promise<'active' | 'pending' | 'unauthenticated'> => {
+      let sawActivationResponse = false;
+
       for (let attempt = 1; attempt <= ACTIVATION_POLL_MAX_ATTEMPTS; attempt += 1) {
         try {
           const activation = await getSubscriptionActivationStatus({});
-          if (cancelled) return false;
-          if (activation.isActive) return true;
+          if (cancelled) return 'pending';
+          sawActivationResponse = true;
+          if (activation.isActive) return 'active';
+          if (activation.status === 'UNAUTHENTICATED') return 'unauthenticated';
+          setStatus('pending');
+          setMessage(
+            t('payment.activationPending', {
+              defaultValue: 'Payment confirmed. Waiting for subscription activation...',
+            })
+          );
         } catch (error) {
           console.error('Activation status check failed:', error);
-          if (cancelled) return false;
+          if (cancelled) return 'pending';
         }
-
-        setStatus('pending');
-        setMessage(
-          t('payment.activationPending', {
-            defaultValue: 'Payment confirmed. Waiting for subscription activation...',
-          })
-        );
 
         if (attempt < ACTIVATION_POLL_MAX_ATTEMPTS) {
           await wait(ACTIVATION_POLL_INTERVAL_MS);
         }
       }
-      return false;
+
+      if (!sawActivationResponse) {
+        throw new Error(
+          t('payment.verificationFailed', { defaultValue: 'Payment verification failed.' })
+        );
+      }
+
+      return 'pending';
     };
 
     const verifyPayment = async () => {
@@ -101,65 +107,13 @@ const PaymentSuccessPage: React.FC = () => {
       setMessage(t('payment.verifying', { defaultValue: 'Verifying payment...' }));
 
       try {
-        if (provider === 'lemonsqueezy') {
-          const activated = await pollUntilActivated();
-          if (cancelled) return;
-          if (!activated) {
-            setStatus('pending');
-            setMessage(
-              t('payment.activationDelayed', {
-                defaultValue:
-                  'Your payment is complete, but activation is taking longer than expected.',
-              })
-            );
-            return;
-          }
-
-          setStatus('success');
-          markPaymentActivationSuccess();
-          setMessage(
-            t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
-          );
-          scheduleRedirect();
-          return;
-        }
-
-        if (!sessionId) {
-          const activated = await pollUntilActivated();
-          if (cancelled) return;
-          if (!activated) {
-            setStatus('pending');
-            setMessage(
-              t('payment.activationPendingNoSession', {
-                defaultValue:
-                  'We are confirming your subscription status. If you just paid, activation may take a moment.',
-              })
-            );
-            return;
-          }
-
-          setStatus('success');
-          markPaymentActivationSuccess();
-          setMessage(
-            t('payment.successBody', { defaultValue: 'Your subscription has been activated.' })
-          );
-          scheduleRedirect();
-          return;
-        }
-
-        const verifyResult = await verifyPaymentSession({ sessionId });
-        if (verifyResult.success === false) {
-          const statusLabel = verifyResult.status ? ` (${verifyResult.status})` : '';
-          throw new Error(
-            verifyResult.error ||
-              t('payment.verificationFailed', { defaultValue: 'Payment verification failed.' }) +
-                statusLabel
-          );
-        }
-
-        const activated = await pollUntilActivated();
+        const activationState = await pollUntilActivated();
         if (cancelled) return;
-        if (!activated) {
+        if (activationState === 'unauthenticated') {
+          navigate(authRedirectTarget, { replace: true });
+          return;
+        }
+        if (activationState !== 'active') {
           setStatus('pending');
           setMessage(
             t('payment.activationDelayed', {
@@ -197,11 +151,12 @@ const PaymentSuccessPage: React.FC = () => {
       }
     };
   }, [
-    provider,
+    location.hash,
+    location.pathname,
+    location.search,
+    plan,
     returnTo,
-    sessionId,
     navigate,
-    verifyPaymentSession,
     getSubscriptionActivationStatus,
     t,
     currentLanguage,
@@ -279,6 +234,7 @@ const PaymentSuccessPage: React.FC = () => {
               onClick={() =>
                 navigate(
                   buildPricingDetailsPath({
+                    plan: isCheckoutPlan(plan) ? plan : undefined,
                     source,
                     returnTo,
                   })

@@ -5,6 +5,7 @@ import { Globe, Check } from 'lucide-react';
 import { isValidLanguage } from '../LanguageRouter';
 import { Button } from '../ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
+import { safeSetLocalStorageItem } from '../../utils/browserStorage';
 
 export const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
@@ -65,8 +66,8 @@ export const LanguageSwitcher = () => {
                   segments.unshift(nextLang);
                 }
                 const nextPath = `/${segments.join('/')}${location.search}${location.hash}`;
-                localStorage.setItem('preferredLanguage', nextLang);
-                localStorage.setItem('preferredLanguageSource', 'user');
+                safeSetLocalStorageItem('preferredLanguage', nextLang);
+                safeSetLocalStorageItem('preferredLanguageSource', 'user');
                 i18n.changeLanguage(nextLang);
                 navigate(nextPath);
                 setIsOpen(false);

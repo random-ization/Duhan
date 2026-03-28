@@ -1,13 +1,28 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from 'convex/react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
+  RotateCcw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { READING_BOOKS } from '../utils/convexRefs';
 import type { PictureBook, PictureBookPage } from '../types';
 import { cn } from '../lib/utils';
+import { resolveSafeReturnTo } from '../utils/navigation';
+import { getSafeImageSrc } from '../utils/imageSrc';
+import {
+  buildPictureBookReaderSessionStorageKey,
+  loadPictureBookReaderSessionState,
+  persistPictureBookReaderSessionState,
+} from '../utils/readingSession';
 
 type BookPageQuery = {
   book: PictureBook;
@@ -88,12 +103,26 @@ export default function PictureBookReaderPage() {
 
 function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const { t } = useTranslation('public');
+  const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
-  const [pageIndex, setPageIndex] = useState(0);
-  const [activeSentenceIndex, setActiveSentenceIndex] = useState(0);
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/reading'),
+    [searchParams]
+  );
+  const sessionStorageKey = useMemo(() => buildPictureBookReaderSessionStorageKey(slug), [slug]);
+  const persistedState = useMemo(
+    () => loadPictureBookReaderSessionState(sessionStorageKey),
+    [sessionStorageKey]
+  );
+  const [pageIndex, setPageIndex] = useState(() => persistedState?.pageIndex ?? 0);
+  const [activeSentenceIndex, setActiveSentenceIndex] = useState(
+    () => persistedState?.activeSentenceIndex ?? 0
+  );
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState<(typeof PLAYBACK_RATES)[number]>(1);
-  const [autoFlip, setAutoFlip] = useState(true);
+  const [playbackRate, setPlaybackRate] = useState<(typeof PLAYBACK_RATES)[number]>(
+    () => persistedState?.playbackRate ?? 1
+  );
+  const [autoFlip, setAutoFlip] = useState(() => persistedState?.autoFlip ?? true);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [visiblePageData, setVisiblePageData] = useState<BookPageQuery>(null);
   const [overlayPageData, setOverlayPageData] = useState<BookPageQuery>(null);
@@ -113,9 +142,12 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     | PictureBook
     | null
     | undefined;
-  const pageData = useQuery(READING_BOOKS.getBookPageData, slug ? { slug, pageIndex } : 'skip') as
-    | BookPageQuery
-    | undefined;
+  const effectivePageIndex =
+    book && book.pageCount > 0 ? Math.min(Math.max(pageIndex, 0), book.pageCount - 1) : pageIndex;
+  const pageData = useQuery(
+    READING_BOOKS.getBookPageData,
+    slug ? { slug, pageIndex: effectivePageIndex } : 'skip'
+  ) as BookPageQuery | undefined;
   const displayBook = book ?? null;
   const incomingPageData = pageData ?? null;
   const renderedPageData = visiblePageData;
@@ -240,7 +272,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       });
     };
 
-    const nextImageUrl = incomingPageData.page?.imageUrl;
+    const nextImageUrl = getSafeImageSrc(incomingPageData.page?.imageUrl);
     if (!nextImageUrl) {
       commitAnimationFrame = requestAnimationFrame(startOverlaySwap);
       return;
@@ -355,6 +387,16 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     audio.playbackRate = playbackRate;
   }, [playbackRate]);
 
+  useEffect(() => {
+    persistPictureBookReaderSessionState(sessionStorageKey, {
+      pageIndex: effectivePageIndex,
+      activeSentenceIndex: safeActiveSentenceIndex,
+      playbackRate,
+      autoFlip,
+      timestamp: Date.now(),
+    });
+  }, [autoFlip, effectivePageIndex, playbackRate, safeActiveSentenceIndex, sessionStorageKey]);
+
   const handlePageChange = useCallback(
     (nextPageIndex: number) => {
       if (!renderedPageData) return;
@@ -404,7 +446,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const isInitialLoading =
     (book === undefined || pageData === undefined) && !displayBook && !visiblePageData;
   const isMissingBook = book === null;
-  const isMissingPage = book !== undefined && pageData === null && !visiblePageData;
+  const hasInvalidPageIndex =
+    displayBook?.pageCount !== undefined &&
+    (effectivePageIndex < 0 || effectivePageIndex >= Math.max(displayBook.pageCount, 1));
+  const isMissingPage =
+    !hasInvalidPageIndex && book !== undefined && pageData === null && !visiblePageData;
 
   if (isInitialLoading) {
     return (
@@ -427,7 +473,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             defaultValue: 'The requested story is missing or not published yet.',
           })}
         </div>
-        <Button onClick={() => navigate('/reading')} className="px-5 py-3">
+        <Button onClick={() => navigate(backPath)} className="px-5 py-3">
           {t('pictureBookReader.backToReading', { defaultValue: 'Return to Reading' })}
         </Button>
       </div>
@@ -438,9 +484,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     return null;
   }
 
+  const currentPageImageSrc = getSafeImageSrc(currentPage?.imageUrl);
   const currentLayout = getReaderLayoutForPage(
     levelNumber,
-    currentPage ? pageOrientations[currentPage.imageUrl] : undefined,
+    currentPageImageSrc ? pageOrientations[currentPageImageSrc] : undefined,
     currentPage?.layoutClass
   );
 
@@ -452,10 +499,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   ) => {
     const layerPage = layerPageData.page;
     if (!layerPage) return null;
+    const pageImageSrc = getSafeImageSrc(layerPage.imageUrl);
 
     const layerLayout = getReaderLayoutForPage(
       levelNumber,
-      pageOrientations[layerPage.imageUrl],
+      pageImageSrc ? pageOrientations[pageImageSrc] : undefined,
       layerPage.layoutClass
     );
     const layerSentences = layerPage.sentences ?? [];
@@ -466,19 +514,25 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     return (
       <div className={cn('absolute inset-0', extraClassName)}>
         <div className={getPageImageRegionClass(layerLayout, layerPage.layoutClass)}>
-          <img
-            src={layerPage.imageUrl}
-            alt={t('pictureBookReader.pageImageAlt', {
-              defaultValue: '{{title}} page {{page}}',
-              title: displayBook.title,
-              page: layerPageData.pageIndex + 1,
-            })}
-            className={cn(
-              layerLayout === 'stacked'
-                ? 'h-[90%] w-auto max-w-[92%] scale-[1.08] object-contain'
-                : 'h-full w-auto max-w-full scale-[1.03] object-contain'
-            )}
-          />
+          {pageImageSrc ? (
+            <img
+              src={pageImageSrc}
+              alt={t('pictureBookReader.pageImageAlt', {
+                defaultValue: '{{title}} page {{page}}',
+                title: displayBook.title,
+                page: layerPageData.pageIndex + 1,
+              })}
+              className={cn(
+                layerLayout === 'stacked'
+                  ? 'h-[90%] w-auto max-w-[92%] scale-[1.08] object-contain'
+                  : 'h-full w-auto max-w-full scale-[1.03] object-contain'
+              )}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+              <BookOpen className="h-12 w-12" />
+            </div>
+          )}
         </div>
 
         <div className={getPageTextRegionClass(layerLayout, layerPage.layoutClass)}>
@@ -549,7 +603,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => navigate('/reading')}
+            onClick={() => navigate(backPath)}
             className="h-14 w-14 rounded-full border-white/70 bg-white/90 text-foreground shadow-lg backdrop-blur"
           >
             <ArrowLeft className="h-5 w-5" />

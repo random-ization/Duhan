@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useLayoutEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { ArrowLeft } from 'lucide-react';
@@ -8,11 +8,23 @@ import { useTranslation } from 'react-i18next';
 import { VOCAB } from '../utils/convexRefs';
 import { getLocalizedContent } from '../utils/languageUtils';
 import VocabQuiz from '../features/vocab/components/VocabQuiz';
+import type { LearningSessionSnapshot } from '../features/vocab/components/VocabQuiz';
 import { VocabBookSpellingSkeleton } from '../components/common';
 import { Button } from '../components/ui';
+import { buildVocabBookPath } from '../utils/vocabBookRoutes';
+import {
+  matchesVocabBookPracticeCategory,
+  normalizeVocabBookPracticeCategory,
+  type VocabBookPracticeCategory,
+} from '../utils/vocabBookPractice';
+import {
+  buildVocabBookSpellingSessionStorageKey,
+  clearLearningSessionSnapshot,
+  loadLearningSessionSnapshot,
+  persistLearningSessionSnapshot,
+} from '../utils/vocabLearningSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
 
-type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 const PAGE_SIZE = 120;
 
 const VocabBookSpellingPage: React.FC = () => {
@@ -20,6 +32,12 @@ const VocabBookSpellingPage: React.FC = () => {
   const { t } = useTranslation();
   const { language } = useAuth();
   const [params] = useSearchParams();
+  const backPath = useMemo(() => buildVocabBookPath(params), [params]);
+  const sessionStorageKey = useMemo(
+    () => buildVocabBookSpellingSessionStorageKey(params),
+    [params]
+  );
+  const [resumeSnapshot, setResumeSnapshot] = React.useState<LearningSessionSnapshot | null>(null);
 
   const categoryParam = (params.get('category') || 'DUE').toUpperCase();
   const q = params.get('q')?.trim();
@@ -34,10 +52,7 @@ const VocabBookSpellingPage: React.FC = () => {
         : undefined,
     [selected]
   );
-  const category: VocabBookCategory =
-    categoryParam === 'UNLEARNED' || categoryParam === 'MASTERED' || categoryParam === 'DUE'
-      ? (categoryParam as VocabBookCategory)
-      : 'DUE';
+  const category: VocabBookPracticeCategory = normalizeVocabBookPracticeCategory(categoryParam);
 
   const [pageCursor, setPageCursor] = React.useState<string | null>(null);
   const [loadedItems, setLoadedItems] = React.useState<VocabBookItemDto[]>([]);
@@ -53,6 +68,10 @@ const VocabBookSpellingPage: React.FC = () => {
   });
 
   React.useEffect(() => {
+    setResumeSnapshot(loadLearningSessionSnapshot(sessionStorageKey));
+  }, [sessionStorageKey]);
+
+  useLayoutEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
   }, [category, q, selected]);
@@ -74,20 +93,9 @@ const VocabBookSpellingPage: React.FC = () => {
   const items = useMemo(() => loadedItems, [loadedItems]);
 
   const words = useMemo(() => {
-    const filtered = items.filter(item => {
-      const p = item.progress;
-      const isMastered = p.status === 'MASTERED';
-      const isUnlearned = p.state === 0 || p.status === 'NEW';
-
-      let c: VocabBookCategory = 'DUE';
-      if (isMastered) {
-        c = 'MASTERED';
-      } else if (isUnlearned) {
-        c = 'UNLEARNED';
-      }
-
-      return c === category;
-    });
+    const filtered = items.filter(item =>
+      matchesVocabBookPracticeCategory(item.progress, category)
+    );
 
     return filtered.map(w => ({
       id: String(w.id),
@@ -104,13 +112,26 @@ const VocabBookSpellingPage: React.FC = () => {
     }));
   }, [items, category, language]);
 
+  const handleSessionSnapshot = React.useCallback(
+    (snapshot: LearningSessionSnapshot) => {
+      setResumeSnapshot(snapshot);
+      persistLearningSessionSnapshot(sessionStorageKey, snapshot);
+    },
+    [sessionStorageKey]
+  );
+
+  const handleComplete = React.useCallback(() => {
+    setResumeSnapshot(null);
+    clearLearningSessionSnapshot(sessionStorageKey);
+  }, [sessionStorageKey]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:from-emerald-400/8 dark:via-background dark:to-emerald-300/8">
         <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-emerald-100 dark:border-emerald-300/20">
           <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
             <Button
-              onClick={() => navigate('/vocab-book')}
+              onClick={() => navigate(backPath)}
               variant="ghost"
               size="auto"
               className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-emerald-300 dark:hover:border-emerald-300/35 transition-all duration-200"
@@ -140,7 +161,7 @@ const VocabBookSpellingPage: React.FC = () => {
       <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-emerald-100 dark:border-emerald-300/20">
         <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
           <Button
-            onClick={() => navigate('/vocab-book')}
+            onClick={() => navigate(backPath)}
             variant="ghost"
             size="auto"
             className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-emerald-300 dark:hover:border-emerald-300/35 transition-all duration-200"
@@ -170,6 +191,9 @@ const VocabBookSpellingPage: React.FC = () => {
           words={words}
           language={language}
           variant="learn"
+          resumeSnapshot={resumeSnapshot}
+          onSessionSnapshot={handleSessionSnapshot}
+          onComplete={handleComplete}
           presetSettings={{
             multipleChoice: false,
             writingMode: true,

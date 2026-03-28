@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MAX_AVATAR_FILE_SIZE,
+  resetFileInputSelection,
   uploadAvatarImage,
   uploadFileToStorage,
   validateAvatarFile,
@@ -22,6 +23,14 @@ describe('validateAvatarFile', () => {
   it('accepts valid avatar files', () => {
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
     expect(validateAvatarFile(file)).toBeNull();
+  });
+
+  it('clears the file input value so the same file can be selected again', () => {
+    const input = { value: 'C:\\\\fakepath\\\\avatar.png' } as HTMLInputElement;
+
+    resetFileInputSelection(input);
+
+    expect(input.value).toBe('');
   });
 });
 

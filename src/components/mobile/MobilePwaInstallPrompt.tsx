@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
+import { safeGetSessionStorageItem, safeSetSessionStorageItem } from '../../utils/browserStorage';
+import { matchesMediaQuery } from '../../utils/mediaQuery';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -12,7 +14,7 @@ const DISMISS_STORAGE_KEY = 'duhan-pwa-install-dismissed';
 
 const isStandalone = () => {
   if (typeof window === 'undefined') return false;
-  const displayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const displayModeStandalone = matchesMediaQuery('(display-mode: standalone)');
   const nav = navigator as Navigator & { standalone?: boolean };
   return displayModeStandalone || nav.standalone === true;
 };
@@ -35,7 +37,7 @@ export function MobilePwaInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setDismissed(window.sessionStorage.getItem(DISMISS_STORAGE_KEY) === '1');
+    setDismissed(safeGetSessionStorageItem(DISMISS_STORAGE_KEY) === '1');
     setInstalled(isStandalone());
     setIosSafari(isIosSafari());
   }, []);
@@ -67,7 +69,7 @@ export function MobilePwaInstallPrompt() {
   const dismiss = () => {
     setDismissed(true);
     if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(DISMISS_STORAGE_KEY, '1');
+      safeSetSessionStorageItem(DISMISS_STORAGE_KEY, '1');
     }
   };
 

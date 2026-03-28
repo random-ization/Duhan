@@ -18,6 +18,11 @@ export const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
 
 export type AvatarValidationError = 'missing' | 'invalid_type' | 'too_large';
 
+export function resetFileInputSelection(input: HTMLInputElement | null | undefined): void {
+  if (!input) return;
+  input.value = '';
+}
+
 export function validateAvatarFile(file?: File | null): AvatarValidationError | null {
   if (!file) return 'missing';
   if (!file.type.startsWith('image/')) return 'invalid_type';

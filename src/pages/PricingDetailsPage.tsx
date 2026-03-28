@@ -8,6 +8,12 @@ import { LocalizedLink } from '../components/LocalizedLink';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { aRef } from '../utils/convexRefs';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
+import {
+  isSafeCheckoutUrl,
+  type LemonSqueezyCheckoutRequest,
+  type LemonSqueezyCheckoutResult,
+  type LemonSqueezyVariantPrices,
+} from '../utils/lemonsqueezy';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
@@ -31,11 +37,7 @@ import { Button } from '../components/ui';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'annual';
 type PlanKey = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
-type PriceEntry = { amount: string; currency: string; formatted: string };
-type VariantPrices = {
-  GLOBAL: Record<string, PriceEntry>;
-  REGIONAL: Record<string, PriceEntry>;
-};
+type VariantPrices = LemonSqueezyVariantPrices;
 type ProPrice = { amount: string; period: string; saving: string };
 type PricingOverviewCard = {
   title: string;
@@ -282,19 +284,7 @@ export default function PricingDetailsPage() {
     i18n.language.startsWith('zh-');
 
   const createCheckoutSession = useAction(
-    aRef<
-      {
-        plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
-        userId?: string;
-        userEmail?: string;
-        userName?: string;
-        region?: string;
-        locale?: string;
-        source?: string;
-        returnTo?: string;
-      },
-      { checkoutUrl: string }
-    >('lemonsqueezy:createCheckout')
+    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
   );
 
   const [prices, setPrices] = useState<VariantPrices | null>(null);
@@ -459,6 +449,9 @@ export default function PricingDetailsPage() {
         { retries: 1, initialDelayMs: 250 }
       );
 
+      if (!isSafeCheckoutUrl(checkoutUrl)) {
+        throw new Error('Invalid checkout URL returned by provider');
+      }
       trackEvent('checkout_success', {
         language: i18n.language,
         plan,

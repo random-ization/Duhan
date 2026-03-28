@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { mRef, NoArgs } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { getLabels } from '../../utils/i18n';
+import { safeSetSessionStorageItem } from '../../utils/browserStorage';
 import { Card, CardContent } from '../ui';
 import { Button } from '../ui';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
@@ -26,7 +27,7 @@ export function ProfileSetupModal({ isOpen, onClose }: Readonly<ProfileSetupModa
 
   const dismiss = () => {
     if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(PROFILE_PROMPT_DISMISS_KEY, '1');
+      safeSetSessionStorageItem(PROFILE_PROMPT_DISMISS_KEY, '1');
     }
     onClose();
   };

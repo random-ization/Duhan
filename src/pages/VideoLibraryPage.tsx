@@ -3,9 +3,11 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Video, Play, Eye, Clock, ArrowLeft } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { getLabels } from '../utils/i18n';
 import { resolveSafeReturnTo } from '../utils/navigation';
+import { buildVideoPlayerPath } from '../utils/videoRoutes';
+import { formatSafeDateLabel } from '../utils/dateLabel';
 import { VideoLibrarySkeleton } from '../components/common';
 import { qRef } from '../utils/convexRefs';
 import { Button } from '../components/ui';
@@ -31,9 +33,11 @@ const LEVELS_KEYS = [
 const VideoLibraryPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const labels = getLabels(language);
   const [activeLevel, setActiveLevel] = useState('');
+  const currentPath = `${location.pathname}${location.search}`;
   const returnTo = React.useMemo(() => {
     return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=videos');
   }, [searchParams]);
@@ -126,7 +130,7 @@ const VideoLibraryPage: React.FC = () => {
         {videos.map(video => (
           <Button
             key={video.id}
-            onClick={() => navigate(`/video/${video.id}`)}
+            onClick={() => navigate(buildVideoPlayerPath(video.id, currentPath))}
             variant="ghost"
             size="auto"
             className="bg-[#FDFBF7] dark:bg-card rounded-2xl border-2 border-foreground dark:border-border overflow-hidden cursor-pointer hover:shadow-[6px_6px_0px_0px_#18181B] dark:hover:shadow-[6px_6px_0px_0px_rgba(148,163,184,0.28)] transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-left w-full p-0 block !shadow-none !whitespace-normal"
@@ -185,7 +189,11 @@ const VideoLibraryPage: React.FC = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {new Date(video.createdAt).toLocaleDateString(getLocale(language))}
+                  {formatSafeDateLabel(
+                    video.createdAt,
+                    getLocale(language),
+                    labels.common?.recently || 'Recently'
+                  )}
                 </span>
               </div>
             </div>

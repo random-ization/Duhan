@@ -39,16 +39,22 @@ import {
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../components/ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../components/ui';
 import { NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { getLocalizedPath, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { logger } from '../utils/logger';
 import { notify } from '../utils/notify';
 import { useFileUpload } from '../hooks/useFileUpload';
+import {
+  safeGetLocalStorageItem,
+  safeRemoveLocalStorageItem,
+  safeSetLocalStorageItem,
+} from '../utils/browserStorage';
 import { useAuth } from '../contexts/AuthContext';
 import { getLanguageLabel } from '../utils/languageUtils';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { ENTITLEMENTS } from '../utils/convexRefs';
+import { resolveSafeReturnTo } from '../utils/navigation';
 
 // Types
 interface TranscriptLine {
@@ -788,6 +794,24 @@ interface PodcastEpisode {
   description?: string;
 }
 
+export function buildPodcastEpisodeShareUrl(args: {
+  origin: string;
+  language: string;
+  episode: Pick<PodcastEpisode, 'audioUrl' | 'title' | 'guid' | 'channelTitle'>;
+  channel: Pick<PodcastChannel, 'title' | 'artworkUrl'>;
+}) {
+  const { origin, language, episode, channel } = args;
+  const params = new URLSearchParams();
+  params.set('audioUrl', encodeURIComponent(episode.audioUrl));
+  params.set('title', episode.title);
+  if (episode.guid) params.set('guid', episode.guid);
+  if (channel.title) params.set('channelTitle', channel.title);
+  if (channel.artworkUrl) params.set('channelArtwork', channel.artworkUrl);
+
+  const sharePath = getLocalizedPath('/podcasts/player', language);
+  return `${origin}${sharePath}?${params.toString()}`;
+}
+
 type PodcastChannel = {
   itunesId?: string;
   id?: string;
@@ -918,10 +942,13 @@ function getTranscriptCacheKey(id: string, language: string) {
   return `transcript_${id}_${language}`;
 }
 
-function loadTranscriptFromLocalCache(id: string, language: string): TranscriptLine[] | null {
+export function loadTranscriptFromLocalCache(
+  id: string,
+  language: string
+): TranscriptLine[] | null {
   const localCacheKey = getTranscriptCacheKey(id, language);
   try {
-    const cachedData = localStorage.getItem(localCacheKey);
+    const cachedData = safeGetLocalStorageItem(localCacheKey);
     if (!cachedData) return null;
     const parsed = JSON.parse(cachedData) as {
       language?: string;
@@ -936,11 +963,15 @@ function loadTranscriptFromLocalCache(id: string, language: string): TranscriptL
   }
 }
 
-function saveTranscriptToLocalCache(id: string, language: string, segments: TranscriptLine[]) {
+export function saveTranscriptToLocalCache(
+  id: string,
+  language: string,
+  segments: TranscriptLine[]
+) {
   if (!segments || segments.length === 0) return;
   const localCacheKey = getTranscriptCacheKey(id, language);
   try {
-    localStorage.setItem(
+    safeSetLocalStorageItem(
       localCacheKey,
       JSON.stringify({
         segments,
@@ -951,6 +982,12 @@ function saveTranscriptToLocalCache(id: string, language: string, segments: Tran
   } catch (storageError) {
     logger.warn('Failed to cache transcript locally', storageError);
   }
+}
+
+export function clearTranscriptLocalCache(episodeId: string, languages: string[]) {
+  languages.forEach(lang => {
+    safeRemoveLocalStorageItem(getTranscriptCacheKey(episodeId, lang));
+  });
 }
 
 function shouldMarkTranscriptLoaded(segments: TranscriptLine[], targetLanguage: string) {
@@ -1218,12 +1255,8 @@ async function resolveTranscriptAudioUrlWithUpload(args: {
   const { rawUrl, episodeId, readAudioFailedText, uploadFile } = args;
   if (!rawUrl) return '';
   const cacheKey = `transcript_audio_url_${episodeId}`;
-  try {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) return cached;
-  } catch {
-    /* ignore cache errors */
-  }
+  const cached = safeGetLocalStorageItem(cacheKey);
+  if (cached) return cached;
 
   const isHttp = /^https?:\/\//i.test(rawUrl);
   const isBlob = rawUrl.startsWith('blob:');
@@ -1256,11 +1289,7 @@ async function resolveTranscriptAudioUrlWithUpload(args: {
     type: blob.type || 'audio/mpeg',
   });
   const { url } = await uploadFile(file, 'podcasts');
-  try {
-    localStorage.setItem(cacheKey, url);
-  } catch {
-    /* ignore cache errors */
-  }
+  safeSetLocalStorageItem(cacheKey, url);
   return url;
 }
 
@@ -1275,6 +1304,10 @@ const PodcastPlayerPage: React.FC = () => {
   const copy = UI_COPY[uiLang];
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
   const mockTranscript = useMemo(() => buildMockTranscript(copy), [copy]);
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts'),
+    [searchParams]
+  );
 
   // 🔥 FIX: Support URL params for page refresh
   // Priority: state > URL params > fallback
@@ -1956,14 +1989,12 @@ const PodcastPlayerPage: React.FC = () => {
       return;
     }
 
-    const params = new URLSearchParams();
-    params.set('audioUrl', encodeURIComponent(episode.audioUrl));
-    params.set('title', episode.title);
-    if (episode.guid) params.set('guid', episode.guid);
-    if (channel.title) params.set('channelTitle', channel.title);
-    if (channel.artworkUrl) params.set('channelArtwork', channel.artworkUrl);
-
-    const shareUrl = `${globalThis.location.origin}/podcasts/player?${params.toString()}`;
+    const shareUrl = buildPodcastEpisodeShareUrl({
+      origin: globalThis.location.origin,
+      language,
+      episode,
+      channel,
+    });
 
     try {
       if (globalThis.navigator.share) {
@@ -1998,14 +2029,7 @@ const PodcastPlayerPage: React.FC = () => {
     setTranscript([]);
 
     try {
-      try {
-        const languagesToClear = ['zh', 'en', 'vi', 'mn'];
-        languagesToClear.forEach(lang => {
-          localStorage.removeItem(`transcript_${episodeId}_${lang}`);
-        });
-      } catch {
-        /* ignore localStorage errors */
-      }
+      clearTranscriptLocalCache(episodeId, ['zh', 'en', 'vi', 'mn']);
       await deleteTranscript({ episodeId });
       // Force reload from API
       await loadTranscriptChunked(true);
@@ -2079,7 +2103,7 @@ const PodcastPlayerPage: React.FC = () => {
           type="button"
           variant="ghost"
           size="icon"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(backPath)}
           className="p-2 hover:bg-muted rounded-full"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -2107,7 +2131,7 @@ const PodcastPlayerPage: React.FC = () => {
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate(backPath)}
                 className="w-12 h-12 border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
                 aria-label={copy.back}
               >

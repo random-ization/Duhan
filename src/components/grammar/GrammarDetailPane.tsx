@@ -18,6 +18,7 @@ import {
   stripGrammarMaskTokens,
   stripLeadingDuplicateHeading,
 } from '../../utils/grammarDisplaySanitizer';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
 import { Badge, Button, Card, CardContent, CardHeader } from '../ui';
 
@@ -927,23 +928,19 @@ const GrammarDetailPane: React.FC<GrammarDetailPaneProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const [fontScale, setFontScale] = useState<ReaderFontScale>(() => {
-    if (typeof window === 'undefined') return 'compact';
-    const stored = window.localStorage.getItem(READER_FONT_SCALE_STORAGE_KEY);
+    const stored = safeGetLocalStorageItem(READER_FONT_SCALE_STORAGE_KEY);
     return stored && isReaderFontScale(stored) ? stored : 'compact';
   });
   const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(READER_RED_EYE_STORAGE_KEY) === '1';
+    return safeGetLocalStorageItem(READER_RED_EYE_STORAGE_KEY) === '1';
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(READER_FONT_SCALE_STORAGE_KEY, fontScale);
+    safeSetLocalStorageItem(READER_FONT_SCALE_STORAGE_KEY, fontScale);
   }, [fontScale]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(READER_RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
+    safeSetLocalStorageItem(READER_RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
   }, [redEyeEnabled]);
 
   const readerVars = useMemo(() => READER_FONT_SCALE_VARS[fontScale] as CSSProperties, [fontScale]);

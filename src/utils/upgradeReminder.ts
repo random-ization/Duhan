@@ -1,3 +1,11 @@
+import {
+  safeGetLocalStorageItem,
+  safeGetSessionStorageItem,
+  safeRemoveSessionStorageItem,
+  safeSetLocalStorageItem,
+  safeSetSessionStorageItem,
+} from './browserStorage';
+
 const DASHBOARD_UPGRADE_BANNER_SESSION_KEY = 'duhan:upgrade-banner:session-user';
 const DASHBOARD_UPGRADE_BANNER_DISMISS_PREFIX = 'duhan:upgrade-banner:dismissed-at';
 
@@ -9,16 +17,12 @@ export const getDashboardUpgradeBannerDismissKey = (userId: string) =>
 export const shouldShowDashboardUpgradeBanner = (userId: string, nowMs = Date.now()) => {
   if (typeof globalThis.window === 'undefined') return false;
 
-  const sessionUserId = globalThis.window.sessionStorage.getItem(
-    DASHBOARD_UPGRADE_BANNER_SESSION_KEY
-  );
+  const sessionUserId = safeGetSessionStorageItem(DASHBOARD_UPGRADE_BANNER_SESSION_KEY);
   if (sessionUserId !== userId) {
     return true;
   }
 
-  const rawDismissedAt = globalThis.window.localStorage.getItem(
-    getDashboardUpgradeBannerDismissKey(userId)
-  );
+  const rawDismissedAt = safeGetLocalStorageItem(getDashboardUpgradeBannerDismissKey(userId));
   const dismissedAt = Number(rawDismissedAt);
   if (!Number.isFinite(dismissedAt) || dismissedAt <= 0) {
     return true;
@@ -30,14 +34,11 @@ export const shouldShowDashboardUpgradeBanner = (userId: string, nowMs = Date.no
 export const dismissDashboardUpgradeBanner = (userId: string, nowMs = Date.now()) => {
   if (typeof globalThis.window === 'undefined') return;
 
-  globalThis.window.localStorage.setItem(
-    getDashboardUpgradeBannerDismissKey(userId),
-    String(nowMs)
-  );
-  globalThis.window.sessionStorage.setItem(DASHBOARD_UPGRADE_BANNER_SESSION_KEY, userId);
+  safeSetLocalStorageItem(getDashboardUpgradeBannerDismissKey(userId), String(nowMs));
+  safeSetSessionStorageItem(DASHBOARD_UPGRADE_BANNER_SESSION_KEY, userId);
 };
 
 export const clearDashboardUpgradeBannerSession = () => {
   if (typeof globalThis.window === 'undefined') return;
-  globalThis.window.sessionStorage.removeItem(DASHBOARD_UPGRADE_BANNER_SESSION_KEY);
+  safeRemoveSessionStorageItem(DASHBOARD_UPGRADE_BANNER_SESSION_KEY);
 };

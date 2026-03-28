@@ -145,4 +145,30 @@ describe('GrammarModulePage AI panel persistence', () => {
       expect(window.localStorage.getItem('grammar_ai_panel_open')).toBe('1');
     });
   });
+
+  it('renders safely when localStorage access is blocked', () => {
+    const originalLocalStorage = window.localStorage;
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+        setItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+      },
+    });
+
+    renderPage();
+
+    expect(screen.getByText('AI Grammar Tutor')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hide AI/i })).toBeInTheDocument();
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  });
 });

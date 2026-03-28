@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   BookOpen,
   Check,
@@ -32,6 +32,13 @@ import {
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
+import { resolveSafeReturnTo } from '../utils/navigation';
+import {
+  buildReadingArticleSessionStorageKey,
+  loadReadingArticleSessionState,
+  persistReadingArticleSessionState,
+} from '../utils/readingSession';
+import { formatReadingPublishedDate, getReadingSourceLabel } from '../utils/readingMetadata';
 import AnnotationToolbar from '../features/annotation-kit/components/AnnotationToolbar';
 import { useScopedAnnotations } from '../features/annotation-kit/hooks/useScopedAnnotations';
 import type { AnnotationSelectionKind } from '../features/annotation-kit/types';
@@ -224,20 +231,6 @@ const TERM_GLOSSARY: Record<
     level: 'TOPIK 4',
   },
 };
-
-function sourceLabel(sourceKey: string) {
-  const map: Record<string, string> = {
-    khan: '경향신문',
-    donga: '동아일보',
-    hankyung: '한국경제',
-    mk: '매일경제',
-    itdonga: 'IT동아',
-    voa_ko: 'VOA 한국어',
-    naver_news_search: 'NAVER News',
-    wiki_ko_featured: '위키백과 알찬 글',
-  };
-  return map[sourceKey] || sourceKey;
-}
 
 function difficultyLabel(
   level: 'L1' | 'L2' | 'L3',
@@ -1624,8 +1617,9 @@ function renderReadingArticleState(args: {
   article: NewsArticle | null | undefined;
   t: ReturnType<typeof useTranslation>['t'];
   navigate: (path: string) => void;
+  backPath: string;
 }) {
-  const { articleId, article, t, navigate } = args;
+  const { articleId, article, t, navigate, backPath } = args;
   if (!articleId) {
     return (
       <div className="rounded-3xl border border-border bg-card p-10 text-center text-sm font-semibold text-muted-foreground">
@@ -1648,7 +1642,7 @@ function renderReadingArticleState(args: {
           type="button"
           variant="ghost"
           size="auto"
-          onClick={() => navigate('/reading')}
+          onClick={() => navigate(backPath)}
           className="mt-4 rounded-xl border border-border bg-card px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-muted"
         >
           {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
@@ -1740,14 +1734,30 @@ const SELECTION_TOOLBAR_DISMISS_SELECTORS = [
 export default function ReadingArticlePage() {
   const isMobile = useIsMobile();
   const { articleId = '' } = useParams<{ articleId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { language } = useAuth();
   const uiLanguage = resolveReadingUiLanguage(language);
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/reading'),
+    [searchParams]
+  );
+  const sessionStorageKey = useMemo(
+    () => buildReadingArticleSessionStorageKey(articleId),
+    [articleId]
+  );
+  const persistedSessionState = useMemo(
+    () => loadReadingArticleSessionState(sessionStorageKey),
+    [sessionStorageKey]
+  );
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [panelTab, setPanelTab] = useState<PanelTab>('ai');
-  const [fontSize, setFontSize] = useState(18);
-  const [translationEnabled, setTranslationEnabled] = useState(false);
+  const restoredSessionKeyRef = useRef<string | null>(null);
+  const [panelTab, setPanelTab] = useState<PanelTab>(() => persistedSessionState?.panelTab ?? 'ai');
+  const [fontSize, setFontSize] = useState(() => persistedSessionState?.fontSize ?? 18);
+  const [translationEnabled, setTranslationEnabled] = useState(
+    () => persistedSessionState?.translationEnabled ?? false
+  );
   const [translations, setTranslations] = useState<string[]>([]);
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
@@ -1764,7 +1774,9 @@ export default function ReadingArticlePage() {
   const [draftNote, setDraftNote] = useState<DraftNote | null>(null);
   const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  const [activeWord, setActiveWord] = useState<string>('');
+  const [activeWord, setActiveWord] = useState<string>(
+    () => persistedSessionState?.activeWord ?? ''
+  );
   const [dictionaryQuery, setDictionaryQuery] = useState('');
   const [dictionaryResult, setDictionaryResult] = useState<DictionarySearchResult | null>(null);
   const [dictionaryLoading, setDictionaryLoading] = useState(false);
@@ -1864,6 +1876,17 @@ export default function ReadingArticlePage() {
   });
 
   useEffect(() => {
+    restoredSessionKeyRef.current = null;
+    setPanelTab(persistedSessionState?.panelTab ?? 'ai');
+    setFontSize(persistedSessionState?.fontSize ?? 18);
+    setTranslationEnabled(persistedSessionState?.translationEnabled ?? false);
+    setActiveWord(persistedSessionState?.activeWord ?? '');
+    setHoveredNoteId(null);
+    setSelectedNoteId(null);
+    setDraftNote(null);
+  }, [persistedSessionState, sessionStorageKey]);
+
+  useEffect(() => {
     if (!scopedAnnotations || scopedAnnotations.length === 0) {
       setNotes([]);
       return;
@@ -1900,14 +1923,14 @@ export default function ReadingArticlePage() {
 
   useEffect(() => {
     setTranslations([]);
-    setTranslationEnabled(false);
+    setTranslationEnabled(persistedSessionState?.translationEnabled ?? false);
     setTranslationError(null);
     setSavedWords({});
     setNotes([]);
     setNoteSyncError(null);
     setSpeaking(false);
     stop();
-  }, [articleConvexId, stop]);
+  }, [articleConvexId, persistedSessionState?.translationEnabled, stop]);
 
   useEffect(() => {
     if (!articleConvexId || !articleTitle || !cleanedBodyText) {
@@ -2424,6 +2447,61 @@ export default function ReadingArticlePage() {
     setFontSize(previous => getNextReadingFontSize(previous));
   };
 
+  const persistArticleSession = useCallback(
+    (scrollTop?: number) => {
+      if (restoredSessionKeyRef.current !== sessionStorageKey) return;
+      persistReadingArticleSessionState(sessionStorageKey, {
+        scrollTop: Math.max(0, scrollTop ?? contentRef.current?.scrollTop ?? 0),
+        fontSize,
+        translationEnabled,
+        panelTab,
+        activeWord: normalizeInlineWhitespace(activeWord),
+        timestamp: Date.now(),
+      });
+    },
+    [activeWord, fontSize, panelTab, sessionStorageKey, translationEnabled]
+  );
+
+  useLayoutEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+    if (restoredSessionKeyRef.current === sessionStorageKey) return;
+
+    const targetScrollTop = Math.max(0, persistedSessionState?.scrollTop ?? 0);
+    let frame = requestAnimationFrame(() => {
+      if (!contentRef.current) return;
+      contentRef.current.scrollTop = targetScrollTop;
+      restoredSessionKeyRef.current = sessionStorageKey;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [paragraphs.length, persistedSessionState?.scrollTop, sessionStorageKey]);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+
+    let frame = 0;
+    const handleScroll = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        persistArticleSession(container.scrollTop);
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      persistArticleSession(container.scrollTop);
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [persistArticleSession]);
+
+  useEffect(() => {
+    persistArticleSession();
+  }, [persistArticleSession]);
+
   const focusNote = useCallback((noteId: string) => {
     setSelectedNoteId(noteId);
     requestAnimationFrame(() => {
@@ -2511,9 +2589,19 @@ export default function ReadingArticlePage() {
     article,
     t,
     navigate,
+    backPath,
   });
   if (stateView) return stateView;
   const resolvedArticle = article as NewsArticle;
+  const sourceDisplayLabel = getReadingSourceLabel(
+    resolvedArticle.sourceKey,
+    t('readingArticle.meta.unknownSource', { defaultValue: 'Unknown source' })
+  );
+  const publishedDateLabel = formatReadingPublishedDate(
+    resolvedArticle.publishedAt,
+    dateLocale,
+    t('readingArticle.meta.dateUnavailable', { defaultValue: 'Date unavailable' })
+  );
 
   const wordCount = Math.max(1, Math.round(cleanedBodyText.length / 2));
 
@@ -2528,7 +2616,7 @@ export default function ReadingArticlePage() {
                 { label: t('nav.media', { defaultValue: 'Media' }), to: '/media' },
                 {
                   label: t('readingArticle.backToDiscovery', { defaultValue: 'Reading' }),
-                  to: '/reading',
+                  to: backPath,
                 },
                 { label: resolvedArticle.title },
               ]}
@@ -2537,7 +2625,7 @@ export default function ReadingArticlePage() {
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => navigate('/reading')}
+              onClick={() => navigate(backPath)}
               className="flex items-center gap-1 text-sm font-semibold text-muted-foreground transition hover:text-muted-foreground"
             >
               <ChevronLeft size={16} />
@@ -2546,8 +2634,7 @@ export default function ReadingArticlePage() {
             <span
               className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${difficultyClass(resolvedArticle.difficultyLevel)}`}
             >
-              {difficultyLabel(resolvedArticle.difficultyLevel, t)} (
-              {sourceLabel(resolvedArticle.sourceKey)})
+              {difficultyLabel(resolvedArticle.difficultyLevel, t)} ({sourceDisplayLabel})
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -2595,10 +2682,8 @@ export default function ReadingArticlePage() {
                   {resolvedArticle.title}
                 </h1>
                 <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
-                  <span>
-                    {new Date(resolvedArticle.publishedAt).toLocaleDateString(dateLocale)}
-                  </span>
-                  <span>{sourceLabel(resolvedArticle.sourceKey)}</span>
+                  <span>{publishedDateLabel}</span>
+                  <span>{sourceDisplayLabel}</span>
                   <span>
                     {t('readingArticle.meta.words', '{{count}} chars', {
                       count: Number(wordCount),

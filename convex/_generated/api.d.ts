@@ -48,7 +48,7 @@ import type * as newsProjection from '../newsProjection.js';
 import type * as newsSources from '../newsSources.js';
 import type * as notePages from '../notePages.js';
 import type * as notebooks from '../notebooks.js';
-import type * as payments from '../payments.js';
+import type * as paymentStatus from '../paymentStatus.js';
 import type * as paymentsMutations from '../paymentsMutations.js';
 import type * as pdfHelpers from '../pdfHelpers.js';
 import type * as podcastActions from '../podcastActions.js';
@@ -138,7 +138,7 @@ declare const fullApi: ApiFromModules<{
   newsSources: typeof newsSources;
   notePages: typeof notePages;
   notebooks: typeof notebooks;
-  payments: typeof payments;
+  paymentStatus: typeof paymentStatus;
   paymentsMutations: typeof paymentsMutations;
   pdfHelpers: typeof pdfHelpers;
   podcastActions: typeof podcastActions;

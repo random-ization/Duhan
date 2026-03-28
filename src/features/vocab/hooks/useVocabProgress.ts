@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  safeGetSessionStorageItem,
+  safeSetSessionStorageItem,
+} from '../../../utils/browserStorage';
 import { logger } from '../../../utils/logger';
 import {
   calculateNextReview,
@@ -438,7 +442,7 @@ export function useFSRSBatchProgress(options?: {
     (entries: BatchQueueEntry[]) => {
       if (typeof window === 'undefined') return;
       try {
-        window.sessionStorage.setItem(persistKey, JSON.stringify(entries));
+        safeSetSessionStorageItem(persistKey, JSON.stringify(entries));
       } catch (error) {
         logger.warn('[FSRS Batch] Failed to persist queue:', error);
       }
@@ -562,7 +566,7 @@ export function useFSRSBatchProgress(options?: {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const raw = window.sessionStorage.getItem(persistKey);
+      const raw = safeGetSessionStorageItem(persistKey);
       if (!raw) return;
       const parsed = JSON.parse(raw) as BatchQueueEntry[];
       if (!Array.isArray(parsed) || parsed.length === 0) return;

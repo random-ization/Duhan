@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../types';
 import { fetchUserCountry } from '../utils/geo';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 // Supported languages
 export const SUPPORTED_LANGUAGES = ['en', 'zh', 'vi', 'mn'] as const;
@@ -54,8 +55,8 @@ const getBrowserPreferredLanguage = (): Language | null => {
 };
 
 const getStoredUserLanguage = (): Language | null => {
-  const stored = localStorage.getItem('preferredLanguage');
-  const storedSource = localStorage.getItem('preferredLanguageSource');
+  const stored = safeGetLocalStorageItem('preferredLanguage');
+  const storedSource = safeGetLocalStorageItem('preferredLanguageSource');
   const normalized = stored ? stored.toLowerCase() : null;
   if (storedSource === 'user' && normalized && isValidLanguage(normalized)) {
     return normalized;
@@ -76,7 +77,7 @@ const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', h
 
 // Get language from URL or detect from browser
 export const detectLanguage = async (): Promise<Language> => {
-  const stored = localStorage.getItem('preferredLanguage');
+  const stored = safeGetLocalStorageItem('preferredLanguage');
   const normalizedStored = stored ? stored.toLowerCase() : null;
   const userLanguage = getStoredUserLanguage();
 
@@ -169,10 +170,10 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
     // Update HTML lang attribute
     document.documentElement.lang = lang;
 
-    const storedSource = localStorage.getItem('preferredLanguageSource');
+    const storedSource = safeGetLocalStorageItem('preferredLanguageSource');
     if (storedSource !== 'user') {
-      localStorage.setItem('preferredLanguage', lang);
-      localStorage.setItem('preferredLanguageSource', 'auto');
+      safeSetLocalStorageItem('preferredLanguage', lang);
+      safeSetLocalStorageItem('preferredLanguageSource', 'auto');
     }
   }, [lang, i18n, navigate, location]);
 

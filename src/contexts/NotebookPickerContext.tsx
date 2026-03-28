@@ -21,6 +21,11 @@ import {
   DialogTitle,
   Input,
 } from '../components/ui';
+import {
+  safeGetLocalStorageItem,
+  safeRemoveLocalStorageItem,
+  safeSetLocalStorageItem,
+} from '../utils/browserStorage';
 
 type PickNotebookOptions = {
   title?: string;
@@ -55,7 +60,7 @@ const getDefaultOptions = (
 
 const readStoredNotebookId = (): Id<'note_pages'> | null => {
   if (typeof globalThis.window === 'undefined') return null;
-  const raw = globalThis.window.localStorage.getItem(LAST_NOTEBOOK_STORAGE_KEY);
+  const raw = safeGetLocalStorageItem(LAST_NOTEBOOK_STORAGE_KEY);
   if (!raw || !raw.trim()) return null;
   return raw as Id<'note_pages'>;
 };
@@ -63,10 +68,10 @@ const readStoredNotebookId = (): Id<'note_pages'> | null => {
 const persistNotebookId = (value: Id<'note_pages'> | null) => {
   if (typeof globalThis.window === 'undefined') return;
   if (!value) {
-    globalThis.window.localStorage.removeItem(LAST_NOTEBOOK_STORAGE_KEY);
+    safeRemoveLocalStorageItem(LAST_NOTEBOOK_STORAGE_KEY);
     return;
   }
-  globalThis.window.localStorage.setItem(LAST_NOTEBOOK_STORAGE_KEY, String(value));
+  safeSetLocalStorageItem(LAST_NOTEBOOK_STORAGE_KEY, String(value));
 };
 
 const formatNotebookMeta = (noteCount: number, reviewCount: number, t: TranslateFn) => {

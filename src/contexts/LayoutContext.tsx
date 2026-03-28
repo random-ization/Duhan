@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 // Default order of cards on the dashboard
 export const DEFAULT_CARD_ORDER = [
@@ -56,7 +57,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isEditing, setIsEditing] = useState(false);
   const [cardOrder, setCardOrder] = useState<string[]>(() => {
     if (globalThis.window === undefined) return DEFAULT_CARD_ORDER;
-    const savedOrder = localStorage.getItem('dashboard_layout');
+    const savedOrder = safeGetLocalStorageItem('dashboard_layout');
     if (!savedOrder) return DEFAULT_CARD_ORDER;
     try {
       const parsed = JSON.parse(savedOrder);
@@ -78,12 +79,12 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateCardOrder = useCallback((newOrder: string[]) => {
     setCardOrder(newOrder);
-    localStorage.setItem('dashboard_layout', JSON.stringify(newOrder));
+    safeSetLocalStorageItem('dashboard_layout', JSON.stringify(newOrder));
   }, []);
 
   const resetLayout = useCallback(() => {
     setCardOrder(DEFAULT_CARD_ORDER);
-    localStorage.setItem('dashboard_layout', JSON.stringify(DEFAULT_CARD_ORDER));
+    safeSetLocalStorageItem('dashboard_layout', JSON.stringify(DEFAULT_CARD_ORDER));
   }, []);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

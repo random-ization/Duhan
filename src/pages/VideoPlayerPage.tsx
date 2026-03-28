@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -30,6 +30,8 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
+import { resolveSafeReturnTo } from '../utils/navigation';
+import { buildVideoPlayerPath } from '../utils/videoRoutes';
 
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileVideoPlayerPage } from '../components/mobile/MobileVideoPlayerPage';
@@ -125,6 +127,11 @@ const getVideoLoadError = (
 ): string | null => {
   if (convexVideo !== null) return null;
   return getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found';
+};
+
+const buildVideoUpgradeReturnTarget = (videoId: string | undefined, returnTo: string): string => {
+  if (!videoId) return '/videos';
+  return buildVideoPlayerPath(videoId, returnTo);
 };
 
 const getPopupPosition = (rect: DOMRect): { x: number; y: number } => {
@@ -401,6 +408,7 @@ const TranscriptPanelContent: React.FC<TranscriptPanelContentProps> = ({
 
 const DesktopVideoPlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
   const { language, user, viewerAccess } = useAuth();
   const { startUpgradeFlow } = useUpgradeFlow();
@@ -429,6 +437,14 @@ const DesktopVideoPlayerPage: React.FC = () => {
   const playbackResourceKey = id ? `video:${id}` : null;
   const playbackUnlocked =
     playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/videos'),
+    [searchParams]
+  );
+  const upgradeReturnTarget = useMemo(
+    () => buildVideoUpgradeReturnTarget(id, backPath),
+    [id, backPath]
+  );
 
   useEffect(() => stopTTS, [stopTTS]);
 
@@ -489,7 +505,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
       startUpgradeFlow({
         plan: 'ANNUAL',
         source: 'media_limit',
-        returnTo: id ? `/videos/${id}` : '/videos',
+        returnTo: upgradeReturnTarget,
       });
       return false;
     }
@@ -508,7 +524,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
         startUpgradeFlow({
           plan: 'ANNUAL',
           source: entitlementError.upgradeSource,
-          returnTo: id ? `/videos/${id}` : '/videos',
+          returnTo: upgradeReturnTarget,
         });
         return false;
       }
@@ -564,7 +580,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/videos')}
+            onClick={() => navigate(backPath)}
             className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold border-0 hover:bg-primary/90"
           >
             {getLabel(labels, ['dashboard', 'video', 'back']) || 'Back to Library'}
@@ -596,7 +612,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/videos')}
+            onClick={() => navigate(backPath)}
             className="w-10 h-10 bg-card border-2 border-foreground rounded-xl flex items-center justify-center hover:bg-muted shadow-[3px_3px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />

@@ -15,6 +15,7 @@ import { Card, CardContent } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
 import { getLabels } from '../utils/i18n';
+import { formatSafeDateLabel } from '../utils/dateLabel';
 
 export default function HistoryPage() {
   const { language } = useAuth();
@@ -105,7 +106,11 @@ export default function HistoryPage() {
               <p className="text-xs text-muted-foreground mb-1">{item.channelName}</p>
               <div className="flex items-center text-xs text-muted-foreground gap-1">
                 <Calendar size={12} />
-                {new Date(item.playedAt).toLocaleDateString(localeFromLanguage(language))}
+                {formatSafeDateLabel(
+                  item.playedAt,
+                  localeFromLanguage(language),
+                  labels.common?.recently || 'Recently'
+                )}
               </div>
             </div>
             <div className="bg-indigo-50 dark:bg-indigo-400/12 p-2 rounded-full text-indigo-600 dark:text-indigo-200">

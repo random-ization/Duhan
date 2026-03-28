@@ -20,6 +20,7 @@ import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from '../components/ui/sheet';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
 
@@ -38,8 +39,7 @@ const GrammarModulePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const raw = window.localStorage.getItem(AI_PANEL_STORAGE_KEY);
+    const raw = safeGetLocalStorageItem(AI_PANEL_STORAGE_KEY);
     return raw == null ? true : raw !== '0';
   });
 
@@ -94,8 +94,7 @@ const GrammarModulePage: React.FC = () => {
   }, [updateLearningProgressMutation, instituteId, activeSelectedUnit]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(AI_PANEL_STORAGE_KEY, isAiPanelOpen ? '1' : '0');
+    safeSetLocalStorageItem(AI_PANEL_STORAGE_KEY, isAiPanelOpen ? '1' : '0');
   }, [isAiPanelOpen]);
 
   const isGrammarLoading = grammarListQuery === undefined;

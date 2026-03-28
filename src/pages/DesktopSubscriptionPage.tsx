@@ -10,6 +10,11 @@ import PricingSection from '../components/PricingSection';
 import { aRef } from '../utils/convexRefs';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import {
+  isSafeCheckoutUrl,
+  type LemonSqueezyCheckoutRequest,
+  type LemonSqueezyCheckoutResult,
+} from '../utils/lemonsqueezy';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { type CheckoutPlan } from '../utils/subscriptionPlan';
@@ -25,17 +30,7 @@ const DesktopSubscriptionPage: React.FC = () => {
 
   const meta = getRouteMeta(location.pathname);
   const createCheckoutSession = useAction(
-    aRef<
-      {
-        plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
-        userId?: string;
-        userEmail?: string;
-        userName?: string;
-        region?: string;
-        locale?: string;
-      },
-      { checkoutUrl: string }
-    >('lemonsqueezy:createCheckout')
+    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
   );
 
   const showLocalizedPromo =
@@ -50,15 +45,6 @@ const DesktopSubscriptionPage: React.FC = () => {
     () => [pageCopy.featureCards[0], pageCopy.featureCards[1], pageCopy.featureCards[2]],
     [pageCopy.featureCards]
   );
-
-  const isCheckoutUrlSafe = (value: string) => {
-    try {
-      const url = new URL(value);
-      return url.protocol === 'https:' || url.protocol === 'http:';
-    } catch {
-      return false;
-    }
-  };
 
   return (
     <div
@@ -299,7 +285,7 @@ const DesktopSubscriptionPage: React.FC = () => {
                 },
                 { retries: 0 }
               );
-              if (!isCheckoutUrlSafe(checkoutUrl)) {
+              if (!isSafeCheckoutUrl(checkoutUrl)) {
                 throw new Error('Invalid checkout URL returned by provider');
               }
               trackEvent('checkout_success', {

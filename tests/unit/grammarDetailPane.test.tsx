@@ -211,6 +211,35 @@ This is a quoted learning tip.
     expect(window.localStorage.getItem('grammar_reader_red_eye')).toBe('1');
   });
 
+  it('renders safely when reader storage access is blocked', () => {
+    const originalLocalStorage = window.localStorage;
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+        setItem: vi.fn(() => {
+          throw new DOMException('Blocked', 'SecurityError');
+        }),
+      },
+    });
+
+    render(<GrammarDetailPane grammar={markdownGrammar} hasNext={false} hasPrev={false} />);
+
+    expect(screen.getByTestId('grammar-reader-shell')).toHaveAttribute(
+      'data-font-scale',
+      'compact'
+    );
+    expect(screen.getByRole('button', { name: 'Red eye mode' })).toBeInTheDocument();
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  });
+
   it('masks markdown quiz answers in red eye mode and opens font controls from the T trigger', () => {
     render(<GrammarDetailPane grammar={markdownGrammar} hasNext={false} hasPrev={false} />);
 

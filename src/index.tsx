@@ -12,33 +12,24 @@ import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import { getConvexUrl } from './utils/convexConfig';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { initSentry } from './utils/sentry';
-
-const CHUNK_RELOAD_GUARD_KEY = 'duhan:chunk-reload-attempted';
-
-function reloadOnStaleChunk(reason: string) {
-  if (typeof globalThis.window === 'undefined') return;
-  const alreadyTried = globalThis.window.sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY) === '1';
-  if (alreadyTried) {
-    // Avoid infinite reload loops when deployment/caching is still inconsistent.
-    console.error(`[runtime] stale chunk recovery skipped (${reason}): already reloaded once`);
-    return;
-  }
-
-  globalThis.window.sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, '1');
-  globalThis.window.location.reload();
-}
+import { isStaleChunkError, recoverFromStaleChunk } from './utils/staleChunkRecovery';
 
 if (typeof globalThis.window !== 'undefined') {
   globalThis.window.addEventListener('vite:preloadError', event => {
     event.preventDefault();
-    reloadOnStaleChunk('vite:preloadError');
+    recoverFromStaleChunk('vite:preloadError');
   });
 
   globalThis.window.addEventListener('unhandledrejection', event => {
-    const message = String(event.reason?.message || event.reason || '');
-    if (!message.includes('Failed to fetch dynamically imported module')) return;
+    if (!isStaleChunkError(event.reason)) return;
     event.preventDefault();
-    reloadOnStaleChunk('dynamic-import');
+    recoverFromStaleChunk('dynamic-import');
+  });
+
+  globalThis.window.addEventListener('error', event => {
+    if (!isStaleChunkError(event.error || event.message)) return;
+    event.preventDefault();
+    recoverFromStaleChunk('window-error');
   });
 }
 

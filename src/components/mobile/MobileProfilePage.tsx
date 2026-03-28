@@ -26,7 +26,12 @@ import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
 import { Button } from '../ui';
 import { Input } from '../ui';
-import { uploadAvatarImage, validateAvatarFile } from '../../utils/storageUpload';
+import { isIncorrectPasswordError, validatePasswordChange } from '../../utils/profilePassword';
+import {
+  resetFileInputSelection,
+  uploadAvatarImage,
+  validateAvatarFile,
+} from '../../utils/storageUpload';
 
 const MobileAvatarContent = ({
   isUploadingAvatar,
@@ -87,15 +92,21 @@ export const MobileProfilePage: React.FC = () => {
 
   // -- HANDLERS --
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     const validationError = validateAvatarFile(file);
-    if (validationError === 'missing') return;
+    if (validationError === 'missing') {
+      resetFileInputSelection(input);
+      return;
+    }
     if (validationError === 'invalid_type') {
       toast.error(labels.profile?.uploadImageError || 'Please upload an image file');
+      resetFileInputSelection(input);
       return;
     }
     if (validationError === 'too_large') {
       toast.error(labels.profile?.imageTooLarge || 'Image size must be less than 5MB');
+      resetFileInputSelection(input);
       return;
     }
 
@@ -114,6 +125,7 @@ export const MobileProfilePage: React.FC = () => {
       toast.error(t('profile.uploadAvatarFailed', { defaultValue: 'Failed to upload avatar' }));
     } finally {
       setIsUploadingAvatar(false);
+      resetFileInputSelection(input);
     }
   };
 
@@ -125,7 +137,12 @@ export const MobileProfilePage: React.FC = () => {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
+    const validationError = validatePasswordChange(newPassword, confirmPassword);
+    if (validationError === 'weak') {
+      toast.error(t('weakPassword', { defaultValue: 'Password must be at least 6 characters' }));
+      return;
+    }
+    if (validationError === 'mismatch') {
       toast.error(t('passwordMismatch', { defaultValue: 'Passwords do not match' }));
       return;
     }
@@ -136,8 +153,15 @@ export const MobileProfilePage: React.FC = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch {
-      toast.error(t('wrongPassword', { defaultValue: 'Failed to update password' }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (isIncorrectPasswordError(msg)) {
+        toast.error(t('wrongPassword', { defaultValue: 'Incorrect password' }));
+      } else {
+        toast.error(
+          t('profile.changePasswordFailed', { defaultValue: 'Failed to change password' })
+        );
+      }
     } finally {
       setIsChangingPassword(false);
     }

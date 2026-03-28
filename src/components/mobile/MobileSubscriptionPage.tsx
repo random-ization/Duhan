@@ -5,6 +5,12 @@ import { useAction } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { aRef, NoArgs } from '../../utils/convexRefs';
 import { runConvexActionWithRetry } from '../../utils/convexActionRetry';
+import {
+  isSafeCheckoutUrl,
+  type LemonSqueezyCheckoutRequest,
+  type LemonSqueezyCheckoutResult,
+  type LemonSqueezyVariantPrices,
+} from '../../utils/lemonsqueezy';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
@@ -20,34 +26,13 @@ export const MobileSubscriptionPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
   const [loading, setLoading] = useState(false);
-  const [prices, setPrices] = useState<{
-    GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
-    REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
-  } | null>(null);
+  const [prices, setPrices] = useState<LemonSqueezyVariantPrices | null>(null);
 
   const createCheckoutSession = useAction(
-    aRef<
-      {
-        plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
-        userId?: string;
-        userEmail?: string;
-        userName?: string;
-        region?: string;
-        locale?: string;
-        source?: string;
-        returnTo?: string;
-      },
-      { checkoutUrl: string }
-    >('lemonsqueezy:createCheckout')
+    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
   );
   const getVariantPrices = useAction(
-    aRef<
-      NoArgs,
-      {
-        GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
-        REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
-      }
-    >('lemonsqueezy:getVariantPrices')
+    aRef<NoArgs, LemonSqueezyVariantPrices>('lemonsqueezy:getVariantPrices')
   );
 
   const showLocalizedPromo =
@@ -131,6 +116,9 @@ export const MobileSubscriptionPage: React.FC = () => {
         },
         { retries: 1, initialDelayMs: 250 }
       );
+      if (!isSafeCheckoutUrl(checkoutUrl)) {
+        throw new Error('Invalid checkout URL returned by provider');
+      }
       trackEvent('checkout_success', {
         language: i18n.language,
         plan: billingInterval,

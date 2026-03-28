@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
+import { getMediaQueryList, matchesMediaQuery, subscribeToMediaQuery } from '../utils/mediaQuery';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -26,7 +28,7 @@ const isTheme = (value: string | null): value is Theme =>
   value === 'light' || value === 'dark' || value === 'system';
 
 const getSystemTheme = (): ResolvedTheme =>
-  window.matchMedia(THEME_MEDIA_QUERY).matches ? 'dark' : 'light';
+  matchesMediaQuery(THEME_MEDIA_QUERY) ? 'dark' : 'light';
 
 const applyResolvedTheme = (resolvedTheme: ResolvedTheme) => {
   const root = document.documentElement;
@@ -52,13 +54,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       return defaultTheme;
     }
 
-    const storedTheme = window.localStorage.getItem(storageKey);
+    const storedTheme = safeGetLocalStorageItem(storageKey);
     return isTheme(storedTheme) ? storedTheme : defaultTheme;
   });
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(THEME_MEDIA_QUERY);
+    const mediaQuery = getMediaQueryList(THEME_MEDIA_QUERY);
 
     const getResolvedTheme = (currentTheme: Theme): ResolvedTheme =>
       currentTheme === 'system' ? getSystemTheme() : currentTheme;
@@ -77,13 +79,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       }
     };
 
-    mediaQuery.addEventListener('change', handleSystemChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemChange);
+    return subscribeToMediaQuery(mediaQuery, handleSystemChange);
   }, [theme]);
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);
-    window.localStorage.setItem(storageKey, nextTheme);
+    safeSetLocalStorageItem(storageKey, nextTheme);
   };
 
   const toggleTheme = () => {

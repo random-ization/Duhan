@@ -13,18 +13,16 @@ import { GlobalModalContainer } from '../modals/GlobalModalContainer';
 import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
+import { matchesMediaQuery } from '../../utils/mediaQuery';
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
-  const displayModeStandalone = globalThis.window.matchMedia('(display-mode: standalone)').matches;
+  const displayModeStandalone = matchesMediaQuery('(display-mode: standalone)');
   const nav = globalThis.navigator as Navigator & { standalone?: boolean };
   const isStandalone = displayModeStandalone || nav.standalone === true;
-  const prefersReducedMotion = globalThis.window.matchMedia(
-    '(prefers-reduced-motion: reduce)'
-  ).matches;
+  const prefersReducedMotion = matchesMediaQuery('(prefers-reduced-motion: reduce)');
   const mobileLikeViewport =
-    globalThis.window.matchMedia('(pointer: coarse)').matches ||
-    globalThis.window.matchMedia('(max-width: 1023px)').matches;
+    matchesMediaQuery('(pointer: coarse)') || matchesMediaQuery('(max-width: 1023px)');
 
   return !isStandalone && !prefersReducedMotion && !mobileLikeViewport;
 };

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { TopikQuestion, TopikExam } from '../types';
+import { safeRemoveLocalStorageItem } from '../utils/browserStorage';
 import { logger } from '../utils/logger';
 
 /**
@@ -131,11 +132,7 @@ export const prefetchQuestions = async (url: string): Promise<void> => {
  */
 export const clearQuestionsCache = (examId: string): void => {
   const cacheKey = `topik-questions-${examId}`;
-  try {
-    localStorage.removeItem(cacheKey);
-  } catch {
-    // localStorage \u4e0d\u53ef\u7528
-  }
+  safeRemoveLocalStorageItem(cacheKey);
 };
 
 export default useTopikQuestions;

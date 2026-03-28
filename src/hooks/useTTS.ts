@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAction } from 'convex/react';
 import { aRef } from '../utils/convexRefs';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 type SpeakActionArgs = {
   text: string;
@@ -69,11 +70,7 @@ function createTraceId(): string {
 function shouldLogTtsTiming(): boolean {
   if (globalThis.window === undefined) return false;
   if (import.meta.env.DEV) return true;
-  try {
-    return localStorage.getItem('tts:timing') === '1';
-  } catch {
-    return false;
-  }
+  return safeGetLocalStorageItem('tts:timing') === '1';
 }
 
 function logTtsTiming(payload: Record<string, unknown>) {
@@ -522,7 +519,7 @@ function buildCacheKey(text: string, voice: string, rate?: string, pitch?: strin
 function loadPersistedCache(): Map<string, string> {
   if (globalThis.window === undefined) return new Map();
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = safeGetLocalStorageItem(CACHE_KEY);
     if (!raw) return new Map();
     const entries = JSON.parse(raw);
     if (!Array.isArray(entries)) return new Map();
@@ -550,7 +547,7 @@ function persistCache(cache: Map<string, string>) {
   if (globalThis.window === undefined) return;
   try {
     const entries = Array.from(cache.entries());
-    localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
+    safeSetLocalStorageItem(CACHE_KEY, JSON.stringify(entries));
   } catch {
     return;
   }

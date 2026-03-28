@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPricingDetailsPath } from '../../src/utils/subscriptionPlan';
+import { buildPricingDetailsPath, isCheckoutPlan } from '../../src/utils/subscriptionPlan';
 
 describe('buildPricingDetailsPath', () => {
   it('returns base path when plan is missing', () => {
@@ -22,5 +22,15 @@ describe('buildPricingDetailsPath', () => {
         returnTo: '/topik',
       })
     ).toBe('/pricing/details?plan=ANNUAL&source=dashboard_banner&returnTo=%2Ftopik');
+  });
+});
+
+describe('isCheckoutPlan', () => {
+  it('accepts known checkout plans', () => {
+    expect(isCheckoutPlan('ANNUAL')).toBe(true);
+  });
+
+  it('rejects unknown checkout plans', () => {
+    expect(isCheckoutPlan('WEEKLY')).toBe(false);
   });
 });

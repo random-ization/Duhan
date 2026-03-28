@@ -3,7 +3,7 @@ import { Play, Library, Search, Disc, History as HistoryIcon, ArrowLeft } from '
 import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
@@ -15,6 +15,9 @@ import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobilePodcastDashboard } from '../components/mobile/MobilePodcastDashboard';
+import { buildPodcastChannelPath, buildPodcastSearchPath } from '../utils/podcastRoutes';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
+import { formatSafeDateLabel } from '../utils/dateLabel';
 import type { Language } from '../types';
 
 interface PodcastChannel {
@@ -72,15 +75,6 @@ const resolveLabel = (
   return fallback;
 };
 
-const buildChannelPath = (channel: Partial<PodcastChannel>): string => {
-  const params = new URLSearchParams();
-  const channelId = channel.itunesId || channel.id || channel._id;
-  if (channelId) params.set('id', String(channelId));
-  if (channel.feedUrl) params.set('feedUrl', channel.feedUrl);
-  const query = params.toString();
-  return `/podcasts/channel${query ? `?${query}` : ''}`;
-};
-
 const useScrollButtons = () => {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
@@ -133,8 +127,8 @@ const useCachedKoreanChart = ({
 
     if (typeof window !== 'undefined') {
       try {
-        const cachedRaw = window.localStorage.getItem(CHART_CACHE_KEY);
-        const cachedTs = window.localStorage.getItem(CHART_CACHE_TS_KEY);
+        const cachedRaw = safeGetLocalStorageItem(CHART_CACHE_KEY);
+        const cachedTs = safeGetLocalStorageItem(CHART_CACHE_TS_KEY);
         cachedAt = cachedTs ? Number(cachedTs) : 0;
         if (cachedRaw) cached = JSON.parse(cachedRaw) as PodcastChannel[];
       } catch {
@@ -164,10 +158,8 @@ const useCachedKoreanChart = ({
         if (cancelled) return;
         const next = results ?? [];
         setChartChannels(next);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(CHART_CACHE_KEY, JSON.stringify(next));
-          window.localStorage.setItem(CHART_CACHE_TS_KEY, String(Date.now()));
-        }
+        safeSetLocalStorageItem(CHART_CACHE_KEY, JSON.stringify(next));
+        safeSetLocalStorageItem(CHART_CACHE_TS_KEY, String(Date.now()));
       })
       .catch(() => {
         if (cancelled) return;
@@ -195,12 +187,14 @@ const FeaturedHeroSection = ({
   labels,
   podcastMsgs,
   navigate,
+  currentPath,
 }: {
   lastPlayed: HistoryItem | null;
   featuredChannel: PodcastChannel | null;
   labels: Labels;
   podcastMsgs: ReturnType<typeof getPodcastMessages>;
   navigate: ReturnType<typeof useLocalizedNavigate>;
+  currentPath: string;
 }) => {
   if (lastPlayed) {
     return (
@@ -208,7 +202,7 @@ const FeaturedHeroSection = ({
         type="button"
         size="auto"
         onClick={() =>
-          navigate('/podcasts/player', {
+          navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
             state: {
               episode: {
                 guid: lastPlayed.episodeGuid,
@@ -255,17 +249,12 @@ const FeaturedHeroSection = ({
   }
 
   if (featuredChannel) {
-    const params = new URLSearchParams();
-    const channelId = featuredChannel.itunesId || featuredChannel.id;
-    if (channelId) params.set('id', String(channelId));
-    if (featuredChannel.feedUrl) params.set('feedUrl', featuredChannel.feedUrl);
-    const query = params.toString();
     return (
       <Button
         type="button"
         size="auto"
         onClick={() =>
-          navigate(`/podcasts/channel${query ? `?${query}` : ''}`, {
+          navigate(buildPodcastChannelPath(featuredChannel, currentPath), {
             state: { channel: featuredChannel },
           })
         }
@@ -347,9 +336,11 @@ const HorizontalScrollButtons = ({
 const SubscriptionChannelCard = ({
   channel,
   navigate,
+  currentPath,
 }: {
   channel: PodcastChannel;
   navigate: NavigateFn;
+  currentPath: string;
 }) => {
   const cardKey = channel.itunesId || channel.id || channel._id || channel.title;
   return (
@@ -357,7 +348,9 @@ const SubscriptionChannelCard = ({
       key={cardKey}
       type="button"
       size="auto"
-      onClick={() => navigate(buildChannelPath(channel), { state: { channel } })}
+      onClick={() =>
+        navigate(buildPodcastChannelPath(channel, currentPath), { state: { channel } })
+      }
       className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal whitespace-normal"
     >
       <div className="w-full aspect-square rounded-xl border-2 border-border overflow-hidden bg-muted">
@@ -389,6 +382,7 @@ const SubscriptionsBody = ({
   subscriptionsCanRight,
   scrollSubscriptions,
   navigate,
+  currentPath,
 }: {
   user: unknown;
   labels: Labels;
@@ -399,6 +393,7 @@ const SubscriptionsBody = ({
   subscriptionsCanRight: boolean;
   scrollSubscriptions: (direction: 'left' | 'right') => void;
   navigate: NavigateFn;
+  currentPath: string;
 }) => {
   if (!user) {
     return (
@@ -456,6 +451,7 @@ const SubscriptionsBody = ({
             key={channel.itunesId || channel.id || channel._id || channel.title}
             channel={channel}
             navigate={navigate}
+            currentPath={currentPath}
           />
         ))}
       </div>
@@ -480,6 +476,7 @@ const SubscriptionsSection = ({
   subscriptionsCanRight,
   scrollSubscriptions,
   navigate,
+  currentPath,
 }: {
   user: unknown;
   labels: Labels;
@@ -490,6 +487,7 @@ const SubscriptionsSection = ({
   subscriptionsCanRight: boolean;
   scrollSubscriptions: (direction: 'left' | 'right') => void;
   navigate: NavigateFn;
+  currentPath: string;
 }) => (
   <section className="space-y-4">
     <div className="flex items-center gap-2 text-foreground">
@@ -508,6 +506,7 @@ const SubscriptionsSection = ({
       subscriptionsCanRight={subscriptionsCanRight}
       scrollSubscriptions={scrollSubscriptions}
       navigate={navigate}
+      currentPath={currentPath}
     />
   </section>
 );
@@ -524,6 +523,7 @@ const TrendingSection = ({
   scrollTrending,
   labels,
   navigate,
+  currentPath,
 }: {
   activeTab: 'community' | 'weekly';
   setActiveTab: (tab: 'community' | 'weekly') => void;
@@ -536,6 +536,7 @@ const TrendingSection = ({
   scrollTrending: (direction: 'left' | 'right') => void;
   labels: Labels;
   navigate: ReturnType<typeof useLocalizedNavigate>;
+  currentPath: string;
 }) => (
   <section className="space-y-4">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -588,12 +589,7 @@ const TrendingSection = ({
             type="button"
             size="auto"
             onClick={() => {
-              const params = new URLSearchParams();
-              const channelId = pod.itunesId || pod.id;
-              if (channelId) params.set('id', String(channelId));
-              if (pod.feedUrl) params.set('feedUrl', pod.feedUrl);
-              const query = params.toString();
-              navigate(`/podcasts/channel${query ? `?${query}` : ''}`, { state: { channel: pod } });
+              navigate(buildPodcastChannelPath(pod, currentPath), { state: { channel: pod } });
             }}
             variant="ghost"
             className="min-w-[220px] max-w-[220px] text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition flex flex-col gap-3 snap-start font-normal whitespace-normal"
@@ -672,6 +668,7 @@ const HistorySection = ({
   language,
   labels,
   navigate,
+  currentPath,
 }: {
   history: HistoryItem[];
   historyRef: React.RefObject<HTMLDivElement | null>;
@@ -682,6 +679,7 @@ const HistorySection = ({
   language: Language;
   labels: Labels;
   navigate: ReturnType<typeof useLocalizedNavigate>;
+  currentPath: string;
 }) => {
   if (history.length === 0) return null;
   return (
@@ -701,7 +699,7 @@ const HistorySection = ({
               type="button"
               size="auto"
               onClick={() =>
-                navigate('/podcasts/player', {
+                navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
                   state: {
                     episode: {
                       guid: record.episodeGuid,
@@ -735,7 +733,11 @@ const HistorySection = ({
                 <div className="text-xs font-bold text-muted-foreground truncate flex items-center gap-1">
                   {record.channelName}
                   <span className="text-muted-foreground">•</span>
-                  {new Date(record.playedAt).toLocaleDateString(localeFromLanguage(language))}
+                  {formatSafeDateLabel(
+                    record.playedAt,
+                    localeFromLanguage(language),
+                    resolveLabel(labels, [['common', 'recently']], 'Recently')
+                  )}
                 </div>
               </div>
             </Button>
@@ -832,7 +834,7 @@ const SearchAndFilterBar = ({
       />
     </form>
     <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
-      <Button type="button" variant="default" size="default" className="whitespace-nowrap">
+      <span className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-xl border-2 border-primary bg-primary px-4 text-sm font-bold text-primary-foreground shadow-pop">
         {resolveLabel(
           labels,
           [
@@ -841,8 +843,8 @@ const SearchAndFilterBar = ({
           ],
           'All'
         )}
-      </Button>
-      <Button type="button" variant="outline" size="default" className="whitespace-nowrap">
+      </span>
+      <span className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-xl border-2 border-border bg-card px-4 text-sm font-bold text-muted-foreground">
         {resolveLabel(
           labels,
           [
@@ -851,10 +853,10 @@ const SearchAndFilterBar = ({
           ],
           'Beginner'
         )}
-      </Button>
-      <Button type="button" variant="outline" size="default" className="whitespace-nowrap">
+      </span>
+      <span className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-xl border-2 border-border bg-card px-4 text-sm font-bold text-muted-foreground">
         {resolveLabel(labels, [['dashboard', 'podcast', 'dailyConv']], 'Daily Conv')}
-      </Button>
+      </span>
     </div>
   </div>
 );
@@ -865,12 +867,14 @@ const FeaturedSection = ({
   podcastMsgs,
   featuredChannel,
   navigate,
+  currentPath,
 }: {
   lastPlayed: HistoryItem | null;
   labels: Labels;
   podcastMsgs: ReturnType<typeof getPodcastMessages>;
   featuredChannel: PodcastChannel | null;
   navigate: NavigateFn;
+  currentPath: string;
 }) => (
   <section className="space-y-4">
     <div className="flex items-center gap-2 text-foreground">
@@ -891,6 +895,7 @@ const FeaturedSection = ({
       labels={labels}
       podcastMsgs={podcastMsgs}
       navigate={navigate}
+      currentPath={currentPath}
     />
   </section>
 );
@@ -926,6 +931,7 @@ const DesktopPodcastDashboard = ({
   historyCanRight,
   scrollHistory,
   language,
+  currentPath,
 }: {
   navigate: NavigateFn;
   backPath: string;
@@ -957,6 +963,7 @@ const DesktopPodcastDashboard = ({
   historyCanRight: boolean;
   scrollHistory: (direction: 'left' | 'right') => void;
   language: Language;
+  currentPath: string;
 }) => (
   <div
     className="min-h-screen bg-background p-6 md:p-12 font-sans pb-32"
@@ -988,6 +995,7 @@ const DesktopPodcastDashboard = ({
           podcastMsgs={podcastMsgs}
           featuredChannel={featuredChannel}
           navigate={navigate}
+          currentPath={currentPath}
         />
 
         <SubscriptionsSection
@@ -1000,6 +1008,7 @@ const DesktopPodcastDashboard = ({
           subscriptionsCanRight={subscriptionsCanRight}
           scrollSubscriptions={scrollSubscriptions}
           navigate={navigate}
+          currentPath={currentPath}
         />
 
         <TrendingSection
@@ -1014,6 +1023,7 @@ const DesktopPodcastDashboard = ({
           scrollTrending={scrollTrending}
           labels={labels}
           navigate={navigate}
+          currentPath={currentPath}
         />
 
         <HistorySection
@@ -1026,6 +1036,7 @@ const DesktopPodcastDashboard = ({
           language={language}
           labels={labels}
           navigate={navigate}
+          currentPath={currentPath}
         />
       </div>
     </div>
@@ -1035,6 +1046,7 @@ const DesktopPodcastDashboard = ({
 export default function PodcastDashboard() {
   const navigate = useLocalizedNavigate();
   const { user, language } = useAuth();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
@@ -1042,6 +1054,7 @@ export default function PodcastDashboard() {
   const backPath = React.useMemo(() => {
     return resolveSafeReturnTo(searchParams.get('returnTo'), '/media?tab=podcasts');
   }, [searchParams]);
+  const currentPath = `${location.pathname}${location.search}`;
 
   // State
   const [activeTab, setActiveTab] = useState<'community' | 'weekly'>('community');
@@ -1115,9 +1128,9 @@ export default function PodcastDashboard() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/podcasts/search?q=${encodeURIComponent(searchTerm)}`);
-    }
+    const target = buildPodcastSearchPath(searchTerm, currentPath);
+    if (!target) return;
+    navigate(target);
   };
 
   const lastPlayed = history.length > 0 ? history[0] : null;
@@ -1169,6 +1182,7 @@ export default function PodcastDashboard() {
       historyCanRight={historyCanRight}
       scrollHistory={scrollHistory}
       language={language}
+      currentPath={currentPath}
     />
   );
 }

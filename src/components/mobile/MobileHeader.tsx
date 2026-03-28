@@ -15,9 +15,11 @@ import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
 import { qRef } from '../../utils/convexRefs';
+import { notify } from '../../utils/notify';
 import { Button } from '../ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { MobileHeaderAction, RouteUiConfig } from '../../config/routes.config';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 
 type HeaderStats = {
   streak: number;
@@ -42,14 +44,14 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   const [menuOpen, setMenuOpen] = useState(false);
   const [fontScaleIndex, setFontScaleIndex] = useState(() => {
     if (typeof window === 'undefined') return 1;
-    const saved = window.localStorage.getItem('mobile_font_scale_index');
+    const saved = safeGetLocalStorageItem('mobile_font_scale_index');
     const parsed = saved ? Number(saved) : 1;
     return Number.isInteger(parsed) && parsed >= 0 && parsed < FONT_SCALES.length ? parsed : 1;
   });
   const [favorites, setFavorites] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
-      const raw = window.localStorage.getItem('mobile_route_favorites');
+      const raw = safeGetLocalStorageItem('mobile_route_favorites');
       const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -74,7 +76,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     const next = (fontScaleIndex + 1) % FONT_SCALES.length;
     setFontScaleIndex(next);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('mobile_font_scale_index', String(next));
+      safeSetLocalStorageItem('mobile_font_scale_index', String(next));
       document.documentElement.style.setProperty('--mobile-font-scale', String(FONT_SCALES[next]));
     }
   };
@@ -93,20 +95,30 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
       : [...favorites, pathWithoutLang];
     setFavorites(next);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('mobile_route_favorites', JSON.stringify(next));
+      safeSetLocalStorageItem('mobile_route_favorites', JSON.stringify(next));
     }
   };
 
   const handleShare = async () => {
     const url = typeof window === 'undefined' ? '' : window.location.href;
     try {
-      if (navigator.share) {
-        await navigator.share({ title: document.title, url });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
+      if (globalThis.navigator.share) {
+        await globalThis.navigator.share({ title: document.title, url });
+        return;
       }
-    } catch {
-      // ignored: user cancelled or unsupported
+
+      if (globalThis.navigator.clipboard?.writeText) {
+        await globalThis.navigator.clipboard.writeText(url);
+        notify.success(t('common.linkCopied', { defaultValue: 'Share link copied' }));
+        return;
+      }
+
+      notify.info(url);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      notify.error(t('common.shareFailed', { defaultValue: 'Unable to share right now.' }));
     } finally {
       setMenuOpen(false);
     }

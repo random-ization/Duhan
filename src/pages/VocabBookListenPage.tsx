@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import {
@@ -24,9 +24,19 @@ import { VocabBookListenSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import { buildVocabBookPath } from '../utils/vocabBookRoutes';
+import {
+  matchesVocabBookPracticeCategory,
+  normalizeVocabBookPracticeCategory,
+  type VocabBookPracticeCategory,
+} from '../utils/vocabBookPractice';
+import {
+  buildVocabBookPracticeSessionStorageKey,
+  loadVocabBookListenSessionState,
+  persistVocabBookListenSessionState,
+} from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
 
-type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
 type ListenMode = 'BASIC' | 'ADVANCED';
 const PAGE_SIZE = 80;
 const PREFETCH_THRESHOLD = 10;
@@ -80,6 +90,15 @@ const VocabBookListenPage: React.FC = () => {
   const labels = useMemo(() => getLabels(language), [language]);
   const meaningVoice = useMemo(() => resolveMeaningVoice(language), [language]);
   const [params] = useSearchParams();
+  const backPath = useMemo(() => buildVocabBookPath(params), [params]);
+  const sessionStorageKey = useMemo(
+    () => buildVocabBookPracticeSessionStorageKey('listen', params),
+    [params]
+  );
+  const persistedState = useMemo(
+    () => loadVocabBookListenSessionState(sessionStorageKey),
+    [sessionStorageKey]
+  );
   const { speak, stop } = useTTS();
 
   useEffect(() => stop, [stop]);
@@ -97,15 +116,12 @@ const VocabBookListenPage: React.FC = () => {
         : undefined,
     [selected]
   );
-  const category: VocabBookCategory =
-    categoryParam === 'UNLEARNED' || categoryParam === 'MASTERED' || categoryParam === 'DUE'
-      ? (categoryParam as VocabBookCategory)
-      : 'DUE';
+  const category: VocabBookPracticeCategory = normalizeVocabBookPracticeCategory(categoryParam);
 
   const [pageCursor, setPageCursor] = useState<string | null>(null);
   const [loadedItems, setLoadedItems] = useState<VocabBookItemDto[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => persistedState?.index ?? 0);
   const indexRef = useRef(0);
 
   const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
@@ -134,42 +150,56 @@ const VocabBookListenPage: React.FC = () => {
   const items = useMemo<VocabBookItemDto[]>(() => loadedItems, [loadedItems]);
 
   const filtered = useMemo(() => {
-    return items.filter(item => {
-      const p = item.progress;
-      const isMastered = p.status === 'MASTERED';
-      const isUnlearned = p.state === 0 || p.status === 'NEW';
-      let c: VocabBookCategory = 'DUE';
-      if (isMastered) {
-        c = 'MASTERED';
-      } else if (isUnlearned) {
-        c = 'UNLEARNED';
-      }
-      return c === category;
-    });
+    return items.filter(item => matchesVocabBookPracticeCategory(item.progress, category));
   }, [items, category]);
 
-  const [mode, setMode] = useState<ListenMode>('BASIC');
+  const [mode, setMode] = useState<ListenMode>(() => persistedState?.mode ?? 'BASIC');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [playMeaning, setPlayMeaning] = useState(true);
-  const [playExampleTranslation, setPlayExampleTranslation] = useState(true);
+  const [playMeaning, setPlayMeaning] = useState(() => persistedState?.playMeaning ?? true);
+  const [playExampleTranslation, setPlayExampleTranslation] = useState(
+    () => persistedState?.playExampleTranslation ?? true
+  );
 
-  const [repeatCount, setRepeatCount] = useState<1 | 2 | 3 | 'INFINITE'>(2);
-  const [speed, setSpeed] = useState<0.8 | 1 | 1.2 | 1.4>(1);
+  const [repeatCount, setRepeatCount] = useState<1 | 2 | 3 | 'INFINITE'>(
+    () => persistedState?.repeatCount ?? 2
+  );
+  const [speed, setSpeed] = useState<0.8 | 1 | 1.2 | 1.4>(() => persistedState?.speed ?? 1);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageCursor(null);
     setLoadedItems([]);
     setNextCursor(null);
-    setIndex(0);
-  }, [category, q, selected]);
+    setIndex(persistedState?.index ?? 0);
+    setMode(persistedState?.mode ?? 'BASIC');
+    setPlayMeaning(persistedState?.playMeaning ?? true);
+    setPlayExampleTranslation(persistedState?.playExampleTranslation ?? true);
+    setRepeatCount(persistedState?.repeatCount ?? 2);
+    setSpeed(persistedState?.speed ?? 1);
+  }, [persistedState, sessionStorageKey]);
 
   useEffect(() => {
     indexRef.current = index;
   }, [index]);
 
   const total = filtered.length;
+  useEffect(() => {
+    if (total === 0) return;
+    setIndex(prev => Math.min(prev, total - 1));
+  }, [total]);
   const current = filtered[index];
+
+  useEffect(() => {
+    persistVocabBookListenSessionState(sessionStorageKey, {
+      index,
+      mode,
+      playMeaning,
+      playExampleTranslation,
+      repeatCount,
+      speed,
+      timestamp: Date.now(),
+    });
+  }, [index, mode, playMeaning, playExampleTranslation, repeatCount, speed, sessionStorageKey]);
 
   useEffect(() => {
     if (!nextCursor || loadingMore || total === 0) return;
@@ -293,7 +323,7 @@ const VocabBookListenPage: React.FC = () => {
           type="button"
           variant="ghost"
           size="auto"
-          onClick={() => navigate('/vocab-book')}
+          onClick={() => navigate(backPath)}
           className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-amber-300 dark:hover:border-amber-300/35 transition-all duration-200"
           aria-label={labels.dashboard?.common?.back || 'Back'}
         >

@@ -7,10 +7,6 @@ export const grantAccess = internalMutation({
   args: {
     customerEmail: v.string(),
     plan: v.string(),
-    creemCustomerId: v.optional(v.string()),
-    creemSubscriptionId: v.optional(v.string()),
-    lemonSqueezyCustomerId: v.optional(v.string()),
-    lemonSqueezySubscriptionId: v.optional(v.string()),
     userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

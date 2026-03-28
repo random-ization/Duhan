@@ -10,6 +10,7 @@ import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useUserActions } from './hooks/useUserActions';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
+import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
 
 const AppRoutes = lazy(() => import('./routes').then(m => ({ default: m.AppRoutes })));
 
@@ -32,6 +33,10 @@ function App() {
   const { selectedInstitute, selectedLevel } = useLearningSelection();
 
   // Track learning progress when user changes institute/level
+  useEffect(() => {
+    finalizeStaleChunkRecovery();
+  }, []);
+
   useEffect(() => {
     if (user && selectedInstitute && Number.isFinite(selectedLevel)) {
       // Prevent feedback loop/concurrent updates

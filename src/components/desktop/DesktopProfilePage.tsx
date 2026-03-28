@@ -19,7 +19,12 @@ import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
 import { ProfileSettingsTab } from '../../pages/profile/tabs/ProfileSettingsTab';
 import { useExamStats } from '../../pages/profile/hooks/useExamStats';
-import { uploadAvatarImage, validateAvatarFile } from '../../utils/storageUpload';
+import { isIncorrectPasswordError, validatePasswordChange } from '../../utils/profilePassword';
+import {
+  resetFileInputSelection,
+  uploadAvatarImage,
+  validateAvatarFile,
+} from '../../utils/storageUpload';
 
 interface ProfileProps {
   language: Language;
@@ -199,15 +204,21 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     const validationError = validateAvatarFile(file);
-    if (validationError === 'missing') return;
+    if (validationError === 'missing') {
+      resetFileInputSelection(input);
+      return;
+    }
     if (validationError === 'invalid_type') {
       error(labels.profile?.uploadImageError || 'Please upload an image file');
+      resetFileInputSelection(input);
       return;
     }
     if (validationError === 'too_large') {
       error(labels.profile?.imageTooLarge || 'Image size must be less than 5MB');
+      resetFileInputSelection(input);
       return;
     }
 
@@ -226,16 +237,18 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
       error(labels.profile?.uploadAvatarFailed || 'Failed to upload avatar');
     } finally {
       setIsUploadingAvatar(false);
+      resetFileInputSelection(input);
     }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
+    const validationError = validatePasswordChange(newPassword, confirmPassword);
+    if (validationError === 'weak') {
       error(labels.weakPassword);
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (validationError === 'mismatch') {
       error(labels.passwordMismatch);
       return;
     }
@@ -251,11 +264,7 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
       setConfirmPassword('');
     } catch (err: unknown) {
       const msg = (err as Error).message || '';
-      if (
-        msg.includes('incorrect') ||
-        msg.includes('wrong') ||
-        msg.includes('INCORRECT_PASSWORD')
-      ) {
+      if (isIncorrectPasswordError(msg)) {
         error(labels.wrongPassword || 'Incorrect password');
       } else {
         error(labels.profile?.changePasswordFailed || 'Failed to change password');

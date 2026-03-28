@@ -15,6 +15,7 @@ import { ENTITLEMENTS, NoArgs, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
 import { normalizeLanguage } from '../utils/languageUtils';
 import { clearDashboardUpgradeBannerSession } from '../utils/upgradeReminder';
+import { safeRemoveLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import {
   canAccessLegacyContent,
   canAccessTopikExam,
@@ -68,8 +69,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 
   const setLanguage = useCallback((lang: Language) => {
-    localStorage.setItem('preferredLanguage', lang);
-    localStorage.setItem('preferredLanguageSource', 'user');
+    safeSetLocalStorageItem('preferredLanguage', lang);
+    safeSetLocalStorageItem('preferredLanguageSource', 'user');
     document.documentElement.lang = lang;
     i18n.changeLanguage(lang);
   }, []);
@@ -134,8 +135,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     await signOut();
     clearDashboardUpgradeBannerSession();
-    localStorage.removeItem('token'); // cleanup legacy
-    localStorage.removeItem('userId'); // cleanup legacy
+    safeRemoveLocalStorageItem('token'); // cleanup legacy
+    safeRemoveLocalStorageItem('userId'); // cleanup legacy
   }, [signOut]);
 
   const refreshUser = useCallback(async () => {

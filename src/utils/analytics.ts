@@ -39,7 +39,7 @@ type AnalyticsEventPayloadMap = {
   };
   payment_activation_success: {
     language: string;
-    provider: 'creem' | 'lemonsqueezy' | 'unknown';
+    provider: 'lemonsqueezy';
   };
   day1_retention: {
     language: string;

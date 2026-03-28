@@ -20,6 +20,7 @@ import type { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
 import VocabLearnOverlay from '../../features/vocab/components/VocabLearnOverlay';
 import FlashcardSettingsModal from '../../features/vocab/components/FlashcardSettingsModal';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { Button } from '../ui';
 
@@ -93,7 +94,7 @@ export default function MobileVocabView({
       return { autoTTS: false, cardFront: 'KOREAN', ratingMode: 'FOUR_BUTTONS' };
     }
     try {
-      const raw = window.localStorage.getItem(settingsStorageKey);
+      const raw = safeGetLocalStorageItem(settingsStorageKey);
       if (!raw) return { autoTTS: false, cardFront: 'KOREAN', ratingMode: 'FOUR_BUTTONS' };
       const parsed = JSON.parse(raw) as Partial<{
         autoTTS: boolean;
@@ -113,7 +114,7 @@ export default function MobileVocabView({
   useEffect(() => {
     if (globalThis.window === undefined) return;
     try {
-      window.localStorage.setItem(settingsStorageKey, JSON.stringify(flashcardSettings));
+      safeSetLocalStorageItem(settingsStorageKey, JSON.stringify(flashcardSettings));
     } catch {
       // ignore
     }

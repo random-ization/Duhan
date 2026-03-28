@@ -58,4 +58,28 @@ describe('MobilePodcastDashboard returnTo behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
     expect(navigateMock).toHaveBeenCalledWith('/media?tab=podcasts');
   });
+
+  it('submits podcast searches from the mobile dashboard', () => {
+    renderWithRouter('/podcasts');
+
+    fireEvent.change(screen.getByPlaceholderText('podcast.searchPlaceholder'), {
+      target: { value: 'talk to me' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/podcasts/search?q=talk+to+me&returnTo=%2Fpodcasts');
+  });
+
+  it('preserves the current dashboard path when opening search', () => {
+    renderWithRouter('/podcasts?returnTo=%2Fmedia%3Ftab%3Dpodcasts');
+
+    fireEvent.change(screen.getByPlaceholderText('podcast.searchPlaceholder'), {
+      target: { value: 'talk to me' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/podcasts/search?q=talk+to+me&returnTo=%2Fpodcasts%3FreturnTo%3D%252Fmedia%253Ftab%253Dpodcasts'
+    );
+  });
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { Search, Podcast, Loader2, ArrowLeft } from 'lucide-react';
 import { useAction } from 'convex/react';
 import { PodcastChannel } from '../types';
@@ -13,6 +13,8 @@ import { aRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobilePodcastSearch } from '../components/mobile/MobilePodcastSearch';
+import { buildPodcastChannelPath } from '../utils/podcastRoutes';
+import { resolveSafeReturnTo } from '../utils/navigation';
 
 interface SearchResultsContentProps {
   loading: boolean;
@@ -21,6 +23,7 @@ interface SearchResultsContentProps {
   query: string;
   labels: Labels;
   navigate: (path: string) => void;
+  buildChannelHref: (channel: PodcastChannel) => string;
 }
 
 const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
@@ -30,6 +33,7 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
   query,
   labels,
   navigate,
+  buildChannelHref,
 }) => {
   if (loading) {
     return (
@@ -65,11 +69,7 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
               key={channel.itunesId || channel.id}
               type="button"
               size="auto"
-              onClick={() =>
-                navigate(
-                  `/podcasts/channel?id=${channel.itunesId || channel.id}&feedUrl=${encodeURIComponent(channel.feedUrl)}`
-                )
-              }
+              onClick={() => navigate(buildChannelHref(channel))}
               variant="ghost"
               className="w-full text-left bg-card p-4 rounded-2xl border-2 border-foreground shadow-sm hover:shadow-pop hover:-translate-y-1 transition cursor-pointer flex gap-4 group focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-300 font-normal"
             >
@@ -126,6 +126,7 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
 
 const DesktopPodcastSearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const query = searchParams.get('q') || '';
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -135,6 +136,8 @@ const DesktopPodcastSearchPage = () => {
   const [results, setResults] = useState<PodcastChannel[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const currentPath = `${location.pathname}${location.search}`;
 
   const searchPodcastsAction = useAction(
     aRef<{ term: string }, PodcastChannel[]>('podcastActions:searchPodcasts')
@@ -166,7 +169,10 @@ const DesktopPodcastSearchPage = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      setSearchParams({ q: searchTerm });
+      const next = new URLSearchParams();
+      next.set('q', searchTerm.trim());
+      next.set('returnTo', backPath);
+      setSearchParams(next);
     }
   };
 
@@ -186,7 +192,7 @@ const DesktopPodcastSearchPage = () => {
               type="button"
               variant="outline"
               size="icon"
-              onClick={() => navigate('/podcasts')}
+              onClick={() => navigate(backPath)}
               className="w-12 h-12 border-2 border-foreground rounded-xl shadow-pop hover:shadow-pop-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all duration-150"
               aria-label={labels.errors?.backToHome || 'Back'}
             >
@@ -233,6 +239,7 @@ const DesktopPodcastSearchPage = () => {
             query={query}
             labels={labels}
             navigate={navigate}
+            buildChannelHref={channel => buildPodcastChannelPath(channel, currentPath)}
           />
         </div>
       </div>

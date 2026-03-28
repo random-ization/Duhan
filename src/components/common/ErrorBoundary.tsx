@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { WithTranslation, withTranslation } from 'react-i18next';
 
 import { logger } from '../../utils/logger';
+import { isStaleChunkError, recoverFromStaleChunk } from '../../utils/staleChunkRecovery';
 import { Button } from '../ui';
 import { Card, CardContent } from '../ui';
 
@@ -18,19 +19,6 @@ interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: React.ErrorInfo | null;
-}
-
-const CHUNK_RELOAD_GUARD_KEY = 'duhan:chunk-reload-attempted';
-
-function isChunkLoadError(error: Error | null): boolean {
-  if (!error) return false;
-  const message = String(error.message || error).toLowerCase();
-  return (
-    message.includes('failed to fetch dynamically imported module') ||
-    message.includes('chunkloaderror') ||
-    message.includes('loading chunk') ||
-    message.includes('importing a module script failed')
-  );
 }
 
 /**
@@ -64,21 +52,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
 
     // Recover from stale build chunks (e.g. old cached HTML points to removed hashed asset).
-    if (isChunkLoadError(error) && typeof globalThis.window !== 'undefined') {
-      const alreadyTried = globalThis.window.sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY) === '1';
-      if (!alreadyTried) {
-        globalThis.window.sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, '1');
-        globalThis.location.reload();
-        return;
-      }
+    if (isStaleChunkError(error) && recoverFromStaleChunk('error-boundary')) {
+      return;
     }
 
     this.setState({ errorInfo });
   }
 
   handleReset = () => {
-    if (isChunkLoadError(this.state.error)) {
-      this.handleReload();
+    if (isStaleChunkError(this.state.error) && recoverFromStaleChunk('manual-retry')) {
       return;
     }
     this.setState({ hasError: false, error: null, errorInfo: null });
