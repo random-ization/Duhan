@@ -831,12 +831,14 @@ export default defineSchema({
   exam_attempts: defineTable({
     userId: v.id('users'),
     examId: v.id('topik_exams'),
+    sessionId: v.optional(v.string()),
     score: v.number(),
     totalQuestions: v.number(),
     maxScore: v.optional(v.number()),
     correctCount: v.optional(v.number()),
     sectionScores: v.optional(v.record(v.string(), v.number())),
     duration: v.optional(v.number()),
+    accuracy: v.optional(v.number()),
     answers: v.optional(v.record(v.string(), v.number())),
     createdAt: v.number(),
   }).index('by_user', ['userId']),
@@ -892,15 +894,53 @@ export default defineSchema({
     .index('by_email_kind_createdAt', ['email', 'kind', 'createdAt'])
     .index('by_user_kind_createdAt', ['userId', 'kind', 'createdAt']),
 
+  learning_events: defineTable({
+    userId: v.id('users'),
+    sessionId: v.string(),
+    module: v.string(),
+    surface: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    unitId: v.optional(v.number()),
+    contentId: v.optional(v.string()),
+    eventName: v.string(),
+    eventAt: v.number(),
+    durationSec: v.optional(v.number()),
+    itemCount: v.optional(v.number()),
+    score: v.optional(v.number()),
+    accuracy: v.optional(v.number()),
+    result: v.optional(v.string()),
+    source: v.optional(v.string()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
+    createdAt: v.number(),
+  })
+    .index('by_user_eventAt', ['userId', 'eventAt'])
+    .index('by_user_session_eventAt', ['userId', 'sessionId', 'eventAt'])
+    .index('by_user_module_eventAt', ['userId', 'module', 'eventAt'])
+    .index('by_module_eventAt', ['module', 'eventAt'])
+    .index('by_eventName_eventAt', ['eventName', 'eventAt']),
+
   // Activity Logs
   activity_logs: defineTable({
     userId: v.id('users'),
     activityType: v.string(),
+    sessionId: v.optional(v.string()),
+    module: v.optional(v.string()),
+    surface: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    unitId: v.optional(v.number()),
+    contentId: v.optional(v.string()),
     duration: v.optional(v.number()),
     itemsStudied: v.optional(v.number()),
+    score: v.optional(v.number()),
+    accuracy: v.optional(v.number()),
+    result: v.optional(v.string()),
+    source: v.optional(v.string()),
     metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     createdAt: v.number(),
-  }).index('by_user', ['userId']),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_user_session_createdAt', ['userId', 'sessionId', 'createdAt']),
 
   admin_user_notes: defineTable({
     userId: v.id('users'),

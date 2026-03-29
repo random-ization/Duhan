@@ -8,6 +8,7 @@ import { toErrorMessage } from './errors';
 import { getPath, isRecord, parseJson, readString } from './validation';
 import { assertProductionRuntimeEnv } from './env';
 import { captureServerException, captureServerMessage } from './sentry';
+import { captureServerPostHogEvent } from './posthog';
 
 assertProductionRuntimeEnv();
 
@@ -47,6 +48,13 @@ type VariantPrice = {
 type VariantPricesResponse = {
   GLOBAL: Record<string, { amount: string; currency: string; formatted: string }>;
   REGIONAL: Record<string, { amount: string; currency: string; formatted: string }>;
+};
+
+type PostHogDistinctUserContext = {
+  userId?: string;
+  userEmail?: string;
+  customerId?: string;
+  subscriptionOrOrderId?: string;
 };
 
 const grantAccessMutation = makeFunctionReference<
@@ -182,6 +190,38 @@ const emptyVariantPrices = (): VariantPricesResponse => ({
   REGIONAL: {},
 });
 
+const resolveDistinctId = ({
+  userId,
+  userEmail,
+  customerId,
+  subscriptionOrOrderId,
+}: PostHogDistinctUserContext) =>
+  userId && userId !== 'guest'
+    ? userId
+    : userEmail ||
+      (customerId ? `ls_customer:${customerId}` : undefined) ||
+      (subscriptionOrOrderId ? `ls_event:${subscriptionOrOrderId}` : undefined) ||
+      undefined;
+
+const captureBillingEvent = async ({
+  event,
+  distinctContext,
+  properties,
+}: {
+  event: string;
+  distinctContext: PostHogDistinctUserContext;
+  properties?: Record<string, unknown>;
+}) => {
+  const distinctId = resolveDistinctId(distinctContext);
+  if (!distinctId) return false;
+
+  return captureServerPostHogEvent({
+    event,
+    distinctId,
+    properties,
+  });
+};
+
 /**
  * Create a Lemon Squeezy checkout session
  */
@@ -284,6 +324,22 @@ export const createCheckout = action({
       }
 
       console.log('[LemonSqueezy] Checkout created:', checkoutUrl);
+      await captureBillingEvent({
+        event: 'server_checkout_created',
+        distinctContext: {
+          userId: args.userId,
+          userEmail: args.userEmail,
+          subscriptionOrOrderId: typeof data?.data?.id === 'string' ? data.data.id : undefined,
+        },
+        properties: {
+          plan: args.plan,
+          region,
+          locale: checkoutLocale,
+          source: args.source,
+          returnTo: args.returnTo,
+          variantId,
+        },
+      });
       return { checkoutUrl };
     } catch (error: unknown) {
       console.error('[LemonSqueezy] Error creating checkout:', toErrorMessage(error));
@@ -489,12 +545,27 @@ async function processWebhookEvent(
 
   if (eventName === 'order_created') {
     if (userEmail) {
-      await ctx.runMutation(grantAccessMutation, {
+      const result = await ctx.runMutation(grantAccessMutation, {
         customerEmail: userEmail,
         plan: planFromCustom ?? 'LIFETIME',
         userId,
       });
-      console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
+      if (result.success) {
+        console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
+        await captureBillingEvent({
+          event: 'server_access_granted',
+          distinctContext: {
+            userId,
+            userEmail,
+            customerId,
+            subscriptionOrOrderId,
+          },
+          properties: {
+            trigger: eventName,
+            plan: planFromCustom ?? 'LIFETIME',
+          },
+        });
+      }
     }
     return;
   }
@@ -514,7 +585,7 @@ async function processWebhookEvent(
 }
 
 async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: WebhookEventData) {
-  const { userEmail, userId, planFromCustom, attributes } = data;
+  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
 
   switch (eventName) {
     case 'subscription_created':
@@ -526,12 +597,28 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
         const plan =
           planFromCustom ?? (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
 
-        await ctx.runMutation(grantAccessMutation, {
+        const result = await ctx.runMutation(grantAccessMutation, {
           customerEmail: userEmail,
           plan,
           userId,
         });
-        console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
+        if (result.success) {
+          console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
+          await captureBillingEvent({
+            event: 'server_access_granted',
+            distinctContext: {
+              userId,
+              userEmail,
+              customerId,
+              subscriptionOrOrderId,
+            },
+            properties: {
+              trigger: eventName,
+              plan,
+              subscriptionStatus: readString(attributes, ['status']),
+            },
+          });
+        }
       }
       break;
 
@@ -539,11 +626,26 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
     case 'subscription_expired':
     case 'subscription_paused':
       if (userEmail) {
-        await ctx.runMutation(revokeAccessMutation, {
+        const result = await ctx.runMutation(revokeAccessMutation, {
           customerEmail: userEmail,
           userId,
         });
-        console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
+        if (result.success) {
+          console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
+          await captureBillingEvent({
+            event: 'server_access_revoked',
+            distinctContext: {
+              userId,
+              userEmail,
+              customerId,
+              subscriptionOrOrderId,
+            },
+            properties: {
+              trigger: eventName,
+              subscriptionStatus: readString(attributes, ['status']),
+            },
+          });
+        }
       }
       break;
 
@@ -552,6 +654,8 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
         userEmail,
         userId,
         planFromCustom,
+        customerId,
+        subscriptionOrOrderId,
         attributes,
       });
       break;
@@ -559,23 +663,55 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
 }
 
 async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData) {
-  const { userEmail, userId, planFromCustom, attributes } = data;
+  const { userEmail, userId, planFromCustom, customerId, subscriptionOrOrderId, attributes } = data;
   const status = readString(attributes, ['status']);
 
   if (status === 'active' || status === 'on_trial') {
     if (userEmail) {
-      await ctx.runMutation(grantAccessMutation, {
+      const plan = planFromCustom ?? 'MONTHLY';
+      const result = await ctx.runMutation(grantAccessMutation, {
         customerEmail: userEmail,
-        plan: planFromCustom ?? 'MONTHLY',
+        plan,
         userId,
       });
+      if (result.success) {
+        await captureBillingEvent({
+          event: 'server_access_granted',
+          distinctContext: {
+            userId,
+            userEmail,
+            customerId,
+            subscriptionOrOrderId,
+          },
+          properties: {
+            trigger: 'subscription_updated',
+            plan,
+            subscriptionStatus: status,
+          },
+        });
+      }
     }
   } else if (status === 'cancelled' || status === 'expired' || status === 'paused') {
     if (userEmail) {
-      await ctx.runMutation(revokeAccessMutation, {
+      const result = await ctx.runMutation(revokeAccessMutation, {
         customerEmail: userEmail,
         userId,
       });
+      if (result.success) {
+        await captureBillingEvent({
+          event: 'server_access_revoked',
+          distinctContext: {
+            userId,
+            userEmail,
+            customerId,
+            subscriptionOrOrderId,
+          },
+          properties: {
+            trigger: 'subscription_updated',
+            subscriptionStatus: status,
+          },
+        });
+      }
     }
   }
 }

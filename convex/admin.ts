@@ -27,6 +27,7 @@ import {
   type AdminUserResolvedPlan,
   type AdminUserSortBy,
 } from './adminUserUtils';
+import { LEARNING_MODULE_VALUES, normalizeLastModuleValue } from './analytics';
 
 const SCAN_PAGE_SIZE = 500;
 const ADMIN_USER_LIST_SCAN_LIMIT = 5000;
@@ -291,6 +292,7 @@ export const getUserDetail = query({
       podcastSubscriptions,
       listeningHistory,
       recentActivityLogs,
+      recentLearningEvents,
       recentNotes,
       recentAuditLogs,
       badges,
@@ -340,6 +342,11 @@ export const getUserDetail = query({
       ctx.db
         .query('activity_logs')
         .withIndex('by_user', q => q.eq('userId', args.userId))
+        .order('desc')
+        .take(ADMIN_USER_ACTIVITY_PREVIEW_LIMIT),
+      ctx.db
+        .query('learning_events')
+        .withIndex('by_user_eventAt', q => q.eq('userId', args.userId))
         .order('desc')
         .take(ADMIN_USER_ACTIVITY_PREVIEW_LIMIT),
       ctx.db
@@ -426,6 +433,16 @@ export const getUserDetail = query({
         : 0;
     const aiCost = aiUsage.reduce((sum, row) => sum + (row.costUsd || 0), 0);
     const aiTokens = aiUsage.reduce((sum, row) => sum + (row.totalTokens || 0), 0);
+    const moduleBreakdownMap = new Map<string, { minutes: number; sessions: Set<string> }>();
+    for (const module of LEARNING_MODULE_VALUES) {
+      moduleBreakdownMap.set(module, { minutes: 0, sessions: new Set<string>() });
+    }
+    for (const event of recentLearningEvents) {
+      const summary = moduleBreakdownMap.get(event.module);
+      if (!summary) continue;
+      summary.minutes += (event.durationSec || 0) / 60;
+      summary.sessions.add(event.sessionId);
+    }
 
     const actorMap = await loadUsersById(ctx, [
       ...recentNotes.map(note => note.authorUserId),
@@ -516,6 +533,20 @@ export const getUserDetail = query({
           total: badges.length,
           new: badges.filter(badge => badge.isNew).length,
         },
+        moduleBreakdown: Array.from(moduleBreakdownMap.entries())
+          .map(([module, summary]) => ({
+            module,
+            minutes: roundToOneDecimal(summary.minutes),
+            sessions: summary.sessions.size,
+          }))
+          .filter(item => item.minutes > 0 || item.sessions > 0),
+        health: {
+          invalidLastModule: Boolean(user.lastModule && !normalizeLastModuleValue(user.lastModule)),
+          lastActivityCacheMismatch:
+            Boolean(recentActivityLogs[0]) &&
+            (user.lastActivityAt !== recentActivityLogs[0].createdAt ||
+              user.lastActivityType !== recentActivityLogs[0].activityType),
+        },
       },
       recentActivity: recentActivityLogs.map(log => ({
         id: log._id,
@@ -523,6 +554,16 @@ export const getUserDetail = query({
         duration: log.duration || 0,
         itemsStudied: log.itemsStudied || 0,
         createdAt: log.createdAt,
+      })),
+      recentLearningSessions: recentLearningEvents.map(event => ({
+        id: event._id,
+        sessionId: event.sessionId,
+        module: event.module,
+        eventName: event.eventName,
+        durationSec: event.durationSec || 0,
+        itemCount: event.itemCount || 0,
+        result: event.result || null,
+        createdAt: event.eventAt,
       })),
       recentExamAttempts: recentExamAttempts.map(attempt => ({
         id: attempt._id,
@@ -567,6 +608,54 @@ export const getUserDetail = query({
             }
           : null,
       })),
+    };
+  },
+});
+
+export const getDataHealth = query({
+  args: {},
+  handler: async ctx => {
+    await requireAdmin(ctx);
+
+    const users = await collectAdminUsers(ctx);
+    const recentLearningEvents = await ctx.db.query('learning_events').order('desc').take(2000);
+    const recentActivityLogs = await ctx.db.query('activity_logs').order('desc').take(2000);
+
+    let invalidLastModuleUsers = 0;
+    let missingActivityCache = 0;
+    let missingStudyMinuteCache = 0;
+    for (const user of users) {
+      if (user.lastModule && !normalizeLastModuleValue(user.lastModule)) {
+        invalidLastModuleUsers += 1;
+      }
+      if (user.lastActivityAt && !user.lastActivityType) {
+        missingActivityCache += 1;
+      }
+      if ((user.totalStudyMinutes || 0) === 0 && user.lastActivityAt) {
+        missingStudyMinuteCache += 1;
+      }
+    }
+
+    return {
+      usersScanned: users.length,
+      learningEventsScanned: recentLearningEvents.length,
+      recentActivityLogsScanned: recentActivityLogs.length,
+      missingSessionIdCount: recentActivityLogs.filter(log => !log.sessionId).length,
+      invalidModuleCount: recentLearningEvents.filter(
+        event =>
+          !LEARNING_MODULE_VALUES.includes(event.module as (typeof LEARNING_MODULE_VALUES)[number])
+      ).length,
+      invalidLastModuleUsers,
+      missingActivityCache,
+      missingStudyMinuteCache,
+      recentSummaryEvents: recentLearningEvents.filter(
+        event =>
+          event.eventName === 'session_progress' ||
+          event.eventName === 'review_completed' ||
+          event.eventName === 'content_completed' ||
+          event.eventName === 'exam_submitted' ||
+          event.eventName === 'exam_auto_submitted'
+      ).length,
     };
   },
 });
@@ -1041,35 +1130,41 @@ export const getAiUsageStats = query({
     >();
 
     let cursor: string | null = null;
-    do {
-      const batch = await ctx.db
-        .query('ai_usage_logs')
-        .withIndex('by_createdAt', q => q.gte('createdAt', start))
-        .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
+    try {
+      do {
+        const batch = await ctx.db
+          .query('ai_usage_logs')
+          .withIndex('by_createdAt', q => q.gte('createdAt', start))
+          .paginate({ numItems: SCAN_PAGE_SIZE, cursor });
 
-      for (const log of batch.page) {
-        const tokens = log.totalTokens || 0;
-        const cost = log.costUsd || 0;
-        summary.totalCalls += 1;
-        summary.totalTokens += tokens;
-        summary.totalCost += cost;
+        for (const log of batch.page) {
+          const tokens = log.totalTokens || 0;
+          const cost = log.costUsd || 0;
+          summary.totalCalls += 1;
+          summary.totalTokens += tokens;
+          summary.totalCost += cost;
 
-        const feature = log.feature || 'unknown';
-        byFeature[feature] = byFeature[feature] || { calls: 0, tokens: 0, cost: 0 };
-        byFeature[feature].calls += 1;
-        byFeature[feature].tokens += tokens;
-        byFeature[feature].cost += cost;
+          const feature = log.feature || 'unknown';
+          byFeature[feature] = byFeature[feature] || { calls: 0, tokens: 0, cost: 0 };
+          byFeature[feature].calls += 1;
+          byFeature[feature].tokens += tokens;
+          byFeature[feature].cost += cost;
 
-        const date = new Date(log.createdAt).toISOString().slice(0, 10);
-        const daily = dailyMap.get(date) || { date, calls: 0, tokens: 0, cost: 0 };
-        daily.calls += 1;
-        daily.tokens += tokens;
-        daily.cost += cost;
-        dailyMap.set(date, daily);
-      }
+          const date = new Date(log.createdAt).toISOString().slice(0, 10);
+          const daily = dailyMap.get(date) || { date, calls: 0, tokens: 0, cost: 0 };
+          daily.calls += 1;
+          daily.tokens += tokens;
+          daily.cost += cost;
+          dailyMap.set(date, daily);
+        }
 
-      cursor = batch.isDone ? null : batch.continueCursor;
-    } while (cursor);
+        cursor = batch.isDone ? null : batch.continueCursor;
+      } while (cursor);
+    } catch (error) {
+      // In local dev, hot reloads can invalidate a pagination cursor mid-scan.
+      // Return whatever was aggregated so the admin dashboard still renders.
+      console.warn('admin:getAiUsageStats pagination degraded', error);
+    }
 
     const daily = [...dailyMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 
@@ -1105,21 +1200,23 @@ export const backfillCachedMetrics = mutation({
         mistakesCount?: number;
         lastActivityAt?: number;
         lastActivityType?: string;
+        totalStudyMinutes?: number;
+        lastModule?: string;
       } = {};
 
-      if (typeof user.savedWordsCount !== 'number') {
-        const savedWords = await ctx.db
-          .query('saved_words')
-          .withIndex('by_user', q => q.eq('userId', user._id))
-          .collect();
+      const savedWords = await ctx.db
+        .query('saved_words')
+        .withIndex('by_user', q => q.eq('userId', user._id))
+        .collect();
+      if ((user.savedWordsCount || 0) !== savedWords.length) {
         patch.savedWordsCount = savedWords.length;
       }
 
-      if (typeof user.mistakesCount !== 'number') {
-        const mistakes = await ctx.db
-          .query('mistakes')
-          .withIndex('by_user', q => q.eq('userId', user._id))
-          .collect();
+      const mistakes = await ctx.db
+        .query('mistakes')
+        .withIndex('by_user', q => q.eq('userId', user._id))
+        .collect();
+      if ((user.mistakesCount || 0) !== mistakes.length) {
         patch.mistakesCount = mistakes.length;
       }
 
@@ -1127,16 +1224,43 @@ export const backfillCachedMetrics = mutation({
         patch.accountStatus = 'ACTIVE';
       }
 
-      if (typeof user.lastActivityAt !== 'number') {
-        const latestActivity = await ctx.db
-          .query('activity_logs')
-          .withIndex('by_user', q => q.eq('userId', user._id))
-          .order('desc')
-          .take(1);
-        if (latestActivity[0]) {
-          patch.lastActivityAt = latestActivity[0].createdAt;
-          patch.lastActivityType = latestActivity[0].activityType;
-        }
+      const learningEvents = await ctx.db
+        .query('learning_events')
+        .withIndex('by_user_eventAt', q => q.eq('userId', user._id))
+        .collect();
+      const activityLogs = await ctx.db
+        .query('activity_logs')
+        .withIndex('by_user', q => q.eq('userId', user._id))
+        .collect();
+      const latestLearningEvent = learningEvents
+        .slice()
+        .sort((left, right) => right.eventAt - left.eventAt)[0];
+      const latestActivity = activityLogs
+        .slice()
+        .sort((left, right) => right.createdAt - left.createdAt)[0];
+      const totalStudyMinutes = roundToOneDecimal(
+        learningEvents.length > 0
+          ? learningEvents.reduce((sum, event) => sum + (event.durationSec || 0) / 60, 0)
+          : activityLogs.reduce((sum, log) => sum + (log.duration || 0), 0)
+      );
+
+      if ((user.totalStudyMinutes || 0) !== totalStudyMinutes) {
+        patch.totalStudyMinutes = totalStudyMinutes;
+      }
+
+      const latestActivityAt = latestLearningEvent?.eventAt ?? latestActivity?.createdAt;
+      const latestActivityType = latestLearningEvent?.module ?? latestActivity?.activityType;
+      if (
+        latestActivityAt &&
+        (user.lastActivityAt !== latestActivityAt || user.lastActivityType !== latestActivityType)
+      ) {
+        patch.lastActivityAt = latestActivityAt;
+        patch.lastActivityType = latestActivityType;
+      }
+
+      const normalizedLastModule = normalizeLastModuleValue(user.lastModule);
+      if (user.lastModule && normalizedLastModule && normalizedLastModule !== user.lastModule) {
+        patch.lastModule = normalizedLastModule;
       }
 
       if (Object.keys(patch).length > 0) {

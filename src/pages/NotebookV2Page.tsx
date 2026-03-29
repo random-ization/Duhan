@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
 import { useMutation, useQuery } from 'convex/react';
@@ -36,7 +36,6 @@ import {
   SheetPortal,
   SheetTitle,
 } from '../components/ui';
-import OfficialTiptapEditor from '../components/notebook/OfficialTiptapEditor';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { sanitizeHtml } from '../utils/sanitize';
 import {
@@ -46,6 +45,8 @@ import {
   ContextualPrimaryActionButton,
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
+
+const OfficialTiptapEditor = lazy(() => import('../components/notebook/OfficialTiptapEditor'));
 
 export type ViewMode = 'gallery' | 'list' | 'table';
 export type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
@@ -361,6 +362,9 @@ export default function NotebookV2Page() {
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
+  const [insightQueryReady, setInsightQueryReady] = useState(
+    () => typeof globalThis.window === 'undefined'
+  );
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorExpanded, setEditorExpanded] = useState(false);
   const [title, setTitle] = useState('');
@@ -368,6 +372,12 @@ export default function NotebookV2Page() {
   const [quoteText, setQuoteText] = useState('');
   const [editorDoc, setEditorDoc] = useState<JSONContent>(EMPTY_DOC);
   const [saveState, setSaveState] = useState<SaveState>('saved');
+
+  const editorFallback = (
+    <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-border bg-muted/50">
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    </div>
+  );
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const migrationDoneRef = useRef(false);
@@ -393,11 +403,16 @@ export default function NotebookV2Page() {
     totals: { notebooks: 0, notes: 0, unassigned: 0 },
   };
 
-  const baseSearchResult = (useQuery(NOTE_PAGES.search, {
-    query: query.trim() || undefined,
-    notebookId: activeNotebookId || undefined,
-    limit: 500,
-  }) as SearchResult | undefined) || { items: [], nextCursor: null };
+  const baseSearchResult = (useQuery(
+    NOTE_PAGES.search,
+    insightQueryReady
+      ? {
+          query: query.trim() || undefined,
+          notebookId: activeNotebookId || undefined,
+          limit: 500,
+        }
+      : 'skip'
+  ) as SearchResult | undefined) || { items: [], nextCursor: null };
 
   const selectedPagePayload = useQuery(
     NOTE_PAGES.getPage,
@@ -457,6 +472,36 @@ export default function NotebookV2Page() {
 
   const markSaveStateSaved = React.useCallback(() => {
     setSaveState('saved');
+  }, []);
+
+  useEffect(() => {
+    if (typeof globalThis.window === 'undefined') {
+      return;
+    }
+
+    type IdleWindow = Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const idleWindow = globalThis.window as IdleWindow;
+    let timerId: number | null = null;
+    let idleId: number | null = null;
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(() => setInsightQueryReady(true), { timeout: 1500 });
+    } else {
+      timerId = globalThis.window.setTimeout(() => setInsightQueryReady(true), 600);
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timerId !== null) {
+        globalThis.window.clearTimeout(timerId);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -803,15 +848,49 @@ export default function NotebookV2Page() {
   });
 
   if (isMobile) {
-    return <MobileNotebookPage {...{
-      t, navigate, dateLocale, activeNotebookId, setActiveNotebookId,
-      selectedPageId, setSelectedPageId, query, setQuery, sourceFilter, setSourceFilter,
-      editorOpen, setEditorOpen, handleEditorOpenChange, editorExpanded, setEditorExpanded,
-      title, setTitle, noteKind, setNoteKind, quoteText, setQuoteText, editorDoc, setEditorDoc,
-      saveState, lastSavedAt, notebooksResult, sourceSummary, searchResult, pendingReviewCount,
-      selectedSearchItem, selectedIsQuoteCard, selectedPagePayload,
-      handleCreateNote, handleDeletePage, handleOpenSource, handleRetrySave,
-    }} />;
+    return (
+      <MobileNotebookPage
+        {...{
+          t,
+          navigate,
+          dateLocale,
+          activeNotebookId,
+          setActiveNotebookId,
+          selectedPageId,
+          setSelectedPageId,
+          query,
+          setQuery,
+          sourceFilter,
+          setSourceFilter,
+          editorOpen,
+          setEditorOpen,
+          handleEditorOpenChange,
+          editorExpanded,
+          setEditorExpanded,
+          title,
+          setTitle,
+          noteKind,
+          setNoteKind,
+          quoteText,
+          setQuoteText,
+          editorDoc,
+          setEditorDoc,
+          saveState,
+          lastSavedAt,
+          notebooksResult,
+          sourceSummary,
+          searchResult,
+          pendingReviewCount,
+          selectedSearchItem,
+          selectedIsQuoteCard,
+          selectedPagePayload,
+          handleCreateNote,
+          handleDeletePage,
+          handleOpenSource,
+          handleRetrySave,
+        }}
+      />
+    );
   }
 
   return (
@@ -1316,26 +1395,30 @@ export default function NotebookV2Page() {
                         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                           {t('notes.v2.page.myNote', { defaultValue: 'My Note' })}
                         </p>
-                        <OfficialTiptapEditor
-                          value={editorDoc}
-                          onChange={setEditorDoc}
-                          placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
-                            defaultValue:
-                              'Write your understanding, questions, or translation for this quote.',
-                          })}
-                          preset="study"
-                        />
+                        <Suspense fallback={editorFallback}>
+                          <OfficialTiptapEditor
+                            value={editorDoc}
+                            onChange={setEditorDoc}
+                            placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
+                              defaultValue:
+                                'Write your understanding, questions, or translation for this quote.',
+                            })}
+                            preset="study"
+                          />
+                        </Suspense>
                       </div>
                     </div>
                   ) : (
-                    <OfficialTiptapEditor
-                      value={editorDoc}
-                      onChange={setEditorDoc}
-                      placeholder={t('notes.v2.page.editorPlaceholder', {
-                        defaultValue: 'Start writing your thoughts here...',
-                      })}
-                      preset="full"
-                    />
+                    <Suspense fallback={editorFallback}>
+                      <OfficialTiptapEditor
+                        value={editorDoc}
+                        onChange={setEditorDoc}
+                        placeholder={t('notes.v2.page.editorPlaceholder', {
+                          defaultValue: 'Start writing your thoughts here...',
+                        })}
+                        preset="full"
+                      />
+                    </Suspense>
                   )}
                 </div>
               </div>

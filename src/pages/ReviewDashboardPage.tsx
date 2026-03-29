@@ -1,4 +1,5 @@
 import React, { useState, type ReactNode } from 'react';
+import type { LearnerStatsDto } from '../../convex/learningStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,9 +26,7 @@ export default function ReviewDashboardPage() {
 
   const reviewSummary = useQuery(VOCAB.getReviewSummary, {}) || null;
   const reviewQueue = useQuery(VOCAB.getDueForReview) || [];
-  const userStats = useQuery(
-    qRef<NoArgs, { streak: number } & Record<string, unknown>>('userStats:getStats')
-  );
+  const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
   const streak = userStats?.streak ?? 0;
 
   const dueItems = reviewQueue.filter(

@@ -20,6 +20,7 @@ import { useTTS } from '../../hooks/useTTS';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 import { useUserActions } from '../../hooks/useUserActions';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { createLearningSessionId, useLearningAnalytics } from '../../hooks/useLearningAnalytics';
 import { notify } from '../../utils/notify';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
@@ -941,6 +942,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const labels = getLabels(language);
   const { saveWord } = useUserActions();
   const { logActivity } = useActivityLogger();
+  const { trackLearningEvent } = useLearningAnalytics();
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const lookupWithMorphology = useAction(
     aRef<
@@ -1018,6 +1020,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const listeningAccumulatedRef = useRef(0);
   const lastAudioTimeRef = useRef<number | null>(null);
+  const learningSessionIdRef = useRef('');
   const activityContextRef = useRef({ courseId, unitIndex: selectedUnitIndex });
 
   // Word popup state
@@ -1032,17 +1035,48 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       if (!force && seconds < 30) return;
       const minutes = Number((seconds / 60).toFixed(2));
       listeningAccumulatedRef.current = 0;
-      logActivity('LISTENING', minutes, 0, { ...activityContextRef.current, auto: true });
+      logActivity('LISTENING', minutes, 0, {
+        sessionId: learningSessionIdRef.current,
+        surface: 'LISTENING_MODULE',
+        courseId: activityContextRef.current.courseId,
+        unitId: activityContextRef.current.unitIndex,
+        contentId: `${activityContextRef.current.courseId}:${activityContextRef.current.unitIndex}`,
+        source: 'listening_module',
+        auto: true,
+      });
     },
     [logActivity]
   );
 
   useEffect(() => {
     flushListeningTime(true);
+    learningSessionIdRef.current = createLearningSessionId(
+      `listening-${courseId}-${selectedUnitIndex}`
+    );
     activityContextRef.current = { courseId, unitIndex: selectedUnitIndex };
     listeningAccumulatedRef.current = 0;
     lastAudioTimeRef.current = null;
-  }, [courseId, selectedUnitIndex, flushListeningTime]);
+    void trackLearningEvent({
+      sessionId: learningSessionIdRef.current,
+      module: 'LISTENING',
+      surface: 'LISTENING_MODULE',
+      courseId,
+      unitId: selectedUnitIndex,
+      contentId: `${courseId}:${selectedUnitIndex}`,
+      eventName: 'session_started',
+      source: 'listening_module',
+    });
+    void trackLearningEvent({
+      sessionId: learningSessionIdRef.current,
+      module: 'LISTENING',
+      surface: 'LISTENING_MODULE',
+      courseId,
+      unitId: selectedUnitIndex,
+      contentId: `${courseId}:${selectedUnitIndex}`,
+      eventName: 'content_opened',
+      source: 'listening_module',
+    });
+  }, [courseId, selectedUnitIndex, flushListeningTime, trackLearningEvent]);
 
   useEffect(() => () => flushListeningTime(true), [flushListeningTime]);
 
@@ -1170,6 +1204,25 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
 
   const handleWordClick = useCallback(
     (event: React.MouseEvent | React.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const clickedWord = normalizeLookupWordCb(
+        target?.closest<HTMLElement>('[data-word]')?.dataset.word ?? ''
+      );
+      if (clickedWord) {
+        void trackLearningEvent({
+          sessionId: learningSessionIdRef.current,
+          module: 'LISTENING',
+          surface: 'LISTENING_MODULE',
+          courseId,
+          unitId: selectedUnitIndex,
+          contentId: `${courseId}:${selectedUnitIndex}`,
+          eventName: 'dictionary_lookup',
+          source: 'listening_module',
+          metadata: {
+            clickedWordLength: clickedWord.length,
+          },
+        });
+      }
       handleListeningWordClick({
         event,
         normalizeLookupWordCb,
@@ -1183,6 +1236,8 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       });
     },
     [
+      courseId,
+      selectedUnitIndex,
       normalizeLookupWordCb,
       lookupInVocabList,
       unitData,
@@ -1191,6 +1246,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       dictionaryRequestRef,
       setSelectedWord,
       performDictionaryLookup,
+      trackLearningEvent,
     ]
   );
 
@@ -1209,6 +1265,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   );
 
   const handleCompleteUnit = useCallback(async () => {
+    const completedDurationSec = listeningAccumulatedRef.current;
     await completeListeningUnit({
       completingUnit,
       setCompletingUnit,
@@ -1218,6 +1275,18 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
       flushListeningTime,
       labels,
     });
+    void trackLearningEvent({
+      sessionId: learningSessionIdRef.current,
+      module: 'LISTENING',
+      surface: 'LISTENING_MODULE',
+      courseId,
+      unitId: selectedUnitIndex,
+      contentId: `${courseId}:${selectedUnitIndex}`,
+      eventName: 'content_completed',
+      durationSec: completedDurationSec,
+      result: 'unit_completed',
+      source: 'listening_module',
+    });
   }, [
     completingUnit,
     setCompletingUnit,
@@ -1226,6 +1295,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     selectedUnitIndex,
     flushListeningTime,
     labels,
+    trackLearningEvent,
   ]);
 
   const handleSaveSelectedWord = useCallback(async () => {

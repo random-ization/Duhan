@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useMutation, useAction, useQuery } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import type { LearnerStatsDto } from '../../convex/learningStats';
 import { ExamAttempt, Language, User } from '../types';
 import { getLabels } from '../utils/i18n';
 import { useAuth } from '../contexts/AuthContext';
@@ -128,6 +129,10 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
     user ? { limit: 200 } : 'skip'
   );
+  const userStats = useQuery(
+    qRef<NoArgs, LearnerStatsDto>('userStats:getStats'),
+    user ? {} : 'skip'
+  );
   const examHistory = examAttempts ?? [];
   const { examsTaken, averageScore } = useExamStats(examHistory);
 
@@ -191,8 +196,8 @@ const Profile: React.FC<ProfileProps> = ({ language }) => {
     accountSectionTitle,
     isProfileIncomplete,
   } = buildProfileDerived({ user: userMeta, labels, linkedAccounts });
-  const dayStreak = user.statistics?.dayStreak ?? 0;
-  const savedWordsCount = vocabBookCount?.count ?? 0;
+  const dayStreak = userStats?.streak ?? 0;
+  const savedWordsCount = userStats?.totalWordsLearned ?? vocabBookCount?.count ?? 0;
   const settingsTabLabel = firstString(labels.generalSettings, 'General');
 
   const handleNameUpdate = async () => {

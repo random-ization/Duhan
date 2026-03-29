@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { PanelRightOpen, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,6 @@ import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import GrammarDirectorySidebar from '../components/grammar/GrammarDirectorySidebar';
 import GrammarDetailPane from '../components/grammar/GrammarDetailPane';
-import GrammarAuxiliaryPane from '../components/grammar/GrammarAuxiliaryPane';
 import { GrammarPointData } from '../types';
 import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
@@ -23,6 +22,7 @@ import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from '../c
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
 const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
+const GrammarAuxiliaryPane = lazy(() => import('../components/grammar/GrammarAuxiliaryPane'));
 
 function normalizeStatus(value: unknown): GrammarPointData['status'] {
   if (value === 'MASTERED' || value === 'LEARNING' || value === 'NEW') return value;
@@ -381,7 +381,15 @@ const GrammarModulePage: React.FC = () => {
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-              <GrammarAuxiliaryPane grammar={desktopSelectedGrammar} embedded />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                    {t('loading', { defaultValue: 'Loading...' })}
+                  </div>
+                }
+              >
+                <GrammarAuxiliaryPane grammar={desktopSelectedGrammar} embedded />
+              </Suspense>
             </div>
           </SheetContent>
         </SheetPortal>

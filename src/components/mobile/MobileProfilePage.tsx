@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
   ArrowLeft,
   User as UserIcon,
@@ -71,6 +72,10 @@ export const MobileProfilePage: React.FC = () => {
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
     user ? { limit: 200 } : 'skip'
+  );
+  const userStats = useQuery(
+    qRef<NoArgs, LearnerStatsDto>('userStats:getStats'),
+    user ? {} : 'skip'
   );
   const examHistory = examAttempts ?? [];
   const { examsTaken, averageScore } = useExamStats(examHistory);
@@ -171,8 +176,8 @@ export const MobileProfilePage: React.FC = () => {
 
   const displayName = user.name || t('profile.unnamed', { defaultValue: 'User' });
   const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
-  const dayStreak = user.statistics?.dayStreak ?? 0;
-  const savedWordsCount = vocabBookCount?.count ?? 0;
+  const dayStreak = userStats?.streak ?? 0;
+  const savedWordsCount = userStats?.totalWordsLearned ?? vocabBookCount?.count ?? 0;
 
   // Helper for accounts
   const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);

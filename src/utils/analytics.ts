@@ -1,3 +1,5 @@
+import { capturePostHogEvent } from './posthog';
+
 export const ANALYTICS_EVENTS = [
   'landing_cta_click',
   'signup_start',
@@ -52,9 +54,6 @@ declare global {
   interface Window {
     dataLayer?: Array<Record<string, unknown>>;
     gtag?: (...args: unknown[]) => void;
-    posthog?: {
-      capture?: (event: string, payload?: Record<string, unknown>) => void;
-    };
   }
 }
 
@@ -80,9 +79,7 @@ export function trackEvent<TName extends AnalyticsEventName>(
     globalThis.window.gtag('event', event, enrichedPayload);
   }
 
-  if (typeof globalThis.window.posthog?.capture === 'function') {
-    globalThis.window.posthog.capture(event, enrichedPayload);
-  }
+  capturePostHogEvent(event, enrichedPayload);
 
   if (import.meta.env.DEV && import.meta.env.VITE_ANALYTICS_DEBUG === 'true') {
     console.info('[analytics:event]', event, enrichedPayload);

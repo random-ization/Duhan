@@ -8,6 +8,7 @@ import { useAuth } from './contexts/AuthContext';
 import { useLearningSelection } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { PostHogTracker } from './components/common/PostHogTracker';
 import { useUserActions } from './hooks/useUserActions';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
@@ -98,6 +99,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
         <GlobalModalProvider>
+          <PostHogTracker />
           <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
             <AppRoutes />
           </Suspense>

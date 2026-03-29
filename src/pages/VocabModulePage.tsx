@@ -29,6 +29,7 @@ import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
 import VocabTest from '../features/vocab/components/VocabTest';
 import { useFSRSBatchProgress } from '../features/vocab/hooks/useVocabProgress';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { createLearningSessionId, useLearningAnalytics } from '../hooks/useLearningAnalytics';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
 
@@ -310,6 +311,7 @@ export default function VocabModulePage() {
   const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
   const { institutes, isLoading: institutesLoading } = useData();
   const { speak: speakTTS } = useTTS();
+  const { trackLearningEvent } = useLearningAnalytics();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
 
@@ -733,6 +735,31 @@ export default function VocabModulePage() {
     [instituteId, selectedSessionUnitId, upsertLearningSessionMutation]
   );
 
+  const getOrCreateSessionId = useCallback(
+    (mode: SessionMode) => {
+      const current =
+        mode === 'FLASHCARD'
+          ? flashcardSessionId
+          : mode === 'LEARN'
+            ? learnSessionId
+            : testSessionId;
+      if (current) return current;
+
+      const created = createLearningSessionId(
+        `vocab-${mode.toLowerCase()}-${instituteId || 'course'}-${selectedSessionUnitId}`
+      );
+      if (mode === 'FLASHCARD') {
+        setFlashcardSessionIdOverride(created);
+      } else if (mode === 'LEARN') {
+        setLearnSessionIdOverride(created);
+      } else {
+        setTestSessionIdOverride(created);
+      }
+      return created;
+    },
+    [flashcardSessionId, instituteId, learnSessionId, selectedSessionUnitId, testSessionId]
+  );
+
   const completeSessionForMode = useCallback(
     async (mode: SessionMode) => {
       const sessionId =
@@ -742,6 +769,17 @@ export default function VocabModulePage() {
             ? learnSessionId
             : testSessionId;
       if (!sessionId) return;
+      await trackLearningEvent({
+        sessionId,
+        module: 'VOCAB',
+        surface: 'VOCAB_MODULE',
+        courseId: instituteId,
+        unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+        contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:${mode}`,
+        eventName: 'review_completed',
+        source: 'vocab_module',
+        result: 'completed',
+      });
       await completeLearningSessionMutation({ sessionId });
       if (mode === 'FLASHCARD') {
         setFlashcardSessionIdOverride(null);
@@ -757,7 +795,15 @@ export default function VocabModulePage() {
         latestTestSnapshotRef.current = null;
       }
     },
-    [completeLearningSessionMutation, flashcardSessionId, learnSessionId, testSessionId]
+    [
+      completeLearningSessionMutation,
+      flashcardSessionId,
+      instituteId,
+      learnSessionId,
+      selectedSessionUnitId,
+      testSessionId,
+      trackLearningEvent,
+    ]
   );
 
   const requestFreshVocabTestAttempt = useCallback(async (): Promise<boolean> => {
@@ -839,6 +885,20 @@ export default function VocabModulePage() {
           return;
         }
       }
+      const sessionId = getOrCreateSessionId(mode);
+      await trackLearningEvent({
+        sessionId,
+        module: 'VOCAB',
+        surface: 'VOCAB_MODULE',
+        courseId: instituteId,
+        unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+        contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:${mode}`,
+        eventName: 'review_started',
+        source: 'vocab_module',
+        metadata: {
+          mode,
+        },
+      });
       if (mode === 'FLASHCARD') {
         setViewState(prev => ({ ...prev, mode: 'flashcard' }));
       } else if (mode === 'LEARN') {
@@ -855,6 +915,10 @@ export default function VocabModulePage() {
       learnSessionId,
       testSessionId,
       requestFreshVocabTestAttempt,
+      getOrCreateSessionId,
+      instituteId,
+      selectedSessionUnitId,
+      trackLearningEvent,
     ]
   );
 
@@ -913,6 +977,24 @@ export default function VocabModulePage() {
 
   const continueFromResumePrompt = useCallback(() => {
     if (!resumeModePrompt) return;
+    const sessionId =
+      resumeModePrompt === 'FLASHCARD'
+        ? flashcardSessionId
+        : resumeModePrompt === 'LEARN'
+          ? learnSessionId
+          : testSessionId;
+    if (sessionId) {
+      void trackLearningEvent({
+        sessionId,
+        module: 'VOCAB',
+        surface: 'VOCAB_MODULE',
+        courseId: instituteId,
+        unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+        contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:${resumeModePrompt}`,
+        eventName: 'session_resumed',
+        source: 'vocab_module',
+      });
+    }
     if (resumeModePrompt === 'FLASHCARD') {
       setViewState(prev => ({ ...prev, mode: 'flashcard' }));
     } else if (resumeModePrompt === 'LEARN') {
@@ -922,12 +1004,31 @@ export default function VocabModulePage() {
     }
     setResumeModePrompt(null);
     setResumeCandidate(null);
-  }, [resumeModePrompt]);
+  }, [
+    flashcardSessionId,
+    instituteId,
+    learnSessionId,
+    resumeModePrompt,
+    selectedSessionUnitId,
+    testSessionId,
+    trackLearningEvent,
+  ]);
 
   const restartFromResumePrompt = useCallback(async () => {
     if (!resumeModePrompt) return;
     if (resumeModePrompt === 'FLASHCARD') {
       if (flashcardSessionId) {
+        await trackLearningEvent({
+          sessionId: flashcardSessionId,
+          module: 'VOCAB',
+          surface: 'VOCAB_MODULE',
+          courseId: instituteId,
+          unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+          contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:FLASHCARD`,
+          eventName: 'session_abandoned',
+          source: 'vocab_module',
+          result: 'restart',
+        });
         await abandonLearningSessionMutation({ sessionId: flashcardSessionId });
       }
       setFlashcardResumeSnapshotOverride(null);
@@ -941,6 +1042,17 @@ export default function VocabModulePage() {
       }));
     } else if (resumeModePrompt === 'LEARN') {
       if (learnSessionId) {
+        await trackLearningEvent({
+          sessionId: learnSessionId,
+          module: 'VOCAB',
+          surface: 'VOCAB_MODULE',
+          courseId: instituteId,
+          unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+          contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:LEARN`,
+          eventName: 'session_abandoned',
+          source: 'vocab_module',
+          result: 'restart',
+        });
         await abandonLearningSessionMutation({ sessionId: learnSessionId });
       }
       setLearnResumeSnapshotOverride(null);
@@ -949,6 +1061,17 @@ export default function VocabModulePage() {
       setLearnOpen(true);
     } else {
       if (testSessionId) {
+        await trackLearningEvent({
+          sessionId: testSessionId,
+          module: 'VOCAB',
+          surface: 'VOCAB_MODULE',
+          courseId: instituteId,
+          unitId: selectedSessionUnitId === ALL_UNIT_SESSION_ID ? undefined : selectedSessionUnitId,
+          contentId: `${instituteId || 'course'}:${selectedSessionUnitId}:TEST`,
+          eventName: 'session_abandoned',
+          source: 'vocab_module',
+          result: 'restart',
+        });
         await abandonLearningSessionMutation({ sessionId: testSessionId });
       }
       setTestResumeSnapshotOverride(null);
@@ -962,8 +1085,11 @@ export default function VocabModulePage() {
     abandonLearningSessionMutation,
     resumeModePrompt,
     flashcardSessionId,
+    instituteId,
     learnSessionId,
     testSessionId,
+    selectedSessionUnitId,
+    trackLearningEvent,
   ]);
 
   const scopeTitle = (() => {

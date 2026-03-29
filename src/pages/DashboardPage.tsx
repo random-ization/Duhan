@@ -125,7 +125,7 @@ interface DashboardCardContext {
   selectedLevel?: number | string | null;
   currentUnit: number;
   progressPercent: number;
-  wordsToReview: number;
+  savedWordsCount: number;
 }
 
 type DashboardUserLite = {
@@ -216,7 +216,7 @@ function resolveInstituteName(
   return selectedInstitute;
 }
 
-function getWordsToReview(vocabBookCount: { count: number } | null | undefined) {
+function getSavedWordsCount(vocabBookCount: { count: number } | null | undefined) {
   if (!vocabBookCount) return 0;
   return vocabBookCount.count;
 }
@@ -371,7 +371,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
     selectedLevel,
     currentUnit,
     progressPercent,
-    wordsToReview,
+    savedWordsCount,
   } = context;
   switch (id) {
     case 'tiger':
@@ -515,7 +515,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
             <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-200 font-bold text-sm">
               {t('dashboard.vocab.count', { defaultValue: '{count} Words' }).replace(
                 '{count}',
-                String(wordsToReview)
+                String(savedWordsCount)
               )}
             </div>
           </div>
@@ -606,11 +606,16 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
 export default function DashboardPage() {
   const { user, language, viewerAccess } = useAuth();
   const { speak, isLoading: isSpeaking } = useTTS();
+  const [lowPriorityQueriesReady, setLowPriorityQueriesReady] = useState(
+    () => typeof globalThis.window === 'undefined'
+  );
   const dailyPhrase = useQuery(
     qRef<{ language: string }, DailyPhraseData | null>('vocab:getDailyPhrase'),
-    {
-      language: resolveDashboardLanguage(language),
-    }
+    lowPriorityQueriesReady
+      ? {
+          language: resolveDashboardLanguage(language),
+        }
+      : 'skip'
   );
   const isMobile = useIsMobile();
   const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
@@ -623,6 +628,38 @@ export default function DashboardPage() {
   const [searchParams] = useSearchParams();
   const [upgradeBannerRefreshKey, setUpgradeBannerRefreshKey] = useState(0);
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
+
+  useEffect(() => {
+    if (typeof globalThis.window === 'undefined') {
+      return;
+    }
+
+    type IdleWindow = Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const idleWindow = globalThis.window as IdleWindow;
+    let timerId: number | null = null;
+    let idleId: number | null = null;
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(() => setLowPriorityQueriesReady(true), {
+        timeout: 1200,
+      });
+    } else {
+      timerId = globalThis.window.setTimeout(() => setLowPriorityQueriesReady(true), 500);
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timerId !== null) {
+        globalThis.window.clearTimeout(timerId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (dashboardView !== 'practice') return;
@@ -684,7 +721,10 @@ export default function DashboardPage() {
     ),
     getVocabBookCountArgs(user)
   );
-  const reviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
+  const reviewSummary = useQuery(
+    VOCAB.getReviewSummary,
+    user && lowPriorityQueriesReady ? {} : 'skip'
+  );
   const dueReviews = reviewSummary?.dueNow ?? 0;
   const courseProgress = useQuery(
     qRef<
@@ -696,7 +736,7 @@ export default function DashboardPage() {
         lastUnitIndex?: number;
       } | null
     >('progress:getCourseProgress'),
-    getCourseProgressArgs(user, selectedInstitute)
+    dashboardView === 'practice' ? 'skip' : getCourseProgressArgs(user, selectedInstitute)
   );
 
   // Sensors
@@ -709,7 +749,7 @@ export default function DashboardPage() {
     })
   );
 
-  const wordsToReview = getWordsToReview(vocabBookCount);
+  const savedWordsCount = getSavedWordsCount(vocabBookCount);
   const { currentUnit, progressPercent } = useMemo(
     () => getProgressStats(courseProgress, user),
     [courseProgress, user]
@@ -743,7 +783,7 @@ export default function DashboardPage() {
     selectedLevel,
     currentUnit,
     progressPercent,
-    wordsToReview,
+    savedWordsCount,
   };
 
   if (isMobile) {

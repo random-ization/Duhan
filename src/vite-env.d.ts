@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_I18N_VERSION?: string;
   readonly VITE_SENTRY_DSN?: string; // Optional
   readonly VITE_ANALYTICS_DEBUG?: string; // Optional
+  readonly VITE_POSTHOG_KEY?: string; // Optional
+  readonly VITE_POSTHOG_HOST?: string; // Optional
 }
 
 interface ImportMeta {

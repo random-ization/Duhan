@@ -11,11 +11,11 @@ import {
   countCorrectAnswers,
   normalizeExamAttemptAnswers,
 } from './examAttemptMetrics';
-
-const buildLastActivityPatch = (activityType: string, nowMs: number) => ({
-  lastActivityAt: nowMs,
-  lastActivityType: activityType,
-});
+import {
+  appendActivitySummary,
+  normalizeLastModuleValue,
+  normalizeLearningModule,
+} from './analytics';
 
 const updateUserCounter = async (
   ctx: MutationCtx,
@@ -215,6 +215,8 @@ export const getExamAttempts = query({
           score: a.score,
           maxScore: totalScore,
           correctCount,
+          duration: a.duration,
+          sessionId: a.sessionId,
           timestamp: a.createdAt,
           userAnswers,
           totalQuestions: a.totalQuestions,
@@ -263,6 +265,8 @@ export const saveExamAttempt = mutation({
     sectionScores: v.optional(v.record(v.string(), v.number())),
     duration: v.optional(v.number()),
     answers: v.optional(v.record(v.string(), v.number())),
+    accuracy: v.optional(v.number()),
+    sessionId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -330,6 +334,8 @@ export const saveExamAttempt = mutation({
       sectionScores,
       duration,
       answers,
+      accuracy: args.accuracy,
+      sessionId: args.sessionId,
       createdAt: Date.now(),
     });
 
@@ -386,29 +392,35 @@ export const logActivity = mutation({
     activityType: v.string(), // VOCAB, READING, LISTENING, EXAM
     duration: v.optional(v.number()),
     itemsStudied: v.optional(v.number()),
+    sessionId: v.optional(v.string()),
+    surface: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    unitId: v.optional(v.number()),
+    contentId: v.optional(v.string()),
+    score: v.optional(v.number()),
+    accuracy: v.optional(v.number()),
+    result: v.optional(v.string()),
+    source: v.optional(v.string()),
     metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    const user = await ctx.db.get(userId);
-    if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
-
-    const { activityType, duration, itemsStudied, metadata } = args;
-    const minutes = Math.max(0, duration || 0);
-    const now = Date.now();
-
-    await ctx.db.insert('activity_logs', {
-      userId,
-      activityType,
-      duration: minutes,
-      itemsStudied,
-      metadata,
-      createdAt: now,
-    });
-
-    await ctx.db.patch(userId, {
-      totalStudyMinutes: (user.totalStudyMinutes || 0) + minutes,
-      ...buildLastActivityPatch(activityType, now),
+    const module = normalizeLearningModule(args.activityType);
+    await appendActivitySummary(ctx, userId, {
+      sessionId: args.sessionId || `legacy-${module.toLowerCase()}-${Date.now()}`,
+      module,
+      surface: args.surface,
+      courseId: args.courseId,
+      unitId: args.unitId,
+      contentId: args.contentId,
+      durationSec: Math.max(0, (args.duration || 0) * 60),
+      itemCount: args.itemsStudied,
+      score: args.score,
+      accuracy: args.accuracy,
+      result: args.result,
+      source: args.source || 'legacy_activity',
+      metadata: args.metadata,
+      eventAt: Date.now(),
     });
 
     return { success: true };
@@ -439,7 +451,10 @@ export const updateLearningProgress = mutation({
     if (lastInstitute !== undefined) updates.lastInstitute = lastInstitute;
     if (lastLevel !== undefined) updates.lastLevel = lastLevel;
     if (lastUnit !== undefined) updates.lastUnit = lastUnit;
-    if (lastModule !== undefined) updates.lastModule = lastModule;
+    if (lastModule !== undefined) {
+      updates.lastModule =
+        normalizeLastModuleValue(lastModule) || normalizeLearningModule(lastModule);
+    }
 
     await ctx.db.patch(user._id, updates);
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from 'convex/react';
 import { Flame, Clock, BookOpen, Zap, BookText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { Skeleton } from '../../components/common';
@@ -15,21 +16,6 @@ import {
 } from '../ui/tooltip';
 
 /* ────────────── types ────────────── */
-
-type WeeklyDay = { day: string; minutes: number };
-
-type UserStats = {
-  streak: number;
-  todayMinutes: number;
-  dailyGoal: number;
-  dailyProgress: number;
-  weeklyActivity: WeeklyDay[];
-  vocabStats: { total: number; dueReviews: number; mastered: number };
-  grammarStats: { total: number; mastered: number };
-  totalMinutes: number;
-  todayWordsStudied: number;
-  todayGrammarStudied: number;
-};
 
 type XpStats = { currentWeekXp: number; totalXp: number } | null;
 
@@ -77,7 +63,7 @@ const StatPairBox = ({
   </div>
 );
 
-const WeeklyChart = ({ data }: { data: WeeklyDay[] }) => {
+const WeeklyChart = ({ data }: { data: LearnerStatsDto['weeklyActivity'] }) => {
   const { i18n, t } = useTranslation();
   const max = Math.max(...data.map(d => d.minutes), 1);
   const locale =
@@ -112,10 +98,11 @@ const WeeklyChart = ({ data }: { data: WeeklyDay[] }) => {
                 <div className="flex flex-col items-center gap-1 flex-1 cursor-default">
                   <div className="w-full relative" style={{ height: 100 }}>
                     <div
-                      className={`absolute bottom-0 w-full rounded-t-lg transition-all duration-500 ${isToday
-                        ? 'bg-gradient-to-t from-emerald-400 to-lime-300 shadow-[0_0_12px_rgba(52,211,153,0.4)]'
-                        : 'bg-white/25 hover:bg-white/40'
-                        }`}
+                      className={`absolute bottom-0 w-full rounded-t-lg transition-all duration-500 ${
+                        isToday
+                          ? 'bg-gradient-to-t from-emerald-400 to-lime-300 shadow-[0_0_12px_rgba(52,211,153,0.4)]'
+                          : 'bg-white/25 hover:bg-white/40'
+                      }`}
                       style={{ height: `${pct}%` }}
                     />
                   </div>
@@ -187,7 +174,7 @@ export const LearnerSummaryCard: React.FC = () => {
   const { t } = useTranslation();
   const labels = getLabels(language);
 
-  const userStats = useQuery(qRef<NoArgs, UserStats>('userStats:getStats'));
+  const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
   const xpStats = useQuery(qRef<NoArgs, XpStats>('xp:getMyXpStats'));
 
   if (userStats === undefined) return <HeroSkeleton />;
@@ -232,7 +219,9 @@ export const LearnerSummaryCard: React.FC = () => {
             <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
               <Flame className="w-4 h-4 text-orange-300" />
               <span className="font-bold text-sm">
-                {(l?.streak || t('learnerSummary.streak', { defaultValue: '{count} day streak' })).replace('{count}', String(streak))}
+                {(
+                  l?.streak || t('learnerSummary.streak', { defaultValue: '{count} day streak' })
+                ).replace('{count}', String(streak))}
               </span>
             </div>
           </div>
@@ -240,7 +229,9 @@ export const LearnerSummaryCard: React.FC = () => {
           {/* Progress bar */}
           <div>
             <div className="flex justify-between text-sm mb-1.5 opacity-80 font-semibold">
-              <span>{l?.progress || t('learnerSummary.progress', { defaultValue: "Today's progress" })}</span>
+              <span>
+                {l?.progress || t('learnerSummary.progress', { defaultValue: "Today's progress" })}
+              </span>
               <span>
                 {formatMetricValue(todayMinutes)} / {formatMetricValue(dailyGoal)}{' '}
                 {l?.minutes || t('learnerSummary.minutes', { defaultValue: 'min' })}
@@ -257,10 +248,10 @@ export const LearnerSummaryCard: React.FC = () => {
           {/* Goal achieved banner */}
           {progressPercent >= 100 && (
             <div className="text-center bg-white/15 rounded-xl py-2 font-bold text-sm">
-              {l?.completed || t('learnerSummary.completed', { defaultValue: '✨ Goal completed today!' })}
+              {l?.completed ||
+                t('learnerSummary.completed', { defaultValue: '✨ Goal completed today!' })}
             </div>
           )}
-
 
           {/* Bottom stat row — today vs cumulative pairs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-t border-white/15 pt-3">

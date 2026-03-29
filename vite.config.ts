@@ -108,6 +108,16 @@ export default defineConfig(({ command }) => ({
         // Do not precache HTML documents. Cached route HTML can outlive hashed chunks and
         // strand users on a stale shell after deploys.
         globPatterns: ['**/*.{js,css,ico,png,svg,webp,jpg,jpeg,webmanifest}'],
+        // Keep install/update fast by excluding very heavy route/vendor chunks from precache.
+        // They are fetched on-demand and still cacheable at runtime.
+        globIgnores: [
+          '**/assets/NotebookPage-*.js',
+          '**/assets/AdminPage-*.js',
+          '**/assets/vendor-xlsx-*.js',
+          '**/assets/vendor-vidstack-react-*.js',
+          '**/assets/OfficialTiptapEditor-*.js',
+          '**/assets/vendor-editor-*.js',
+        ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,

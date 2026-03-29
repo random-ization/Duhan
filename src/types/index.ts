@@ -77,6 +77,9 @@ export interface ExamAttempt {
   maxScore: number;
   totalScore?: number; // Alias for maxScore
   correctCount?: number; // Number of correct answers
+  totalQuestions?: number;
+  duration?: number;
+  sessionId?: string;
   timestamp: number;
   userAnswers: Record<number, number>;
 }

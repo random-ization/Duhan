@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
   ArrowLeft,
   Flame,
@@ -21,9 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { MobileHeaderAction, RouteUiConfig } from '../../config/routes.config';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 
-type HeaderStats = {
-  streak: number;
-};
+type HeaderStats = Pick<LearnerStatsDto, 'streak'>;
 
 const FONT_SCALES = [0.95, 1, 1.08];
 

@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react';
-import { Eye, Loader2, Search, ShieldOff, ShieldCheck } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Eye,
+  Loader2,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  ShieldOff,
+  SlidersHorizontal,
+  Users,
+} from 'lucide-react';
 import type { PaginationOptions, PaginationResult } from 'convex/server';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -9,6 +19,7 @@ import { Select } from '../ui/select';
 import { mRef, qRef } from '../../utils/convexRefs';
 import { UserDetailSheet } from './UserDetailSheet';
 import type {
+  AdminDataHealth,
   AdminProfileFormState,
   AdminUserDetail,
   AdminUserListFilters,
@@ -89,6 +100,7 @@ export const UserManagement: React.FC = () => {
     qRef<{ userId: string }, AdminUserDetail | null>('admin:getUserDetail'),
     selectedUserId ? { userId: selectedUserId } : 'skip'
   );
+  const dataHealth = useQuery(qRef<Record<string, never>, AdminDataHealth>('admin:getDataHealth'));
 
   const updateUserProfile = useMutation(
     mRef<
@@ -124,6 +136,16 @@ export const UserManagement: React.FC = () => {
   const [addingNote, setAddingNote] = useState(false);
 
   const loading = status === 'LoadingFirstPage';
+  const hasActiveFilters = Boolean(
+    search.trim() ||
+    filters.role ||
+    filters.accountStatus ||
+    filters.plan ||
+    filters.emailVerified ||
+    filters.kycStatus ||
+    filters.activityWindow ||
+    filters.sortBy !== DEFAULT_FILTERS.sortBy
+  );
 
   const openDetail = (userId: string, tab: DetailTab = 'overview') => {
     setSelectedUserId(userId);
@@ -183,15 +205,46 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const resetFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFilters(DEFAULT_FILTERS);
+  };
+
   return (
-    <div className="flex h-[calc(100vh-200px)] flex-col gap-6">
-      <div className="rounded-2xl border-2 border-zinc-900 bg-white p-4 shadow-[4px_4px_0px_0px_#18181B]">
-        <div className="grid gap-4 xl:grid-cols-[minmax(260px,1.3fr),repeat(6,minmax(120px,1fr))]">
-          <div className="relative">
+    <div className="space-y-6">
+      <section className="rounded-3xl border-2 border-zinc-900 bg-white p-5 shadow-[6px_6px_0px_0px_#18181B]">
+        <div className="flex flex-col gap-4 border-b border-zinc-200 pb-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              用户工作台
+            </div>
+            <h2 className="mt-3 text-2xl font-black text-zinc-900">快速筛选，直接查看详情</h2>
+            <p className="mt-2 max-w-3xl text-sm font-medium text-zinc-500">
+              第一屏先给你搜索和关键筛选，下面直接就是用户列表。点击任意用户行或“查看详情”即可打开完整画像。
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-bold text-zinc-700">
+              <Users className="h-4 w-4 text-zinc-500" />
+              当前已加载 {users.length} 位用户
+            </div>
+            {hasActiveFilters ? (
+              <Button variant="outline" onClick={resetFilters}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                清空筛选
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
+          <div className="relative md:col-span-2 xl:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
             <Input
               aria-label="搜索用户"
-              className="pl-10"
+              className="h-12 rounded-2xl border-zinc-200 bg-zinc-50 pl-10"
               placeholder="搜索邮箱、昵称或用户 ID"
               value={search}
               onChange={event => setSearch(event.target.value)}
@@ -199,6 +252,7 @@ export const UserManagement: React.FC = () => {
           </div>
           <Select
             aria-label="按角色筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.role || ''}
             onChange={event =>
               setFilters(prev => ({
@@ -213,6 +267,7 @@ export const UserManagement: React.FC = () => {
           </Select>
           <Select
             aria-label="按账号状态筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.accountStatus || ''}
             onChange={event =>
               setFilters(prev => ({
@@ -228,6 +283,7 @@ export const UserManagement: React.FC = () => {
           </Select>
           <Select
             aria-label="按会员方案筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.plan || ''}
             onChange={event =>
               setFilters(prev => ({
@@ -243,6 +299,7 @@ export const UserManagement: React.FC = () => {
           </Select>
           <Select
             aria-label="按邮箱验证筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.emailVerified || ''}
             onChange={event =>
               setFilters(prev => ({
@@ -257,7 +314,23 @@ export const UserManagement: React.FC = () => {
             <option value="UNVERIFIED">未验证</option>
           </Select>
           <Select
+            aria-label="按 KYC 状态筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
+            value={filters.kycStatus || ''}
+            onChange={event =>
+              setFilters(prev => ({
+                ...prev,
+                kycStatus: (event.target.value || undefined) as AdminUserListFilters['kycStatus'],
+              }))
+            }
+          >
+            <option value="">KYC 状态</option>
+            <option value="VERIFIED">已认证</option>
+            <option value="NONE">未认证</option>
+          </Select>
+          <Select
             aria-label="按活跃状态筛选"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.activityWindow || ''}
             onChange={event =>
               setFilters(prev => ({
@@ -273,6 +346,7 @@ export const UserManagement: React.FC = () => {
           </Select>
           <Select
             aria-label="排序方式"
+            className="h-12 rounded-2xl border-zinc-200 bg-zinc-50"
             value={filters.sortBy}
             onChange={event =>
               setFilters(prev => ({ ...prev, sortBy: event.target.value as typeof prev.sortBy }))
@@ -285,13 +359,161 @@ export const UserManagement: React.FC = () => {
             ))}
           </Select>
         </div>
-        <div className="mt-3 text-sm font-bold text-zinc-500">当前已加载 {users.length} 位用户</div>
-      </div>
 
-      <div className="flex-1 overflow-hidden rounded-2xl border-2 border-zinc-900 bg-white shadow-[4px_4px_0px_0px_#18181B]">
-        <div className="h-full overflow-auto">
-          <table className="w-full text-left">
-            <thead className="sticky top-0 z-10 bg-zinc-50">
+        {dataHealth ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+                Session 缺失
+              </div>
+              <div className="mt-2 text-2xl font-black text-zinc-900">
+                {dataHealth.missingSessionIdCount}
+              </div>
+              <div className="mt-1 text-sm text-zinc-500">最近活动日志缺少 sessionId</div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+                模块异常
+              </div>
+              <div className="mt-2 text-2xl font-black text-zinc-900">
+                {dataHealth.invalidModuleCount}
+              </div>
+              <div className="mt-1 text-sm text-zinc-500">最近学习事件中的无效模块值</div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+                进度指针异常
+              </div>
+              <div className="mt-2 text-2xl font-black text-zinc-900">
+                {dataHealth.invalidLastModuleUsers}
+              </div>
+              <div className="mt-1 text-sm text-zinc-500">用户 `lastModule` 无法归一化</div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+                活跃缓存异常
+              </div>
+              <div className="mt-2 text-2xl font-black text-zinc-900">
+                {dataHealth.missingActivityCache + dataHealth.missingStudyMinuteCache}
+              </div>
+              <div className="mt-1 text-sm text-zinc-500">最近活跃/学习分钟缓存疑似缺失</div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="overflow-hidden rounded-3xl border-2 border-zinc-900 bg-white shadow-[6px_6px_0px_0px_#18181B]">
+        <div className="flex flex-col gap-4 border-b border-zinc-200 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-lg font-black text-zinc-900">用户列表</h3>
+            <p className="mt-1 text-sm font-medium text-zinc-500">
+              点击整行或右侧按钮即可查看完整用户画像、权限与运营备注。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filters.accountStatus ? (
+              <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                账号: {getAccountStatusLabel(filters.accountStatus)}
+              </Badge>
+            ) : null}
+            {filters.plan ? (
+              <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                方案: {getPlanLabel(filters.plan)}
+              </Badge>
+            ) : null}
+            {filters.activityWindow ? (
+              <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                活跃: {filters.activityWindow === 'ACTIVE_7_DAYS' ? '7 天活跃' : '30 天未活跃'}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="divide-y divide-zinc-100 lg:hidden">
+          {loading ? (
+            <div className="p-10 text-center text-zinc-400">
+              <Loader2 className="mx-auto animate-spin" />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="p-10 text-center text-zinc-400">暂无匹配用户</div>
+          ) : (
+            users.map(user => (
+              <button
+                key={user.id}
+                type="button"
+                onClick={() => openDetail(user.id)}
+                className="w-full space-y-4 p-4 text-left transition hover:bg-zinc-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-zinc-200 bg-zinc-100">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name || user.email}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-black text-zinc-500">
+                          {(user.name || user.email).slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate font-black text-zinc-900">
+                        {user.name || '未设置昵称'}
+                      </div>
+                      <div className="truncate text-sm text-zinc-500">{user.email}</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-zinc-400" />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      user.accountStatus === 'DISABLED'
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    }
+                  >
+                    {getAccountStatusLabel(user.accountStatus)}
+                  </Badge>
+                  <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                    {getPlanLabel(user.resolvedPlan)}
+                  </Badge>
+                  <Badge variant="outline" className="border-zinc-200 bg-zinc-50 text-zinc-700">
+                    {user.emailVerified ? '邮箱已验证' : '邮箱未验证'}
+                  </Badge>
+                </div>
+
+                <div className="grid gap-3 text-sm text-zinc-500 sm:grid-cols-2">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wide text-zinc-400">
+                      最近活跃
+                    </div>
+                    <div className="mt-1 font-semibold text-zinc-900">
+                      {formatRelativeActivity(user.lastActivityAt)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wide text-zinc-400">
+                      注册时间
+                    </div>
+                    <div className="mt-1 font-semibold text-zinc-900">
+                      {formatAdminDateTime(user.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto lg:block">
+          <table className="min-w-[1120px] w-full text-left">
+            <thead className="bg-zinc-50">
               <tr className="border-b-2 border-zinc-200">
                 <th className="p-4 text-xs font-black uppercase tracking-wider text-zinc-500">
                   用户
@@ -331,7 +553,11 @@ export const UserManagement: React.FC = () => {
                 </tr>
               ) : (
                 users.map(user => (
-                  <tr key={user.id} className="transition-colors hover:bg-zinc-50">
+                  <tr
+                    key={user.id}
+                    className="cursor-pointer transition-colors hover:bg-zinc-50"
+                    onClick={() => openDetail(user.id)}
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-zinc-200 bg-zinc-100">
@@ -414,14 +640,24 @@ export const UserManagement: React.FC = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openDetail(user.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={event => {
+                            event.stopPropagation();
+                            openDetail(user.id);
+                          }}
+                        >
                           <Eye className="mr-1 h-4 w-4" />
-                          查看
+                          查看详情
                         </Button>
                         <Button
                           size="sm"
                           variant={user.accountStatus === 'DISABLED' ? 'outline' : 'destructive'}
-                          onClick={() => void handleQuickStatusAction(user)}
+                          onClick={event => {
+                            event.stopPropagation();
+                            void handleQuickStatusAction(user);
+                          }}
                         >
                           {user.accountStatus === 'DISABLED' ? (
                             <>
@@ -460,7 +696,7 @@ export const UserManagement: React.FC = () => {
             <span className="text-sm text-zinc-400">已经到底了</span>
           ) : null}
         </div>
-      </div>
+      </section>
 
       <UserDetailSheet
         open={detailOpen}

@@ -1,38 +1,51 @@
 import { useCallback } from 'react';
-import { useMutation } from 'convex/react';
+import type { LearningModule } from '../../convex/analytics';
 import { useAuth } from '../contexts/AuthContext';
-import { toErrorMessage } from '../utils/errors';
-import { mRef } from '../utils/convexRefs';
+import { createLearningSessionId, useLearningAnalytics } from './useLearningAnalytics';
 
 export const useActivityLogger = () => {
   const { user } = useAuth();
-  const logActivityMutation = useMutation(
-    mRef<
-      { activityType: string; duration?: number; itemsStudied?: number; metadata?: unknown },
-      { success: boolean }
-    >('user:logActivity')
-  );
+  const { trackSessionSummary } = useLearningAnalytics();
 
   const logActivity = useCallback(
     async (
-      activityType: 'VOCAB' | 'READING' | 'LISTENING' | 'GRAMMAR' | 'EXAM',
+      activityType: LearningModule,
       duration?: number,
       itemsStudied?: number,
-      metadata?: unknown
+      metadata?: Record<string, string | number | boolean | undefined> & {
+        sessionId?: string;
+        surface?: string;
+        courseId?: string;
+        unitId?: number;
+        contentId?: string;
+        score?: number;
+        accuracy?: number;
+        result?: string;
+        source?: string;
+      }
     ) => {
       if (!user) return;
-      try {
-        await logActivityMutation({
-          activityType,
-          duration,
-          itemsStudied,
-          metadata,
-        });
-      } catch (e) {
-        console.error('Failed to log activity', toErrorMessage(e));
-      }
+      const durationMinutes = Math.max(0, duration || 0);
+      await trackSessionSummary({
+        sessionId:
+          metadata?.sessionId || createLearningSessionId(`${activityType.toLowerCase()}-summary`),
+        module: activityType,
+        surface: metadata?.surface,
+        courseId: metadata?.courseId,
+        unitId: metadata?.unitId,
+        contentId: metadata?.contentId,
+        durationSec: durationMinutes * 60,
+        itemCount: itemsStudied,
+        score: metadata?.score,
+        accuracy: metadata?.accuracy,
+        result: metadata?.result,
+        source: metadata?.source || 'activity_logger',
+        metadata: Object.fromEntries(
+          Object.entries(metadata || {}).filter(([, value]) => value !== undefined)
+        ) as Record<string, string | number | boolean>,
+      });
     },
-    [user, logActivityMutation]
+    [trackSessionSummary, user]
   );
 
   return { logActivity };

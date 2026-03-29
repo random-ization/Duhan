@@ -441,6 +441,29 @@ export const UserDetailSheet: React.FC<UserDetailSheetProps> = ({
                       />
                     </div>
 
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <MetricCard
+                        label="学习事件模块数"
+                        value={detail.learning.moduleBreakdown.length}
+                        hint="最近事件中的有效模块分布"
+                      />
+                      <MetricCard
+                        label="指针归一化"
+                        value={detail.learning.health.invalidLastModule ? '异常' : '正常'}
+                        hint="检查 lastModule 是否可映射到规范模块"
+                      />
+                      <MetricCard
+                        label="活跃缓存"
+                        value={detail.learning.health.lastActivityCacheMismatch ? '漂移' : '正常'}
+                        hint="最近活跃缓存与 activity_logs 是否一致"
+                      />
+                      <MetricCard
+                        label="最近 Summary"
+                        value={detail.recentLearningSessions.length}
+                        hint="最近学习事件会话摘要"
+                      />
+                    </div>
+
                     <div className="grid gap-6 lg:grid-cols-3">
                       <TimelineCard
                         title="最近学习活动"
@@ -462,6 +485,35 @@ export const UserDetailSheet: React.FC<UserDetailSheetProps> = ({
                               </div>
                               <p className="mt-1 text-sm text-zinc-500">
                                 时长 {item.duration} 分钟 · 学习项 {item.itemsStudied}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </TimelineCard>
+
+                      <TimelineCard
+                        title="最近学习会话"
+                        emptyText="暂无学习事件"
+                        icon={<BookOpen className="h-4 w-4 text-zinc-500" />}
+                        hasItems={detail.recentLearningSessions.length > 0}
+                      >
+                        <div className="space-y-3">
+                          {detail.recentLearningSessions.map(item => (
+                            <div
+                              key={item.id}
+                              className="rounded-xl border border-zinc-100 bg-zinc-50 p-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-bold text-zinc-900">
+                                  {item.module} · {item.eventName}
+                                </span>
+                                <span className="text-xs text-zinc-500">
+                                  {formatAdminDateTime(item.createdAt)}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm text-zinc-500">
+                                Session {item.sessionId.slice(0, 12)} · {item.durationSec}s · 学习项{' '}
+                                {item.itemCount}
                               </p>
                             </div>
                           ))}
@@ -519,6 +571,35 @@ export const UserDetailSheet: React.FC<UserDetailSheetProps> = ({
                           ))}
                         </div>
                       </TimelineCard>
+                    </div>
+
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+                      <div className="mb-4 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-zinc-500" />
+                        <h4 className="font-black text-zinc-900">模块分布</h4>
+                      </div>
+                      {detail.learning.moduleBreakdown.length === 0 ? (
+                        <p className="text-sm text-zinc-400">暂无可展示的学习事件分布</p>
+                      ) : (
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          {detail.learning.moduleBreakdown.map(item => (
+                            <div
+                              key={item.module}
+                              className="rounded-xl border border-zinc-100 bg-zinc-50 p-4"
+                            >
+                              <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">
+                                {item.module}
+                              </div>
+                              <div className="mt-2 text-2xl font-black text-zinc-900">
+                                {item.minutes} 分钟
+                              </div>
+                              <div className="mt-1 text-sm text-zinc-500">
+                                {item.sessions} 个 session
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
 

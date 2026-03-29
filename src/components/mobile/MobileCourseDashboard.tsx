@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { useQuery } from 'convex/react';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { Zap, BookOpen, Trophy, Flame, BookMarked, Headphones } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
+import { NoArgs, qRef } from '../../utils/convexRefs';
 
 interface MobileCourseDashboardProps {
   readonly courseName: string;
@@ -28,6 +31,10 @@ export function MobileCourseDashboard({
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const userStats = useQuery(
+    qRef<NoArgs, LearnerStatsDto>('userStats:getStats'),
+    user ? {} : 'skip'
+  );
   const isCurrentCourse = user?.lastInstitute === instituteId;
   const rawLastModule = isCurrentCourse ? user?.lastModule : undefined;
   const lastUnit =
@@ -97,7 +104,7 @@ export function MobileCourseDashboard({
               </h2>
               <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-400/10 text-orange-600 dark:text-orange-200 px-2.5 py-1 rounded-full border border-orange-100 dark:border-orange-300/25 shrink-0">
                 <Flame size={14} className="fill-orange-500 dark:fill-orange-300/90" />
-                <span className="font-black text-xs">{user?.statistics?.dayStreak ?? 0}</span>
+                <span className="font-black text-xs">{userStats?.streak ?? 0}</span>
               </div>
             </div>
             <p className="mt-1 text-xs text-muted-foreground text-left line-clamp-2">

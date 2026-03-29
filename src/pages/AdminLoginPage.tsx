@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import {
+  getLocalizedPath,
+  useCurrentLanguage,
+  useLocalizedNavigate,
+} from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { ShieldCheck, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -15,7 +19,9 @@ const AdminLoginPage: React.FC = () => {
   const { user } = useAuth();
   const { signIn } = useAuthActions();
   const navigate = useLocalizedNavigate();
-  const postAuthRedirectUrl = `${globalThis.location.origin}/admin`;
+  const currentLanguage = useCurrentLanguage();
+  const postAuthRedirectPath = getLocalizedPath('/admin', currentLanguage);
+  const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
   // If already logged in as admin, redirect to admin panel
   useEffect(() => {
@@ -41,6 +47,50 @@ const AdminLoginPage: React.FC = () => {
         resolveAuthErrorMessage(err, {
           fallback: '登录失败，请稍后再试',
           invalidCredentials: '邮箱或密码错误',
+          tooManyAttempts: '尝试次数过多，请稍后再试',
+          emailRequired: '缺少邮箱信息，请重试',
+          accountExistsLinkRequired: '该邮箱已注册，请先使用原登录方式进入后台',
+          kakaoEmailRequired: '请在 Kakao 授权中同意提供邮箱',
+          emailAlreadyExists: '该邮箱已注册',
+        })
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signIn('google', { redirectTo: postAuthRedirectUrl });
+    } catch (err: unknown) {
+      setError(
+        resolveAuthErrorMessage(err, {
+          fallback: 'Google 登录失败，请稍后再试',
+          invalidCredentials: 'Google 登录失败，请稍后再试',
+          tooManyAttempts: '尝试次数过多，请稍后再试',
+          emailRequired: '缺少邮箱信息，请重试',
+          accountExistsLinkRequired: '该邮箱已注册，请先使用原登录方式进入后台',
+          kakaoEmailRequired: '请在 Kakao 授权中同意提供邮箱',
+          emailAlreadyExists: '该邮箱已注册',
+        })
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signIn('kakao', { redirectTo: postAuthRedirectUrl });
+    } catch (err: unknown) {
+      setError(
+        resolveAuthErrorMessage(err, {
+          fallback: 'Kakao 登录失败，请稍后再试',
+          invalidCredentials: 'Kakao 登录失败，请稍后再试',
           tooManyAttempts: '尝试次数过多，请稍后再试',
           emailRequired: '缺少邮箱信息，请重试',
           accountExistsLinkRequired: '该邮箱已注册，请先使用原登录方式进入后台',
@@ -145,10 +195,43 @@ const AdminLoginPage: React.FC = () => {
                 </>
               )}
             </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-200" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-xs font-bold uppercase tracking-wide text-zinc-400">
+                  或使用原登录方式
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void handleGoogleLogin()}
+                disabled={loading}
+                className="rounded-xl border-2 border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 transition hover:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                使用 Google 登录
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleKakaoLogin()}
+                disabled={loading}
+                className="rounded-xl border-2 border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 transition hover:border-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                使用 Kakao 登录
+              </button>
+            </div>
           </form>
 
           {/* Footer */}
           <div className="mt-6 pt-6 border-t border-zinc-200 text-center">
+            <p className="mb-3 text-xs text-zinc-400">
+              如果你的管理员账号原本通过 Google 或 Kakao 注册，请使用上面的原登录方式。
+            </p>
             <button
               type="button"
               onClick={() => navigate('/')}

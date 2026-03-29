@@ -8,6 +8,7 @@ import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
 import { useNotebookPicker } from '../contexts/NotebookPickerContext';
 import { toErrorMessage } from '../utils/errors';
 import { mRef, NOTE_PAGES } from '../utils/convexRefs';
+import { createLearningSessionId, useLearningAnalytics } from './useLearningAnalytics';
 
 const normalizeExamAnswers = (answers: Record<number, number> | undefined) => {
   if (!answers) return answers;
@@ -43,6 +44,7 @@ export const useUserActions = () => {
   const { user } = useAuth();
   const { confirm } = useConfirmDialog();
   const { pickNotebook } = useNotebookPicker();
+  const { trackLearningEvent } = useLearningAnalytics();
 
   const saveSavedWordMutation = useMutation(
     mRef<
@@ -105,6 +107,8 @@ export const useUserActions = () => {
         totalQuestions?: number;
         sectionScores?: unknown;
         duration?: number;
+        accuracy?: number;
+        sessionId?: string;
         answers?: unknown;
       },
       { success: boolean; attemptId: Id<'exam_attempts'> }
@@ -154,11 +158,20 @@ export const useUserActions = () => {
           exampleSentence: newItem.exampleSentence,
           exampleTranslation: newItem.exampleTranslation,
         });
+        await trackLearningEvent({
+          sessionId: createLearningSessionId('word-saved'),
+          module: 'VOCAB',
+          eventName: 'word_saved',
+          source: 'user_actions',
+          metadata: {
+            hasExampleSentence: Boolean(newItem.exampleSentence),
+          },
+        });
       } catch (e) {
         console.error('Failed to save word', e);
       }
     },
-    [user, saveSavedWordMutation]
+    [trackLearningEvent, user, saveSavedWordMutation]
   );
 
   const recordMistake = useCallback(
@@ -179,11 +192,20 @@ export const useUserActions = () => {
           wordId,
           context: 'Web App',
         });
+        await trackLearningEvent({
+          sessionId: createLearningSessionId('word-mistake'),
+          module: 'VOCAB',
+          eventName: 'word_mistake_added',
+          source: 'user_actions',
+          metadata: {
+            hasWordId: Boolean(wordId),
+          },
+        });
       } catch (e) {
         console.error('Failed to save mistake', toErrorMessage(e));
       }
     },
-    [user, saveMistakeMutation]
+    [trackLearningEvent, user, saveMistakeMutation]
   );
 
   const clearMistakes = useCallback(async () => {
@@ -323,11 +345,24 @@ export const useUserActions = () => {
             });
           }
         }
+        await trackLearningEvent({
+          sessionId: createLearningSessionId('annotation'),
+          module: resolvedAnnotationModuleToLearningModule(
+            annotation.scopeType || annotation.contextKey
+          ),
+          eventName: 'annotation_created',
+          source: 'user_actions',
+          metadata: {
+            hasNote: Boolean(annotation.note?.trim()),
+            hasHighlight: annotation.color !== null,
+          },
+        });
       } catch (apiError) {
         console.error('Failed to save annotation to server:', apiError);
       }
     },
     [
+      trackLearningEvent,
       user,
       saveAnnotationMutation,
       upsertAnnotationByAnchorMutation,
@@ -346,6 +381,10 @@ export const useUserActions = () => {
         await saveExamAttemptMutation({
           examId: attempt.examId,
           score: attempt.score,
+          totalQuestions: attempt.totalQuestions,
+          duration: attempt.duration,
+          accuracy: attempt.maxScore > 0 ? (attempt.score / attempt.maxScore) * 100 : undefined,
+          sessionId: attempt.sessionId,
           answers: normalizeExamAnswers(attempt.userAnswers),
         });
       } catch (e) {
@@ -394,4 +433,13 @@ export const useUserActions = () => {
     deleteExamAttempt,
     updateLearningProgress,
   };
+};
+
+const resolvedAnnotationModuleToLearningModule = (value: string) => {
+  const upper = value.trim().toUpperCase();
+  if (upper.includes('READING')) return 'READING' as const;
+  if (upper.includes('LISTEN')) return 'LISTENING' as const;
+  if (upper.includes('GRAMMAR')) return 'GRAMMAR' as const;
+  if (upper.includes('TOPIK') || upper.includes('EXAM')) return 'EXAM' as const;
+  return 'VOCAB' as const;
 };

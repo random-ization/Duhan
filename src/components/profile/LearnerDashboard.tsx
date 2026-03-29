@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
   Flame,
   BookOpen,
@@ -16,25 +17,9 @@ import { Button } from '../ui';
 
 const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
 
-interface LearnerStats {
-  streak: number;
-  todayMinutes: number;
-  dailyGoal: number;
-  wordsToReview: number;
-  totalWordsLearned: number;
-  totalGrammarLearned: number;
-  weeklyActivity: { day: string; minutes: number }[];
-  currentProgress: {
-    instituteName: string;
-    level: number;
-    unit: number;
-    module: string;
-  } | null;
-}
-
 export const LearnerDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const statsData = useQuery(qRef<NoArgs, LearnerStats | null>('userStats:getStats'));
+  const statsData = useQuery(qRef<NoArgs, LearnerStatsDto | null>('userStats:getStats'));
   const loading = statsData === undefined;
   const stats = statsData ?? null;
 
@@ -133,7 +118,7 @@ export const LearnerDashboard: React.FC = () => {
                   {t('learnerDashboard.unitProgress', {
                     defaultValue: 'Unit {{unit}} · {{module}}',
                     unit: stats.currentProgress.unit,
-                    module: getModuleName(stats.currentProgress.module, t),
+                    module: getModuleName(stats.currentProgress.module || '', t),
                   })}
                 </div>
               </div>
@@ -222,12 +207,19 @@ const getModuleName = (
   t: (key: string, options?: Record<string, unknown>) => string
 ) => {
   switch (module) {
+    case 'VOCAB':
     case 'vocab':
       return t('learnerDashboard.module.vocab', { defaultValue: 'Vocabulary' });
+    case 'READING':
     case 'reading':
       return t('learnerDashboard.module.reading', { defaultValue: 'Reading' });
+    case 'GRAMMAR':
     case 'grammar':
       return t('learnerDashboard.module.grammar', { defaultValue: 'Grammar' });
+    case 'LISTENING':
+      return t('learnerDashboard.module.listening', { defaultValue: 'Listening' });
+    case 'EXAM':
+      return t('learnerDashboard.module.exam', { defaultValue: 'Exam' });
     default:
       return module;
   }

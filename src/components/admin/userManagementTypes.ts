@@ -130,12 +130,31 @@ export type AdminUserDetail = {
       total: number;
       new: number;
     };
+    moduleBreakdown: Array<{
+      module: string;
+      minutes: number;
+      sessions: number;
+    }>;
+    health: {
+      invalidLastModule: boolean;
+      lastActivityCacheMismatch: boolean;
+    };
   };
   recentActivity: Array<{
     id: string;
     activityType: string;
     duration: number;
     itemsStudied: number;
+    createdAt: number;
+  }>;
+  recentLearningSessions: Array<{
+    id: string;
+    sessionId: string;
+    module: string;
+    eventName: string;
+    durationSec: number;
+    itemCount: number;
+    result: string | null;
     createdAt: number;
   }>;
   recentExamAttempts: Array<{
@@ -169,6 +188,18 @@ export type AdminUserDetail = {
     createdAt: number;
     actor: AdminActorSummary;
   }>;
+};
+
+export type AdminDataHealth = {
+  usersScanned: number;
+  learningEventsScanned: number;
+  recentActivityLogsScanned: number;
+  missingSessionIdCount: number;
+  invalidModuleCount: number;
+  invalidLastModuleUsers: number;
+  missingActivityCache: number;
+  missingStudyMinuteCache: number;
+  recentSummaryEvents: number;
 };
 
 export type AdminProfileFormState = {

@@ -19,6 +19,7 @@ describe('userStatsHelpers', () => {
       wordsLearned: 0,
       readingsCompleted: 0,
       listeningsCompleted: 0,
+      examsCompleted: 0,
     });
   });
 
@@ -78,6 +79,7 @@ describe('userStatsHelpers', () => {
       wordsLearned: 4,
       readingsCompleted: 1,
       listeningsCompleted: 1,
+      examsCompleted: 0,
     });
 
     const weeklyActivity = buildWeeklyActivity(state.weeklyMinutes);

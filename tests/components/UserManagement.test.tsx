@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserManagement } from '../../src/components/admin/UserManagement';
 import type {
+  AdminDataHealth,
   AdminUserDetail,
   AdminUserListItem,
 } from '../../src/components/admin/userManagementTypes';
@@ -91,6 +92,11 @@ const detail: AdminUserDetail = {
     },
     ai: { callsLast30Days: 10, totalTokensLast30Days: 2048, totalCostLast30Days: 1.2 },
     badges: { total: 6, new: 1 },
+    moduleBreakdown: [{ module: 'READING', minutes: 12, sessions: 1 }],
+    health: {
+      invalidLastModule: false,
+      lastActivityCacheMismatch: false,
+    },
   },
   recentActivity: [
     {
@@ -122,6 +128,18 @@ const detail: AdminUserDetail = {
       playedAt: new Date('2026-03-26T00:00:00.000Z').getTime(),
     },
   ],
+  recentLearningSessions: [
+    {
+      id: 'evt_1',
+      sessionId: 'sess_1',
+      module: 'READING',
+      eventName: 'content_completed',
+      durationSec: 720,
+      itemCount: 2,
+      result: 'unit_completed',
+      createdAt: new Date('2026-03-28T00:00:00.000Z').getTime(),
+    },
+  ],
   adminNotes: [
     {
       id: 'note_1',
@@ -140,6 +158,18 @@ const detail: AdminUserDetail = {
       actor: { id: 'admin_1', name: '运营 A', email: 'ops@example.com' },
     },
   ],
+};
+
+const dataHealth: AdminDataHealth = {
+  usersScanned: 1,
+  learningEventsScanned: 10,
+  recentActivityLogsScanned: 10,
+  missingSessionIdCount: 0,
+  invalidModuleCount: 0,
+  invalidLastModuleUsers: 0,
+  missingActivityCache: 0,
+  missingStudyMinuteCache: 0,
+  recentSummaryEvents: 4,
 };
 
 describe('UserManagement', () => {
@@ -165,6 +195,9 @@ describe('UserManagement', () => {
       const fnName = getFunctionName(ref as Record<PropertyKey, unknown>);
       if (fnName === 'admin:getUserDetail') {
         return args === 'skip' ? undefined : detail;
+      }
+      if (fnName === 'admin:getDataHealth') {
+        return dataHealth;
       }
       throw new Error(`unexpected query ${fnName}`);
     });

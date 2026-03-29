@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { Flame, Search, Target, ArrowRight, Headphones, Tv, ChevronRight } from 'lucide-react';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLearningSelection } from '../../contexts/LearningContext';
 import { useData } from '../../contexts/DataContext';
@@ -23,13 +24,6 @@ const ASSETS = {
   memo: '/emojis/Spiral_Calendar.png',
   typing: '/emojis/keyboard_icon_3d_1769658200654.png',
   vocabBook: '/emojis/flashcards_icon_3d_1769658215552.png',
-};
-
-type UserStats = {
-  streak: number;
-  dailyMinutes: number;
-  dailyGoal: number;
-  vocabStats: { dueReviews: number };
 };
 
 const getGreetingLabel = (t: (key: string, opts?: Record<string, unknown>) => string) => {
@@ -77,8 +71,8 @@ const resolveCurrentUnit = ({
   return lastUnitIndex || userLastUnit || inferredUnit;
 };
 
-const computeGoalPercent = (stats: UserStats) =>
-  Math.min(100, (stats.dailyMinutes / Math.max(stats.dailyGoal, 1)) * 100);
+const computeGoalPercent = (stats: LearnerStatsDto) =>
+  Math.min(100, (stats.todayMinutes / Math.max(stats.dailyGoal, 1)) * 100);
 
 const MobileDashboardLayout = ({
   user,
@@ -94,7 +88,7 @@ const MobileDashboardLayout = ({
   selectedLevel,
   currentUnit,
   progressPercent,
-  wordsToReview,
+  savedWordsCount,
   topScore,
 }: {
   user: ReturnType<typeof useAuth>['user'];
@@ -102,7 +96,7 @@ const MobileDashboardLayout = ({
   navigate: ReturnType<typeof useLocalizedNavigate>;
   searchQuery: string;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  stats: UserStats;
+  stats: LearnerStatsDto;
   goalPercent: number;
   greeting: string;
   instituteName: string;
@@ -110,7 +104,7 @@ const MobileDashboardLayout = ({
   selectedLevel: number | string | null | undefined;
   currentUnit: number;
   progressPercent: number;
-  wordsToReview: number;
+  savedWordsCount: number;
   topScore: number;
 }) => {
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -194,11 +188,11 @@ const MobileDashboardLayout = ({
           <div className="mb-4 relative z-10">
             <div className="flex justify-between text-xs font-semibold text-indigo-100 dark:text-indigo-200/80 mb-1.5">
               <span>
-                {stats.dailyMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
+                {stats.todayMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
               </span>
               <span>
                 {t('dashboard.mobile.leftMinutes', {
-                  count: Math.max(0, stats.dailyGoal - stats.dailyMinutes),
+                  count: Math.max(0, stats.dailyGoal - stats.todayMinutes),
                   defaultValue: '{{count}} left',
                 })}
               </span>
@@ -212,7 +206,7 @@ const MobileDashboardLayout = ({
           </div>
           <div className="grid grid-cols-3 gap-2 border-t border-white/10 pt-3 relative z-10">
             <div className="text-center">
-              <div className="text-xl font-black">{stats.dailyMinutes}</div>
+              <div className="text-xl font-black">{stats.todayMinutes}</div>
               <div className="text-[10px] opacity-70 uppercase tracking-wide">
                 {t('dashboard.mobile.minutesShort', { defaultValue: 'Mins' })}
               </div>
@@ -298,7 +292,11 @@ const MobileDashboardLayout = ({
                 {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
               </h4>
               <p className="text-indigo-600 dark:text-indigo-200/90 text-xs font-bold mt-0.5">
-                {wordsToReview} {t('dashboard.mobile.due')}
+                {savedWordsCount}{' '}
+                {t('dashboard.vocab.count', {
+                  count: savedWordsCount,
+                  defaultValue: '{{count}} words',
+                })}
               </p>
             </div>
             <img
@@ -452,14 +450,14 @@ export const MobileDashboard: React.FC = () => {
   // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
 
   // 1. User Stats (Streak, Minutes)
-  const userStats = useQuery(qRef<NoArgs, UserStats>('userStats:getStats'));
+  const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
 
   // 2. Vocab Count
   const vocabBookCount = useQuery(
     qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
     user ? { includeMastered: true } : 'skip'
   );
-  const wordsToReview = vocabBookCount?.count || 0;
+  const savedWordsCount = vocabBookCount?.count || 0;
 
   // 3. Exam Attempts (for Best Score)
   const examAttempts = useQuery(
@@ -504,11 +502,31 @@ export const MobileDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // -- Render Helpers --
-  const stats = userStats || {
+  const stats: LearnerStatsDto = userStats || {
     streak: 0,
-    dailyMinutes: 0,
+    todayMinutes: 0,
     dailyGoal: 30,
-    vocabStats: { dueReviews: 0 },
+    dailyProgress: 0,
+    weeklyActivity: [],
+    todayActivities: {
+      wordsLearned: 0,
+      readingsCompleted: 0,
+      listeningsCompleted: 0,
+      examsCompleted: 0,
+    },
+    courseProgress: [],
+    currentProgress: null,
+    totalWordsLearned: 0,
+    totalGrammarLearned: 0,
+    wordsToReview: 0,
+    vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+    grammarStats: { total: 0, mastered: 0 },
+    reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0 },
+    moduleBreakdown: [],
+    recentSessions: [],
+    totalMinutes: 0,
+    todayWordsStudied: 0,
+    todayGrammarStudied: 0,
   };
   const goalPercent = computeGoalPercent(stats);
   const greeting = getGreetingLabel(t);
@@ -528,7 +546,7 @@ export const MobileDashboard: React.FC = () => {
       selectedLevel={selectedLevel}
       currentUnit={currentUnit}
       progressPercent={progressPercent}
-      wordsToReview={wordsToReview}
+      savedWordsCount={savedWordsCount}
       topScore={topScore}
     />
   );

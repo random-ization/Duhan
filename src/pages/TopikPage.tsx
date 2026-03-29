@@ -1,7 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useState } from 'react';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import TopikModule from '../components/topik';
 import { useAuth } from '../contexts/AuthContext';
 import { useTopikExams } from '../hooks/useTopikExams';
 import { useUserActions } from '../hooks/useUserActions';
@@ -37,18 +36,16 @@ import {
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
 
+const TopikModule = lazy(() => import('../components/topik'));
+
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
+const ONE_DAY_MS = 86400000;
 type ReminderLevel = 'none' | 'good' | 'warn' | 'danger';
 
 const stripLocalePrefix = (pathname: string): string => {
   const pathSegments = pathname.split('/').filter(Boolean);
   const hasLocalePrefix = pathSegments[0] && LOCALE_PREFIXES.includes(pathSegments[0]);
   return hasLocalePrefix ? `/${pathSegments.slice(1).join('/')}` : pathname;
-};
-
-const getTopHistoryScore = (examHistory: ExamAttempt[]): number => {
-  if (examHistory.length === 0) return 0;
-  return Math.max(...examHistory.map(e => e.score || 0));
 };
 
 const getReminderLevel = (daysSince: number): ReminderLevel => {
@@ -122,12 +119,103 @@ const TopikPage: React.FC = () => {
     });
   }, [location.pathname, location.search, startUpgradeFlow]);
 
-  // Compute top score from exam history
-  const topScore = getTopHistoryScore(examHistory);
-  const totalAttempts = examHistory.length;
+  const writingExams = React.useMemo(
+    () => topikExams.filter(exam => exam.type === 'WRITING'),
+    [topikExams]
+  );
 
   // Filter exams based on type
-  const filteredExams = topikExams.filter(exam => exam.type === filterType);
+  const filteredExams = React.useMemo(
+    () => topikExams.filter(exam => exam.type === filterType),
+    [filterType, topikExams]
+  );
+
+  const topikLobbyStats = React.useMemo(() => {
+    const totalAttempts = examHistory.length;
+    const examTypeMap = new Map(topikExams.map(e => [e.id, e.type]));
+
+    let scoreSum = 0;
+    let passCount = 0;
+    let topScore = 0;
+    let readingAttempts = 0;
+    let listeningAttempts = 0;
+    let writingAttempts = 0;
+    let readingBest = 0;
+    let listeningBest = 0;
+    let writingBest = 0;
+    let lastTimestamp = 0;
+    const attemptedIds = new Set<string>();
+
+    for (const attempt of examHistory) {
+      const score = attempt.score || 0;
+      scoreSum += score;
+      if (score >= 60) passCount += 1;
+      if (score > topScore) topScore = score;
+
+      if (attempt.examId) {
+        attemptedIds.add(attempt.examId);
+        const examType = examTypeMap.get(attempt.examId);
+        if (examType === 'READING') {
+          readingAttempts += 1;
+          if (score > readingBest) readingBest = score;
+        } else if (examType === 'LISTENING') {
+          listeningAttempts += 1;
+          if (score > listeningBest) listeningBest = score;
+        } else if (examType === 'WRITING') {
+          writingAttempts += 1;
+          if (score > writingBest) writingBest = score;
+        }
+      }
+
+      const timestamp = attempt.timestamp || 0;
+      if (timestamp > lastTimestamp) lastTimestamp = timestamp;
+    }
+
+    const avgScore = totalAttempts > 0 ? Math.round((scoreSum / totalAttempts) * 10) / 10 : 0;
+    const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
+
+    const recent5 = [...examHistory]
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, 5)
+      .map(e => e.score || 0)
+      .reverse();
+    const trendUp = recent5.length >= 2 && recent5[recent5.length - 1] >= recent5[0];
+
+    const daysSince = lastTimestamp > 0 ? Math.floor((now - lastTimestamp) / ONE_DAY_MS) : -1;
+
+    const recommended = topikExams.find(e => !attemptedIds.has(e.id));
+
+    const reminderLevel = getReminderLevel(daysSince);
+    const reminderColors = {
+      none: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-400/20 text-blue-700 dark:text-blue-300',
+      good: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-400/20 text-emerald-700 dark:text-emerald-300',
+      warn: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-400/20 text-amber-700 dark:text-amber-300',
+      danger:
+        'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-400/20 text-rose-700 dark:text-rose-300',
+    }[reminderLevel];
+    const reminderIcon = { none: '✨', good: '🟢', warn: '🟡', danger: '🔴' }[reminderLevel];
+    const reminderMsg = getReminderMessage(daysSince, t);
+
+    return {
+      topScore,
+      totalAttempts,
+      avgScore,
+      passRate,
+      readingAttempts,
+      listeningAttempts,
+      writingAttempts,
+      readingBest,
+      listeningBest,
+      writingBest,
+      hasRecentTrend: recent5.length >= 2,
+      trendUp,
+      maxScore: 100,
+      reminderColors,
+      reminderIcon,
+      reminderMsg,
+      recommended,
+    };
+  }, [examHistory, now, t, topikExams]);
 
   const topikContextualContent = React.useMemo(
     () => (
@@ -231,19 +319,29 @@ const TopikPage: React.FC = () => {
   // We will wrap it.
   if (examId || isHistoryRoute) {
     return (
-      <TopikModule
-        exams={topikExams}
-        language={language}
-        history={examHistory}
-        onSaveHistory={saveExamAttempt}
-        annotations={topikAnnotations ?? []}
-        onSaveAnnotation={saveAnnotation}
-        canAccessContent={canAccessContent}
-        onShowUpgradePrompt={onShowUpgradePrompt}
-        upgradePromptLoading={upgradeFlowLoading}
-        onDeleteHistory={deleteExamAttempt}
-        initialView={isHistoryRoute ? 'HISTORY_LIST' : 'LIST'}
-      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="text-sm font-semibold text-muted-foreground">
+              {t('loading', { defaultValue: 'Loading...' })}
+            </div>
+          </div>
+        }
+      >
+        <TopikModule
+          exams={topikExams}
+          language={language}
+          history={examHistory}
+          onSaveHistory={saveExamAttempt}
+          annotations={topikAnnotations ?? []}
+          onSaveAnnotation={saveAnnotation}
+          canAccessContent={canAccessContent}
+          onShowUpgradePrompt={onShowUpgradePrompt}
+          upgradePromptLoading={upgradeFlowLoading}
+          onDeleteHistory={deleteExamAttempt}
+          initialView={isHistoryRoute ? 'HISTORY_LIST' : 'LIST'}
+        />
+      </Suspense>
     );
   }
 
@@ -286,238 +384,180 @@ const TopikPage: React.FC = () => {
         </div>
 
         {/* ─── TOPIK Stats Card ─── */}
-        {(() => {
-          const oneDayMs = 86400000;
-
-          // Core stats
-          const scores = examHistory.map(e => e.score || 0);
-          const avgScore =
-            scores.length > 0
-              ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
-              : 0;
-          const passCount = scores.filter(s => s >= 60).length;
-          const passRate = scores.length > 0 ? Math.round((passCount / scores.length) * 100) : 0;
-
-          // Subject breakdown — join with topikExams to get type
-          const examTypeMap = new Map(topikExams.map(e => [e.id, e.type]));
-          const readingAttempts = examHistory.filter(e => examTypeMap.get(e.examId) === 'READING');
-          const listeningAttempts = examHistory.filter(
-            e => examTypeMap.get(e.examId) === 'LISTENING'
-          );
-          const writingAttempts = examHistory.filter(e => examTypeMap.get(e.examId) === 'WRITING');
-
-          const readingBest =
-            readingAttempts.length > 0 ? Math.max(...readingAttempts.map(e => e.score || 0)) : 0;
-          const listeningBest =
-            listeningAttempts.length > 0
-              ? Math.max(...listeningAttempts.map(e => e.score || 0))
-              : 0;
-          const writingBest =
-            writingAttempts.length > 0 ? Math.max(...writingAttempts.map(e => e.score || 0)) : 0;
-
-          const maxScore = 100;
-
-          // Recent trend: last 5 scores direction
-          const recent5 = [...examHistory]
-            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-            .slice(0, 5)
-            .map(e => e.score || 0)
-            .reverse();
-          const trendUp = recent5.length >= 2 && recent5[recent5.length - 1] >= recent5[0];
-
-          // Days since last attempt
-          const lastTimestamp =
-            examHistory.length > 0 ? Math.max(...examHistory.map(e => e.timestamp || 0)) : 0;
-          const daysSince = lastTimestamp > 0 ? Math.floor((now - lastTimestamp) / oneDayMs) : -1;
-
-          // Recommended next exam (one user hasn't done)
-          const attemptedIds = new Set(examHistory.map(e => e.examId));
-          const recommended = topikExams.find(e => !attemptedIds.has(e.id));
-
-          // Reminder urgency
-          const reminderLevel = getReminderLevel(daysSince);
-          const reminderColors = {
-            none: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-400/20 text-blue-700 dark:text-blue-300',
-            good: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-400/20 text-emerald-700 dark:text-emerald-300',
-            warn: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-400/20 text-amber-700 dark:text-amber-300',
-            danger:
-              'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-400/20 text-rose-700 dark:text-rose-300',
-          }[reminderLevel];
-          const reminderIcon = { none: '✨', good: '🟢', warn: '🟡', danger: '🔴' }[reminderLevel];
-          const reminderMsg = getReminderMessage(daysSince, t);
-
-          return (
-            <div className="rounded-2xl border-2 border-border bg-card shadow-sm overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
-                {/* ── Panel 1: Core Stats ── */}
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
-                    <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                      {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      {
-                        label: t('dashboard.topik.bestLabel', { defaultValue: 'Best Score' }),
-                        value: topScore,
-                        color: 'text-amber-600 dark:text-amber-300',
-                      },
-                      {
-                        label: t('topikLobby.avgScore', { defaultValue: 'Avg. Score' }),
-                        value: avgScore,
-                        color: 'text-indigo-600 dark:text-indigo-300',
-                      },
-                      {
-                        label: t('topikLobby.passRate', { defaultValue: 'Pass Rate' }),
-                        value: `${passRate}%`,
-                        color:
-                          passRate >= 60
-                            ? 'text-emerald-600 dark:text-emerald-300'
-                            : 'text-rose-500 dark:text-rose-400',
-                      },
-                      {
-                        label: t('dashboard.topik.totalAttempts', { defaultValue: 'Attempts' }),
-                        value: totalAttempts,
-                        color: 'text-foreground',
-                      },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="bg-muted rounded-xl p-3 text-center">
-                        <div className={`text-2xl font-black ${color}`}>{value}</div>
-                        <div className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wide">
-                          {label}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── Panel 2: Subject Breakdown ── */}
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📊</span>
-                    <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                      {t('topikLobby.breakdown', { defaultValue: 'Subject Breakdown' })}
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        label: t('dashboard.topik.reading', { defaultValue: 'Reading' }),
-                        best: readingBest,
-                        attempts: readingAttempts.length,
-                        color: 'bg-blue-500',
-                      },
-                      {
-                        label: t('dashboard.topik.listening', { defaultValue: 'Listening' }),
-                        best: listeningBest,
-                        attempts: listeningAttempts.length,
-                        color: 'bg-violet-500',
-                      },
-                      {
-                        label: t('dashboard.topik.writing', { defaultValue: 'Writing' }),
-                        best: writingBest,
-                        attempts: writingAttempts.length,
-                        color: 'bg-emerald-500',
-                      },
-                    ].map(({ label, best, attempts, color }) => (
-                      <div key={label}>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="text-sm font-bold text-foreground">{label}</span>
-                          <span className="text-xs font-bold text-muted-foreground">
-                            {attempts > 0
-                              ? `${t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}: ${best}`
-                              : t('topikLobby.notTried', { defaultValue: 'Not tried' })}
-                          </span>
-                        </div>
-                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${color} transition-all duration-700`}
-                            style={{
-                              width:
-                                attempts > 0 ? `${Math.min(100, (best / maxScore) * 100)}%` : '0%',
-                            }}
-                          />
-                        </div>
-                        <div className="text-[10px] text-muted-foreground mt-1 font-medium">
-                          {attempts > 0
-                            ? t('topikLobby.subjectAttempts', {
-                                count: attempts,
-                                defaultValue: `${attempts} attempts`,
-                              })
-                            : t('topikLobby.tryThisSection', {
-                                defaultValue: '← Try this section!',
-                              })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {recent5.length >= 2 && (
-                    <div
-                      className={`text-xs font-bold mt-2 flex items-center gap-1.5 ${trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}
-                    >
-                      {trendUp ? '↗' : '↘'}{' '}
-                      {trendUp
-                        ? t('topikLobby.trendUp', {
-                            defaultValue: 'Score improving in last 5 attempts',
-                          })
-                        : t('topikLobby.trendDown', {
-                            defaultValue: 'Score declining — focus on weak areas',
-                          })}
+        <div className="rounded-2xl border-2 border-border bg-card shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+            {/* ── Panel 1: Core Stats ── */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
+                <span className="font-black text-sm text-foreground uppercase tracking-wider">
+                  {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    label: t('dashboard.topik.bestLabel', { defaultValue: 'Best Score' }),
+                    value: topikLobbyStats.topScore,
+                    color: 'text-amber-600 dark:text-amber-300',
+                  },
+                  {
+                    label: t('topikLobby.avgScore', { defaultValue: 'Avg. Score' }),
+                    value: topikLobbyStats.avgScore,
+                    color: 'text-indigo-600 dark:text-indigo-300',
+                  },
+                  {
+                    label: t('topikLobby.passRate', { defaultValue: 'Pass Rate' }),
+                    value: `${topikLobbyStats.passRate}%`,
+                    color:
+                      topikLobbyStats.passRate >= 60
+                        ? 'text-emerald-600 dark:text-emerald-300'
+                        : 'text-rose-500 dark:text-rose-400',
+                  },
+                  {
+                    label: t('dashboard.topik.totalAttempts', { defaultValue: 'Attempts' }),
+                    value: topikLobbyStats.totalAttempts,
+                    color: 'text-foreground',
+                  },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-muted rounded-xl p-3 text-center">
+                    <div className={`text-2xl font-black ${color}`}>{value}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wide">
+                      {label}
                     </div>
-                  )}
-                </div>
-
-                {/* ── Panel 3: Reminder ── */}
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">💡</span>
-                    <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                      {t('topikLobby.todayTitle', { defaultValue: "Today's Tip" })}
-                    </span>
                   </div>
-                  <div className={`rounded-xl border p-3 text-sm font-medium ${reminderColors}`}>
-                    {reminderIcon} {reminderMsg}
-                  </div>
-                  {recommended ? (
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                        {t('topikLobby.recommended', { defaultValue: 'Recommended' })}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="default"
-                        size="auto"
-                        onClick={() => navigate(`/topik/${recommended.id}`)}
-                        className="w-full flex items-center justify-between rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
-                      >
-                        <span>{recommended.title}</span>
-                        <ArrowRight
-                          size={16}
-                          className="group-hover:translate-x-1 transition-transform"
-                        />
-                      </Button>
-                      <p className="text-[10px] text-muted-foreground font-medium text-center">
-                        {t('topikLobby.estimatedTime', { defaultValue: 'Est. time:' })}{' '}
-                        {recommended.timeLimit} {t('topikLobby.minutes', { defaultValue: 'min' })}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <div className="text-2xl mb-1">🎉</div>
-                      <p className="text-xs font-bold text-muted-foreground">
-                        {t('topikLobby.allDone', {
-                          defaultValue: "You've tried all available exams!",
-                        })}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
-          );
-        })()}
+
+            {/* ── Panel 2: Subject Breakdown ── */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📊</span>
+                <span className="font-black text-sm text-foreground uppercase tracking-wider">
+                  {t('topikLobby.breakdown', { defaultValue: 'Subject Breakdown' })}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {[
+                  {
+                    label: t('dashboard.topik.reading', { defaultValue: 'Reading' }),
+                    best: topikLobbyStats.readingBest,
+                    attempts: topikLobbyStats.readingAttempts,
+                    color: 'bg-blue-500',
+                  },
+                  {
+                    label: t('dashboard.topik.listening', { defaultValue: 'Listening' }),
+                    best: topikLobbyStats.listeningBest,
+                    attempts: topikLobbyStats.listeningAttempts,
+                    color: 'bg-violet-500',
+                  },
+                  {
+                    label: t('dashboard.topik.writing', { defaultValue: 'Writing' }),
+                    best: topikLobbyStats.writingBest,
+                    attempts: topikLobbyStats.writingAttempts,
+                    color: 'bg-emerald-500',
+                  },
+                ].map(({ label, best, attempts, color }) => (
+                  <div key={label}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-sm font-bold text-foreground">{label}</span>
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {attempts > 0
+                          ? `${t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}: ${best}`
+                          : t('topikLobby.notTried', { defaultValue: 'Not tried' })}
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${color} transition-all duration-700`}
+                        style={{
+                          width:
+                            attempts > 0
+                              ? `${Math.min(100, (best / topikLobbyStats.maxScore) * 100)}%`
+                              : '0%',
+                        }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1 font-medium">
+                      {attempts > 0
+                        ? t('topikLobby.subjectAttempts', {
+                            count: attempts,
+                            defaultValue: `${attempts} attempts`,
+                          })
+                        : t('topikLobby.tryThisSection', {
+                            defaultValue: '← Try this section!',
+                          })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {topikLobbyStats.hasRecentTrend && (
+                <div
+                  className={`text-xs font-bold mt-2 flex items-center gap-1.5 ${topikLobbyStats.trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}
+                >
+                  {topikLobbyStats.trendUp ? '↗' : '↘'}{' '}
+                  {topikLobbyStats.trendUp
+                    ? t('topikLobby.trendUp', {
+                        defaultValue: 'Score improving in last 5 attempts',
+                      })
+                    : t('topikLobby.trendDown', {
+                        defaultValue: 'Score declining — focus on weak areas',
+                      })}
+                </div>
+              )}
+            </div>
+
+            {/* ── Panel 3: Reminder ── */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💡</span>
+                <span className="font-black text-sm text-foreground uppercase tracking-wider">
+                  {t('topikLobby.todayTitle', { defaultValue: "Today's Tip" })}
+                </span>
+              </div>
+              <div
+                className={`rounded-xl border p-3 text-sm font-medium ${topikLobbyStats.reminderColors}`}
+              >
+                {topikLobbyStats.reminderIcon} {topikLobbyStats.reminderMsg}
+              </div>
+              {topikLobbyStats.recommended ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                    {t('topikLobby.recommended', { defaultValue: 'Recommended' })}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="auto"
+                    onClick={() => navigate(`/topik/${topikLobbyStats.recommended?.id}`)}
+                    className="w-full flex items-center justify-between rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
+                  >
+                    <span>{topikLobbyStats.recommended.title}</span>
+                    <ArrowRight
+                      size={16}
+                      className="group-hover:translate-x-1 transition-transform"
+                    />
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground font-medium text-center">
+                    {t('topikLobby.estimatedTime', { defaultValue: 'Est. time:' })}{' '}
+                    {topikLobbyStats.recommended.timeLimit}{' '}
+                    {t('topikLobby.minutes', { defaultValue: 'min' })}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-2xl mb-1">🎉</div>
+                  <p className="text-xs font-bold text-muted-foreground">
+                    {t('topikLobby.allDone', {
+                      defaultValue: "You've tried all available exams!",
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Filter Buttons */}
         <div className="flex items-center gap-2 bg-card p-1.5 rounded-xl border-2 border-foreground shadow-pop w-fit">
@@ -576,120 +616,112 @@ const TopikPage: React.FC = () => {
             </h3>
 
             {filterType === 'WRITING' ? (
-              // Writing exams: use topikExams with type WRITING, or show placeholder
-              (() => {
-                const writingExams = topikExams.filter(e => (e.type as string) === 'WRITING');
-                if (writingExams.length === 0) {
-                  // Placeholder card using a synthetic entry
-                  return (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() =>
-                          notify.info(
-                            t('dashboard.topik.writingComingSoon', {
-                              defaultValue: 'Writing module is coming soon.',
-                            })
-                          )
-                        }
-                        className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
-                      >
-                        <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
-                          <div
-                            className="absolute inset-0 opacity-20"
-                            style={{
-                              backgroundImage:
-                                'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
-                            }}
-                          />
-                          <div className="text-3xl font-black text-yellow-300 font-display z-10">
-                            <PenLine size={28} />
-                          </div>
-                          <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                            {t('dashboard.topik.writingCardLabel')}
-                          </div>
-                        </div>
-                        <div className="p-4 flex-1 flex flex-col justify-between">
-                          <div>
-                            <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
-                              {t('dashboard.topik.writingMockTitle')}
-                            </h4>
-                            <p className="text-xs font-bold text-muted-foreground mt-1">
-                              {t('dashboard.topik.writingMockDesc')}
-                            </p>
-                            <div className="flex gap-3 mt-2">
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                                <Clock size={12} /> {t('topikLobby.timeLimit', { count: 50 })}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                            <span className="text-[10px] font-bold text-muted-foreground">
-                              {t('dashboard.topik.clickStart')}
-                            </span>
-                            <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
-                              {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
-                            </span>
-                          </div>
-                        </div>
-                      </Button>
+              writingExams.length === 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() =>
+                      notify.info(
+                        t('dashboard.topik.writingComingSoon', {
+                          defaultValue: 'Writing module is coming soon.',
+                        })
+                      )
+                    }
+                    className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
+                  >
+                    <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                      <div
+                        className="absolute inset-0 opacity-20"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
+                        }}
+                      />
+                      <div className="text-3xl font-black text-yellow-300 font-display z-10">
+                        <PenLine size={28} />
+                      </div>
+                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
+                        {t('dashboard.topik.writingCardLabel')}
+                      </div>
                     </div>
-                  );
-                }
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {writingExams.map(exam => (
-                      <Button
-                        key={exam.id}
-                        type="button"
-                        variant="ghost"
-                        size="auto"
-                        onClick={() => navigate(`/topik/writing/${exam.id}`)}
-                        className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
-                      >
-                        <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
-                          <div
-                            className="absolute inset-0 opacity-20"
-                            style={{
-                              backgroundImage:
-                                'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
-                            }}
-                          />
-                          <div className="text-3xl font-black text-yellow-300 font-display z-10">
-                            {exam.round}
-                          </div>
-                          <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                            {t('dashboard.topik.writingCardLabel')}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
+                          {t('dashboard.topik.writingMockTitle')}
+                        </h4>
+                        <p className="text-xs font-bold text-muted-foreground mt-1">
+                          {t('dashboard.topik.writingMockDesc')}
+                        </p>
+                        <div className="flex gap-3 mt-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                            <Clock size={12} /> {t('topikLobby.timeLimit', { count: 50 })}
                           </div>
                         </div>
-                        <div className="p-4 flex-1 flex flex-col justify-between">
-                          <div>
-                            <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
-                              {exam.title}
-                            </h4>
-                            <div className="flex gap-3 mt-2">
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                                <Clock size={12} />{' '}
-                                {t('topikLobby.timeLimit', { count: exam.timeLimit })}
-                              </div>
+                      </div>
+                      <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
+                        <span className="text-[10px] font-bold text-muted-foreground">
+                          {t('dashboard.topik.clickStart')}
+                        </span>
+                        <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
+                          {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
+                        </span>
+                      </div>
+                    </div>
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {writingExams.map(exam => (
+                    <Button
+                      key={exam.id}
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => navigate(`/topik/writing/${exam.id}`)}
+                      className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
+                    >
+                      <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                        <div
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            backgroundImage:
+                              'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
+                          }}
+                        />
+                        <div className="text-3xl font-black text-yellow-300 font-display z-10">
+                          {exam.round}
+                        </div>
+                        <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
+                          {t('dashboard.topik.writingCardLabel')}
+                        </div>
+                      </div>
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
+                            {exam.title}
+                          </h4>
+                          <div className="flex gap-3 mt-2">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                              <Clock size={12} />{' '}
+                              {t('topikLobby.timeLimit', { count: exam.timeLimit })}
                             </div>
                           </div>
-                          <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                            <span className="text-[10px] font-bold text-muted-foreground">
-                              {t('dashboard.topik.clickStart')}
-                            </span>
-                            <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
-                              {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
-                            </span>
-                          </div>
                         </div>
-                      </Button>
-                    ))}
-                  </div>
-                );
-              })()
+                        <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            {t('dashboard.topik.clickStart')}
+                          </span>
+                          <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
+                            {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
+                          </span>
+                        </div>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              )
             ) : filteredExams.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredExams.map(exam => {

@@ -27,6 +27,7 @@ import { notify } from '../../utils/notify';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
 import { useUserActions } from '../../hooks/useUserActions';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { createLearningSessionId, useLearningAnalytics } from '../../hooks/useLearningAnalytics';
 import { buildAnchorFromRange } from '../annotation-kit/utils/selection';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../components/ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
@@ -1618,6 +1619,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const { speak: speakTTS, stop: stopTTS } = useTTS();
   const { saveWord, saveAnnotation } = useUserActions();
   const { logActivity } = useActivityLogger();
+  const { trackLearningEvent } = useLearningAnalytics();
 
   useEffect(() => stopTTS, [stopTTS]);
   // State for selected unit (allows changing within the component)
@@ -1706,6 +1708,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const readingAccumulatedRef = useRef(0);
   const lastTickRef = useRef(0);
   const lastInteractionRef = useRef(0);
+  const learningSessionIdRef = useRef('');
   const activityContextRef = useRef({
     courseId,
     unitIndex: selectedUnitIndex,
@@ -1719,13 +1722,25 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       if (!force && seconds < 30) return;
       const minutes = Number((seconds / 60).toFixed(2));
       readingAccumulatedRef.current = 0;
-      logActivity('READING', minutes, 0, { ...activityContextRef.current, auto: true });
+      logActivity('READING', minutes, 0, {
+        sessionId: learningSessionIdRef.current,
+        surface: 'READING_MODULE',
+        courseId: activityContextRef.current.courseId,
+        unitId: activityContextRef.current.unitIndex,
+        contentId: `${activityContextRef.current.courseId}:${activityContextRef.current.unitIndex}:${activityContextRef.current.articleIndex}`,
+        source: 'reading_module',
+        articleIndex: activityContextRef.current.articleIndex,
+        auto: true,
+      });
     },
     [logActivity]
   );
 
   useEffect(() => {
     flushReadingTime(true);
+    learningSessionIdRef.current = createLearningSessionId(
+      `reading-${courseId}-${selectedUnitIndex}-${activeArticleIndex}`
+    );
     activityContextRef.current = {
       courseId,
       unitIndex: selectedUnitIndex,
@@ -1733,7 +1748,27 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     };
     lastTickRef.current = Date.now();
     lastInteractionRef.current = Date.now();
-  }, [courseId, selectedUnitIndex, activeArticleIndex, flushReadingTime]);
+    void trackLearningEvent({
+      sessionId: learningSessionIdRef.current,
+      module: 'READING',
+      surface: 'READING_MODULE',
+      courseId,
+      unitId: selectedUnitIndex,
+      contentId: `${courseId}:${selectedUnitIndex}:${activeArticleIndex}`,
+      eventName: 'session_started',
+      source: 'reading_module',
+    });
+    void trackLearningEvent({
+      sessionId: learningSessionIdRef.current,
+      module: 'READING',
+      surface: 'READING_MODULE',
+      courseId,
+      unitId: selectedUnitIndex,
+      contentId: `${courseId}:${selectedUnitIndex}:${activeArticleIndex}`,
+      eventName: 'content_opened',
+      source: 'reading_module',
+    });
+  }, [courseId, selectedUnitIndex, activeArticleIndex, flushReadingTime, trackLearningEvent]);
 
   useEffect(() => {
     const handleInteraction = () => {
@@ -2140,12 +2175,29 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         isFromVocabList: !!vocabMatch,
       });
       setSelectionToolbar(null);
+      void trackLearningEvent({
+        sessionId: learningSessionIdRef.current,
+        module: 'READING',
+        surface: 'READING_MODULE',
+        courseId,
+        unitId: selectedUnitIndex,
+        contentId: `${courseId}:${selectedUnitIndex}:${activeArticleIndex}`,
+        eventName: 'dictionary_lookup',
+        source: 'reading_module',
+        metadata: {
+          hasBaseForm: Boolean(baseForm),
+          fromVocabList: Boolean(vocabMatch),
+        },
+      });
 
       void performDictionaryLookup(clickedWord, query, fallbackMeaning, requestId, charIndex);
     },
     [
+      activeArticleIndex,
+      courseId,
       findBaseForm,
       lookupInVocabList,
+      trackLearningEvent,
       moduleText.loading,
       moduleText.noMeaning,
       normalizeLookupWordCb,
@@ -2156,6 +2208,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       resolveLookupLoadingMeaning,
       performDictionaryLookup,
       language,
+      selectedUnitIndex,
     ]
   );
 
@@ -2384,8 +2437,21 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
     if (completingUnit) return;
     try {
       setCompletingUnit(true);
+      const completedDurationSec = readingAccumulatedRef.current;
       await completeUnitMutation({ courseId, unitIndex: selectedUnitIndex });
       flushReadingTime(true);
+      void trackLearningEvent({
+        sessionId: learningSessionIdRef.current,
+        module: 'READING',
+        surface: 'READING_MODULE',
+        courseId,
+        unitId: selectedUnitIndex,
+        contentId: `${courseId}:${selectedUnitIndex}:${activeArticleIndex}`,
+        eventName: 'content_completed',
+        durationSec: completedDurationSec,
+        result: 'unit_completed',
+        source: 'reading_module',
+      });
       notify.success(moduleText.lessonLearned);
     } catch (error) {
       console.error('Failed to mark unit complete:', error);
@@ -2393,12 +2459,14 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
       setCompletingUnit(false);
     }
   }, [
+    activeArticleIndex,
     completingUnit,
     completeUnitMutation,
     courseId,
     selectedUnitIndex,
     flushReadingTime,
     moduleText.lessonLearned,
+    trackLearningEvent,
   ]);
 
   return (

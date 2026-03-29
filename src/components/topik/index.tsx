@@ -13,6 +13,7 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
 import { logger } from '../../utils/logger';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
+import { createLearningSessionId, useLearningAnalytics } from '../../hooks/useLearningAnalytics';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileExamSession } from '../mobile/topik/MobileExamSession';
 import { MobileExamReview } from '../mobile/topik/MobileExamReview';
@@ -332,6 +333,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const convex = useConvex();
   const { setSidebarHidden } = useLayoutActions();
   const { logActivity } = useActivityLogger();
+  const { trackLearningEvent } = useLearningAnalytics();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
 
@@ -350,6 +352,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const [loading, setLoading] = useState(false);
   const questionCacheRef = useRef<Map<string, TopikQuestionDto[]>>(new Map());
+  const examSessionIdRef = useRef<string | null>(null);
   const pathWithoutLang = getPathWithoutLanguage(location.pathname);
   const isHistoryPath = pathWithoutLang === '/topik/history';
 
@@ -505,6 +508,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       totalQuestions: questions.length,
     });
 
+    const timeSpentSeconds = Math.max(0, currentExam.timeLimit * 60 - timeLeft);
     const attempt: ExamAttempt = {
       id: Date.now().toString(),
       examId: currentExam.id,
@@ -513,20 +517,54 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       maxScore: totalScore,
       totalScore,
       correctCount,
+      totalQuestions: questions.length,
+      duration: timeSpentSeconds,
+      sessionId: examSessionIdRef.current || undefined,
       timestamp: Date.now(),
       userAnswers,
     };
     onSaveHistory(attempt);
-    const timeSpentSeconds = Math.max(0, currentExam.timeLimit * 60 - timeLeft);
     const minutes = Math.max(1, Math.round(timeSpentSeconds / 60));
     logActivity('EXAM', minutes, questions.length, {
+      sessionId: examSessionIdRef.current || undefined,
+      surface: 'TOPIK',
+      contentId: currentExam.id,
       examId: currentExam.id,
       examType: currentExam.type,
+      score,
+      accuracy: totalScore > 0 ? (score / totalScore) * 100 : undefined,
+      result: timeLeft === 0 ? 'auto_submitted' : 'submitted',
+    });
+    void trackLearningEvent({
+      sessionId: examSessionIdRef.current || createLearningSessionId(`topik-${currentExam.id}`),
+      module: 'EXAM',
+      surface: 'TOPIK',
+      contentId: currentExam.id,
+      eventName: timeLeft === 0 ? 'exam_auto_submitted' : 'exam_submitted',
+      durationSec: timeSpentSeconds,
+      itemCount: questions.length,
+      score,
+      accuracy: totalScore > 0 ? (score / totalScore) * 100 : undefined,
+      result: timeLeft === 0 ? 'auto_submitted' : 'submitted',
+      source: 'topik_module',
+      metadata: {
+        correctCount,
+      },
     });
 
     setView('RESULT');
     setSidebarHidden(false);
-  }, [currentExam, userAnswers, onSaveHistory, setView, setSidebarHidden, timeLeft, logActivity]);
+    examSessionIdRef.current = null;
+  }, [
+    currentExam,
+    logActivity,
+    onSaveHistory,
+    setSidebarHidden,
+    setView,
+    timeLeft,
+    trackLearningEvent,
+    userAnswers,
+  ]);
 
   const handleRequestExitExam = useCallback(() => {
     setShowExitConfirm(true);
@@ -593,6 +631,21 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const startExam = () => {
     setSidebarHidden(true); // Hide sidebar when exam starts
+    examSessionIdRef.current = createLearningSessionId(`topik-${currentExam?.id || 'exam'}`);
+    if (currentExam) {
+      void trackLearningEvent({
+        sessionId: examSessionIdRef.current,
+        module: 'EXAM',
+        surface: 'TOPIK',
+        contentId: currentExam.id,
+        eventName: 'exam_started',
+        source: 'topik_module',
+        metadata: {
+          examType: currentExam.type,
+          questionCount: currentExam.questions?.length || 0,
+        },
+      });
+    }
     setTimerActive(true);
     handleSetView('EXAM');
   };
@@ -629,6 +682,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   const resetExam = () => {
     setSidebarHidden(false); // Restore sidebar
+    examSessionIdRef.current = null;
     setCurrentExam(null);
     setUserAnswers({});
     setTimeLeft(0);
