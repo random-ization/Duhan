@@ -48,23 +48,23 @@ function getPublisherGroupLabel(
   key: PublisherGroupKey,
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  if (key === 'all') return t('learningFlow.materials.publishers.all', { defaultValue: '全部' });
+  if (key === 'all') return t('learningFlow.materials.publishers.all', { defaultValue: 'All' });
   if (key === 'yonsei') {
-    return t('learningFlow.materials.publishers.yonsei', { defaultValue: '延世大学' });
+    return t('learningFlow.materials.publishers.yonsei', { defaultValue: 'Yonsei Univ.' });
   }
   if (key === 'seoul') {
-    return t('learningFlow.materials.publishers.seoul', { defaultValue: '首尔大学' });
+    return t('learningFlow.materials.publishers.seoul', { defaultValue: 'Seoul Univ.' });
   }
   if (key === 'chungang') {
-    return t('learningFlow.materials.publishers.chungang', { defaultValue: '中央大学' });
+    return t('learningFlow.materials.publishers.chungang', { defaultValue: 'Chung Ang Univ.' });
   }
   if (key === 'oer') {
-    return t('learningFlow.materials.publishers.oer', { defaultValue: '开放资源' });
+    return t('learningFlow.materials.publishers.oer', { defaultValue: 'OER' });
   }
   if (key === 'topik') {
     return t('learningFlow.materials.publishers.topik', { defaultValue: 'TOPIK' });
   }
-  return t('learningFlow.materials.publishers.other', { defaultValue: '其他' });
+  return t('learningFlow.materials.publishers.other', { defaultValue: 'Others' });
 }
 
 function getPublisherLabel(
@@ -173,11 +173,7 @@ export default function LearningResourcePickerPage() {
   const { selectedInstitute } = useLearningSelection();
   const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
 
-  if (!isLearningFlowModule(moduleType)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const moduleKey = moduleType;
+  const moduleKey = isLearningFlowModule(moduleType) ? moduleType : 'vocabulary';
   const moduleBadge = MODULE_BADGE_THEME[moduleKey];
   const sortedCourses = useMemo(() => {
     const list = [...((institutes || []) as Institute[])].sort((a, b) => {
@@ -252,6 +248,10 @@ export default function LearningResourcePickerPage() {
     navigate(buildLearningModulePath(moduleKey, course.id));
   };
 
+  if (!isLearningFlowModule(moduleType)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div
       className="min-h-screen w-full bg-[#F0F4F8] p-4 font-sans md:p-8"
@@ -281,7 +281,7 @@ export default function LearningResourcePickerPage() {
                 </span>
               </div>
               <h1 className="text-2xl font-black leading-none tracking-tight text-slate-900 md:text-3xl">
-                {t('learningFlow.materials.title', { defaultValue: '选择教材' })}
+                {t('learningFlow.materials.title', { defaultValue: 'Select Coursebook' })}
               </h1>
             </div>
           </div>
@@ -302,7 +302,7 @@ export default function LearningResourcePickerPage() {
               onChange={event => setSearchQuery(event.target.value)}
               className="w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-slate-900"
               placeholder={t('learningFlow.materials.searchPlaceholder', {
-                defaultValue: '搜索教材/出版社...',
+                defaultValue: 'Search textbooks/publishers...',
               })}
             />
           </div>
@@ -370,7 +370,7 @@ export default function LearningResourcePickerPage() {
                   <div className="mt-1.5 flex items-center gap-1.5">
                     {isActive && (
                       <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-white">
-                        {t('learningFlow.materials.current', { defaultValue: '当前' })}
+                        {t('learningFlow.materials.current', { defaultValue: 'Current' })}
                       </span>
                     )}
                     <span
@@ -385,14 +385,14 @@ export default function LearningResourcePickerPage() {
                   </p>
                   <p className="mt-1 text-[10px] font-bold tracking-wide text-slate-400">
                     {(course.totalUnits || 10).toString()}{' '}
-                    {t('learningFlow.materials.units', { defaultValue: '个单元' })}
+                    {t('learningFlow.materials.units', { defaultValue: 'Units' })}
                   </p>
                 </div>
 
                 <div
                   className={`w-full border-t-2 border-slate-100 bg-slate-50 py-2 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 transition-colors ${theme.hoverClass}`}
                 >
-                  {t('learningFlow.materials.selectBook', { defaultValue: '选择此书' })}
+                  {t('learningFlow.materials.selectBook', { defaultValue: 'Select Book' })}
                 </div>
               </button>
             );
