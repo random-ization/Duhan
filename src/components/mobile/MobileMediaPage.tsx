@@ -205,12 +205,10 @@ const VideoTab: React.FC<{
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {videos.map(video => (
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
               key={video.id}
               onClick={() => navigate(buildVideoPlayerPath(video.id, currentPath))}
-              className="bg-card rounded-2xl border-2 border-foreground dark:border-border overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] dark:shadow-[4px_4px_0px_0px_rgba(148,163,184,0.26)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-left w-full group block"
+              className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm active:scale-95 transition-transform text-left w-full group block"
             >
               <div className="aspect-video bg-muted relative">
                 {video.thumbnailUrl ? (
@@ -272,7 +270,7 @@ const VideoTab: React.FC<{
                   </span>
                 </div>
               </div>
-            </Button>
+            </button>
           ))}
         </div>
       )}
@@ -492,7 +490,7 @@ const PodcastTab: React.FC<{
                   params.set('returnTo', currentPath);
                   navigate(`/podcasts/channel?${params.toString()}`, { state: { channel: sub } });
                 }}
-                className="min-w-[140px] max-w-[140px] bg-card p-3 rounded-2xl border-2 border-foreground shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] flex flex-col gap-3 text-left active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all"
+                className="min-w-[140px] max-w-[140px] bg-card p-3 rounded-2xl border border-border shadow-sm flex flex-col gap-3 text-left active:scale-95 transition-transform"
               >
                 <div className="aspect-square rounded-xl bg-muted border border-border overflow-hidden">
                   {getArtworkUrl(sub.artworkUrl, sub.artwork) ? (

@@ -1267,6 +1267,16 @@ export default function VocabModulePage() {
           </svg>
         </div>
       </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="auto"
+        onClick={() => navigate('/dashboard/resources/vocabulary')}
+        className="hidden md:inline-flex rounded-xl border-2 border-foreground bg-card px-3 py-2 text-xs font-black text-foreground"
+      >
+        {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}
+      </Button>
     </div>
   );
 

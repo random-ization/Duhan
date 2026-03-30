@@ -214,7 +214,7 @@ export const MobileGlobalPlayer: React.FC = () => {
                       defaultValue: 'Skip back 15 seconds',
                     })}
                   >
-                    <SkipBack className="w-8 h-8 fill-slate-900" />
+                    <SkipBack className="w-8 h-8 fill-foreground text-foreground" />
                   </Button>
 
                   <Button
@@ -246,7 +246,7 @@ export const MobileGlobalPlayer: React.FC = () => {
                       defaultValue: 'Skip forward 15 seconds',
                     })}
                   >
-                    <SkipForward className="w-8 h-8 fill-slate-900" />
+                    <SkipForward className="w-8 h-8 fill-foreground text-foreground" />
                   </Button>
                 </div>
 

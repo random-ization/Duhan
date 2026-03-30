@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useMemo, useEffect, useCallback } from
 import { useParams } from 'react-router-dom';
 import { PanelRightOpen, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +34,7 @@ const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const navigate = useLocalizedNavigate();
   const { clearContextualSidebar } = useLayoutActions();
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
@@ -335,6 +337,13 @@ const GrammarModulePage: React.FC = () => {
                   {isAiPanelOpen
                     ? t('grammarModule.aiPanelHide', { defaultValue: 'Hide AI' })
                     : t('grammarModule.aiPanelShow', { defaultValue: 'Show AI' })}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                  onClick={() => navigate('/dashboard/resources/grammar')}
+                >
+                  {t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
                 </Button>
               </div>
             </div>

@@ -1310,6 +1310,10 @@ export const analyzeQuestion = action({
     correctAnswer: v.number(),
     type: v.optional(v.string()),
     language: v.optional(v.string()),
+    instruction: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    contextBox: v.optional(v.string()),
+    questionNumber: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_topik_question');
@@ -1318,6 +1322,8 @@ export const analyzeQuestion = action({
 
     const client = new OpenAI({ apiKey });
     const responseLanguage = resolveAiOutputLanguage(args.language);
+    const analysisMode = inferTopikQuestionAnalysisMode(args);
+    const questionContext = buildTopikQuestionAnalysisContext(args);
 
     try {
       const completion = await client.chat.completions.create({
@@ -1335,11 +1341,33 @@ Return strict JSON only:
   "wrongOptions": { "1": string, "2": string, ... } (why each wrong option is wrong)
 }
 All textual fields must be in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
+The explanation must be specific to the actual Korean text shown in the problem. Do not give generic test-taking advice.
+For every question, use the passage/context/instruction when available.
+When the problem is an ordering / sequencing question:
+- Explain the correct order step by step.
+- Refer to the labeled fragments such as (가), (나), (다), (라) explicitly.
+- Cite the concrete clue that determines each transition, such as time flow, cause-result, pronoun/reference, or discourse marker.
+- In "analysis", explain why fragment A must come before fragment B.
+- In "wrongOptions", explain the first point where each wrong sequence breaks the story or logic.
+When the problem is an insertion / <보기> question:
+- Explain the local coherence clue before and after the insertion point.
+- Mention why neighboring sentences make that location correct.
 Do not include markdown or extra text.`,
           },
           {
             role: 'user',
-            content: `Question: ${args.question}\nOptions: ${args.options.join(', ')}\nCorrect: ${args.correctAnswer + 1}`,
+            content: JSON.stringify({
+              analysisMode,
+              responseLanguage: responseLanguage.nativeLabel,
+              questionContext,
+              answerGuide: {
+                correctOptionNumber: args.correctAnswer + 1,
+                options: args.options.map((option, index) => ({
+                  number: index + 1,
+                  text: normalizeTopikAnalysisText(option),
+                })),
+              },
+            }),
           },
         ],
         response_format: { type: 'json_object' },
@@ -1364,6 +1392,73 @@ Do not include markdown or extra text.`,
       return { success: false, data: null };
     }
   },
+});
+
+type AnalyzeTopikQuestionArgs = {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  type?: string;
+  language?: string;
+  instruction?: string;
+  passage?: string;
+  contextBox?: string;
+  questionNumber?: number;
+};
+
+type TopikQuestionAnalysisMode = 'SEQUENCE_ORDERING' | 'INSERTION' | 'GENERAL';
+
+const normalizeTopikAnalysisText = (value?: string) =>
+  String(value ?? '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|li|tr|h\d)>/gi, '\n')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+
+const inferTopikQuestionAnalysisMode = (
+  args: Pick<AnalyzeTopikQuestionArgs, 'question' | 'instruction' | 'passage' | 'contextBox'>
+): TopikQuestionAnalysisMode => {
+  const haystack = [
+    args.question,
+    args.instruction,
+    args.passage,
+    args.contextBox,
+  ]
+    .map(normalizeTopikAnalysisText)
+    .join('\n');
+
+  if (/(순서대로|배열한 것|순서에 맞게|배열하)/.test(haystack)) {
+    return 'SEQUENCE_ORDERING';
+  }
+
+  if (/(<보기>|들어가기에 가장 알맞은 곳|주어진 문장이 들어갈 곳)/.test(haystack)) {
+    return 'INSERTION';
+  }
+
+  return 'GENERAL';
+};
+
+const buildTopikQuestionAnalysisContext = (
+  args: Pick<
+    AnalyzeTopikQuestionArgs,
+    'question' | 'instruction' | 'passage' | 'contextBox' | 'questionNumber'
+  >
+) => ({
+  questionNumber: args.questionNumber ?? null,
+  instruction: normalizeTopikAnalysisText(args.instruction),
+  question: normalizeTopikAnalysisText(args.question),
+  passage: normalizeTopikAnalysisText(args.passage),
+  contextBox: normalizeTopikAnalysisText(args.contextBox),
 });
 
 export const analyzeReadingArticle = action({

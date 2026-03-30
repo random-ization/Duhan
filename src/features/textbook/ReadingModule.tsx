@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../compon
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
 import { Button, Input, Select, Textarea } from '../../components/ui';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 
 // Legacy API removed - using Convex
 
@@ -821,6 +822,7 @@ interface ReadingModuleHeaderProps {
   setFontSize: React.Dispatch<React.SetStateAction<number>>;
   setIsSerif: React.Dispatch<React.SetStateAction<boolean>>;
   language: Language;
+  onSwitchMaterial: () => void;
 }
 
 const ReadingModuleHeader: React.FC<ReadingModuleHeaderProps> = ({
@@ -843,6 +845,7 @@ const ReadingModuleHeader: React.FC<ReadingModuleHeaderProps> = ({
   setFontSize,
   setIsSerif,
   language,
+  onSwitchMaterial,
 }) => (
   <header className="bg-card dark:bg-slate-900 border-b-2 border-foreground px-3 sm:px-6 py-3 shrink-0">
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -907,6 +910,14 @@ const ReadingModuleHeader: React.FC<ReadingModuleHeaderProps> = ({
             )}
           </span>
         )}
+        <Button
+          variant="outline"
+          size="auto"
+          onClick={onSwitchMaterial}
+          className="px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors bg-card"
+        >
+          {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}
+        </Button>
       </div>
 
       <div className="self-end md:self-auto relative">
@@ -1472,6 +1483,7 @@ interface ReadingLoadedContentProps {
   saveNote: (comment: string, color: HighlightColor) => void;
   mobileSheetOpen: boolean;
   setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onSwitchMaterial: () => void;
 }
 
 const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
@@ -1517,6 +1529,7 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
   saveNote,
   mobileSheetOpen,
   setMobileSheetOpen,
+  onSwitchMaterial,
 }) => (
   <>
     <ReadingModuleHeader
@@ -1539,6 +1552,7 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
       setFontSize={setFontSize}
       setIsSerif={setIsSerif}
       language={language}
+      onSwitchMaterial={onSwitchMaterial}
     />
 
     <div className="flex-1 flex overflow-hidden">
@@ -1614,6 +1628,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   language = 'en',
   onBack,
 }) => {
+  const navigate = useLocalizedNavigate();
   const labels = getLabels(language);
   const moduleText = useMemo(() => resolveReadingModuleText(labels), [labels]);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
@@ -2519,6 +2534,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           saveNote={saveNote}
           mobileSheetOpen={mobileSheetOpen}
           setMobileSheetOpen={setMobileSheetOpen}
+          onSwitchMaterial={() => navigate('/dashboard/resources/reading')}
         />
       )}
     </div>

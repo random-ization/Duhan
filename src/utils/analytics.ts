@@ -8,6 +8,9 @@ export const ANALYTICS_EVENTS = [
   'checkout_success',
   'payment_activation_success',
   'day1_retention',
+  'dashboard_learning_module_selected',
+  'learning_material_selected',
+  'learning_resource_opened',
 ] as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[number];
@@ -47,6 +50,24 @@ type AnalyticsEventPayloadMap = {
     language: string;
     userTier: string;
     daysSinceSignup: number;
+  };
+  dashboard_learning_module_selected: {
+    language: string;
+    module: 'grammar' | 'vocabulary' | 'listening' | 'reading';
+    entryPoint: 'dashboard_desktop' | 'dashboard_mobile';
+  };
+  learning_material_selected: {
+    language: string;
+    module: 'grammar' | 'vocabulary' | 'listening' | 'reading';
+    courseId: string;
+    source: 'recent' | 'recommended' | 'manual';
+  };
+  learning_resource_opened: {
+    language: string;
+    module: 'grammar' | 'vocabulary' | 'listening' | 'reading';
+    resourceId: string;
+    resourcePath: string;
+    courseId?: string;
   };
 };
 

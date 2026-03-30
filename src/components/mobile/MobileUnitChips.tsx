@@ -60,10 +60,10 @@ export default function MobileUnitChips({
             size="auto"
             key={unit}
             onClick={() => onSelect(unit)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full font-bold text-xs transition-all border-2 whitespace-nowrap ${
+            className={`flex-shrink-0 cursor-pointer snap-start rounded-xl px-4 py-2 font-bold text-sm border-2 transition-transform active:scale-95 ${
               isActive
-                ? 'bg-slate-900 text-white border-slate-900 shadow-[2px_2px_0px_0px_rgba(15,23,42,0.3)] dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
+                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                : 'bg-card text-muted-foreground border-border hover:border-foreground/30 shadow-none'
             }`}
           >
             {getUnitName(unit)}

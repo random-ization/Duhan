@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { House, BookOpen, Dumbbell, Clapperboard, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { Button } from '../ui';
 import { getPathWithoutLang } from '../../utils/pathname';
+import { cn } from '../../lib/utils';
 
 type Tab = {
   key: 'dashboard' | 'courses' | 'practice' | 'media' | 'profile';
@@ -90,29 +90,33 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+20px)] z-50 h-[78px] rounded-[2rem] bg-card border-2 border-foreground shadow-2xl px-2 grid grid-cols-5 items-center pb-2">
-      {tabs.map(tab => {
-        const isActive = isTabActive(tab);
-        const Icon = tab.icon;
-        return (
-          <Button
-            key={tab.key}
-            type="button"
-            size="auto"
-            variant="ghost"
-            onClick={() => handleTabPress(tab.path)}
-            className={`h-14 w-full rounded-[22px] grid place-items-center gap-1 text-[11px] font-extrabold select-none transition ${
-              isActive
-                ? 'bg-indigo-50 text-indigo-600 outline outline-2 outline-indigo-500'
-                : 'text-muted-foreground active:bg-accent'
-            }`}
-            aria-label={tab.label}
-          >
-            <Icon size={21} strokeWidth={isActive ? 3 : 2.2} />
-            <span className="leading-none">{tab.label}</span>
-          </Button>
-        );
-      })}
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex h-[60px] items-center justify-around px-2">
+        {tabs.map(tab => {
+          const isActive = isTabActive(tab);
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => handleTabPress(tab.path)}
+              className={cn(
+                'flex flex-1 flex-col items-center justify-center gap-1 h-full select-none transition-colors rounded-xl active:bg-zinc-100/50 dark:active:bg-zinc-800/50',
+                isActive
+                  ? 'text-zinc-900 dark:text-zinc-50 font-bold'
+                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 font-medium'
+              )}
+              aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[10px] sm:text-[11px] leading-none tracking-tight">
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }

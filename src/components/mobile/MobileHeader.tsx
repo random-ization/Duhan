@@ -240,7 +240,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
 
   if (routeUiConfig.headerType === 'dashboard') {
     return (
-      <div className="md:hidden sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-2 bg-gradient-to-b from-background/95 via-background/85 to-background/0 backdrop-blur-md">
+      <header className="md:hidden sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 px-4 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
             <img
@@ -257,12 +257,12 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
           </div>
           {renderRightAction()}
         </div>
-      </div>
+      </header>
     );
   }
 
   return (
-    <div className="md:hidden sticky top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-2 bg-gradient-to-b from-background/95 via-background/85 to-background/0 backdrop-blur-md">
+    <header className="md:hidden sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 px-4 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
       <div className="grid grid-cols-[40px,1fr,40px] items-center gap-2">
         {routeUiConfig.headerType === 'detail' ? (
           <Button
@@ -283,6 +283,6 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
         </div>
         <div className="justify-self-end">{renderRightAction()}</div>
       </div>
-    </div>
+    </header>
   );
 }

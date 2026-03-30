@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GripVertical, FileText } from 'lucide-react';
+import { GripVertical, FileText, ChevronRight, BookOpen } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
 import { useAuth } from '../contexts/AuthContext';
-import { useLearningSelection } from '../contexts/LearningContext';
+import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
 import { useLayoutActions, useLayoutDashboardState } from '../contexts/LayoutContext';
 import { useData } from '../contexts/DataContext'; // Import Data Context for institute lookup
 import LearnerSummaryCard from '../components/dashboard/LearnerSummaryCard';
@@ -26,6 +26,7 @@ import {
   shouldShowDashboardUpgradeBanner,
 } from '../utils/upgradeReminder';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
+import { buildLearningModulePath, resolveLearningEntryTarget } from '../utils/learningFlow';
 
 interface DailyPhraseData {
   id: string;
@@ -142,12 +143,93 @@ type DashboardCourseProgress = {
   lastUnitIndex?: number;
 } | null;
 
-type DashboardInstitute = { id: string; name: string };
+type DashboardInstitute = { id: string; name: string; coverUrl?: string };
 
 type DashboardProgressStats = {
   currentUnit: number;
   progressPercent: number;
 };
+
+type LearningEntranceModule = 'grammar' | 'vocabulary' | 'listening' | 'reading';
+
+type LearningEntranceCard = {
+  id: LearningEntranceModule;
+  badge: string;
+  title: string;
+  subtitle: string;
+  path: string;
+  icon: string;
+  bgClass: string;
+  borderClass: string;
+  badgeClass: string;
+  ctaClass: string;
+  ringClass: string;
+};
+
+function buildLearningEntranceCards(t: DashboardTranslateFn): LearningEntranceCard[] {
+  return [
+    {
+      id: 'grammar',
+      badge: 'GRAMMAR',
+      title: t('courseDashboard.modules.grammar', { defaultValue: 'Grammar' }),
+      subtitle: t('dashboard.learningFlow.grammar', {
+        defaultValue: 'Pattern explanations and sentence structures',
+      }),
+      path: '/dashboard/resources/grammar',
+      icon: '⚡️',
+      bgClass: 'bg-violet-50/80 dark:bg-violet-400/10',
+      borderClass: 'border-violet-200 dark:border-violet-300/30',
+      badgeClass: 'bg-violet-500 text-white',
+      ctaClass: 'text-violet-600 dark:text-violet-200',
+      ringClass: 'border-violet-200/80 dark:border-violet-300/25',
+    },
+    {
+      id: 'vocabulary',
+      badge: 'VOCABULARY',
+      title: t('courseDashboard.modules.vocabulary', { defaultValue: 'Vocabulary' }),
+      subtitle: t('dashboard.learningFlow.vocabulary', {
+        defaultValue: 'Word mastery with active recall practice',
+      }),
+      path: '/dashboard/resources/vocabulary',
+      icon: '🧩',
+      bgClass: 'bg-emerald-50/80 dark:bg-emerald-400/10',
+      borderClass: 'border-emerald-200 dark:border-emerald-300/30',
+      badgeClass: 'bg-emerald-500 text-white',
+      ctaClass: 'text-emerald-600 dark:text-emerald-200',
+      ringClass: 'border-emerald-200/80 dark:border-emerald-300/25',
+    },
+    {
+      id: 'listening',
+      badge: 'LISTENING',
+      title: t('courseDashboard.modules.listening', { defaultValue: 'Listening' }),
+      subtitle: t('dashboard.learningFlow.listening', {
+        defaultValue: 'Audio comprehension with real-world Korean',
+      }),
+      path: '/dashboard/resources/listening',
+      icon: '🎧',
+      bgClass: 'bg-amber-50/80 dark:bg-amber-400/10',
+      borderClass: 'border-amber-200 dark:border-amber-300/30',
+      badgeClass: 'bg-amber-500 text-white',
+      ctaClass: 'text-amber-600 dark:text-amber-200',
+      ringClass: 'border-amber-200/80 dark:border-amber-300/25',
+    },
+    {
+      id: 'reading',
+      badge: 'READING',
+      title: t('courseDashboard.modules.reading', { defaultValue: 'Reading' }),
+      subtitle: t('dashboard.learningFlow.reading', {
+        defaultValue: 'Articles and text drills for reading fluency',
+      }),
+      path: '/dashboard/resources/reading',
+      icon: '📘',
+      bgClass: 'bg-blue-50/80 dark:bg-blue-400/10',
+      borderClass: 'border-blue-300 dark:border-blue-300/30',
+      badgeClass: 'bg-blue-500 text-white',
+      ctaClass: 'text-blue-600 dark:text-blue-200',
+      ringClass: 'border-blue-200/80 dark:border-blue-300/25',
+    },
+  ];
+}
 
 function getGreetingMessage(t: DashboardTranslateFn) {
   const hour = new Date().getHours();
@@ -621,6 +703,7 @@ export default function DashboardPage() {
   const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
   const { t } = useTranslation();
   const { selectedInstitute, selectedLevel } = useLearningSelection();
+  const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
   const { isEditing, cardOrder } = useLayoutDashboardState();
   const { updateCardOrder } = useLayoutActions();
   const { institutes, isLoading: institutesLoading } = useData(); // Get institutes data
@@ -628,6 +711,8 @@ export default function DashboardPage() {
   const [searchParams] = useSearchParams();
   const [upgradeBannerRefreshKey, setUpgradeBannerRefreshKey] = useState(0);
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
+
+  const dashboardLanguage = resolveDashboardLanguage(language);
 
   useEffect(() => {
     if (typeof globalThis.window === 'undefined') {
@@ -679,12 +764,12 @@ export default function DashboardPage() {
     if (safeGetLocalStorageItem(dedupeKey) === '1') return;
 
     trackEvent('day1_retention', {
-      language: resolveDashboardLanguage(language),
+      language: dashboardLanguage,
       userTier: user.tier || 'UNKNOWN',
       daysSinceSignup,
     });
     safeSetLocalStorageItem(dedupeKey, '1');
-  }, [language, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
+  }, [dashboardLanguage, user?.createdAt, user?.id, user?.joinDate, user?.tier]);
 
   useEffect(() => {
     if (!user?.id || viewerAccess?.isPremium) {
@@ -770,6 +855,37 @@ export default function DashboardPage() {
   const greeting = getGreetingMessage(t);
   const learnerName = getLearnerName(user);
   const gridClassName = getDashboardGridClassName(isEditing);
+  const learningEntranceCards = buildLearningEntranceCards(t);
+  const learningEntryTarget = useMemo(
+    () =>
+      resolveLearningEntryTarget({
+        institutes,
+        selectedInstitute,
+        selectedLevel,
+        userLastInstitute: user?.lastInstitute,
+      }),
+    [institutes, selectedInstitute, selectedLevel, user?.lastInstitute]
+  );
+  const currentMaterialMeta = useMemo(() => {
+    const allInstitutes = institutes as DashboardInstitute[] | undefined;
+    if (!allInstitutes || allInstitutes.length === 0) {
+      return { name: instituteName, coverUrl: undefined as string | undefined };
+    }
+
+    if (learningEntryTarget?.instituteId) {
+      const targetInstitute = allInstitutes.find(
+        item => item.id === learningEntryTarget.instituteId
+      );
+      if (targetInstitute) {
+        return {
+          name: targetInstitute.name,
+          coverUrl: targetInstitute.coverUrl,
+        };
+      }
+    }
+
+    return { name: instituteName, coverUrl: undefined as string | undefined };
+  }, [institutes, instituteName, learningEntryTarget]);
   const onSpeakDailyPhrase = () => {
     if (dailyPhrase?.korean) speak(dailyPhrase.korean);
   };
@@ -917,6 +1033,119 @@ export default function DashboardPage() {
             dueCount={dueReviews}
             recommendedCount={reviewSummary?.recommendedToday ?? dueReviews}
           />
+        </div>
+      )}
+
+      {dashboardView !== 'practice' && (
+        <div className="rounded-2xl border border-slate-200 bg-card/85 px-4 py-3 md:px-5 md:py-4 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-card px-3 py-2">
+              <div className="h-10 w-8 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                {currentMaterialMeta.coverUrl ? (
+                  <img
+                    src={currentMaterialMeta.coverUrl}
+                    alt={currentMaterialMeta.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-500">
+                    <BookOpen className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+                  {t('dashboard.textbook.default', { defaultValue: 'Textbook' })}
+                </p>
+                <div className="relative max-w-[260px]">
+                  <p
+                    className="truncate pr-6 text-sm font-black text-foreground"
+                    title={t('dashboard.learningFlow.currentMaterial', {
+                      defaultValue: 'Current textbook: {{name}}',
+                      name: currentMaterialMeta.name,
+                    })}
+                  >
+                    {currentMaterialMeta.name}
+                  </p>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/courses')}
+              className="w-fit rounded-lg border-slate-300 px-3 font-bold"
+            >
+              {t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {dashboardView !== 'practice' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(220px,auto)]">
+          {learningEntranceCards.map(card => (
+            <BentoCard
+              key={card.id}
+              onClick={() => {
+                trackEvent('dashboard_learning_module_selected', {
+                  language: dashboardLanguage,
+                  module: card.id,
+                  entryPoint: 'dashboard_desktop',
+                });
+                safeSetLocalStorageItem('duhan:learning_flow:last_module', card.id);
+                if (learningEntryTarget) {
+                  setSelectedInstitute(learningEntryTarget.instituteId);
+                  setSelectedLevel(learningEntryTarget.level);
+                }
+              }}
+              onClickPath={
+                learningEntryTarget
+                  ? buildLearningModulePath(card.id, learningEntryTarget.instituteId)
+                  : '/courses'
+              }
+              bgClass={card.bgClass}
+              borderClass={card.borderClass}
+              className="h-full min-h-[220px]"
+            >
+              <div className="relative z-10 flex h-full flex-col justify-between gap-4">
+                <div>
+                  <span
+                    className={`inline-flex rounded-md px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${card.badgeClass}`}
+                  >
+                    {card.badge}
+                  </span>
+                  <h3 className="mt-3 text-2xl font-black leading-tight text-foreground">
+                    {card.title}
+                  </h3>
+                  <p className="mt-2 max-w-[92%] text-sm font-semibold leading-snug text-muted-foreground">
+                    {card.subtitle}
+                  </p>
+                </div>
+
+                <div
+                  className={`inline-flex items-center gap-1 text-base md:text-lg font-black ${card.ctaClass}`}
+                >
+                  <span>
+                    {t('dashboard.learningFlow.cta', { defaultValue: 'Choose materials' })}
+                  </span>
+                  <ChevronRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
+              </div>
+
+              <div
+                className={`absolute -bottom-6 -right-6 h-24 w-24 rounded-full border-[3px] bg-card/65 backdrop-blur-[1px] transition-transform duration-300 group-hover:scale-110 ${card.ringClass}`}
+              />
+              <span className="absolute bottom-4 right-4 text-4xl leading-none transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
+                {card.icon}
+              </span>
+            </BentoCard>
+          ))}
         </div>
       )}
 

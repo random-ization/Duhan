@@ -1826,9 +1826,65 @@
       "bestScoreLabel": "最高：{{score}}",
       "latestEpisodes": "最新剧集"
     },
+    "learningFlow": {
+      "badge": "学习流程",
+      "title": "先选能力模块，再选教材和资源",
+      "subtitle": "请选择语法、单词、听力或阅读后继续。",
+      "cta": "选择资源",
+      "currentMaterial": "当前教材：{{name}}",
+      "mobileTitle": "先选择学习模块",
+      "grammar": "系统讲解句型与语法结构",
+      "vocabulary": "通过主动回忆强化词汇记忆",
+      "listening": "用真实语料提升听力理解",
+      "reading": "通过文章练习提升阅读流畅度"
+    },
     "subtitle": "Ready to beat today's boss?",
     "alt": {
       "tigerCoach": "老虎教练"
+    }
+  },
+  "learningFlow": {
+    "header": {
+      "badge": "第 2 步 · 教材与资源",
+      "helper": "你可以在 Dashboard 直接进入学习；需要更换教材时再来这里。"
+    },
+    "materials": {
+      "title": "选择教材",
+      "subtitle": "选择后可解锁与教材关联的学习资源。",
+      "current": "当前",
+      "searchPlaceholder": "搜索教材/出版社...",
+      "selectBook": "选择此书",
+      "units": "个单元",
+      "emptyPublisher": "该出版社分组下暂无教材。",
+      "publishers": {
+        "all": "全部",
+        "yonsei": "延世",
+        "seoul": "首尔大学",
+        "chungang": "中央大学",
+        "oer": "开放资源",
+        "topik": "TOPIK",
+        "other": "其他"
+      }
+    },
+    "resources": {
+      "title": "选择资源",
+      "selectedMaterial": "当前教材：{{name}}",
+      "noMaterial": "可先进入通用资源，也可以先选择教材。",
+      "grammarCourseTitle": "教材语法",
+      "grammarCourseDesc": "围绕所选教材单元学习语法点。",
+      "vocabCourseTitle": "教材单词",
+      "vocabCourseDesc": "按教材单元进行间隔复习与记忆巩固。",
+      "vocabBookTitle": "我的生词本",
+      "vocabBookDesc": "集中复习所有课程保存的单词。",
+      "listeningCourseTitle": "教材听力",
+      "listeningCourseDesc": "按所选教材学习听力音频与任务。",
+      "podcastTitle": "播客资源库",
+      "podcastDesc": "通过精选播客进行日常听力沉浸。",
+      "readingCourseTitle": "教材阅读",
+      "readingCourseDesc": "阅读与所选教材配套的课文内容。"
+    },
+    "actions": {
+      "switchMaterial": "切换教材"
     }
   },
   "typingGame": {

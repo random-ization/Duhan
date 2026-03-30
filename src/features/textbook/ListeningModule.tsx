@@ -25,6 +25,7 @@ import { notify } from '../../utils/notify';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../components/ui';
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
 import { Button, Select } from '../../components/ui';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 
 // =========================================
 // Types
@@ -939,6 +940,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   language = 'en',
   onBack,
 }) => {
+  const navigate = useLocalizedNavigate();
   const labels = getLabels(language);
   const { saveWord } = useUserActions();
   const { logActivity } = useActivityLogger();
@@ -1358,6 +1360,14 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                 >
                   <Languages className="w-4 h-4 inline mr-1" />
                   {uiText.translationLabel}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="auto"
+                  onClick={() => navigate('/dashboard/resources/listening')}
+                  className="px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors bg-card"
+                >
+                  {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}
                 </Button>
               </div>
 

@@ -180,6 +180,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         correctAnswer: number;
         type: string;
         language?: string;
+        instruction?: string;
+        passage?: string;
+        contextBox?: string;
+        questionNumber?: number;
       },
       { success?: boolean; data?: AIAnalysis }
     >('ai:analyzeQuestion')
@@ -212,6 +216,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         correctAnswer: question.correctAnswer ?? 0,
         type: 'TOPIK_QUESTION',
         language,
+        instruction: question.instruction,
+        passage: question.passage,
+        contextBox: question.contextBox,
+        questionNumber: question.number ?? currentQuestionIndex + 1,
       })) as { success?: boolean; data?: AIAnalysis };
 
       if (result?.success && result.data) {
@@ -907,6 +915,26 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                       </div>
                       <div className="text-muted-foreground leading-relaxed bg-card/60 p-3 rounded-xl text-sm whitespace-pre-wrap">
                         {aiAnalysis.analysis}
+                      </div>
+                    </div>
+                  )}
+
+                  {Object.entries(aiAnalysis.wrongOptions || {}).length > 0 && (
+                    <div>
+                      <div className="text-xs font-bold text-indigo-400 dark:text-indigo-200 uppercase tracking-wider mb-1">
+                        {t('dashboard.topik.mobile.review.wrongOptions', {
+                          defaultValue: 'Wrong Options',
+                        })}
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(aiAnalysis.wrongOptions || {}).map(([key, value]) => (
+                          <div key={key} className="text-muted-foreground bg-card/60 p-3 rounded-xl text-sm">
+                            <span className="font-bold">
+                              {t('common.option', { defaultValue: 'Option' })} {key}:
+                            </span>{' '}
+                            <span>{value}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

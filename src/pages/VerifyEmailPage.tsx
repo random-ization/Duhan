@@ -97,14 +97,14 @@ const VerifyEmailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <h1 className="text-2xl font-black text-slate-900 mb-2">
+    <div className="min-h-[100dvh] bg-background flex flex-col sm:justify-center sm:py-12 sm:px-6">
+      <div className="flex-1 sm:flex-initial flex flex-col w-full max-w-md mx-auto bg-card sm:rounded-[2rem] sm:border sm:shadow-2xl overflow-y-auto mt-0 px-6 py-12 sm:p-8">
+        <h1 className="text-2xl font-black text-foreground mb-2 mt-4 sm:mt-0 tracking-tight">
           {t('auth.verifyEmail', { defaultValue: 'Verify email' })}
         </h1>
 
         {!token && (
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm font-medium text-muted-foreground mb-8">
             {t('auth.verifyEmailDescription', {
               defaultValue: 'Click the button below to send a verification email.',
             })}
@@ -113,12 +113,12 @@ const VerifyEmailPage: React.FC = () => {
 
         {state !== 'idle' && (
           <div
-            className={`mb-5 rounded-xl border p-4 text-sm ${
+            className={`mb-6 rounded-[14px] border p-4 text-sm font-medium ${
               state === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                ? 'bg-secondary border-border text-secondary-foreground'
                 : state === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
+                  ? 'bg-destructive/10 border-destructive/20 text-destructive'
+                  : 'bg-muted border-border text-muted-foreground'
             }`}
           >
             {message || t('common.loading', { defaultValue: 'Loading...' })}
@@ -131,20 +131,20 @@ const VerifyEmailPage: React.FC = () => {
             onClick={handleRequest}
             loading={state === 'loading'}
             loadingText={t('common.loading', { defaultValue: 'Loading...' })}
-            variant="ghost"
+            variant="default"
             size="auto"
-            className="w-full rounded-xl bg-slate-900 text-white font-bold py-3 disabled:opacity-60"
+            className="w-full h-[54px] rounded-[16px] flex items-center justify-center gap-2 mt-2 font-bold text-[15px]"
           >
             {t('auth.sendVerificationEmail', { defaultValue: 'Send verification email' })}
           </Button>
         )}
 
-        <div className="mt-6 text-sm flex gap-4">
+        <div className="mt-8 text-[13px] font-semibold text-muted-foreground flex items-center justify-start gap-4">
           <Button
             asChild
-            variant="ghost"
+            variant="link"
             size="auto"
-            className="text-indigo-600 hover:text-indigo-700 font-semibold"
+            className="h-auto p-0 font-bold"
           >
             <LocalizedLink to="/login">
               {t('auth.backToLogin', { defaultValue: 'Back to login' })}
@@ -153,9 +153,9 @@ const VerifyEmailPage: React.FC = () => {
           {user && (
             <Button
               asChild
-              variant="ghost"
+              variant="link"
               size="auto"
-              className="text-slate-600 hover:text-slate-700 font-semibold"
+              className="h-auto p-0 font-bold text-foreground"
             >
               <LocalizedLink to="/profile">
                 {t('profile.title', { defaultValue: 'Profile' })}

@@ -517,12 +517,12 @@ const MobileResults = ({
           lockBodyScroll={false}
           className="fixed inset-0 z-50 bg-muted flex flex-col items-center justify-center p-6"
         >
-          <div className="w-full max-w-sm bg-card rounded-[2.5rem] shadow-xl shadow-slate-200/50 dark:shadow-[0_20px_40px_-18px_rgba(148,163,184,0.28)] overflow-hidden border border-border">
+          <div className="w-full max-w-sm bg-card rounded-[2.5rem] shadow-2xl shadow-black/10 dark:shadow-none overflow-hidden border border-border">
             {/* Header */}
             <div className="bg-primary p-8 text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 dark:from-indigo-300/16 dark:to-purple-300/16" />
               <div className="relative z-10">
-                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ring-4 ring-slate-800 border-2 border-border">
+                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ring-4 ring-background border-2 border-border">
                   <span className="text-4xl">{isHighScore ? '🏆' : '👍'}</span>
                 </div>
                 <h2 className="text-2xl font-black text-primary-foreground mb-1">

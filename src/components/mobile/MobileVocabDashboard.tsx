@@ -80,7 +80,7 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
           variant="ghost"
           size="auto"
           onClick={onStartLearn}
-          className="group w-full bg-card border-2 border-border rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
+          className="group w-full bg-card border border-border rounded-2xl p-1 shadow-sm active:scale-95 transition-transform"
         >
           <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-green-50 dark:group-hover:bg-green-400/12 transition-colors">
             <div className="flex items-center gap-4">
@@ -107,11 +107,11 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
           variant="ghost"
           size="auto"
           onClick={onStartTest}
-          className="group w-full bg-card border-2 border-border rounded-2xl p-1 shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:translate-y-1 active:shadow-none transition-all"
+          className="group w-full bg-card border border-border rounded-2xl p-1 shadow-sm active:scale-95 transition-transform"
         >
           <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 transition-colors">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:indigo-300">
                 <Trophy className="w-6 h-6" />
               </div>
               <div className="text-left">

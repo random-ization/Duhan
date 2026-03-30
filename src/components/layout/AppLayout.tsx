@@ -115,7 +115,7 @@ export default function AppLayout() {
           {shouldShowFooter && <Footer />}
         </div>
         {shouldShowMobileNav && (
-          <div className="h-[calc(env(safe-area-inset-bottom)+112px)] md:h-0" />
+          <div className="h-[calc(env(safe-area-inset-bottom)+60px)] md:h-0 flex-shrink-0" />
         )}
       </main>
       {shouldShowMobileNav && <MobilePwaInstallPrompt />}

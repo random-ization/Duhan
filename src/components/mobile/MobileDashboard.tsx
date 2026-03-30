@@ -169,58 +169,41 @@ const MobileDashboardLayout = ({
       </header>
 
       <main className="relative z-10 px-4 space-y-5 pt-5 animate-in fade-in duration-500">
-        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200/60 dark:shadow-slate-950/30 relative overflow-hidden">
+        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-[24px] p-4 text-white shadow-lg shadow-indigo-200/50 dark:shadow-none relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <div>
-              <h2 className="font-bold text-lg">
-                {t('dashboard.summary.title', { defaultValue: "Today's Goal" })}
-              </h2>
-              <p className="text-indigo-100 dark:text-indigo-200/80 text-xs font-medium">
-                {t('dashboard.mobile.keepMomentum')}
-              </p>
-            </div>
-            <div className="bg-card/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10 flex items-center gap-1">
-              <Target className="w-3 h-3" />
-              {Math.round(goalPercent)}%
-            </div>
-          </div>
-          <div className="mb-4 relative z-10">
-            <div className="flex justify-between text-xs font-semibold text-indigo-100 dark:text-indigo-200/80 mb-1.5">
-              <span>
-                {stats.todayMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
-              </span>
-              <span>
-                {t('dashboard.mobile.leftMinutes', {
-                  count: Math.max(0, stats.dailyGoal - stats.todayMinutes),
-                  defaultValue: '{{count}} left',
-                })}
-              </span>
-            </div>
-            <div className="h-2.5 bg-black/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 dark:from-emerald-400/75 dark:to-teal-400/75 rounded-full shadow-[0_0_10px_rgba(110,231,183,0.5)] dark:shadow-[0_0_8px_rgba(52,211,153,0.28)] transition-all duration-500"
-                style={{ width: `${goalPercent}%` }}
-              ></div>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 border-t border-white/10 pt-3 relative z-10">
-            <div className="text-center">
-              <div className="text-xl font-black">{stats.todayMinutes}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">
-                {t('dashboard.mobile.minutesShort', { defaultValue: 'Mins' })}
+          <div className="flex flex-col gap-3 relative z-10">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="font-bold text-base leading-tight">
+                  {t('dashboard.summary.title', { defaultValue: "Today's Goal" })}
+                </h2>
+                <div className="text-indigo-100 dark:text-indigo-200/80 text-[10px] font-medium mt-0.5">
+                  {stats.todayMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="text-sm font-black leading-none">{stats.streak}</div>
+                  <div className="text-[9px] opacity-70 uppercase tracking-wide mt-0.5">
+                    {t('dashboard.mobile.streakShort', { defaultValue: 'Streak' })}
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-white/20"></div>
+                <div className="text-right">
+                  <div className="text-sm font-black leading-none">{stats.vocabStats.dueReviews}</div>
+                  <div className="text-[9px] opacity-70 uppercase tracking-wide mt-0.5">
+                    {t('dashboard.mobile.dueShort', { defaultValue: 'Due' })}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="text-center border-l border-white/10">
-              <div className="text-xl font-black">{stats.vocabStats.dueReviews}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">
-                {t('dashboard.mobile.dueShort', { defaultValue: 'Due' })}
-              </div>
-            </div>
-            <div className="text-center border-l border-white/10">
-              <div className="text-xl font-black">{stats.streak}</div>
-              <div className="text-[10px] opacity-70 uppercase tracking-wide">
-                {t('dashboard.mobile.streakShort', { defaultValue: 'Streak' })}
+            {/* Progress Bar */}
+            <div className="relative">
+              <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 dark:from-emerald-400/75 dark:to-teal-400/75 rounded-full shadow-[0_0_10px_rgba(110,231,183,0.5)] dark:shadow-[0_0_8px_rgba(52,211,153,0.28)] transition-all duration-500"
+                  style={{ width: `${goalPercent}%` }}
+                ></div>
               </div>
             </div>
           </div>
@@ -277,108 +260,94 @@ const MobileDashboardLayout = ({
           />
         </Button>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Practice Grid - Horizontal Scroll Area */}
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-4 pt-1 hidden-scrollbar border-t border-border mt-2 pt-5 -mx-4 px-4">
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate('/vocab-book')}
-            className="w-full justify-start items-start bg-indigo-50 dark:bg-indigo-400/10 p-4 rounded-3xl border border-indigo-100 dark:border-indigo-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
           >
-            <div className="relative z-10 w-full">
-              <span className="bg-indigo-500 dark:bg-indigo-400/30 text-white dark:text-indigo-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                {t('dashboard.mobile.review')}
-              </span>
-              <h4 className="font-black text-lg text-foreground mt-1">
-                {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
-              </h4>
-              <p className="text-indigo-600 dark:text-indigo-200/90 text-xs font-bold mt-0.5">
-                {savedWordsCount}{' '}
-                {t('dashboard.vocab.count', {
-                  count: savedWordsCount,
-                  defaultValue: '{{count}} words',
-                })}
+            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
+              <div>
+                <span className="bg-indigo-100 dark:bg-indigo-400/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
+                  {t('dashboard.mobile.review')}
+                </span>
+                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
+                  {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
+                </h4>
+              </div>
+              <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold mt-2">
+                {savedWordsCount} {t('dashboard.vocab.count', { count: savedWordsCount, defaultValue: 'words' })}
               </p>
             </div>
-            <img
-              src={ASSETS.vocabBook}
-              className="absolute -right-3 -bottom-3 w-16 h-16 rotate-12"
-              alt=""
-            />
+            <img src={ASSETS.vocabBook} className="absolute -right-3 -bottom-3 w-16 h-16 rotate-12 opacity-80" alt="" />
           </Button>
 
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate('/notebook')}
-            className="w-full justify-start items-start bg-orange-50 dark:bg-orange-400/10 p-4 rounded-3xl border border-orange-100 dark:border-orange-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
           >
-            <div className="relative z-10 w-full">
-              <span className="bg-orange-500 dark:bg-orange-400/30 text-white dark:text-orange-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                {t('dashboard.mobile.notes')}
-              </span>
-              <h4 className="font-black text-lg text-foreground mt-1">
-                {t('dashboard.mobile.mistakes')}
-              </h4>
-              <div className="flex gap-1 mt-1">
+            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
+              <div>
+                <span className="bg-orange-100 dark:bg-orange-400/20 text-orange-700 dark:text-orange-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
+                  {t('dashboard.mobile.notes')}
+                </span>
+                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
+                  {t('dashboard.mobile.mistakes')}
+                </h4>
+              </div>
+              <div className="flex gap-1 mt-2">
                 <span className="bg-red-100 dark:bg-red-400/14 text-red-600 dark:text-red-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
                   {t('dashboard.mobile.check')}
                 </span>
               </div>
             </div>
-            <img
-              src={ASSETS.memo}
-              className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-6"
-              alt=""
-            />
+            <img src={ASSETS.memo} className="absolute -right-3 bottom-0 w-16 h-16 opacity-80" alt="" />
           </Button>
 
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate('/typing')}
-            className="w-full justify-start items-start bg-emerald-50 dark:bg-emerald-400/10 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
           >
-            <div className="relative z-10 w-full">
-              <span className="bg-emerald-500 dark:bg-emerald-400/30 text-white dark:text-emerald-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                {t('dashboard.mobile.typing')}
-              </span>
-              <h4 className="font-black text-lg text-foreground mt-1">
-                {t('dashboard.mobile.practice')}
-              </h4>
-              <p className="text-emerald-700 dark:text-emerald-200/90 text-xs font-bold mt-0.5">
+            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
+              <div>
+                <span className="bg-emerald-100 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
+                  {t('dashboard.mobile.typing')}
+                </span>
+                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
+                  {t('dashboard.mobile.practice')}
+                </h4>
+              </div>
+              <p className="text-emerald-600 dark:text-emerald-400 text-xs font-bold mt-2">
                 {t('dashboard.mobile.start')}
               </p>
             </div>
-            <img
-              src={ASSETS.typing}
-              className="absolute -right-3 -bottom-3 w-16 h-16 rotate-6"
-              alt=""
-            />
+            <img src={ASSETS.typing} className="absolute -right-2 -bottom-2 w-16 h-16 opacity-80 rotate-6" alt="" />
           </Button>
 
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate('/topik')}
-            className="w-full justify-start items-start bg-amber-50 dark:bg-amber-400/10 p-4 rounded-3xl border border-amber-100 dark:border-amber-300/20 relative overflow-hidden text-left active:scale-95 transition-transform"
+            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
           >
-            <div className="relative z-10 w-full">
-              <span className="bg-amber-500 dark:bg-amber-400/30 text-white dark:text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                {t('dashboard.mobile.exam')}
-              </span>
-              <h4 className="font-black text-lg text-foreground mt-1">{t('nav.topik')}</h4>
-              <p className="text-amber-700 dark:text-amber-200/90 text-xs font-bold mt-0.5">
-                {t('dashboard.mobile.bestScoreLabel', {
-                  score: topScore,
-                  defaultValue: 'Best: {{score}}',
-                })}
+            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
+              <div>
+                <span className="bg-amber-100 dark:bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
+                  {t('dashboard.mobile.exam')}
+                </span>
+                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">{t('nav.topik')}</h4>
+              </div>
+              <p className="text-amber-600 dark:text-amber-400 text-xs font-bold mt-2">
+                {t('dashboard.mobile.bestScoreLabel', { score: topScore, defaultValue: 'Best: {{score}}' })}
               </p>
             </div>
-            <img
-              src={ASSETS.trophy}
-              className="absolute -right-3 -bottom-3 w-16 h-16 -rotate-12"
-              alt=""
-            />
+            <img src={ASSETS.trophy} className="absolute -right-2 -bottom-2 w-16 h-16 opacity-80" alt="" />
           </Button>
         </div>
 
@@ -387,7 +356,7 @@ const MobileDashboardLayout = ({
             variant="ghost"
             size="auto"
             onClick={() => navigate('/podcasts')}
-            className="bg-violet-50 dark:bg-violet-400/10 p-4 rounded-3xl border border-violet-100 dark:border-violet-300/20 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
+            className="bg-card p-4 rounded-3xl border border-border flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform group"
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-400/16 flex items-center justify-center text-violet-600 dark:text-violet-200">
@@ -401,7 +370,7 @@ const MobileDashboardLayout = ({
                   {t('dashboard.podcast.label')}
                 </h4>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[10px] font-bold text-violet-600 dark:text-violet-200/90">
+                  <span className="text-[10px] font-bold text-muted-foreground group-active:text-violet-600 dark:group-active:text-violet-200/90 transition-colors">
                     {t('dashboard.mobile.latestEpisodes')}
                   </span>
                 </div>
@@ -414,7 +383,7 @@ const MobileDashboardLayout = ({
             variant="ghost"
             size="auto"
             onClick={() => navigate('/videos')}
-            className="bg-rose-50 dark:bg-rose-400/10 p-4 rounded-3xl border border-rose-100 dark:border-rose-300/20 flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform"
+            className="bg-card p-4 rounded-3xl border border-border flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform group"
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-400/16 flex items-center justify-center text-rose-600 dark:text-rose-200">
@@ -427,7 +396,7 @@ const MobileDashboardLayout = ({
                 <h4 className="font-bold text-foreground text-lg leading-tight mt-1">
                   {t('dashboard.mobile.videoLibrary')}
                 </h4>
-                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-200/90 mt-1 block">
+                <span className="text-[10px] font-bold text-muted-foreground group-active:text-rose-600 dark:group-active:text-rose-200/90 mt-1 block transition-colors">
                   {t('dashboard.mobile.immersion')}
                 </span>
               </div>

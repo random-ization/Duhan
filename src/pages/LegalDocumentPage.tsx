@@ -50,12 +50,12 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   if (error || !document) {
     return (
-      <div className="max-w-4xl mx-auto text-center py-12">
-        <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+      <div className="max-w-4xl mx-auto text-center py-12 px-4">
+        <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-foreground mb-2">
           {labels.documentNotFound || 'Document Not Found'}
         </h2>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           {labels.documentNotFoundDesc || 'The requested document could not be found.'}
         </p>
       </div>
@@ -63,7 +63,7 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-20">
       <Seo
         title={meta.title}
         description={meta.description}
@@ -71,22 +71,24 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
         noIndex={meta.noIndex}
       />
       {/* Back Button */}
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <BackButton onClick={() => navigate(-1)} />
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-indigo-100 p-3 rounded-lg">
-            <FileText className="w-6 h-6 text-indigo-600" />
+      <div className="bg-card rounded-2xl shadow-sm border border-border p-5 md:p-6 mb-4 md:mb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-2 md:mb-4">
+          <div className="bg-indigo-50 dark:bg-indigo-400/15 p-3 rounded-xl shrink-0">
+            <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">{document.title}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
+              {document.title}
+            </h1>
             {document.updatedAt && (
-              <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
+              <div className="flex items-center gap-1.5 mt-2 text-xs md:text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4 ml-0.5" />
+                <span className="font-medium">
                   {labels.lastUpdated || 'Last updated:'}{' '}
                   {new Date(document.updatedAt).toLocaleDateString()}
                 </span>
@@ -97,9 +99,9 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+      <div className="bg-card rounded-2xl shadow-sm border border-border p-5 md:p-8">
         <div
-          className="prose prose-slate max-w-none"
+          className="prose prose-slate dark:prose-invert prose-sm md:prose-base max-w-none break-words"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(formatContent(document.content)) }}
         />
       </div>
@@ -129,7 +131,7 @@ function formatContent(content: string): string {
     parsed = parsed.replaceAll(/\*([^*]+)\*/g, '<em>$1</em>');
     parsed = parsed.replaceAll(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" class="text-indigo-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
+      '<a href="$2" class="text-indigo-600 dark:text-indigo-400 font-medium hover:underline" target="_blank" rel="noopener noreferrer">$1</a>'
     );
     return parsed;
   };

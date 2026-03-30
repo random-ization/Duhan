@@ -1333,6 +1333,18 @@
       "goalPart3": "Keep it up!"
     },
     "subtitle": "Ready to beat today's boss?",
+    "learningFlow": {
+      "badge": "Learning Flow",
+      "title": "Choose a skill first, then pick materials",
+      "subtitle": "Select Grammar, Vocabulary, Listening, or Reading to continue.",
+      "cta": "Choose materials",
+      "currentMaterial": "Current textbook: {{name}}",
+      "mobileTitle": "Choose a skill module first",
+      "grammar": "Pattern explanations and sentence structures",
+      "vocabulary": "Word mastery with active recall practice",
+      "listening": "Audio comprehension with real-world Korean",
+      "reading": "Articles and text drills for reading fluency"
+    },
     "premiumBadge": "Premium",
     "common": {
       "streak": "Streak Challenge",
@@ -1818,6 +1830,50 @@
     },
     "alt": {
       "tigerCoach": "Tiger coach"
+    }
+  },
+  "learningFlow": {
+    "header": {
+      "badge": "Step 2 · Materials & Resources",
+      "helper": "You can start from Dashboard directly. Use this page when you want to switch materials."
+    },
+    "materials": {
+      "title": "Choose a textbook",
+      "subtitle": "Select one to unlock textbook-linked resources.",
+      "current": "Current",
+      "searchPlaceholder": "Search textbook/publisher...",
+      "selectBook": "Select this book",
+      "units": "units",
+      "emptyPublisher": "No textbooks in this publisher group yet.",
+      "publishers": {
+        "all": "All",
+        "yonsei": "Yonsei",
+        "seoul": "Seoul National",
+        "chungang": "Chung-Ang",
+        "oer": "OER",
+        "topik": "TOPIK",
+        "other": "Others"
+      }
+    },
+    "resources": {
+      "title": "Choose a resource",
+      "selectedMaterial": "Selected textbook: {{name}}",
+      "noMaterial": "You can open general resources now, or pick a textbook first.",
+      "grammarCourseTitle": "Textbook Grammar",
+      "grammarCourseDesc": "Study grammar points tied to your selected textbook units.",
+      "vocabCourseTitle": "Textbook Vocabulary",
+      "vocabCourseDesc": "Practice words from textbook units with spaced repetition.",
+      "vocabBookTitle": "My Vocab Book",
+      "vocabBookDesc": "Review saved words across all courses in one place.",
+      "listeningCourseTitle": "Textbook Listening",
+      "listeningCourseDesc": "Follow your selected course listening tracks and tasks.",
+      "podcastTitle": "Podcast Library",
+      "podcastDesc": "Use curated episodes for daily listening immersion.",
+      "readingCourseTitle": "Textbook Reading",
+      "readingCourseDesc": "Read textbook passages linked to your selected course."
+    },
+    "actions": {
+      "switchMaterial": "Switch textbook"
     }
   },
   "sidebar": {

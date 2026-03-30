@@ -544,7 +544,7 @@ const LandingHero = () => {
               });
               navigate('/register');
             }}
-            className="px-10 py-5 bg-brand-yellow dark:bg-amber-300 border-2 border-black text-slate-900 text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
+            className="px-6 py-4 md:px-10 md:py-5 bg-brand-yellow dark:bg-amber-300 border-2 border-black text-slate-900 text-base md:text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
           >
             {t('landing.hero.ctaPrimary')}
             <ArrowRight className="w-5 h-5" />
@@ -553,7 +553,7 @@ const LandingHero = () => {
             href="#topik"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="px-10 py-5 bg-white text-slate-900 text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-black hover:text-black transition-all flex items-center justify-center gap-3"
+            className="px-6 py-4 md:px-10 md:py-5 bg-white text-slate-900 text-base md:text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-black hover:text-black transition-all flex items-center justify-center gap-3"
           >
             <PlayCircle className="w-5 h-5" />
             {t('landing.hero.ctaSecondary')}
@@ -648,7 +648,7 @@ const LandingTopik = () => {
           </motion.div>
           <motion.h2
             variants={fadeInUp}
-            className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight"
+            className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
           >
             {t('landing.topik.titleLine1')}
             <br />
@@ -910,7 +910,7 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
           </motion.div>
           <motion.h2
             variants={fadeInUp}
-            className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight"
+            className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
           >
             {t('landing.ai.titleLine1')}
             <br />
@@ -1046,11 +1046,11 @@ const LandingToolbox = ({
               size="auto"
               aria-expanded={expandedFeatureCards.pdf}
               onClick={() => toggleFeatureCard('pdf')}
-              className="p-8 flex flex-col w-full text-left outline-none"
+              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <FileDown className="w-7 h-7" />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <FileDown className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div
                   className={`p-2 rounded-full hover:bg-slate-50 transition-colors ${expandedFeatureCards.pdf ? 'bg-slate-50' : ''}`}
@@ -1196,11 +1196,11 @@ const LandingToolbox = ({
               size="auto"
               aria-expanded={expandedFeatureCards.podcast}
               onClick={() => toggleFeatureCard('podcast')}
-              className="p-8 flex flex-col w-full text-left outline-none"
+              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-400/15 dark:text-pink-200 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <Mic2 className="w-7 h-7" />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-400/15 dark:text-pink-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <Mic2 className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div
                   className={`p-2 rounded-full hover:bg-pink-100/80 dark:hover:bg-pink-400/20 transition-colors ${expandedFeatureCards.podcast ? 'bg-pink-100/70 dark:bg-pink-400/20' : ''}`}
@@ -1331,11 +1331,11 @@ const LandingToolbox = ({
               size="auto"
               aria-expanded={expandedFeatureCards.video}
               onClick={() => toggleFeatureCard('video')}
-              className="p-8 flex flex-col w-full text-left outline-none"
+              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-200 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <PlayCircle className="w-7 h-7" />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
+                  <PlayCircle className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div
                   className={`p-2 rounded-full hover:bg-slate-50 transition-colors ${

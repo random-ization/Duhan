@@ -46,19 +46,19 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <h1 className="text-2xl font-black text-slate-900 mb-2">
+    <div className="min-h-[100dvh] bg-background flex flex-col sm:justify-center sm:py-12 sm:px-6">
+      <div className="flex-1 sm:flex-initial flex flex-col w-full max-w-md mx-auto bg-card sm:rounded-[2rem] sm:border sm:shadow-2xl overflow-y-auto mt-0 px-6 py-12 sm:p-8">
+        <h1 className="text-2xl font-black text-foreground mb-2 mt-4 sm:mt-0 tracking-tight">
           {t('auth.forgotPassword', { defaultValue: 'Forgot password' })}
         </h1>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm font-medium text-muted-foreground mb-8">
           {t('auth.forgotPasswordDescription', {
             defaultValue: 'Enter your email and we will send you a password reset link.',
           })}
         </p>
 
         {submitted ? (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-700">
+          <div className="rounded-[14px] bg-secondary border border-border p-4 text-sm font-medium text-secondary-foreground mb-4">
             {t('auth.passwordResetEmailSent', {
               defaultValue:
                 'If this email exists, a reset link has been sent. Please check your inbox.',
@@ -72,28 +72,28 @@ const ForgotPasswordPage: React.FC = () => {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder={t('auth.placeholderEmail', { defaultValue: 'Email' })}
-              className="h-auto w-full rounded-xl shadow-none border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] px-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm font-bold text-destructive">{error}</p>}
             <Button
               type="submit"
-              variant="ghost"
+              variant="default"
               size="auto"
               loading={loading}
               loadingText={t('common.loading', { defaultValue: 'Loading...' })}
-              className="w-full rounded-xl bg-slate-900 text-white font-bold py-3 disabled:opacity-60"
+              className="w-full h-[54px] rounded-[16px] flex items-center justify-center gap-2 mt-2 font-bold text-[15px]"
             >
               {t('auth.sendResetLink', { defaultValue: 'Send reset link' })}
             </Button>
           </form>
         )}
 
-        <div className="mt-6 text-sm">
+        <div className="mt-8 text-[13px] font-semibold text-muted-foreground flex items-center justify-center gap-1">
           <Button
             asChild
-            variant="ghost"
+            variant="link"
             size="auto"
-            className="text-indigo-600 hover:text-indigo-700 font-semibold"
+            className="h-auto p-0 font-bold"
           >
             <LocalizedLink to="/login">
               {t('auth.backToLogin', { defaultValue: 'Back to login' })}

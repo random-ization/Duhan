@@ -840,6 +840,10 @@ const useQuestionReviewActions = ({
         correctAnswer: number;
         type: string;
         language?: string;
+        instruction?: string;
+        passage?: string;
+        contextBox?: string;
+        questionNumber?: number;
       },
       { success?: boolean; data?: AIAnalysis }
     >('ai:analyzeQuestion')
@@ -872,6 +876,10 @@ const useQuestionReviewActions = ({
         correctAnswer: correctAnswer ?? 0,
         type: 'TOPIK_QUESTION',
         language,
+        instruction: question.instruction,
+        passage: question.passage,
+        contextBox: question.contextBox,
+        questionNumber: question.number ?? questionIndex + 1,
       })) as { success?: boolean; data?: AIAnalysis };
 
       if (result?.success && result.data) setAiAnalysis(result.data);
@@ -887,6 +895,7 @@ const useQuestionReviewActions = ({
     aiAnalysis,
     analyzeQuestionAction,
     question,
+    questionIndex,
     correctAnswer,
     aiErrorMessage,
     language,

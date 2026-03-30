@@ -1786,8 +1786,64 @@
       "bestScoreLabel": "Cao nhất: {{score}}",
       "latestEpisodes": "Tập mới nhất"
     },
+    "learningFlow": {
+      "badge": "Luồng học",
+      "title": "Chọn kỹ năng trước, rồi chọn giáo trình và tài nguyên",
+      "subtitle": "Hãy chọn Ngữ pháp, Từ vựng, Nghe hoặc Đọc để tiếp tục.",
+      "cta": "Chọn tài nguyên",
+      "currentMaterial": "Giáo trình hiện tại: {{name}}",
+      "mobileTitle": "Hãy chọn mô-đun kỹ năng trước",
+      "grammar": "Giải thích mẫu câu và cấu trúc ngữ pháp",
+      "vocabulary": "Ghi nhớ từ bằng luyện tập gợi nhớ chủ động",
+      "listening": "Nâng khả năng nghe với ngữ liệu thực tế",
+      "reading": "Luyện đọc bài viết để tăng độ trôi chảy"
+    },
     "alt": {
       "tigerCoach": "Hổ huấn luyện"
+    }
+  },
+  "learningFlow": {
+    "header": {
+      "badge": "Bước 2 · Giáo trình & Tài nguyên",
+      "helper": "Bạn có thể bắt đầu học trực tiếp từ Dashboard; dùng trang này khi muốn đổi giáo trình."
+    },
+    "materials": {
+      "title": "Chọn giáo trình",
+      "subtitle": "Chọn một giáo trình để mở tài nguyên gắn với giáo trình đó.",
+      "current": "Hiện tại",
+      "searchPlaceholder": "Tìm giáo trình/nhà xuất bản...",
+      "selectBook": "Chọn giáo trình này",
+      "units": "bài",
+      "emptyPublisher": "Nhóm nhà xuất bản này chưa có giáo trình.",
+      "publishers": {
+        "all": "Tất cả",
+        "yonsei": "Yonsei",
+        "seoul": "Seoul National",
+        "chungang": "Chung-Ang",
+        "oer": "OER",
+        "topik": "TOPIK",
+        "other": "Khác"
+      }
+    },
+    "resources": {
+      "title": "Chọn tài nguyên",
+      "selectedMaterial": "Giáo trình đã chọn: {{name}}",
+      "noMaterial": "Bạn có thể mở tài nguyên chung ngay, hoặc chọn giáo trình trước.",
+      "grammarCourseTitle": "Ngữ pháp theo giáo trình",
+      "grammarCourseDesc": "Học điểm ngữ pháp bám theo các bài trong giáo trình đã chọn.",
+      "vocabCourseTitle": "Từ vựng theo giáo trình",
+      "vocabCourseDesc": "Luyện từ theo từng bài với lộ trình ôn cách quãng.",
+      "vocabBookTitle": "Sổ từ vựng của tôi",
+      "vocabBookDesc": "Ôn toàn bộ từ đã lưu từ các giáo trình ở một nơi.",
+      "listeningCourseTitle": "Nghe theo giáo trình",
+      "listeningCourseDesc": "Học bài nghe và nhiệm vụ theo giáo trình đã chọn.",
+      "podcastTitle": "Thư viện podcast",
+      "podcastDesc": "Nghe podcast chọn lọc để tăng cường ngâm ngữ hằng ngày.",
+      "readingCourseTitle": "Đọc theo giáo trình",
+      "readingCourseDesc": "Đọc các bài đọc gắn với giáo trình đã chọn."
+    },
+    "actions": {
+      "switchMaterial": "Đổi giáo trình"
     }
   },
   "typingGame": {
