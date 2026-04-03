@@ -2534,7 +2534,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           saveNote={saveNote}
           mobileSheetOpen={mobileSheetOpen}
           setMobileSheetOpen={setMobileSheetOpen}
-          onSwitchMaterial={() => navigate('/dashboard/resources/reading')}
+          onSwitchMaterial={() => navigate('/courses')}
         />
       )}
     </div>

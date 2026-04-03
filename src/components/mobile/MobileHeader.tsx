@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,6 +22,7 @@ import { Button } from '../ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { MobileHeaderAction, RouteUiConfig } from '../../config/routes.config';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 
 type HeaderStats = Pick<LearnerStatsDto, 'streak'>;
 
@@ -57,6 +59,8 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
       return [];
     }
   });
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const returnToParam = searchParams.get('returnTo');
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -171,10 +175,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
           variant="outline"
           size="auto"
           onClick={() => handlePrimaryAction(routeUiConfig.headerAction)}
-          className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
+          className="w-10 h-10 rounded-2xl border border-border bg-card shadow-sm active:scale-90 transition-all duration-200"
           aria-label={ariaLabel}
         >
-          <Icon size={17} />
+          <Icon size={18} strokeWidth={2.5} />
         </Button>
       );
     }
@@ -187,10 +191,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
               type="button"
               variant="outline"
               size="auto"
-              className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
+              className="w-10 h-10 rounded-2xl border border-border bg-card shadow-sm active:scale-90 transition-all duration-200"
               aria-label={t('common.more', { defaultValue: 'More actions' })}
             >
-              <MoreHorizontal size={18} />
+              <MoreHorizontal size={20} strokeWidth={2.5} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -240,48 +244,74 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
 
   if (routeUiConfig.headerType === 'dashboard') {
     return (
-      <header className="md:hidden sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 px-4 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <img
-              src={user?.avatar || '/logo.png'}
-              alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
-              className="w-10 h-10 rounded-xl border border-border bg-card object-cover"
-            />
+      <header className="md:hidden sticky top-0 z-30 bg-background/50 backdrop-blur-xl px-4 pt-[calc(env(safe-area-inset-top)+16px)] pb-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between gap-3"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-lg rounded-full" />
+              <img
+                src={user?.avatar || '/logo.png'}
+                alt={user?.name ?? 'User'}
+                className="relative w-12 h-12 rounded-[1.25rem] border-2 border-white dark:border-zinc-800 shadow-xl object-cover transition-transform active:scale-95"
+              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-[3px] border-white dark:border-zinc-900 shadow-sm" />
+            </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-foreground">{greeting}</p>
-              <p className="truncate text-xs font-semibold text-muted-foreground">
-                {user?.name || t('common.appName', { defaultValue: 'Duhan' })}
+              <p className="truncate text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">
+                {greeting}
               </p>
+              <h1 className="truncate text-xl font-black text-foreground tracking-tight italic transition-all">
+                {user?.name || t('common.appName', { defaultValue: 'Duhan' })}
+              </h1>
             </div>
           </div>
-          {renderRightAction()}
-        </div>
+          <div className="flex items-center gap-2">
+            <motion.div whileTap={{ scale: 0.95 }}>{renderRightAction()}</motion.div>
+          </div>
+        </motion.div>
       </header>
     );
   }
 
+  const handleBack = () => {
+    if (hasSafeReturnTo(returnToParam)) {
+      navigate(resolveSafeReturnTo(returnToParam, '/dashboard'));
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/dashboard');
+  };
+
   return (
-    <header className="md:hidden sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 px-4 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
-      <div className="grid grid-cols-[40px,1fr,40px] items-center gap-2">
+    <header className="md:hidden sticky top-0 z-30 border-b border-border/50 bg-background/80 backdrop-blur-xl px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+      <div className="grid grid-cols-[40px,1fr,40px] items-center gap-4">
         {routeUiConfig.headerType === 'detail' ? (
           <Button
             type="button"
             variant="outline"
             size="auto"
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-xl border border-border bg-card shadow-sm"
+            onClick={handleBack}
+            className="w-10 h-10 rounded-2xl border border-border bg-card shadow-sm active:scale-90 transition-all duration-200"
             aria-label={t('common.back', { defaultValue: 'Back' })}
           >
-            <ArrowLeft size={17} />
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </Button>
         ) : (
           <div />
         )}
-        <div className="truncate text-center text-base font-black tracking-tight text-foreground">
+        <div className="truncate text-center text-lg font-black tracking-tight text-foreground italic px-2">
           {headerTitle}
         </div>
-        <div className="justify-self-end">{renderRightAction()}</div>
+        <div className="justify-self-end">
+          <motion.div whileTap={{ scale: 0.95 }}>{renderRightAction()}</motion.div>
+        </div>
       </div>
     </header>
   );

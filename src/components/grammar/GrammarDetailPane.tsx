@@ -12,7 +12,6 @@ import {
   GRAMMAR_MASK_TRANSLATION_TOKEN,
   GRAMMAR_MASK_TRANSLATION_END_TOKEN,
   GRAMMAR_MASK_TRANSLATION_START_TOKEN,
-  getGrammarMaskKind,
   sanitizeGrammarDisplayText,
   sanitizeGrammarMarkdown,
   stripGrammarMaskTokens,
@@ -29,6 +28,10 @@ type ReaderFontScale = 'compact' | 'comfortable' | 'relaxed' | 'large';
 
 const READER_FONT_SCALE_STORAGE_KEY = 'grammar_reader_font_scale';
 const READER_RED_EYE_STORAGE_KEY = 'grammar_reader_red_eye';
+const LEADING_ANSWER_LABEL_RE =
+  /^(?:\*{1,2})?(?:参考答案|测验参考答案|示例答案|答案|reference answers?|answers?)(?:\*{1,2})?\s*[:：]/i;
+const LEADING_CORRECTION_LABEL_RE =
+  /^(?:\*{1,2})?(?:改正|修正|correction|correct answer)(?:\*{1,2})?\s*[:：]/i;
 
 const READER_FONT_SCALE_OPTIONS: Array<{
   value: ReaderFontScale;
@@ -161,7 +164,66 @@ function extractTextContent(node: React.ReactNode): string {
 }
 
 function getRedEyeMaskClass(enabled: boolean): string {
-  return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
+  return enabled ? 'blur-sm select-none transition-all duration-200' : '';
+}
+
+const RedEyeMask: React.FC<{
+  enabled: boolean;
+  kind: 'translation' | 'answer';
+  children: React.ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}> = ({ enabled, kind, children, className, style }) => {
+  const [revealed, setRevealed] = useState(false);
+
+  if (!enabled) {
+    return (
+      <span data-grammar-mask={kind} className={className} style={style}>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      data-grammar-mask={kind}
+      className={`${getRedEyeMaskClass(enabled)} ${className || ''}`.trim()}
+      style={{
+        ...style,
+        display: 'inline-block',
+        filter: revealed ? 'none' : 'blur(8px)',
+      }}
+      onPointerEnter={() => setRevealed(true)}
+      onPointerLeave={() => setRevealed(false)}
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
+      onFocus={() => setRevealed(true)}
+      onBlur={() => setRevealed(false)}
+    >
+      {children}
+    </span>
+  );
+};
+
+function renderMaskedBlockContent(
+  children: React.ReactNode,
+  maskKind: 'translation' | 'answer' | null,
+  redEyeEnabled: boolean
+): React.ReactNode {
+  if (!maskKind || !redEyeEnabled) {
+    return renderMaskedNode(children, redEyeEnabled);
+  }
+
+  return (
+    <RedEyeMask
+      enabled
+      kind={maskKind}
+      className={getRedEyeMaskClass(true)}
+      style={{ whiteSpace: 'normal' }}
+    >
+      {renderMaskedNode(children, false)}
+    </RedEyeMask>
+  );
 }
 
 function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
@@ -179,9 +241,14 @@ function wrapMaskedInlineNode(
   key: string
 ): React.ReactNode {
   return (
-    <span key={key} data-grammar-mask={maskKind} className={getRedEyeMaskClass(redEyeEnabled)}>
+    <RedEyeMask
+      key={key}
+      enabled={redEyeEnabled}
+      kind={maskKind}
+      className={getRedEyeMaskClass(redEyeEnabled)}
+    >
       {node}
-    </span>
+    </RedEyeMask>
   );
 }
 
@@ -220,13 +287,14 @@ function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.
           : GRAMMAR_MASK_ANSWER_TOKEN;
       const maskedContent = stripGrammarMaskTokens(remaining.slice(next.index + token.length));
       segments.push(
-        <span
+        <RedEyeMask
           key={`mask-${key++}`}
-          data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
+          enabled={redEyeEnabled}
+          kind={next.kind.startsWith('translation') ? 'translation' : 'answer'}
           className={getRedEyeMaskClass(redEyeEnabled)}
         >
           {maskedContent}
-        </span>
+        </RedEyeMask>
       );
       break;
     }
@@ -248,13 +316,14 @@ function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.
       remaining.slice(next.index + startToken.length, endIndex)
     );
     segments.push(
-      <span
+      <RedEyeMask
         key={`mask-${key++}`}
-        data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
+        enabled={redEyeEnabled}
+        kind={next.kind.startsWith('translation') ? 'translation' : 'answer'}
         className={getRedEyeMaskClass(redEyeEnabled)}
       >
         {maskedContent}
-      </span>
+      </RedEyeMask>
     );
     remaining = remaining.slice(endIndex + endToken.length);
   }
@@ -307,6 +376,14 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
     return React.cloneElement(node, props, renderMaskedNode(props.children, redEyeEnabled));
   }
   return node;
+}
+
+function getNodeMaskKind(node: any): 'translation' | 'answer' | null {
+  const value =
+    node?.properties?.['data-grammar-mask'] ??
+    node?.data?.hProperties?.['data-grammar-mask'] ??
+    null;
+  return value === 'translation' || value === 'answer' ? value : null;
 }
 
 function resolveSupportedLanguage(language?: string): SupportedLanguage {
@@ -449,22 +526,27 @@ const MarkdownRenderer: React.FC<{
             {children}
           </h3>
         ),
-        p: ({ children, node: _node }) => {
+        p: ({ children, node }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind = nodeMaskKind
+            ? nodeMaskKind
+            : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN) ||
+                LEADING_ANSWER_LABEL_RE.test(stripGrammarMaskTokens(rawText).trim())
+              ? 'answer'
+              : rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+                ? 'translation'
+                : null;
           return (
             <p
-              className={`my-5 text-slate-700 dark:text-slate-300 ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
+              className="my-5 text-slate-700 dark:text-slate-300"
               style={{
                 fontSize: 'var(--reader-body-size)',
                 lineHeight: 'var(--reader-body-leading)',
                 maxWidth: 'var(--reader-content-measure)',
               }}
-              data-grammar-mask={maskKind || undefined}
             >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </p>
           );
         },
@@ -484,21 +566,29 @@ const MarkdownRenderer: React.FC<{
             {children}
           </ol>
         ),
-        li: ({ children, node: _node }) => {
+        li: ({ children, node }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const cleanText = stripGrammarMaskTokens(rawText).trim();
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind = nodeMaskKind
+            ? nodeMaskKind
+            : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN)
+              ? 'answer'
+              : rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+                ? 'translation'
+                : LEADING_ANSWER_LABEL_RE.test(cleanText) ||
+                    LEADING_CORRECTION_LABEL_RE.test(cleanText)
+                  ? 'answer'
+                  : null;
           return (
             <li
-              className={`pl-1 text-slate-700 dark:text-slate-300 ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
+              className="pl-1 text-slate-700 dark:text-slate-300"
               style={{
                 fontSize: 'var(--reader-list-size)',
                 lineHeight: 'var(--reader-list-leading)',
               }}
-              data-grammar-mask={maskKind || undefined}
             >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </li>
           );
         },
@@ -542,15 +632,14 @@ const MarkdownRenderer: React.FC<{
         ),
         td: ({ children }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const maskKind = rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+            ? 'translation'
+            : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN)
+              ? 'answer'
+              : null;
           return (
-            <td
-              className={`border-b border-r border-slate-200 px-4 py-3 align-top text-sm text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-300 ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
-              data-grammar-mask={maskKind || undefined}
-            >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+            <td className="border-b border-r border-slate-200 px-4 py-3 align-top text-sm text-slate-700 last:border-r-0 dark:border-slate-800 dark:text-slate-300">
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </td>
           );
         },
@@ -830,14 +919,21 @@ const GrammarExamplesSection: React.FC<{
                     {example.kr}
                   </p>
                   <p
-                    className={`mt-2 text-slate-500 dark:text-slate-400 ${getRedEyeMaskClass(redEyeEnabled)}`}
+                    className="mt-2 text-slate-500 dark:text-slate-400"
                     style={{
                       fontSize: 'var(--reader-example-translation-size)',
                       lineHeight: '1.8',
                     }}
                     data-testid={`grammar-example-translation-${index}`}
                   >
-                    {getLocalizedExampleTranslation(example, language)}
+                    <RedEyeMask
+                      enabled={redEyeEnabled}
+                      kind="translation"
+                      className={getRedEyeMaskClass(redEyeEnabled)}
+                      style={{ whiteSpace: 'normal' }}
+                    >
+                      {getLocalizedExampleTranslation(example, language)}
+                    </RedEyeMask>
                   </p>
                 </div>
               </div>
@@ -879,10 +975,17 @@ const GrammarQuizSection: React.FC<{
               <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{prompt}</p>
               {answer ? (
                 <p
-                  className={`text-sm text-blue-700 mt-2 dark:text-blue-200 ${getRedEyeMaskClass(redEyeEnabled)}`}
+                  className="text-sm text-blue-700 mt-2 dark:text-blue-200"
                   data-testid={`grammar-quiz-answer-${index}`}
                 >
-                  {t('grammarDetail.answerShort', { defaultValue: 'Ans.' })} {answer}
+                  <RedEyeMask
+                    enabled={redEyeEnabled}
+                    kind="answer"
+                    className={getRedEyeMaskClass(redEyeEnabled)}
+                    style={{ whiteSpace: 'normal' }}
+                  >
+                    {t('grammarDetail.answerShort', { defaultValue: 'Ans.' })} {answer}
+                  </RedEyeMask>
                 </p>
               ) : null}
             </CardContent>

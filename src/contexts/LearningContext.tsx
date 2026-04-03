@@ -9,6 +9,30 @@ type ListType = 'SAVED' | 'MISTAKES';
 type LearningMaterialMap = Partial<Record<LearningFlowModule, LearningMaterialSelection>>;
 const RECENT_MATERIALS_STORAGE_KEY = 'duhan:learning:recent-materials:v1';
 
+export function mergeRecentMaterial(
+  prev: LearningMaterialMap,
+  module: LearningFlowModule,
+  material: LearningMaterialSelection
+): LearningMaterialMap {
+  const existing = prev[module];
+  const isSameMaterial =
+    existing?.instituteId === material.instituteId &&
+    existing?.level === material.level &&
+    existing?.unit === material.unit;
+
+  if (isSameMaterial) {
+    return prev;
+  }
+
+  return {
+    ...prev,
+    [module]: {
+      ...material,
+      updatedAt: material.updatedAt ?? Date.now(),
+    },
+  };
+}
+
 interface LearningSelectionState {
   selectedInstitute: string;
   selectedLevel: number;
@@ -104,13 +128,8 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
   const setRecentMaterial = useCallback(
     (module: LearningFlowModule, material: LearningMaterialSelection) => {
       setRecentMaterials(prev => {
-        const next = {
-          ...prev,
-          [module]: {
-            ...material,
-            updatedAt: material.updatedAt ?? Date.now(),
-          },
-        };
+        const next = mergeRecentMaterial(prev, module, material);
+        if (next === prev) return prev;
         safeSetLocalStorageItem(RECENT_MATERIALS_STORAGE_KEY, JSON.stringify(next));
         return next;
       });

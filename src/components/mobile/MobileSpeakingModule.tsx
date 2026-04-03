@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { ArrowLeft, Mic, Square, Play, RotateCcw, Volume2 } from 'lucide-react';
+import { Mic, Square, Play, RotateCcw, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 interface MobileSpeakingModuleProps {
   readonly unitTitle: string;
@@ -15,7 +16,7 @@ interface MobileSpeakingModuleProps {
 }
 
 export function MobileSpeakingModule({
-  unitTitle: _unitTitle,
+  unitTitle,
   targetSentence,
   referenceAudioUrl,
   translation,
@@ -86,26 +87,20 @@ export function MobileSpeakingModule({
 
   return (
     <div className="flex flex-col h-screen bg-muted">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-muted border-b border-transparent px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={onBack}
-          className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors shadow-sm"
-        >
-          <ArrowLeft size={20} className="text-muted-foreground" />
-        </Button>
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-          {t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' })}
-        </span>
-        <div className="w-10" /> {/* Spacer */}
-      </div>
+      <MobileWorkspaceHeader
+        title={unitTitle}
+        subtitle={t('mobileSpeakingModule.subtitle', {
+          defaultValue: 'Listen, record, and compare your pronunciation.',
+        })}
+        eyebrow={t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+      />
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
         {/* Card */}
-        <div className="w-full bg-card rounded-[2rem] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-border flex flex-col items-center text-center space-y-6">
+        <div className="w-full bg-card rounded-[2rem] p-8 shadow-lg border border-border flex flex-col items-center text-center space-y-6">
           <h1 className="text-2xl font-black text-foreground leading-relaxed">{targetSentence}</h1>
 
           {translation && (
@@ -189,7 +184,7 @@ export function MobileSpeakingModule({
       </div>
 
       {/* Footer / Controls */}
-      <div className="bg-card border-t border-border p-8 pt-6 pb-[calc(env(safe-area-inset-bottom)+32px)] flex flex-col items-center justify-center rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+      <div className="bg-card border-t border-border p-8 pt-6 pb-[calc(var(--mobile-safe-bottom)+32px)] flex flex-col items-center justify-center rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
         {error && <p className="text-rose-500 text-sm mb-4 font-medium">{error}</p>}
 
         <Button
@@ -201,10 +196,10 @@ export function MobileSpeakingModule({
           className={cn(
             'w-24 h-24 rounded-[32px] flex items-center justify-center transition-all duration-300 shadow-xl',
             isRecording
-              ? 'bg-rose-500 shadow-rose-200 scale-110'
+              ? 'bg-rose-500 shadow-rose-500/30 scale-110'
               : audioUrl
                 ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-indigo-500 shadow-indigo-200 hover:scale-105 active:scale-95 text-white'
+                : 'bg-primary shadow-primary/30 hover:scale-105 active:scale-95 text-white'
           )}
         >
           {isRecording ? (

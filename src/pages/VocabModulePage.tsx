@@ -29,6 +29,7 @@ import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
 import VocabTest from '../features/vocab/components/VocabTest';
 import { useFSRSBatchProgress } from '../features/vocab/hooks/useVocabProgress';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { createLearningSessionId, useLearningAnalytics } from '../hooks/useLearningAnalytics';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
@@ -308,7 +309,7 @@ export default function VocabModulePage() {
   const { user, language } = useAuth();
   const { startUpgradeFlow } = useUpgradeFlow();
   const { selectedLevel } = useLearningSelection();
-  const { setSelectedInstitute, setSelectedLevel } = useLearningActions();
+  const { setRecentMaterial, setSelectedInstitute, setSelectedLevel } = useLearningActions();
   const { institutes, isLoading: institutesLoading } = useData();
   const { speak: speakTTS } = useTTS();
   const { trackLearningEvent } = useLearningAnalytics();
@@ -366,6 +367,15 @@ export default function VocabModulePage() {
   const latestTestSnapshotRef = useRef<VocabTestSessionSnapshot | null>(null);
 
   const selectedSessionUnitId = normalizeUnitForSession(selectedUnitId);
+
+  useEffect(() => {
+    if (!instituteId) return;
+    setRecentMaterial('vocabulary', {
+      instituteId,
+      level: course ? resolveInstituteDefaultLevel(course) : selectedLevel || 1,
+      unit: selectedSessionUnitId,
+    });
+  }, [course, instituteId, selectedLevel, selectedSessionUnitId, setRecentMaterial]);
 
   // Flashcard settings
 
@@ -1272,7 +1282,7 @@ export default function VocabModulePage() {
         type="button"
         variant="outline"
         size="auto"
-        onClick={() => navigate('/dashboard/resources/vocabulary')}
+        onClick={() => navigate('/courses')}
         className="hidden md:inline-flex rounded-xl border-2 border-foreground bg-card px-3 py-2 text-xs font-black text-foreground"
       >
         {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}

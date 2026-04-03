@@ -132,7 +132,7 @@ export function MobileDictionarySheet({
             size="auto"
             type="button"
             onClick={onSave}
-            className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-[20px] font-bold text-lg shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-[20px] font-bold text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Plus strokeWidth={3} size={20} />
             {t('mobileDictionarySheet.saveToNotebook', { defaultValue: 'Save to Vocab' })}

@@ -1,17 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
-import {
-  ArrowLeft,
-  Mic,
-  Type,
-  Play,
-  Square,
-  Settings2,
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from 'lucide-react';
+import { Mic, Type, Play, Square, Settings2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +25,7 @@ import {
   persistVocabBookDictationSessionState,
 } from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 
@@ -403,51 +394,47 @@ const DictationPageShell = ({ children }: { children: React.ReactNode }) => (
 
 const DictationTopBar = ({
   labels,
+  total,
   progressText,
   onBack,
   onOpenSettings,
 }: {
   labels: ReturnType<typeof getLabels>;
+  total: number;
   progressText: string;
   onBack: () => void;
   onOpenSettings?: () => void;
 }) => (
-  <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-rose-100 dark:border-rose-300/20">
-    <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        onClick={onBack}
-        className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
-        aria-label={labels.common?.back || 'Back'}
-      >
-        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-      </Button>
-
-      <div className="text-center">
-        <p className="text-xs font-black text-rose-500 dark:text-rose-300 tracking-wider uppercase">
-          {labels.vocab?.modeDictation || 'Dictation'}
-        </p>
-        <p className="text-sm font-black text-muted-foreground">{progressText}</p>
+  <MobileImmersiveHeader
+    title={labels.vocab?.modeDictation || 'Dictation'}
+    subtitle={progressText || 'Listen, pause, and type what you hear.'}
+    eyebrow={labels.dashboard?.vocab?.title || 'My Vocab'}
+    onBack={onBack}
+    backLabel={labels.common?.back || 'Back'}
+    status={
+      <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+          Progress
+        </div>
+        <div className="text-base font-black text-foreground">{progressText || `0/${total}`}</div>
       </div>
-
-      {onOpenSettings ? (
+    }
+    actions={
+      onOpenSettings ? (
         <Button
           type="button"
           variant="ghost"
           size="auto"
           onClick={onOpenSettings}
-          className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-rose-300 dark:hover:border-rose-300/35 transition-all duration-200"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
           aria-label={labels.vocab?.settings || 'Settings'}
         >
-          <Settings2 className="w-5 h-5 text-muted-foreground" />
+          <Settings2 className="w-4 h-4 text-foreground" />
         </Button>
-      ) : (
-        <div className="w-12" />
-      )}
-    </div>
-  </div>
+      ) : undefined
+    }
+    className="sticky top-0 z-20 border-b-[3px] border-rose-100 dark:border-rose-300/20 bg-card/80"
+  />
 );
 
 const DictationSettingsDialog = ({
@@ -755,7 +742,12 @@ const VocabBookDictationPage: React.FC = () => {
   if (loading) {
     return (
       <DictationPageShell>
-        <DictationTopBar labels={labels} progressText="" onBack={() => navigate(backPath)} />
+        <DictationTopBar
+          labels={labels}
+          total={total}
+          progressText=""
+          onBack={() => navigate(backPath)}
+        />
         <VocabBookDictationSkeleton />
       </DictationPageShell>
     );
@@ -765,12 +757,13 @@ const VocabBookDictationPage: React.FC = () => {
     <DictationPageShell>
       <DictationTopBar
         labels={labels}
+        total={total}
         progressText={started ? `${index + 1}/${total || 0}` : ''}
         onBack={() => navigate(backPath)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8 pb-[calc(var(--mobile-safe-bottom)+2rem)]">
         <DictationContent
           total={total}
           started={started}

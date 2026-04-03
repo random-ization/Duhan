@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, PlayCircle, Settings2, Sparkles, BookOpen } from 'lucide-react';
+import { PlayCircle, Settings2, Sparkles, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { InteractiveWordChip } from './InteractiveWordChip';
 import { Button } from '../ui';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 interface MobileReadingModuleProps {
   readonly unitTitle: string;
@@ -45,40 +46,31 @@ export function MobileReadingModule({
   }, [unitData]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted font-sans">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b border-border px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          onClick={onBack}
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <ArrowLeft size={20} className="text-muted-foreground" />
-        </Button>
-
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            {t('readingModule.mobile.title', { defaultValue: 'Reading Practice' })}
-          </span>
-          <h1 className="text-sm font-black text-foreground truncate max-w-[200px]">{unitTitle}</h1>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <Settings2 size={20} className="text-muted-foreground" />
-        </Button>
-      </div>
+    <div className="flex min-h-[100dvh] flex-col bg-background font-sans">
+      <MobileWorkspaceHeader
+        title={unitTitle}
+        subtitle={t('readingModule.mobile.storyHint', {
+          defaultValue: 'Tap any underlined word to see its meaning.',
+        })}
+        eyebrow={t('readingModule.mobile.title', { defaultValue: 'Reading Practice' })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        actions={
+          <Button
+            variant="ghost"
+            size="auto"
+            type="button"
+            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+          >
+            <Settings2 size={18} className="text-muted-foreground" />
+          </Button>
+        }
+      />
 
       {/* Chat Stream */}
-      <div className="flex-1 p-4 pb-32 space-y-6">
+      <div className="flex-1 p-4 pb-[calc(var(--mobile-safe-bottom)+7rem)] space-y-6">
         {/* Intro Card */}
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg shadow-indigo-200 mb-8">
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg shadow-primary/20 mb-8">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-2xl bg-card/20 flex items-center justify-center backdrop-blur-sm">
               <BookOpen size={24} className="text-white" />
@@ -144,13 +136,13 @@ export function MobileReadingModule({
       </div>
 
       {/* Bottom Action Bar (Sticky) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] z-20 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border p-4 pb-mobile-safe z-20 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <Button
           variant="ghost"
           size="auto"
           type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="flex-1 h-14 bg-primary rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-slate-900/20"
+          className="flex-1 h-14 bg-primary rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-primary/20"
         >
           {isPlaying ? (
             <>{t('readingModule.mobile.stopAudio', { defaultValue: 'Stop Audio' })}</>

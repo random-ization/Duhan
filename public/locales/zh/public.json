@@ -317,7 +317,8 @@
       "topikGrammarCollection": "TOPIK语法合集"
     },
     "otherPublisher": "其他",
-    "viewAll": "查看全部"
+    "viewAll": "查看全部",
+    "loadError": "当前无法加载教材，请稍后重试。"
   },
   "landing": {
     "seo": {
@@ -794,6 +795,7 @@
   "nav": {
     "dashboard": "主页",
     "courses": "课程",
+    "learn": "学习",
     "practice": "练习",
     "media": "媒体",
     "videos": "视频",
@@ -1823,6 +1825,8 @@
       "streakShort": "连击",
       "levelFallback": "1 级",
       "chapterLabel": "第 {{unit}} 课",
+      "resumeTitle": "最近学习",
+      "swipeHint": "左右滑动查看更多",
       "bestScoreLabel": "最高：{{score}}",
       "latestEpisodes": "最新剧集"
     },
@@ -1882,6 +1886,36 @@
       "podcastDesc": "通过精选播客进行日常听力沉浸。",
       "readingCourseTitle": "教材阅读",
       "readingCourseDesc": "阅读与所选教材配套的课文内容。"
+    },
+    "mobileHub": {
+      "title": "选择今天要学的能力。",
+      "subtitle": "先选学习功能，再进入适合该功能的教材。",
+      "materialPickerTitle": "选择教材",
+      "materialPickerSummary": "{{module}} · {{count}} 本教材",
+      "pickMaterial": "选择教材",
+      "selectMaterialHint": "先选择一本教材，再开始这个学习功能。",
+      "selectMaterialCta": "选择教材",
+      "resumeHint": "前往学习页，为这个功能选择教材。",
+      "resumeFromUnit": "最近学习到第 {{unit}} 单元",
+      "noMaterialSelected": "尚未选择教材",
+      "notSelectedShort": "未选择",
+      "progressLabel": "进度",
+      "recentLabel": "最近",
+      "vocabProgress": "已掌握 {{mastered}} / {{total}}",
+      "grammarProgress": "已掌握 {{mastered}} / {{total}}",
+      "unitProgress": "已完成 {{completed}} / {{total}} 单元",
+      "vocabulary": {
+        "description": "闪卡、学习模式和主动回忆训练。"
+      },
+      "grammar": {
+        "description": "语法点讲解、句型结构与用法。"
+      },
+      "listening": {
+        "description": "教材音频、逐句文本与听力练习。"
+      },
+      "reading": {
+        "description": "课文阅读、文章训练与查词工具。"
+      }
     },
     "actions": {
       "switchMaterial": "切换教材"
@@ -2554,7 +2588,9 @@
       "daily": "日常",
       "news": "新闻",
       "picks": "精选"
-    }
+    },
+    "emptyTrending": "当前暂无热门播客。",
+    "loadError": "当前无法加载播客数据，请稍后重试。"
   },
   "typing": {
     "label": "打字练习",
@@ -2788,6 +2824,7 @@
       "subtitle": "RSS 自动抓取，适合泛读与了解时事",
       "manualRefresh": "手动刷新",
       "empty": "暂无新闻数据，请先在管理后台触发一次抓取",
+      "loadError": "当前无法加载新闻，请稍后重试。",
       "aiExtracted": "AI 提取 {{count}} 词",
       "readingMinutes": "约 {{minutes}} 分钟阅读",
       "autoRefreshed": "已根据阅读记录自动更新推荐",
@@ -2829,6 +2866,11 @@
       "literatureSource": "公版名家名篇",
       "literatureBadge": "C2 母语级 • 诗歌",
       "literatureBookmark": "文学赏析"
+    },
+    "mobile": {
+      "globalInsights": "全球洞察",
+      "articlesToday": "今日 {{count}} 篇",
+      "swipeHint": "左右滑动"
     },
     "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）"
   },

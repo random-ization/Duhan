@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { safeGetSessionStorageItem, safeSetSessionStorageItem } from '../../utils/browserStorage';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
+import { useGlobalModal } from '../../contexts/GlobalModalContext';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -30,6 +31,7 @@ const isIosSafari = () => {
 
 export function MobilePwaInstallPrompt() {
   const { t } = useTranslation();
+  const { activeModal } = useGlobalModal();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -83,7 +85,7 @@ export function MobilePwaInstallPrompt() {
     }
   };
 
-  if (installed || dismissed) return null;
+  if (installed || dismissed || activeModal !== null) return null;
 
   const canPromptInstall = deferredPrompt !== null;
   const shouldShowIosGuide = iosSafari && !isStandalone();
@@ -91,8 +93,8 @@ export function MobilePwaInstallPrompt() {
   if (!canPromptInstall && !shouldShowIosGuide) return null;
 
   return (
-    <div className="md:hidden fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+110px)] z-50">
-      <div className="rounded-2xl border-2 border-foreground bg-card shadow-2xl p-3 flex items-start gap-3">
+    <div className="md:hidden fixed left-4 right-4 bottom-mobile-floating z-[55] pointer-events-none">
+      <div className="pointer-events-auto rounded-2xl border-2 border-foreground bg-card shadow-2xl p-3 flex items-start gap-3">
         <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center shrink-0">
           <Download size={18} />
         </div>

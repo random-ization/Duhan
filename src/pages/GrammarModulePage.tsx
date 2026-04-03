@@ -20,7 +20,7 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
-import { buildLearningPickerPath, resolveInstituteDefaultLevel } from '../utils/learningFlow';
+import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from '../components/ui/sheet';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
@@ -353,7 +353,7 @@ const GrammarModulePage: React.FC = () => {
                 <Button
                   variant="outline"
                   className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  onClick={() => navigate(buildLearningPickerPath('grammar'))}
+                  onClick={() => navigate('/courses')}
                 >
                   {t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
                 </Button>

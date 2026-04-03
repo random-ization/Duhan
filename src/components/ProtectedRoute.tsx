@@ -33,10 +33,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { t } = useTranslation();
   const { isLoading, isAuthenticated } = useConvexAuth();
   const { user, loading: userDataLoading, language } = useAuth();
-  const { isPending: appLocaleLoading } = useQuery({
+  useQuery({
     queryKey: ['i18n', 'namespace', 'app', language],
     queryFn: () => ensureLocaleNamespaces(language, ['app']),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && Boolean(language),
     staleTime: Infinity,
     gcTime: Infinity,
   });
@@ -49,7 +49,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Step 1: ANY loading state = show loading, DO NOT redirect
   // This is CRITICAL to avoid the race condition
-  if (isLoading || userDataLoading || appLocaleLoading) {
+  if (isLoading || userDataLoading) {
     return (
       <Loading fullScreen size="lg" text={t('common.loading', { defaultValue: 'Loading...' })} />
     );

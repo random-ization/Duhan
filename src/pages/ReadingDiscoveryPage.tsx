@@ -3,6 +3,8 @@ import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileMediaPage } from '../components/mobile/MobileMediaPage';
 import { NEWS, READING_BOOKS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
@@ -583,6 +585,7 @@ const ArchiveContent: React.FC<{
 
 export default function ReadingDiscoveryPage() {
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -844,6 +847,10 @@ export default function ReadingDiscoveryPage() {
     ],
     [t]
   );
+
+  if (isMobile) {
+    return <MobileMediaPage />;
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-2 pb-16 pt-4 sm:px-4 lg:px-6">

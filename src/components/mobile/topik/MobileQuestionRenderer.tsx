@@ -23,7 +23,7 @@ export const MobileQuestionRenderer: React.FC<
       {/* Question Header / Prompts */}
       <div className="bg-card rounded-2xl shadow-sm p-4 mb-4 border border-border shrink-0">
         <div className="flex items-start gap-3">
-          <span className="bg-indigo-600 dark:bg-indigo-400/75 text-white w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 shadow-sm shadow-indigo-200/80 dark:shadow-indigo-950/30">
+          <span className="bg-indigo-600 dark:bg-indigo-400/75 text-white w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 shadow-sm">
             {question.number || '?'}
           </span>
           <div className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export const MobileQuestionRenderer: React.FC<
                   key={idx}
                   onClick={() => onAnswerChange(idx)}
                   className={clsx(
-                    'relative rounded-xl border-2 overflow-hidden aspect-[4/3] transition-all active:scale-[0.98] group',
+                    'relative rounded-xl border overflow-hidden aspect-[4/3] transition-all active:scale-[0.98] group',
                     isSelectedOption
                       ? 'border-indigo-600 dark:border-indigo-300 ring-2 ring-indigo-600 dark:ring-indigo-300 ring-offset-1'
                       : 'border-border hover:border-indigo-200 dark:hover:border-indigo-300/40'
@@ -127,9 +127,9 @@ export const MobileQuestionRenderer: React.FC<
                 key={idx}
                 onClick={() => onAnswerChange(idx)}
                 className={clsx(
-                  'w-full p-4 rounded-xl border-2 text-left active:scale-[0.99] transition-all group relative overflow-hidden',
+                  'w-full p-4 rounded-xl border text-left active:scale-[0.99] transition-all group relative overflow-hidden',
                   isSelectedOption
-                    ? 'border-indigo-600 dark:border-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 shadow-md ring-1 ring-indigo-600 dark:ring-indigo-300'
+                    ? 'border-indigo-600 dark:border-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 shadow-sm ring-1 ring-indigo-600 dark:ring-indigo-300'
                     : 'border-border bg-card hover:border-indigo-200 dark:hover:border-indigo-300/40'
                 )}
               >

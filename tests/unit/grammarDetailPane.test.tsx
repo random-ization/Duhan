@@ -206,8 +206,15 @@ This is a quoted learning tip.
     fireEvent.click(redEyeButton);
 
     expect(screen.getByTestId('grammar-reader-shell')).toHaveAttribute('data-red-eye', 'on');
-    expect(screen.getByTestId('grammar-example-translation-0').className).toContain('blur-sm');
-    expect(screen.getByTestId('grammar-quiz-answer-0').className).toContain('blur-sm');
+    expect(
+      screen
+        .getByTestId('grammar-example-translation-0')
+        .querySelector('[data-grammar-mask="translation"]')?.className
+    ).toContain('blur-sm');
+    expect(
+      screen.getByTestId('grammar-quiz-answer-0').querySelector('[data-grammar-mask="answer"]')
+        ?.className
+    ).toContain('blur-sm');
     expect(window.localStorage.getItem('grammar_reader_red_eye')).toBe('1');
   });
 
@@ -276,6 +283,33 @@ This is a quoted learning tip.
     );
     expect(translationMask).toBeInTheDocument();
     expect(translationMask?.className).toContain('blur-sm');
+  });
+
+  it('reveals masked translations on hover in red eye mode', () => {
+    render(<GrammarDetailPane grammar={markdownGrammar} hasNext={false} hasPrev={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Red eye mode' }));
+
+    const translationMask = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-grammar-mask="translation"]')
+    ).find(
+      node =>
+        node.className.includes('blur-sm') &&
+        node.textContent?.includes('(看天色，好像马上要下雪了。)')
+    );
+
+    expect(translationMask).toBeInTheDocument();
+    expect(translationMask?.style.filter).toBe('blur(8px)');
+
+    if (!translationMask) {
+      throw new Error('Expected a translation mask to hover');
+    }
+
+    fireEvent.mouseEnter(translationMask);
+    expect(translationMask.style.filter).toBe('none');
+
+    fireEvent.mouseLeave(translationMask);
+    expect(translationMask.style.filter).toBe('blur(8px)');
   });
 
   it('does not mask quiz prompts, intro glosses, or comparison notes', () => {

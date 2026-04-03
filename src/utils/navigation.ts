@@ -9,3 +9,8 @@ export function resolveSafeReturnTo(rawValue: string | null | undefined, fallbac
 
   return raw;
 }
+
+export function hasSafeReturnTo(rawValue: string | null | undefined): boolean {
+  const raw = (rawValue || '').trim();
+  return raw.startsWith('/') && !raw.startsWith('//');
+}

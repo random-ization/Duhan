@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Video, Loader2, Eye, Languages } from 'lucide-react';
+import { Video, Loader2, Eye, Languages } from 'lucide-react';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
@@ -19,6 +19,7 @@ import { getEntitlementErrorData } from '../../utils/entitlements';
 import { notify } from '../../utils/notify';
 import { resolveSafeReturnTo } from '../../utils/navigation';
 import { buildVideoPlayerPath } from '../../utils/videoRoutes';
+import { MobileImmersiveHeader } from './MobileImmersiveHeader';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -261,14 +262,6 @@ export const MobileVideoPlayerPage: React.FC = () => {
     <div className="flex flex-col h-[100dvh] bg-card">
       {/* 1. Stick Video Player at Top */}
       <div className="w-full aspect-video bg-black shrink-0 relative z-10">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => navigate(backPath)}
-          className="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full backdrop-blur-md"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
         <Suspense
           fallback={
             <div className="text-white flex items-center justify-center h-full">
@@ -292,38 +285,55 @@ export const MobileVideoPlayerPage: React.FC = () => {
       </div>
 
       {/* 2. Controls & Info Bar */}
-      <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-        <div className="min-w-0">
-          <h1 className="font-bold text-foreground text-lg truncate pr-2">{video.title}</h1>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Eye className="w-3 h-3" /> {video.views}
-            </span>
-            {video.level && (
-              <span className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-bold uppercase">
+      <MobileImmersiveHeader
+        title={video.title}
+        subtitle={
+          video.description ||
+          t('dashboard.video.subtitleHint', {
+            defaultValue: 'Tap any transcript line to jump and any word to look it up.',
+          })
+        }
+        eyebrow={t('nav.videos', { defaultValue: 'Videos' })}
+        onBack={() => navigate(backPath)}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        status={
+          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+            <div className="flex items-center justify-end gap-1 text-[11px] font-black text-muted-foreground">
+              <Eye className="h-3.5 w-3.5" />
+              <span>{video.views}</span>
+            </div>
+            {video.level ? (
+              <div className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-300">
                 {video.level}
-              </span>
-            )}
+              </div>
+            ) : null}
           </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setShowTranslation(!showTranslation)}
-          className={cn(
-            'p-2 rounded-lg font-bold text-xs transition-colors flex items-center gap-1 shrink-0',
-            showTranslation ? 'bg-indigo-100 text-indigo-700' : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <Languages className="w-4 h-4" />
-          {showTranslation
-            ? t('common.on', { defaultValue: 'On' })
-            : t('common.off', { defaultValue: 'Off' })}
-        </Button>
-      </div>
+        }
+        actions={
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={() => setShowTranslation(!showTranslation)}
+            className={cn(
+              'rounded-2xl border px-3 py-2 font-bold text-xs transition-colors flex items-center gap-1 shrink-0 shadow-sm',
+              showTranslation
+                ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-300/20 dark:bg-indigo-400/14 dark:text-indigo-200'
+                : 'border-border bg-card text-muted-foreground'
+            )}
+          >
+            <Languages className="w-4 h-4" />
+            {showTranslation
+              ? t('common.on', { defaultValue: 'On' })
+              : t('common.off', { defaultValue: 'Off' })}
+          </Button>
+        }
+      />
 
       {/* 3. Scrollable Transcript List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted" ref={scrollAreaRef}>
+      <div
+        className="flex-1 overflow-y-auto p-4 pb-mobile-safe space-y-3 bg-muted"
+        ref={scrollAreaRef}
+      >
         {!video.transcriptData || video.transcriptData.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-2 opacity-20" />

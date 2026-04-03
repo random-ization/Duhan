@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui';
+import { motion } from 'framer-motion';
 
 interface MobileUnitChipsProps {
   readonly totalUnits: number;
@@ -44,30 +44,36 @@ export default function MobileUnitChips({
       14: t('grammarModule.unitsShort.unit14', 'Standard'),
       15: t('grammarModule.unitsShort.unit15', 'Particles'),
     };
-    return units[unitId] || `${t('unit')} ${unitId}`;
+    return units[unitId] || `${t('unit', 'Unit')} ${unitId}`;
   };
 
   return (
     <div
       ref={scrollRef}
-      className="flex overflow-x-auto gap-2 px-4 pb-4 no-scrollbar scroll-smooth"
+      className="flex overflow-x-auto gap-2 px-4 pb-3 no-scrollbar scroll-smooth"
     >
       {Array.from({ length: totalUnits }, (_, i) => i + 1).map(unit => {
         const isActive = unit === selectedUnit;
         return (
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
             key={unit}
+            type="button"
             onClick={() => onSelect(unit)}
-            className={`flex-shrink-0 cursor-pointer snap-start rounded-xl px-4 py-2 font-bold text-sm border-2 transition-transform active:scale-95 ${
+            className={`relative shrink-0 cursor-pointer snap-start rounded-full px-5 py-2.5 text-xs font-black tracking-wider uppercase transition-all outline-none ${
               isActive
-                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                : 'bg-card text-muted-foreground border-border hover:border-foreground/30 shadow-none'
+                ? 'text-white'
+                : 'bg-white text-slate-400 hover:text-slate-600 shadow-sm border border-slate-50'
             }`}
           >
-            {getUnitName(unit)}
-          </Button>
+            {isActive && (
+              <motion.div
+                layoutId="activeUnitTab"
+                className="absolute inset-0 bg-indigo-600 rounded-full shadow-lg shadow-indigo-100"
+                style={{ zIndex: -1 }}
+              />
+            )}
+            <span className="relative z-10">{getUnitName(unit)}</span>
+          </button>
         );
       })}
     </div>

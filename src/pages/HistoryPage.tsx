@@ -36,7 +36,7 @@ export default function HistoryPage() {
   const navigate = useLocalizedNavigate();
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-[100dvh] bg-background pb-20">
       <div className="bg-card p-4 sticky top-0 z-10 border-b flex items-center gap-4">
         <Button
           type="button"

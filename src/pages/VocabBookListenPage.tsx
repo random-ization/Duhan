@@ -2,7 +2,6 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import {
-  ArrowLeft,
   Headphones,
   Rocket,
   Settings2,
@@ -36,6 +35,7 @@ import {
   persistVocabBookListenSessionState,
 } from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 type ListenMode = 'BASIC' | 'ADVANCED';
 const PAGE_SIZE = 80;
@@ -317,45 +317,40 @@ const VocabBookListenPage: React.FC = () => {
   const title = labels.vocab?.modeListen || 'Listen';
 
   const renderHeader = () => (
-    <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-amber-100 dark:border-amber-300/20">
-      <div className="max-w-3xl mx-auto px-4 py-5 flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={() => navigate(backPath)}
-          className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-amber-300 dark:hover:border-amber-300/35 transition-all duration-200"
-          aria-label={labels.dashboard?.common?.back || 'Back'}
-        >
-          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-        </Button>
-
-        <div className="text-center">
-          <p className="text-xs font-black text-amber-500 dark:text-amber-300 tracking-wider uppercase">
-            {title}
-          </p>
-          <p className="text-sm font-black text-muted-foreground">
+    <MobileImmersiveHeader
+      title={title}
+      subtitle={
+        loadingMore
+          ? labels.common?.loading || 'Loading...'
+          : labels.vocab?.listenSubtitle || 'Build recognition through repeated listening.'
+      }
+      eyebrow={labels.dashboard?.vocab?.title || 'My Vocab'}
+      onBack={() => navigate(backPath)}
+      backLabel={labels.dashboard?.common?.back || 'Back'}
+      status={
+        <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+            Progress
+          </div>
+          <div className="text-base font-black text-foreground">
             {total === 0 ? '0/0' : `${index + 1}/${total}`}
-          </p>
-          {loadingMore && (
-            <p className="text-[10px] font-bold text-muted-foreground">
-              {labels.common?.loading || 'Loading...'}
-            </p>
-          )}
+          </div>
         </div>
-
+      }
+      actions={
         <Button
           type="button"
           variant="ghost"
           size="auto"
           onClick={() => setSettingsOpen(true)}
-          className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-amber-300 dark:hover:border-amber-300/35 transition-all duration-200"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
           aria-label={labels.settings || 'Settings'}
         >
-          <Settings2 className="w-5 h-5 text-muted-foreground" />
+          <Settings2 className="w-4 h-4 text-foreground" />
         </Button>
-      </div>
-    </div>
+      }
+      className="sticky top-0 z-20 border-b-[3px] border-amber-100 dark:border-amber-300/20 bg-card/80"
+    />
   );
 
   const renderModeSelector = () => (
@@ -652,7 +647,7 @@ const VocabBookListenPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 dark:from-amber-400/8 dark:via-background dark:to-amber-300/8">
       {renderHeader()}
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
+      <div className="max-w-3xl mx-auto px-4 py-8 pb-[calc(var(--mobile-safe-bottom)+2rem)] space-y-5">
         {renderModeSelector()}
         <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
           {renderPlayerCard()}

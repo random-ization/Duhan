@@ -58,7 +58,7 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
     .sort((a, b) => a - b);
 
   return (
-    <div className="pb-[130px] pt-4 px-4 bg-muted min-h-screen">
+    <div className="pb-mobile-nav pt-4 px-4 bg-background min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-black text-foreground mb-1">
@@ -130,7 +130,9 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-foreground truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">{point.pattern}</h3>
+                        <h3 className="font-bold text-foreground truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+                          {point.pattern}
+                        </h3>
                         <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-[200px]">
                           {getLocalizedContent(point, 'explanation', language)}
                         </p>

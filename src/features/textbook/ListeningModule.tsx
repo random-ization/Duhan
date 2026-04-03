@@ -1364,7 +1364,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                 <Button
                   variant="outline"
                   size="auto"
-                  onClick={() => navigate('/dashboard/resources/listening')}
+                  onClick={() => navigate('/courses')}
                   className="px-3 py-2 border-2 border-foreground rounded-lg font-bold text-xs text-foreground transition-colors bg-card"
                 >
                   {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}

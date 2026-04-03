@@ -1,420 +1,350 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
-import { Flame, Search, Target, ArrowRight, Headphones, Tv, ChevronRight } from 'lucide-react';
+import { Headphones, Tv, ChevronRight, BookMarked, Sparkles } from 'lucide-react';
+import {
+  VocabIcon,
+  GrammarIcon,
+  ListeningIcon,
+  ReadingIcon,
+  StreakIcon,
+  GoalIcon,
+  TrophyIcon,
+} from '../ui/CustomIcons';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLearningSelection } from '../../contexts/LearningContext';
-import { useData } from '../../contexts/DataContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { qRef, NoArgs } from '../../utils/convexRefs';
-import { ExamAttempt } from '../../types';
+import {
+  buildLearningModulePath,
+  normalizeLearningFlowModule,
+  type LearningFlowModule,
+  type LearningMaterialSelection,
+} from '../../utils/learningFlow';
+import { Institute } from '../../types';
 import { Button } from '../ui';
-import { Input } from '../ui';
+import { MobileSectionHeader } from './MobileSectionHeader';
 
-// Assets
-const ASSETS = {
-  wave: '/emojis/Waving_Hand.png',
-  fire: '/emojis/Fire.png',
-  gem: '/emojis/Gem_Stone.png',
-  book: '/emojis/Open_Book.png',
-  trophy: '/emojis/Trophy.png',
-  tv: '/emojis/Television.png',
-  headphone: '/emojis/Headphone.png',
-  memo: '/emojis/Spiral_Calendar.png',
-  typing: '/emojis/keyboard_icon_3d_1769658200654.png',
-  vocabBook: '/emojis/flashcards_icon_3d_1769658215552.png',
-};
-
-const getGreetingLabel = (t: (key: string, opts?: Record<string, unknown>) => string) => {
-  const hour = new Date().getHours();
-  if (hour < 12) return t('dashboard.greeting.morning', { defaultValue: 'Good morning' });
-  if (hour < 18) return t('dashboard.greeting.afternoon', { defaultValue: 'Good afternoon' });
-  return t('dashboard.greeting.evening', { defaultValue: 'Good evening' });
-};
-
-const calculateTopScore = (examAttempts: ExamAttempt[] | null | undefined) => {
-  if (!examAttempts || examAttempts.length === 0) return 0;
-  return Math.max(...examAttempts.map(e => e.score));
-};
-
-const resolveInstituteName = ({
-  selectedInstitute,
-  institutesLoading,
-  institutes,
-  t,
+const resolveResumeMaterial = ({
+  recentMaterials,
+  user,
+  learningEntryTarget,
 }: {
-  selectedInstitute: string | null;
-  institutesLoading: boolean;
-  institutes: ReturnType<typeof useData>['institutes'];
-  t: (key: string, opts?: Record<string, unknown>) => string;
+  recentMaterials: Partial<Record<LearningFlowModule, LearningMaterialSelection>>;
+  user: ReturnType<typeof useAuth>['user'];
+  learningEntryTarget: { instituteId: string; level: number } | null;
 }) => {
-  if (!selectedInstitute) return t('dashboard.textbook.label', { defaultValue: 'Textbook' });
-  if (institutesLoading) return t('common.loading', { defaultValue: 'Loading...' });
-  const institute = institutes?.find(i => i.id === selectedInstitute);
-  return institute ? institute.name : selectedInstitute;
+  const lastModule = normalizeLearningFlowModule(user?.lastModule ?? null);
+  if (!lastModule) return { module: null, material: null };
+
+  const remembered = recentMaterials[lastModule];
+  if (remembered?.instituteId) {
+    return { module: lastModule, material: remembered };
+  }
+
+  if (user?.lastInstitute) {
+    return {
+      module: lastModule,
+      material: {
+        instituteId: user.lastInstitute,
+        level: user.lastLevel || learningEntryTarget?.level || 1,
+        unit: user.lastUnit,
+      },
+    };
+  }
+
+  return { module: lastModule, material: null };
 };
 
-const resolveCurrentUnit = ({
-  completedUnits,
-  totalUnits,
-  lastUnitIndex,
-  userLastUnit,
-}: {
-  completedUnits: number[];
-  totalUnits: number;
-  lastUnitIndex?: number;
-  userLastUnit?: number;
-}) => {
-  const inferredUnit =
-    completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, totalUnits) : 1;
-  return lastUnitIndex || userLastUnit || inferredUnit;
+const resolveModuleDisplay = (
+  module: LearningFlowModule | null,
+  t: (key: string, opts?: Record<string, unknown>) => string
+) => {
+  if (module === 'vocabulary') {
+    return t('courseDashboard.modules.vocabulary', { defaultValue: 'Vocabulary' });
+  }
+  if (module === 'grammar') {
+    return t('courseDashboard.modules.grammar', { defaultValue: 'Grammar' });
+  }
+  if (module === 'listening') {
+    return t('courseDashboard.modules.listening', { defaultValue: 'Listening' });
+  }
+  if (module === 'reading') {
+    return t('courseDashboard.modules.reading', { defaultValue: 'Reading' });
+  }
+  return t('nav.learn', { defaultValue: 'Learning' });
 };
 
-const computeGoalPercent = (stats: LearnerStatsDto) =>
-  Math.min(100, (stats.todayMinutes / Math.max(stats.dailyGoal, 1)) * 100);
+type DashboardExplore = {
+  id: string;
+  label: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  iconClassName: string;
+  badgeClassName: string;
+  path: string;
+};
 
 const MobileDashboardLayout = ({
-  user,
   t,
   navigate,
-  searchQuery,
-  setSearchQuery,
   stats,
-  goalPercent,
-  greeting,
-  instituteName,
-  isInstituteNameLoading,
-  selectedLevel,
-  currentUnit,
-  progressPercent,
   savedWordsCount,
-  topScore,
+  resumeModule,
+  resumeMaterialName,
+  resumePath,
 }: {
-  user: ReturnType<typeof useAuth>['user'];
   t: (key: string, opts?: Record<string, unknown>) => string;
   navigate: ReturnType<typeof useLocalizedNavigate>;
-  searchQuery: string;
-  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   stats: LearnerStatsDto;
-  goalPercent: number;
-  greeting: string;
-  instituteName: string;
-  isInstituteNameLoading: boolean;
-  selectedLevel: number | string | null | undefined;
-  currentUnit: number;
-  progressPercent: number;
   savedWordsCount: number;
-  topScore: number;
+  resumeModule: LearningFlowModule | null;
+  resumeMaterialName: string;
+  resumePath: string;
 }) => {
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) return;
-    navigate(
-      `/dictionary/search?returnTo=${encodeURIComponent('/dashboard')}&q=${encodeURIComponent(query)}`
-    );
-  };
+  const shortcutCards = [
+    {
+      id: 'review',
+      label: t('dashboard.mobile.review', { defaultValue: 'Review' }),
+      title: t('dashboard.vocab.title', { defaultValue: 'My Vocab' }),
+      subtitle: t('dashboard.mobile.quickReviewSubtitle', { defaultValue: 'Clear due cards.' }),
+      value: `${stats.vocabStats.dueReviews}`,
+      icon: VocabIcon,
+      path: '/vocab-book',
+    },
+    {
+      id: 'practice',
+      label: t('dashboard.mobile.practice', { defaultValue: 'Practice' }),
+      title: t('nav.practice', { defaultValue: 'Practice' }),
+      subtitle: t('dashboard.mobile.quickPracticeSubtitle', { defaultValue: 'Focus drills.' }),
+      value: `${savedWordsCount}`,
+      icon: GrammarIcon,
+      path: '/practice',
+    },
+    {
+      id: 'notebook',
+      label: t('dashboard.mobile.notes', { defaultValue: 'Notebook' }),
+      title: t('dashboard.notes.label', { defaultValue: 'Notebook' }),
+      subtitle: t('dashboard.mobile.quickNotebookSubtitle', { defaultValue: 'Weak spots.' }),
+      value: `${stats.reviewStats.savedWords || stats.vocabStats.total}`,
+      icon: TrophyIcon,
+      path: '/notebook',
+    },
+  ];
+
+  const exploreCards: DashboardExplore[] = [
+    {
+      id: 'reading',
+      label: t('nav.reading', { defaultValue: 'Reading Hub' }),
+      title: t('nav.reading', { defaultValue: 'Reading & News' }),
+      subtitle: t('dashboard.readingHub.mobileSubtitle', {
+        defaultValue: 'News, stories, and picture books for immersion.',
+      }),
+      icon: <BookMarked className="w-5 h-5" />,
+      iconClassName: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
+      badgeClassName: 'bg-blue-500 text-white',
+      path: '/reading',
+    },
+    {
+      id: 'podcasts',
+      label: t('dashboard.mobile.listen', { defaultValue: 'Listen' }),
+      title: t('dashboard.podcast.label', { defaultValue: 'Podcasts' }),
+      subtitle: t('dashboard.mobile.latestEpisodes', {
+        defaultValue: 'Jump into recent episodes and transcript-led study.',
+      }),
+      icon: <Headphones className="w-5 h-5" />,
+      iconClassName: 'bg-violet-100 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400',
+      badgeClassName: 'bg-violet-500 text-white',
+      path: '/podcasts',
+    },
+    {
+      id: 'videos',
+      label: t('dashboard.mobile.watch', { defaultValue: 'Watch' }),
+      title: t('dashboard.mobile.videoLibrary', { defaultValue: 'Video Library' }),
+      subtitle: t('dashboard.mobile.immersion', {
+        defaultValue: 'Shadow native pacing with subtitle-aware playback.',
+      }),
+      icon: <Tv className="w-5 h-5" />,
+      iconClassName: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
+      badgeClassName: 'bg-rose-500 text-white',
+      path: '/videos',
+    },
+  ];
 
   return (
-    <div className="relative min-h-screen pb-[130px] bg-transparent overflow-hidden">
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-3">
-        <div className="flex justify-between items-center gap-3 mb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={t('profile.title', { defaultValue: 'Profile' })}
-                  className="w-9 h-9 rounded-full border border-border"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:text-indigo-200 font-bold border border-indigo-200 dark:border-indigo-300/25">
-                  {user?.name?.[0] || 'U'}
+    <div className="relative min-h-screen pb-mobile-nav bg-background">
+      <div className="mx-auto w-full max-w-2xl px-0 pt-0 pb-12 overflow-hidden">
+        {/* Bento Box Header Section */}
+        <section className="grid grid-cols-2 gap-4 mb-10 px-4 pt-6">
+          {/* Main Hero (Bento: Large) */}
+          <div className="col-span-2 relative overflow-hidden rounded-[2.5rem] bg-indigo-600/90 p-6 text-white shadow-2xl backdrop-blur-md rim-light">
+            <div className="absolute top-0 right-0 h-48 w-48 bg-white/10 blur-[80px] -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 flex flex-col justify-between h-full space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-white/90">
+                  <Sparkles className="h-3 w-3" />
+                  {t('dashboard.summary.title', { defaultValue: 'FOCUS' })}
                 </div>
-              )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-card"></div>
-            </div>
-            <div>
-              <h1 className="text-sm font-extrabold text-foreground leading-none">{greeting},</h1>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                {user?.name?.split(' ')[0] || t('guest', { defaultValue: 'Learner' })}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-400/10 px-2 py-1 rounded-lg border border-orange-100 dark:border-orange-300/25">
-              <Flame className="w-3.5 h-3.5 text-orange-500 dark:text-orange-300 fill-orange-500 dark:fill-orange-300" />
-              <span className="text-xs font-black text-orange-600 dark:text-orange-200">
-                {stats.streak}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSearchSubmit} className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Search className="w-4 h-4 text-muted-foreground" />
-          </div>
-          <Input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder={t('dashboard.dictionary.placeholder', {
-              defaultValue: 'Dictionary Search...',
-            })}
-            className="w-full bg-muted border border-border text-foreground text-sm rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-ring focus:bg-card transition-all shadow-sm placeholder:text-muted-foreground font-medium"
-          />
-        </form>
-      </header>
-
-      <main className="relative z-10 px-4 space-y-5 pt-5 animate-in fade-in duration-500">
-        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-slate-800 dark:to-foreground/90 rounded-[24px] p-4 text-white shadow-lg shadow-indigo-200/50 dark:shadow-none relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-card/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="flex flex-col gap-3 relative z-10">
-            <div className="flex justify-between items-center">
+              </div>
               <div>
-                <h2 className="font-bold text-base leading-tight">
-                  {t('dashboard.summary.title', { defaultValue: "Today's Goal" })}
+                <h2 className="text-3xl font-black leading-[1.1] tracking-tighter italic text-balance">
+                  {resumeMaterialName
+                    ? t('dashboard.mobileFocus.continue', { defaultValue: 'Pick up progress.' })
+                    : t('dashboard.mobileFocus.choose', { defaultValue: 'Start a path.' })}
                 </h2>
-                <div className="text-indigo-100 dark:text-indigo-200/80 text-[10px] font-medium mt-0.5">
-                  {stats.todayMinutes} / {stats.dailyGoal} {t('minutes', { defaultValue: 'mins' })}
-                </div>
+                <p className="mt-2 text-[13px] font-bold text-white/80 leading-relaxed uppercase tracking-wide">
+                  {resumeMaterialName
+                    ? `${resolveModuleDisplay(resumeModule, t)} · ${resumeMaterialName}`
+                    : t('learningFlow.mobileHub.subtitle', { defaultValue: 'Choose a skill' })}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="text-right">
-                  <div className="text-sm font-black leading-none">{stats.streak}</div>
-                  <div className="text-[9px] opacity-70 uppercase tracking-wide mt-0.5">
-                    {t('dashboard.mobile.streakShort', { defaultValue: 'Streak' })}
-                  </div>
-                </div>
-                <div className="h-6 w-px bg-white/20"></div>
-                <div className="text-right">
-                  <div className="text-sm font-black leading-none">{stats.vocabStats.dueReviews}</div>
-                  <div className="text-[9px] opacity-70 uppercase tracking-wide mt-0.5">
-                    {t('dashboard.mobile.dueShort', { defaultValue: 'Due' })}
-                  </div>
-                </div>
+              <Button
+                variant="ghost"
+                size="auto"
+                onClick={() => navigate(resumePath)}
+                className="flex h-12 w-full items-center justify-center rounded-2xl bg-white px-4 text-sm font-black text-indigo-600 shadow-lg active:scale-95 transition-all"
+              >
+                {resumeModule && resumeMaterialName
+                  ? t('dashboard.common.continueLearning', { defaultValue: 'RESUME NOW' })
+                  : t('learningFlow.mobileHub.pickMaterial', { defaultValue: 'GET STARTED' })}
+              </Button>
+            </div>
+          </div>
+
+          {/* Streak (Bento: Small) */}
+          <div className="col-span-1 rounded-[2rem] bg-card/60 p-5 backdrop-blur-md shadow-lg rim-light flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <StreakIcon size={20} />
+              <div className="text-right">
+                <span className="unit text-2xl font-black italic tracking-tighter text-foreground">
+                  {stats.streak}
+                </span>
               </div>
             </div>
-            {/* Progress Bar */}
-            <div className="relative">
-              <div className="h-2 bg-black/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 dark:from-emerald-400/75 dark:to-teal-400/75 rounded-full shadow-[0_0_10px_rgba(110,231,183,0.5)] dark:shadow-[0_0_8px_rgba(52,211,153,0.28)] transition-all duration-500"
-                  style={{ width: `${goalPercent}%` }}
-                ></div>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
+              {t('dashboard.mobile.streakShort', { defaultValue: 'STREAK' })}
+            </p>
+          </div>
+
+          {/* Goal (Bento: Small) */}
+          <div className="col-span-1 rounded-[2rem] bg-card/60 p-5 backdrop-blur-md shadow-lg rim-light flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <GoalIcon size={20} />
+              <div className="text-right">
+                <span className="unit text-2xl font-black italic tracking-tighter text-foreground">
+                  {stats.todayMinutes}
+                </span>
+                <span className="text-[10px] text-muted-foreground/60"> / {stats.dailyGoal}m</span>
               </div>
             </div>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
+              {t('common.minutes', { defaultValue: 'MINUTES' })}
+            </p>
           </div>
         </section>
 
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => navigate('/courses')}
-          className="w-full text-left justify-start items-start bg-sky-50 dark:bg-sky-400/10 rounded-3xl p-5 border border-sky-100 dark:border-sky-300/20 relative overflow-hidden group active:scale-[0.98] transition-all duration-200"
-        >
-          <div className="relative z-10 w-full">
-            <div className="flex justify-between items-start mb-2">
-              <span className="bg-sky-500 dark:bg-sky-400/30 text-white dark:text-sky-100 text-[10px] font-black px-2 py-0.5 rounded uppercase">
-                {t('dashboard.textbook.label', { defaultValue: 'Current Course' })}
-              </span>
-              <span className="text-sky-600 dark:text-sky-200 font-bold text-xs bg-card dark:bg-sky-400/14 px-2 py-0.5 rounded shadow-sm">
-                {selectedLevel || t('dashboard.mobile.levelFallback', { defaultValue: 'Lvl 1' })}
-              </span>
-            </div>
-            <h3 className="text-2xl font-black text-foreground leading-tight mb-1 pr-12">
-              {isInstituteNameLoading ? (
-                <span className="inline-block h-8 w-44 animate-pulse rounded-lg bg-sky-200/65 dark:bg-sky-300/20" />
-              ) : (
-                instituteName
-              )}
-            </h3>
-            <div className="mt-4 bg-card/60 dark:bg-sky-400/10 backdrop-blur-sm p-3 rounded-xl border border-white/50 dark:border-sky-300/20">
-              <div className="flex justify-between text-xs font-bold text-sky-700 dark:text-sky-200 mb-1.5">
-                <span>
-                  {t('dashboard.mobile.chapterLabel', {
-                    unit: currentUnit,
-                    defaultValue: 'Chapter {{unit}}',
-                  })}
-                </span>
-                <span>{progressPercent}%</span>
-              </div>
-              <div className="h-2 bg-sky-200 dark:bg-sky-400/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-sky-500 dark:bg-sky-300/75 transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2 text-sm font-bold text-foreground">
-              <span>{t('dashboard.common.continueLearning')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </div>
-          <img
-            src={ASSETS.book}
-            className="absolute -right-6 -bottom-6 w-32 h-32 opacity-80 rotate-12"
-            alt=""
+        {/* Study Hub Grid */}
+        <section className="space-y-6 mb-12">
+          <MobileSectionHeader
+            title={t('dashboard.mobile.shortcutsTitle', { defaultValue: 'LEARNING HUB' })}
           />
-        </Button>
+          <div className="grid grid-cols-2 gap-4">
+            {shortcutCards.map(card => {
+              const Icon = card.icon;
+              return (
+                <Button
+                  key={card.id}
+                  variant="outline"
+                  size="auto"
+                  onClick={() => navigate(card.path)}
+                  className="group relative overflow-hidden rounded-[2.5rem] border border-indigo-100/30 bg-card/70 p-5 text-left shadow-lg backdrop-blur-md active:scale-95 transition-all !flex !flex-col !items-start !justify-between !whitespace-normal rim-light"
+                >
+                  <div className="w-full relative z-10 flex items-start justify-between mb-8">
+                    <Icon size={22} className="shadow-md" />
+                    <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 italic">
+                      {card.value}
+                    </span>
+                  </div>
+                  <div className="relative z-10">
+                    <h4 className="text-lg font-black leading-tight text-foreground italic uppercase tracking-tight">
+                      {card.title}
+                    </h4>
+                    <p className="mt-1.5 text-[11px] font-bold leading-relaxed text-muted-foreground line-clamp-1">
+                      {card.subtitle}
+                    </p>
+                  </div>
+                </Button>
+              );
+            })}
+          </div>
+        </section>
 
-        {/* Practice Grid - Horizontal Scroll Area */}
-        <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-4 pt-1 hidden-scrollbar border-t border-border mt-2 pt-5 -mx-4 px-4">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/vocab-book')}
-            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
-          >
-            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
-              <div>
-                <span className="bg-indigo-100 dark:bg-indigo-400/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.review')}
-                </span>
-                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
-                  {t('dashboard.vocab.title', { defaultValue: 'My Vocab' })}
-                </h4>
-              </div>
-              <p className="text-indigo-600 dark:text-indigo-400 text-xs font-bold mt-2">
-                {savedWordsCount} {t('dashboard.vocab.count', { count: savedWordsCount, defaultValue: 'words' })}
-              </p>
-            </div>
-            <img src={ASSETS.vocabBook} className="absolute -right-3 -bottom-3 w-16 h-16 rotate-12 opacity-80" alt="" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/notebook')}
-            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
-          >
-            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
-              <div>
-                <span className="bg-orange-100 dark:bg-orange-400/20 text-orange-700 dark:text-orange-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.notes')}
-                </span>
-                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
-                  {t('dashboard.mobile.mistakes')}
-                </h4>
-              </div>
-              <div className="flex gap-1 mt-2">
-                <span className="bg-red-100 dark:bg-red-400/14 text-red-600 dark:text-red-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                  {t('dashboard.mobile.check')}
-                </span>
-              </div>
-            </div>
-            <img src={ASSETS.memo} className="absolute -right-3 bottom-0 w-16 h-16 opacity-80" alt="" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/typing')}
-            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
-          >
-            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
-              <div>
-                <span className="bg-emerald-100 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.typing')}
-                </span>
-                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">
-                  {t('dashboard.mobile.practice')}
-                </h4>
-              </div>
-              <p className="text-emerald-600 dark:text-emerald-400 text-xs font-bold mt-2">
-                {t('dashboard.mobile.start')}
-              </p>
-            </div>
-            <img src={ASSETS.typing} className="absolute -right-2 -bottom-2 w-16 h-16 opacity-80 rotate-6" alt="" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/topik')}
-            className="flex-none w-[150px] snap-start justify-start items-start bg-card p-4 rounded-3xl border border-border relative overflow-hidden text-left active:scale-95 transition-transform shadow-sm"
-          >
-            <div className="relative z-10 w-full h-full flex flex-col justify-between min-h-[5rem]">
-              <div>
-                <span className="bg-amber-100 dark:bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.exam')}
-                </span>
-                <h4 className="font-bold text-base text-foreground mt-1.5 leading-tight">{t('nav.topik')}</h4>
-              </div>
-              <p className="text-amber-600 dark:text-amber-400 text-xs font-bold mt-2">
-                {t('dashboard.mobile.bestScoreLabel', { score: topScore, defaultValue: 'Best: {{score}}' })}
-              </p>
-            </div>
-            <img src={ASSETS.trophy} className="absolute -right-2 -bottom-2 w-16 h-16 opacity-80" alt="" />
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 pb-8">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/podcasts')}
-            className="bg-card p-4 rounded-3xl border border-border flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-400/16 flex items-center justify-center text-violet-600 dark:text-violet-200">
-                <Headphones className="w-7 h-7" />
-              </div>
-              <div className="text-left">
-                <span className="bg-violet-500 dark:bg-violet-400/30 text-white dark:text-violet-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.listen')}
-                </span>
-                <h4 className="font-bold text-foreground text-lg leading-tight mt-1">
-                  {t('dashboard.podcast.label')}
-                </h4>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[10px] font-bold text-muted-foreground group-active:text-violet-600 dark:group-active:text-violet-200/90 transition-colors">
-                    {t('dashboard.mobile.latestEpisodes')}
-                  </span>
+        {/* Immersion Section */}
+        <section className="space-y-6">
+          <MobileSectionHeader
+            title={t('dashboard.mobile.exploreTitle', { defaultValue: 'IMMERSION' })}
+          />
+          <div className="grid grid-cols-1 gap-4">
+            {exploreCards.map(card => (
+              <Button
+                key={card.id}
+                variant="outline"
+                size="auto"
+                onClick={() => navigate(card.path)}
+                className="group relative rounded-[2rem] border border-indigo-100/30 bg-card/60 p-4 shadow-lg backdrop-blur-md active:scale-[0.98] transition-all !flex !items-center !justify-between !whitespace-normal rim-light"
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div
+                    className={cn(
+                      'grid h-12 w-12 place-items-center rounded-2xl shadow-inner',
+                      card.id === 'reading'
+                        ? 'bg-blue-500/10 text-blue-600'
+                        : card.id === 'podcasts'
+                          ? 'bg-violet-500/10 text-violet-600'
+                          : 'bg-rose-500/10 text-rose-600'
+                    )}
+                  >
+                    {card.id === 'reading' ? (
+                      <ReadingIcon size={20} />
+                    ) : card.id === 'podcasts' ? (
+                      <ListeningIcon size={20} />
+                    ) : (
+                      <Tv className="w-5 h-5 shadow-sm" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-base font-black leading-tight text-foreground italic uppercase tracking-tight">
+                      {card.title}
+                    </h4>
+                    <p className="mt-1 text-[11px] font-bold leading-relaxed text-muted-foreground mr-4 line-clamp-1">
+                      {card.subtitle}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/videos')}
-            className="bg-card p-4 rounded-3xl border border-border flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-400/16 flex items-center justify-center text-rose-600 dark:text-rose-200">
-                <Tv className="w-7 h-7" />
-              </div>
-              <div className="text-left">
-                <span className="bg-rose-500 dark:bg-rose-400/30 text-white dark:text-rose-100 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                  {t('dashboard.mobile.watch')}
-                </span>
-                <h4 className="font-bold text-foreground text-lg leading-tight mt-1">
-                  {t('dashboard.mobile.videoLibrary')}
-                </h4>
-                <span className="text-[10px] font-bold text-muted-foreground group-active:text-rose-600 dark:group-active:text-rose-200/90 mt-1 block transition-colors">
-                  {t('dashboard.mobile.immersion')}
-                </span>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </Button>
-        </div>
-      </main>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-400 group-active:translate-x-1 transition-transform">
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </Button>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };
 
-export const MobileDashboard: React.FC = () => {
+export const MobileDashboard: React.FC<{
+  learningEntryTarget: { instituteId: string; level: number } | null;
+  institutes: Institute[] | undefined;
+  institutesLoading: boolean;
+}> = ({ learningEntryTarget, institutes: _institutes, institutesLoading: _institutesLoading }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const { selectedInstitute, selectedLevel } = useLearningSelection();
-  const { institutes, isLoading: institutesLoading } = useData();
+  const { recentMaterials } = useLearningSelection();
 
   // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
 
@@ -427,48 +357,6 @@ export const MobileDashboard: React.FC = () => {
     user ? { includeMastered: true } : 'skip'
   );
   const savedWordsCount = vocabBookCount?.count || 0;
-
-  // 3. Exam Attempts (for Best Score)
-  const examAttempts = useQuery(
-    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
-    user ? { limit: 200 } : 'skip'
-  );
-  const topScore = useMemo(() => calculateTopScore(examAttempts), [examAttempts]);
-
-  // 4. Course Progress
-  const courseProgress = useQuery(
-    qRef<
-      { courseId: string },
-      {
-        completedUnits: number[];
-        totalUnits: number;
-        progressPercent: number;
-        lastUnitIndex?: number;
-      } | null
-    >('progress:getCourseProgress'),
-    user && selectedInstitute ? { courseId: selectedInstitute } : 'skip'
-  );
-
-  // -- Derived Data --
-  const completedUnits = courseProgress?.completedUnits ?? [];
-  const totalUnits = courseProgress?.totalUnits || 10;
-  const currentUnit = resolveCurrentUnit({
-    completedUnits,
-    totalUnits,
-    lastUnitIndex: courseProgress?.lastUnitIndex,
-    userLastUnit: user?.lastUnit,
-  });
-  const progressPercent =
-    courseProgress?.progressPercent ?? Math.min(100, Math.round((currentUnit / totalUnits) * 100));
-
-  const instituteName = useMemo(
-    () => resolveInstituteName({ selectedInstitute, institutesLoading, institutes, t }),
-    [selectedInstitute, institutesLoading, institutes, t]
-  );
-  const isInstituteNameLoading = Boolean(selectedInstitute) && institutesLoading;
-
-  // -- Search Logic --
-  const [searchQuery, setSearchQuery] = useState('');
 
   // -- Render Helpers --
   const stats: LearnerStatsDto = userStats || {
@@ -497,26 +385,36 @@ export const MobileDashboard: React.FC = () => {
     todayWordsStudied: 0,
     todayGrammarStudied: 0,
   };
-  const goalPercent = computeGoalPercent(stats);
-  const greeting = getGreetingLabel(t);
+  const { module: resumeModule, material: resumeMaterial } = useMemo(
+    () =>
+      resolveResumeMaterial({
+        recentMaterials,
+        user,
+        learningEntryTarget,
+      }),
+    [learningEntryTarget, recentMaterials, user]
+  );
+  const resumeMaterialName = useMemo(() => {
+    if (!resumeMaterial?.instituteId || !_institutes) return '';
+    const institute = _institutes.find(item => item.id === resumeMaterial.instituteId);
+    return institute?.name || resumeMaterial.instituteId;
+  }, [_institutes, resumeMaterial]);
+  const resumePath = useMemo(() => {
+    if (resumeModule && resumeMaterial?.instituteId) {
+      return buildLearningModulePath(resumeModule, resumeMaterial.instituteId);
+    }
+    return '/courses';
+  }, [resumeMaterial, resumeModule]);
 
   return (
     <MobileDashboardLayout
-      user={user}
       t={t}
       navigate={navigate}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
       stats={stats}
-      goalPercent={goalPercent}
-      greeting={greeting}
-      instituteName={instituteName}
-      isInstituteNameLoading={isInstituteNameLoading}
-      selectedLevel={selectedLevel}
-      currentUnit={currentUnit}
-      progressPercent={progressPercent}
       savedWordsCount={savedWordsCount}
-      topScore={topScore}
+      resumeModule={resumeModule}
+      resumeMaterialName={resumeMaterialName}
+      resumePath={resumePath}
     />
   );
 };

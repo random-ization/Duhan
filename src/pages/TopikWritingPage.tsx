@@ -21,6 +21,8 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 import { api } from '../../convex/_generated/api';
 
@@ -60,6 +62,7 @@ const TopikWritingPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { startUpgradeFlow } = useUpgradeFlow();
+  const isMobile = useIsMobile();
 
   const startSession = useMutation(api.topikWriting.startSession);
   // Find the exam in context
@@ -110,14 +113,37 @@ const TopikWritingPage: React.FC = () => {
 
   // ── Render loading ──────────────────────────────────────────────────────────
   if (state.phase === 'loading') {
+    const loadingContent = (
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        <p className="font-bold text-muted-foreground text-sm">
+          {t('topikWriting.session.loadingExam', { defaultValue: 'Preparing writing exam...' })}
+        </p>
+      </div>
+    );
+
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-background">
+          <MobileImmersiveHeader
+            eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+            title={t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+            subtitle={t('topikWriting.session.loadingExam', {
+              defaultValue: 'Preparing writing exam...',
+            })}
+            onBack={() => navigate('/topik')}
+            backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+          />
+          <div className="flex min-h-[calc(100dvh-var(--mobile-header-offset))] items-center justify-center px-4 pb-mobile-safe pt-8">
+            {loadingContent}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="font-bold text-muted-foreground text-sm">
-            {t('topikWriting.session.loadingExam', { defaultValue: 'Preparing writing exam...' })}
-          </p>
-        </div>
+        {loadingContent}
       </div>
     );
   }

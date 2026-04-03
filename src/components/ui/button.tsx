@@ -15,27 +15,24 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const baseClasses =
-  'inline-flex items-center justify-center font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap';
+  'inline-flex items-center justify-center font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap active:scale-[0.98]';
 
 const variantClasses = {
-  default:
-    'bg-primary text-primary-foreground border-2 border-primary shadow-pop hover:translate-y-1 hover:shadow-none',
-  destructive:
-    'bg-destructive text-destructive-foreground border-2 border-destructive shadow-pop hover:translate-y-1 hover:shadow-none',
+  default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+  destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
   outline:
-    'bg-card text-foreground border-2 border-border hover:bg-accent hover:text-accent-foreground',
+    'bg-background text-foreground border border-input shadow-sm hover:bg-accent hover:text-accent-foreground',
   secondary:
-    'bg-secondary text-secondary-foreground border-2 border-border hover:bg-accent hover:text-accent-foreground',
-  ghost:
-    'bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-transparent',
-  link: 'bg-transparent border border-transparent text-primary underline-offset-4 hover:underline shadow-none',
+    'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 border border-transparent',
+  ghost: 'bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  link: 'bg-transparent text-primary underline-offset-4 hover:underline',
 } as const;
 
 const sizeClasses = {
-  default: 'h-11 px-4 rounded-xl text-sm',
+  default: 'h-10 px-4 py-2 rounded-xl text-sm',
   sm: 'h-9 px-3 rounded-lg text-sm',
-  lg: 'h-12 px-6 rounded-xl text-base',
-  icon: 'h-10 w-10 rounded-full',
+  lg: 'h-11 px-8 rounded-xl text-base',
+  icon: 'h-10 w-10 rounded-xl',
   auto: 'h-auto p-0',
 } as const;
 

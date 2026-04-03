@@ -38,21 +38,12 @@ interface HistoryItem {
   duration?: number;
 }
 
-const FILTER_OPTIONS = [
-  { key: 'all', labelKey: 'podcast.filterOptions.all' },
-  { key: 'beginner', labelKey: 'podcast.filterOptions.beginner' },
-  { key: 'intermediate', labelKey: 'podcast.filterOptions.intermediate' },
-  { key: 'daily', labelKey: 'podcast.filterOptions.daily' },
-  { key: 'news', labelKey: 'podcast.filterOptions.news' },
-];
-
 export const MobilePodcastDashboard: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [trendingTab, setTrendingTab] = useState<'all' | 'picks'>('all');
   const backPath = useMemo(() => {
@@ -135,9 +126,9 @@ export const MobilePodcastDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted pb-[130px]">
+    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
       {/* Header */}
-      <header className="bg-card/80 backdrop-blur-xl px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-6 border-b border-border/40 sticky top-0 z-30 rounded-b-[2.5rem] shadow-sm">
+      <header className="sticky top-0 z-30 border-b border-border/40 bg-background px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-6 shadow-sm">
         <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"
@@ -181,28 +172,6 @@ export const MobilePodcastDashboard: React.FC = () => {
           </Button>
         </div>
       </header>
-
-      {/* Filter Chips */}
-      <div
-        className="px-5 py-3 flex gap-2 overflow-x-auto"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {FILTER_OPTIONS.map(opt => (
-          <Button
-            variant="ghost"
-            size="auto"
-            key={opt.key}
-            onClick={() => setFilter(opt.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-              filter === opt.key
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
-            {t(opt.labelKey, { defaultValue: opt.key })}
-          </Button>
-        ))}
-      </div>
 
       {shouldShowLoadingIssue && (
         <div className="px-5 py-2">
@@ -256,7 +225,13 @@ export const MobilePodcastDashboard: React.FC = () => {
               <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '45%' }} // Simulated progress
+                  animate={{
+                    width:
+                      latestHistory.duration && latestHistory.progress
+                        ? `${Math.min(100, Math.round((latestHistory.progress / latestHistory.duration) * 100))}%`
+                        : '0%',
+                  }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
                   className="h-full bg-green-400 rounded-full"
                 />
               </div>

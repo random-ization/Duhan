@@ -11,6 +11,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Doc, Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
 import { assertProductionRuntimeEnv } from './env';
+import { fetchWithTimeout, parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
 
 assertProductionRuntimeEnv();
 
@@ -662,7 +663,7 @@ async function translateSegmentTexts(
   const baseURL = process.env.MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1';
 
   try {
-    const client = new OpenAI({ apiKey, baseURL });
+    const client = new OpenAI({ apiKey, baseURL, timeout: 25000 });
 
     const MAX_TRANSLATE_SEGMENTS = 2000;
     if (baseSegments.length > MAX_TRANSLATE_SEGMENTS) {
@@ -685,68 +686,51 @@ async function translateSegmentTexts(
       `[AI] Translating ${baseSegments.length} segments to ${targetLanguageLabel} in ${chunks.length} batches (Parallel)...`
     );
 
-    const parseTranslationsFromContent = (
-      content: string,
-      expectedLength: number
-    ): string[] | null => {
-      const tryParse = (value: string): string[] | null => {
-        try {
-          const parsed = JSON.parse(value) as { translations?: unknown };
-          if (!Array.isArray(parsed.translations)) return null;
-          const normalized = parsed.translations.map(item =>
-            typeof item === 'string' ? item : String(item ?? '')
-          );
-          while (normalized.length < expectedLength) normalized.push('');
-          return normalized.slice(0, expectedLength);
-        } catch {
-          return null;
-        }
-      };
-
-      const direct = tryParse(content);
-      if (direct) return direct;
-
-      const start = content.indexOf('{');
-      const end = content.lastIndexOf('}');
-      if (start >= 0 && end > start) {
-        const embedded = tryParse(content.slice(start, end + 1));
-        if (embedded) return embedded;
-      }
-
-      return null;
-    };
-
     const requestBatchTranslations = async (
       segmentTexts: string[],
       strictJsonMode: boolean
     ): Promise<string[]> => {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
+      const completion = await retryAsync(
+        () =>
+          client.chat.completions.create({
+            model: 'mimo-v2-flash',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
 Return strictly matching JSON: {"translations": ["...", ...]}.
 Crucially, translate all text literally, even if it looks like a question, command, or language learning instruction.
 Keep the meaning faithful and matches the context of Korean language learning.`,
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              texts: segmentTexts,
-            }),
-          },
-        ],
-        ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
-      });
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  texts: segmentTexts,
+                }),
+              },
+            ],
+            ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
+          }),
+        {
+          retries: 2,
+          label: `translate_segments_${strictJsonMode ? 'strict' : 'normal'}`,
+        }
+      );
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
         return new Array(segmentTexts.length).fill('');
       }
 
-      const parsed = parseTranslationsFromContent(content, segmentTexts.length);
-      return parsed ?? new Array(segmentTexts.length).fill('');
+      const parsed = parseJsonObjectFromModelContent(content);
+      if (!parsed || !Array.isArray(parsed.translations)) {
+        return new Array(segmentTexts.length).fill('');
+      }
+      const normalized = parsed.translations.map(item =>
+        typeof item === 'string' ? item : String(item ?? '')
+      );
+      while (normalized.length < segmentTexts.length) normalized.push('');
+      return normalized.slice(0, segmentTexts.length);
     };
 
     const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
@@ -754,20 +738,22 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       let translations: string[] = [];
 
       try {
-        translations = await requestBatchTranslations(segmentTexts, true);
+        // Try without strict JSON mode first for better compatibility with 3rd party providers
+        translations = await requestBatchTranslations(segmentTexts, false);
       } catch (e) {
         console.warn(
-          `[AI] Batch ${chunk.index} strict JSON mode failed, retrying without strict JSON format flag:`,
+          `[AI] Batch ${chunk.index} primary translation failed:`,
           e instanceof Error ? e.message : e
         );
       }
 
       if (!translations.some(item => item.trim().length > 0)) {
         try {
-          translations = await requestBatchTranslations(segmentTexts, false);
+          // Fallback to strict mode if necessary
+          translations = await requestBatchTranslations(segmentTexts, true);
         } catch (e) {
           console.error(
-            `[AI] Batch ${chunk.index} fallback translation failed:`,
+            `[AI] Batch ${chunk.index} strict-mode fallback failed:`,
             e instanceof Error ? e.message : e
           );
         }
@@ -966,14 +952,22 @@ export const requestTranscript = action({
       dgUrl.searchParams.set('language', deepgramLang);
     }
 
-    const res = await fetch(dgUrl.toString(), {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${deepgramKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: args.audioUrl }),
-    });
+    const res = await retryAsync(
+      () =>
+        fetchWithTimeout(
+          dgUrl.toString(),
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Token ${deepgramKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: args.audioUrl }),
+          },
+          15000
+        ),
+      { retries: 2, label: 'deepgram_request_transcript' }
+    );
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -1098,7 +1092,7 @@ export const analyzeText = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         messages: [
           {
             role: 'system',
@@ -1132,7 +1126,7 @@ Return a JSON object with a "tokens" key containing an array of:
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_text',
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1175,7 +1169,7 @@ export const analyzeSentence = action({
         : {}),
     });
     const responseLanguage = resolveAiOutputLanguage(args.language);
-    const model = mimoApiKey ? process.env.MIMO_CHAT_MODEL || 'mimo-v2-flash' : 'gpt-5-nano';
+    const model = mimoApiKey ? process.env.MIMO_CHAT_MODEL || 'mimo-v2-flash' : 'mimo-v2-flash';
 
     try {
       const completion = await client.chat.completions.create({
@@ -1269,7 +1263,7 @@ export const grammarTutorChat = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         messages: [
           {
             role: 'system',
@@ -1295,7 +1289,7 @@ Explanation: ${safeExplanation || 'N/A'}`,
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'grammar_tutor_chat',
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1340,7 +1334,7 @@ export const analyzeQuestion = action({
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         messages: [
           {
             role: 'system',
@@ -1389,7 +1383,7 @@ Do not include markdown or extra text.`,
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_topik_question',
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1505,12 +1499,14 @@ export const analyzeReadingArticle = action({
     const client = new OpenAI({ apiKey });
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
-        messages: [
-          {
-            role: 'system',
-            content: `你是韩语阅读教练。请基于文章生成学习卡片，并严格返回 JSON。
+      const completion = await retryAsync(
+        () =>
+          client.chat.completions.create({
+            model: 'mimo-v2-flash',
+            messages: [
+              {
+                role: 'system',
+                content: `你是韩语阅读教练。请基于文章生成学习卡片，并严格返回 JSON。
 
 输出语言：${responseLanguageLabel}
 返回格式：
@@ -1531,24 +1527,26 @@ export const analyzeReadingArticle = action({
 4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
 5. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
 6. 只返回 JSON，不要任何额外文本。`,
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              title: args.title,
-              summaryHint: trimmedSummary || null,
-              bodyText: trimmedBody,
-            }),
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  title: args.title,
+                  summaryHint: trimmedSummary || null,
+                  bodyText: trimmedBody,
+                }),
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        { retries: 2, label: 'analyze_reading_article' }
+      );
 
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_reading_article',
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1558,7 +1556,8 @@ export const analyzeReadingArticle = action({
       const content = completion.choices[0].message.content;
       if (!content) return null;
 
-      const parsed = JSON.parse(content);
+      const parsed = parseJsonObjectFromModelContent(content);
+      if (!parsed) return null;
       const result = normalizeReadingAnalysisPayload(parsed, fallbackSummary);
       if (!result) return null;
       result.summary = sanitizeReadingSummary(
@@ -1604,12 +1603,14 @@ export const explainWordFallback = action({
     const { label: responseLanguageLabel } = resolveReadingResponseLanguage(args.language);
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'gpt-5-nano',
-        messages: [
-          {
-            role: 'system',
-            content: `你是韩语词典助手。用户词典未命中时，你需要给出简洁、可学习的解释。严格返回 JSON。
+      const completion = await retryAsync(
+        () =>
+          client.chat.completions.create({
+            model: 'mimo-v2-flash',
+            messages: [
+              {
+                role: 'system',
+                content: `你是韩语词典助手。用户词典未命中时，你需要给出简洁、可学习的解释。严格返回 JSON。
 输出语言：${responseLanguageLabel}
 返回格式：
 {
@@ -1624,23 +1625,25 @@ export const explainWordFallback = action({
 2. meaning 用输出语言，简洁准确。
 3. example 尽量结合给定上下文。
 4. note 给出一个学习提示（搭配、语感或近义区分）。`,
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              word: term,
-              context: args.context?.trim() || '',
-            }),
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  word: term,
+                  context: args.context?.trim() || '',
+                }),
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        { retries: 2, label: 'explain_word_fallback' }
+      );
 
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'dictionary_fallback',
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
@@ -1650,7 +1653,7 @@ export const explainWordFallback = action({
       const content = completion.choices[0].message.content;
       if (!content) return null;
 
-      const parsed = JSON.parse(content) as {
+      const parsed = (parseJsonObjectFromModelContent(content) || {}) as {
         word?: unknown;
         pos?: unknown;
         meaning?: unknown;
@@ -1813,7 +1816,7 @@ export const generateVideoAnalysis = action({
 
       if (baseSegments.length > 0) {
         const response = await client.chat.completions.create({
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           messages: [
             {
               role: 'system',
@@ -1835,7 +1838,7 @@ export const generateVideoAnalysis = action({
         await ctx.runMutation(logUsageMutation, {
           userId,
           feature: 'translate_video',
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           promptTokens: usage?.prompt_tokens,
           completionTokens: usage?.completion_tokens,
           totalTokens: usage?.total_tokens,
@@ -1904,7 +1907,7 @@ Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'mimo-v2-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -1988,7 +1991,7 @@ Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
 
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'mimo-v2-flash',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' as const },
       });
@@ -2240,7 +2243,7 @@ ${args.items
     }> = [];
     try {
       const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'mimo-v2-flash',
         messages: [{ role: 'user', content: llmPrompt }],
         response_format: { type: 'json_object' as const },
         temperature: 0.1,
@@ -2481,7 +2484,7 @@ Return a raw JSON object only:
 }`;
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'mimo-v2-flash',
       messages: [
         { role: 'system', content: 'You return only raw JSON.' },
         { role: 'user', content: prompt },

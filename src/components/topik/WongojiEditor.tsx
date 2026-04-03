@@ -21,6 +21,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const COLS = 20; // fixed columns per row
 
@@ -74,16 +75,16 @@ function buildCells(value: string, totalCells: number): Array<string | null> {
 
 interface CellProps {
   char: string | null;
-  index: number;
   /** Whether this cell is at the cursor position */
   isCursor: boolean;
   /** 0-indexed column */
   col: number;
   /** 0-indexed row */
   row: number;
+  compact?: boolean;
 }
 
-const Cell = React.memo(({ char, isCursor, col, row }: CellProps) => {
+const Cell = React.memo(({ char, isCursor, col, row, compact = false }: CellProps) => {
   // First column of each row gets a slightly thicker left border (classic
   // 원고지 style) and every 5th column has a mid-weight separator.
   const isRowStart = col === 0;
@@ -96,7 +97,8 @@ const Cell = React.memo(({ char, isCursor, col, row }: CellProps) => {
     <div
       className={cn(
         'relative flex items-center justify-center',
-        'w-8 h-8 text-sm font-medium leading-none select-none',
+        compact ? 'h-[1.3rem] w-[1.3rem] text-[11px]' : 'w-8 h-8 text-sm',
+        'font-medium leading-none select-none',
         // Base borders – black/white styling (dark gray in light mode, white in dark mode)
         'border-b border-r border-neutral-400 dark:border-white/20',
         isRowStart && 'border-l border-neutral-400 dark:border-white/20',
@@ -125,6 +127,7 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const textareaRef = (forwardedRef as React.RefObject<HTMLTextAreaElement>) ?? internalRef;
     const { t } = useTranslation();
+    const isMobile = useIsMobile();
 
     // Track cursor position so we can highlight the active cell.
     const [cursorPos, setCursorPos] = React.useState<number>(value.length);
@@ -191,25 +194,49 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
     const charCount = value.replace(/\n/g, '').length;
     const percentage = Math.round((charCount / maxLength) * 100);
     const remaining = maxLength - charCount;
+    const cellRem = isMobile ? 1.3 : 2;
+    const visualRow = Math.floor(visualCursorIndex / COLS) + 1;
+    const visualColumn = (visualCursorIndex % COLS) + 1;
+    const charsUnit = t('topikWriting.session.charsUnit', { defaultValue: 'chars' });
 
     return (
       <div className={cn('flex flex-col gap-3', className)}>
         {/* ── Header stats ── */}
-        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground px-1">
-          <span>
-            <span
+        <div
+          className={cn(
+            'px-1 text-xs font-medium text-muted-foreground',
+            isMobile ? 'space-y-3' : 'flex items-center justify-between'
+          )}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              <span
+                className={cn(
+                  'font-black',
+                  charCount > maxLength * 0.95 ? 'text-destructive' : 'text-foreground'
+                )}
+              >
+                {charCount}
+              </span>
+              {' / '}
+              {maxLength} {charsUnit}
+            </span>
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em]">
+              {t('wongojiEditor.lineStatus', {
+                defaultValue: 'Row {{row}} · Col {{column}}',
+                row: visualRow,
+                column: visualColumn,
+              })}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div
               className={cn(
-                'font-black',
-                charCount > maxLength * 0.95 ? 'text-destructive' : 'text-foreground'
+                'h-1.5 rounded-full overflow-hidden bg-muted',
+                isMobile ? 'flex-1' : 'w-32'
               )}
             >
-              {charCount}
-            </span>
-            {' / '}
-            {maxLength} {t('topikWriting.session.characterCount', 'chars').trim()}
-          </span>
-          <div className="flex items-center gap-3">
-            <div className="w-32 h-1.5 bg-muted rounded-full overflow-hidden">
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-300',
@@ -222,7 +249,7 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
                 style={{ width: `${Math.min(100, percentage)}%` }}
               />
             </div>
-            <span>
+            <span className="shrink-0">
               {t('topikWriting.session.remainingChars', {
                 count: remaining,
                 defaultValue: `{{count}} left`,
@@ -232,15 +259,29 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
         </div>
 
         {/* ── Paper + transparent textarea (layered) ── */}
-        <div className="flex justify-center border-y border-border py-4 bg-background">
-          <div className="relative overflow-auto rounded-lg border-2 border-border shadow-inner bg-background">
+        <div
+          className={cn(
+            'bg-background',
+            isMobile
+              ? 'rounded-3xl border border-border/80 px-3 py-3'
+              : 'border-y border-border py-4'
+          )}
+        >
+          <div
+            className={cn(
+              'relative overflow-auto bg-background',
+              isMobile
+                ? 'rounded-2xl border border-border shadow-inner'
+                : 'rounded-lg border-2 border-border shadow-inner'
+            )}
+          >
             {/* Visual grid — pointer-events-none so all input reaches the textarea */}
             <div
               className="pointer-events-none"
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${COLS}, 2rem)`,
-                width: `${COLS * 2}rem`,
+                gridTemplateColumns: `repeat(${COLS}, ${cellRem}rem)`,
+                width: `${COLS * cellRem}rem`,
               }}
               aria-hidden
             >
@@ -250,11 +291,11 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
                 return (
                   <Cell
                     key={idx}
-                    index={idx}
                     char={char}
                     isCursor={!readOnly && idx === visualCursorIndex}
                     col={col}
                     row={row}
+                    compact={isMobile}
                   />
                 );
               })}
@@ -287,7 +328,7 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
                 )}
                 style={{
                   // Match grid dimensions so scrolling stays in sync
-                  minHeight: `${totalRows * 2}rem`,
+                  minHeight: `${totalRows * cellRem}rem`,
                   fontFamily: 'monospace',
                 }}
               />
@@ -298,17 +339,20 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
         {/* ── Row / line info ── */}
         <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1">
           <span>
-            {t('wongojiEditor.row', { defaultValue: 'Row' })} {Math.ceil(visualCursorIndex / COLS)}{' '}
-            / {totalRows}
+            {t('wongojiEditor.row', { defaultValue: 'Row' })} {visualRow} / {totalRows}
           </span>
           <span>
-            {t('wongojiEditor.column', { defaultValue: 'Column' })} {(visualCursorIndex % COLS) + 1}
+            {t('wongojiEditor.column', { defaultValue: 'Column' })} {visualColumn}
           </span>
           <span className="ml-auto opacity-60">
-            {t('wongojiEditor.perLine', {
-              defaultValue: '{{count}} chars per line · Wongoji',
-              count: COLS,
-            })}
+            {isMobile
+              ? t('wongojiEditor.mobileHint', {
+                  defaultValue: 'Scroll sideways if needed',
+                })
+              : t('wongojiEditor.perLine', {
+                  defaultValue: '{{count}} chars per line · Wongoji',
+                  count: COLS,
+                })}
           </span>
         </div>
       </div>

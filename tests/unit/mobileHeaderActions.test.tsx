@@ -41,11 +41,16 @@ const baseConfig: RouteUiConfig = {
   hasBottomNav: true,
   hasHeader: true,
   hasFooter: false,
+  usePatternBackground: false,
+  useDesktopContainerPadding: false,
+  useDesktopMaxWidth: false,
+  lockMainScroll: false,
   headerType: 'section',
   headerAction: 'none',
   headerTitle: 'nav.test',
   headerTitleDefault: 'Test',
   allowHiddenChrome: false,
+  mobilePageMode: 'workspace',
 };
 
 const renderHeader = ({
@@ -124,7 +129,7 @@ describe('MobileHeader action behavior', () => {
     });
 
     renderHeader({
-      routeUiConfig: { ...baseConfig, headerType: 'page' },
+      routeUiConfig: { ...baseConfig, headerType: 'detail' },
       path: '/dashboard',
       pathWithoutLang: '/dashboard',
     });

@@ -14,8 +14,9 @@ import { clsx } from 'clsx';
 import { TopikExam, Language } from '../../../types';
 import { MobileQuestionRenderer } from './MobileQuestionRenderer';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
-import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../ui';
+import { BottomSheet } from '../../common/BottomSheet';
 import { Button } from '../../ui';
+import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 
 // --- Constants (Copied from ExamSession.tsx to ensure consistency) ---
 const TOPIK_READING_STRUCTURE: {
@@ -254,11 +255,9 @@ const ListeningAudioPanel: React.FC<ListeningAudioPanelProps> = ({
 }) => (
   <div
     className={clsx(
-      'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-xl mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
+      'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-lg mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
       audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]',
-      audioError
-        ? 'shadow-red-900/20 dark:shadow-red-950/25'
-        : 'shadow-primary/25 dark:shadow-primary/15'
+      audioError ? 'shadow-red-500/20' : 'shadow-primary/25'
     )}
   >
     <Button
@@ -326,7 +325,7 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
 }) => {
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
   return (
-    <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
+    <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-mobile-safe flex gap-3 shadow-lg pointer-events-auto">
       <Button
         variant="ghost"
         size="auto"
@@ -351,7 +350,7 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
           variant="ghost"
           size="auto"
           onClick={onSubmit}
-          className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-200/80 dark:shadow-green-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span>{t('dashboard.topik.mobile.session.finish', { defaultValue: 'Finish' })}</span>
           <CheckCircle2 className="w-5 h-5" />
@@ -361,7 +360,7 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
           variant="ghost"
           size="auto"
           onClick={onNext}
-          className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-indigo-200/80 dark:shadow-indigo-950/25 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span>{t('dashboard.topik.mobile.session.next', { defaultValue: 'Next' })}</span>
           <ChevronRight className="w-5 h-5" />
@@ -459,119 +458,94 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
 
   return (
     <div className="flex flex-col h-[100dvh] bg-muted overflow-hidden relative">
-      <Dialog open={gridOpen} onOpenChange={setGridOpen}>
-        <DialogPortal>
-          <DialogOverlay
-            unstyled
-            forceMount
-            onClick={() => setGridOpen(false)}
-            className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-[1px] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
-          />
-          <DialogContent
-            unstyled
-            forceMount
-            closeOnEscape={true}
-            lockBodyScroll={false}
-            className="fixed inset-0 z-[71] p-4 flex items-center justify-center pointer-events-none data-[state=closed]:pointer-events-none"
-          >
-            <div className="pointer-events-auto w-full max-w-md bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-black text-foreground">
-                    {t('dashboard.topik.mobile.session.questionMap', {
-                      defaultValue: 'Question Map',
-                    })}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-semibold">
-                    {t('dashboard.topik.mobile.session.answeredCount', {
-                      current: answeredCount,
-                      total: exam.questions.length,
-                      defaultValue: 'Answered {{current}}/{{total}}',
-                    })}
-                  </p>
-                </div>
+      <BottomSheet
+        isOpen={gridOpen}
+        onClose={() => setGridOpen(false)}
+        height="full"
+        title={t('dashboard.topik.mobile.session.questionMap', {
+          defaultValue: 'Question Map',
+        })}
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground">
+              {t('dashboard.topik.mobile.session.answeredCount', {
+                current: answeredCount,
+                total: exam.questions.length,
+                defaultValue: 'Answered {{current}}/{{total}}',
+              })}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-5 gap-3 pb-2">
+            {exam.questions.map((question, idx) => {
+              const answered = userAnswers[idx] !== undefined;
+              const active = idx === currentQuestionIndex;
+              return (
                 <Button
                   variant="ghost"
                   size="auto"
                   type="button"
-                  onClick={() => setGridOpen(false)}
-                  className="w-8 h-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center"
-                  aria-label={t('common.close', { defaultValue: 'Close' })}
+                  key={`${question.id}-${idx}`}
+                  onClick={() => {
+                    setCurrentQuestionIndex(idx);
+                    setGridOpen(false);
+                  }}
+                  className={clsx(
+                    'h-11 rounded-xl text-sm font-black border transition-colors',
+                    active
+                      ? 'bg-indigo-600 dark:bg-indigo-400/75 text-white border-indigo-600'
+                      : answered
+                        ? 'bg-emerald-50 dark:bg-emerald-500/12 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/25'
+                        : 'bg-card text-muted-foreground border-border'
+                  )}
                 >
-                  <X className="w-4 h-4" />
+                  {question.number || idx + 1}
                 </Button>
-              </div>
-              <div className="p-4 grid grid-cols-5 gap-2">
-                {exam.questions.map((question, idx) => {
-                  const answered = userAnswers[idx] !== undefined;
-                  const active = idx === currentQuestionIndex;
-                  return (
-                    <Button
-                      variant="ghost"
-                      size="auto"
-                      type="button"
-                      key={`${question.id}-${idx}`}
-                      onClick={() => {
-                        setCurrentQuestionIndex(idx);
-                        setGridOpen(false);
-                      }}
-                      className={clsx(
-                        'h-10 rounded-lg text-sm font-black border-2 transition-colors',
-                        active
-                          ? 'bg-indigo-600 dark:bg-indigo-400/75 text-white border-indigo-600 dark:border-indigo-300/70'
-                          : answered
-                            ? 'bg-emerald-50 dark:bg-emerald-500/12 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/25'
-                            : 'bg-card text-muted-foreground border-border'
-                      )}
-                    >
-                      {question.number || idx + 1}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
+              );
+            })}
+          </div>
+        </div>
+      </BottomSheet>
 
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0 z-30">
-        <div className="flex items-center gap-3">
+      <MobileImmersiveHeader
+        title={t('dashboard.topik.realExam', { defaultValue: 'TOPIK Exam' })}
+        subtitle={t('dashboard.topik.mobile.session.questionProgress', {
+          current: currentQuestionIndex + 1,
+          total: exam.questions.length,
+          defaultValue: 'Question {{current}} of {{total}}',
+        })}
+        eyebrow={`TOPIK II ${examTypeLabel}`}
+        onBack={onExit}
+        backLabel={t('common.close', { defaultValue: 'Close' })}
+        backIcon={<X className="h-4 w-4 text-foreground" />}
+        status={
+          <div
+            className={clsx(
+              'flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-black shadow-sm',
+              timeLeft < 300
+                ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-300/20 dark:bg-red-400/10 dark:text-red-200'
+                : 'border-border bg-card text-foreground'
+            )}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>{formatDuration(timeLeft)}</span>
+          </div>
+        }
+        actions={
           <Button
             variant="ghost"
             size="auto"
-            onClick={onExit}
-            className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted"
+            onClick={() => setGridOpen(true)}
+            className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm dark:border-indigo-300/20 dark:bg-indigo-400/14 dark:text-indigo-200"
           >
-            <X className="w-5 h-5" />
+            <span className="text-sm">
+              {currentQuestionIndex + 1}/{exam.questions.length}
+            </span>
+            <Grid3x3 className="ml-2 h-4 w-4" />
           </Button>
-          <div>
-            <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-              TOPIK II {examTypeLabel}
-            </div>
-            <div
-              className={clsx(
-                'flex items-center gap-1.5 font-black text-sm',
-                timeLeft < 300 ? 'text-red-500 dark:text-red-300' : 'text-muted-foreground'
-              )}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>{formatDuration(timeLeft)}</span>
-            </div>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setGridOpen(true)}
-          className="px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-400/14 text-indigo-600 dark:text-indigo-200 text-xs font-bold flex items-center gap-2"
-        >
-          <span className="text-sm">
-            {currentQuestionIndex + 1}/{exam.questions.length}
-          </span>
-          <Grid3x3 className="w-4 h-4" />
-        </Button>
-      </header>
+        }
+      />
 
       {/* Main Content */}
       <div className="flex-1 relative flex flex-col overflow-hidden">

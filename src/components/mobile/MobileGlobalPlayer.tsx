@@ -80,9 +80,9 @@ export const MobileGlobalPlayer: React.FC = () => {
   return (
     <>
       {isMinimized && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+110px)] left-4 right-4 z-50 pointer-events-none">
+        <div className="fixed bottom-mobile-floating left-4 right-4 z-[50] pointer-events-none">
           <div
-            className="pointer-events-auto bg-card/80 dark:bg-card/60 backdrop-blur-2xl rounded-[1.5rem] p-2 pr-3 flex items-center shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)] border border-border/50"
+            className="pointer-events-auto bg-card/80 dark:bg-card/60 backdrop-blur-2xl rounded-[1.5rem] p-2 pr-3 flex items-center shadow-lg shadow-black/10 border border-border/50"
             onClick={() => setMinimized(false)}
             role="button"
             tabIndex={0}
@@ -221,7 +221,7 @@ export const MobileGlobalPlayer: React.FC = () => {
                     variant="ghost"
                     size="auto"
                     type="button"
-                    className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 hover:scale-105 active:scale-95 transition-all"
+                    className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
                     onClick={togglePlay}
                     aria-label={
                       isPlaying

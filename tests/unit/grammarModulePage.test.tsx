@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import { GRAMMARS, INSTITUTES } from '../../src/utils/convexRefs';
 
@@ -92,11 +92,17 @@ const unitGrammar = [
 
 const { default: GrammarModulePage } = await import('../../src/pages/GrammarModulePage');
 
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="current-location">{`${location.pathname}${location.search}`}</div>;
+};
+
 const renderPage = () =>
   render(
     <MemoryRouter initialEntries={['/course/course-1/grammar']}>
       <Routes>
         <Route path="/course/:instituteId/grammar" element={<GrammarModulePage />} />
+        <Route path="/:lang/courses" element={<LocationProbe />} />
       </Routes>
     </MemoryRouter>
   );
@@ -170,5 +176,13 @@ describe('GrammarModulePage AI panel persistence', () => {
       configurable: true,
       value: originalLocalStorage,
     });
+  });
+
+  it('routes desktop switch textbook to the course library', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch textbook' }));
+
+    expect(screen.getByTestId('current-location')).toHaveTextContent('/en/courses');
   });
 });

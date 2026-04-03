@@ -84,7 +84,7 @@ export const MobilePodcastSearch: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-muted flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm px-4 py-3 flex gap-3 items-center">
         <Button

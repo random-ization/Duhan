@@ -82,4 +82,13 @@ describe('MobilePodcastDashboard returnTo behavior', () => {
       '/podcasts/search?q=talk+to+me&returnTo=%2Fpodcasts%3FreturnTo%3D%252Fmedia%253Ftab%253Dpodcasts'
     );
   });
+
+  it('does not render the deprecated top filter chips', () => {
+    renderWithRouter('/podcasts');
+
+    expect(screen.queryByRole('button', { name: /beginner/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /intermediate/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /daily/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /news/i })).not.toBeInTheDocument();
+  });
 });

@@ -31,73 +31,79 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
   const progress = total > 0 ? (masteredCount / total) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-muted pb-[130px]">
+    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
       {/* Header */}
-      <header className="bg-card p-6 pb-8 border-b border-border rounded-b-[2rem] shadow-sm relative overflow-hidden">
-        {/* Decor */}
-        <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-green-100 dark:bg-green-400/12 rounded-full opacity-50 z-0" />
+      <header className="relative overflow-hidden border-b border-border/50 bg-background p-6 pt-10 pb-12 shadow-sm">
+        {/* Glow Effects */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-500/10 blur-[80px] rounded-full" />
+        <div className="absolute top-10 -left-10 w-32 h-32 bg-primary/5 blur-[50px] rounded-full" />
 
         <div className="relative z-10">
-          <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
+          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-70">
             {instituteName}
           </div>
-          <h1 className="text-3xl font-black text-foreground mb-1">
+          <h1 className="text-3xl font-black text-foreground mb-1 italic tracking-tighter">
             {unitId === 'ALL'
               ? t('vocab.allUnits', { defaultValue: 'All Units' })
-              : `${t('vocab.unit', { defaultValue: 'Unit' })} ${unitId}`}
+              : `Unit ${unitId}`}
           </h1>
-          <p className="text-muted-foreground font-medium">
+          <p className="text-muted-foreground font-bold text-sm tracking-tight opacity-80">
             {total} {t('vocab.wordsUnit', { defaultValue: 'words' })}
           </p>
 
-          {/* Progress Card */}
-          <div className="mt-6 bg-primary rounded-2xl p-5 text-primary-foreground shadow-lg relative overflow-hidden">
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <div className="text-3xl font-black text-green-400 dark:text-green-300">
-                  {Math.round(progress)}%
+          {/* Progress Card (Hero style) */}
+          <div className="mt-8 bg-black dark:bg-zinc-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <div className="text-4xl font-black text-green-400 italic tracking-tighter">
+                    {Math.round(progress)}%
+                  </div>
+                  <div className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em] mt-1">
+                    {t('vocab.mastered', { defaultValue: 'Mastered' })}
+                  </div>
                 </div>
-                <div className="text-xs font-bold text-primary-foreground/75 uppercase tracking-wider">
-                  {t('vocab.mastered', { defaultValue: 'Mastered' })}
+                <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10">
+                  <Trophy className="w-6 h-6 text-yellow-400" />
                 </div>
               </div>
-              <Trophy className="w-8 h-8 text-yellow-400 dark:text-yellow-300" />
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 dark:bg-green-300 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="h-3 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/5">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 to-emerald-400 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(74,222,128,0.5)]"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* Actions */}
-      <div className="p-6 grid gap-4">
+      <div className="p-6 pt-8 grid gap-5">
         {/* Learn Button */}
         <Button
           variant="ghost"
           size="auto"
           onClick={onStartLearn}
-          className="group w-full bg-card border border-border rounded-2xl p-1 shadow-sm active:scale-95 transition-transform"
+          className="group w-full bg-card border border-border/40 rounded-[2rem] p-1 shadow-sm active:scale-[0.98] transition-all hover:border-green-500/30"
         >
-          <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-green-50 dark:group-hover:bg-green-400/12 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-400/14 flex items-center justify-center text-green-600 dark:text-green-300">
+          <div className="bg-card rounded-[1.8rem] p-6 flex items-center justify-between group-hover:bg-green-50/50 dark:group-hover:bg-green-500/5 transition-colors">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-[1.2rem] bg-green-100 dark:bg-green-500/20 flex items-center justify-center text-green-600 dark:text-green-400 shadow-inner group-hover:scale-110 transition-transform">
                 <BrainIcon />
               </div>
               <div className="text-left">
-                <div className="font-black text-lg text-foreground">
+                <div className="font-black text-xl text-foreground italic tracking-tight">
                   {t('vocab.learn', { defaultValue: 'Start Learning' })}
                 </div>
-                <div className="text-xs font-bold text-muted-foreground">
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider opacity-70">
                   {t('vocab.flashcards', { defaultValue: 'Flashcards' })}
                 </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-border flex items-center justify-center group-hover:border-green-200 dark:group-hover:border-green-300/30 group-hover:bg-card">
-              <Play className="w-4 h-4 text-green-500 dark:text-green-300 ml-0.5" />
+            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-green-500/50 group-hover:bg-white dark:group-hover:bg-zinc-800 transition-all shadow-sm">
+              <Play className="w-4 h-4 text-green-500 ml-0.5" />
             </div>
           </div>
         </Button>
@@ -107,24 +113,24 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
           variant="ghost"
           size="auto"
           onClick={onStartTest}
-          className="group w-full bg-card border border-border rounded-2xl p-1 shadow-sm active:scale-95 transition-transform"
+          className="group w-full bg-card border border-border/40 rounded-[2rem] p-1 shadow-sm active:scale-[0.98] transition-all hover:border-indigo-500/30"
         >
-          <div className="bg-card rounded-xl p-5 flex items-center justify-between group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-400/14 flex items-center justify-center text-indigo-600 dark:indigo-300">
-                <Trophy className="w-6 h-6" />
+          <div className="bg-card rounded-[1.8rem] p-6 flex items-center justify-between group-hover:bg-indigo-50/50 dark:group-hover:bg-indigo-500/5 transition-colors">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-[1.2rem] bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner group-hover:scale-110 transition-transform">
+                <Trophy className="w-7 h-7" />
               </div>
               <div className="text-left">
-                <div className="font-black text-lg text-foreground">
+                <div className="font-black text-xl text-foreground italic tracking-tight">
                   {t('vocab.quiz', { defaultValue: 'Take Quiz' })}
                 </div>
-                <div className="text-xs font-bold text-muted-foreground">
-                  {t('vocab.testMode', { defaultValue: 'Challenge yourself' })}
+                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider opacity-70">
+                  {t('vocab.testMode', { defaultValue: 'Challenge' })}
                 </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-border flex items-center justify-center group-hover:border-indigo-200 dark:group-hover:border-indigo-300/30 group-hover:bg-card">
-              <ChevronRight className="w-5 h-5 text-indigo-500 dark:text-indigo-300" />
+            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-indigo-500/50 group-hover:bg-white dark:group-hover:bg-zinc-800 transition-all shadow-sm">
+              <ChevronRight className="w-5 h-5 text-indigo-500" />
             </div>
           </div>
         </Button>
@@ -134,11 +140,11 @@ export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
           variant="ghost"
           size="auto"
           onClick={onManageList}
-          className="mt-2 w-full bg-card p-4 rounded-xl border border-border flex items-center justify-between"
+          className="mt-2 w-full bg-muted/50 p-5 rounded-[1.5rem] border border-border/40 flex items-center justify-between hover:bg-card transition-all active:scale-[0.99]"
         >
           <div className="flex items-center gap-3">
-            <ListIcon className="w-5 h-5 text-muted-foreground" />
-            <span className="font-bold text-muted-foreground">
+            <ListIcon className="w-5 h-5 text-muted-foreground opacity-70" />
+            <span className="font-black text-muted-foreground text-sm tracking-tight">
               {t('vocab.wordList', { defaultValue: 'Word List' })}
             </span>
           </div>

@@ -3,7 +3,6 @@ import { TopikExam, Language } from '../../../types';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowLeft,
   Check,
   X,
   ChevronLeft,
@@ -20,6 +19,7 @@ import { aRef, NOTE_PAGES } from '../../../utils/convexRefs';
 import { Button } from '../../ui';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { useNotebookPicker } from '../../../contexts/NotebookPickerContext';
+import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 
 interface MobileExamReviewProps {
   exam: TopikExam;
@@ -116,10 +116,10 @@ const ReviewSaveToast: React.FC<{ show: boolean; saveError: string | null; t: Tr
 }) => {
   if (!show) return null;
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-[90%] max-w-sm">
+    <div className="fixed bottom-mobile-floating left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-[90%] max-w-sm pointer-events-none">
       <div
         className={clsx(
-          'px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border',
+          'pointer-events-auto px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border',
           saveError
             ? 'bg-red-50 dark:bg-red-500/14 text-red-800 dark:text-red-200 border-red-200 dark:border-red-300/25'
             : 'bg-emerald-600 dark:bg-emerald-500/70 text-white border-emerald-500 dark:border-emerald-300/35'
@@ -403,28 +403,26 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
   const renderOverview = () => (
     <div className="flex flex-col h-full bg-muted">
-      {/* Header */}
-      <header className="bg-card/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="text-center">
-          <h1 className="font-bold text-muted-foreground text-base line-clamp-1 max-w-[200px]">
-            {exam.title}
-          </h1>
-          <p className="text-[10px] text-muted-foreground font-medium">
-            {t('dashboard.topik.mobile.review.mode', { defaultValue: 'Review Mode' })}
-          </p>
-        </div>
-        <div className="w-8"></div>
-      </header>
+      <MobileImmersiveHeader
+        title={exam.title}
+        subtitle={t('dashboard.topik.mobile.review.mode', { defaultValue: 'Review Mode' })}
+        eyebrow={t('nav.topik', { defaultValue: 'TOPIK' })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        status={
+          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+              {t('dashboard.topik.mobile.review.totalScore', { defaultValue: 'Total Score' })}
+            </div>
+            <div className="text-base font-black text-foreground">
+              {stats.score}/{stats.totalScore}
+            </div>
+          </div>
+        }
+        className="sticky top-0 z-20"
+      />
 
-      <div className="flex-1 overflow-y-auto pb-safe">
+      <div className="flex-1 overflow-y-auto pb-mobile-safe">
         {/* Score Card */}
         <div className="p-6">
           <div className="bg-card rounded-3xl shadow-lg border border-border overflow-hidden relative p-8 text-center flex flex-col items-center">
@@ -477,7 +475,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               setCurrentQuestionIndex(0);
               setViewMode('DETAIL');
             }}
-            className="flex-1 bg-indigo-600 dark:bg-indigo-400/75 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-indigo-200/80 dark:shadow-indigo-950/30 active:scale-[0.98] transition-transform text-sm"
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all text-sm"
           >
             {t('dashboard.topik.mobile.review.reviewAll', { defaultValue: 'Review All' })}
           </Button>
@@ -487,7 +485,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             size="auto"
             onClick={handleReviewWrong}
             disabled={stats.mistakeCount === 0}
-            className="flex-1 bg-card border-2 border-border text-muted-foreground rounded-xl py-3.5 font-bold active:bg-muted text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
           >
             {t('dashboard.topik.mobile.review.reviewMistakes', {
               count: stats.mistakeCount,
@@ -524,11 +522,11 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   key={q.id}
                   onClick={() => handleQuestionClick(idx)}
                   className={clsx(
-                    'aspect-square rounded-xl flex items-center justify-center font-bold text-sm transition-all border-b-4 active:border-b-0 active:translate-y-[4px]',
+                    'aspect-square rounded-xl flex items-center justify-center font-bold text-sm transition-all border active:scale-95',
                     isCorrect
-                      ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/30'
+                      ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/30 shadow-sm shadow-emerald-500/10'
                       : isAnswered
-                        ? 'bg-red-100 dark:bg-red-500/16 text-red-600 dark:text-red-200 border-red-200 dark:border-red-300/30'
+                        ? 'bg-red-100 dark:bg-red-500/16 text-red-600 dark:text-red-200 border-red-200 dark:border-red-300/30 shadow-sm shadow-red-500/10'
                         : 'bg-muted text-muted-foreground border-border'
                   )}
                 >
@@ -671,7 +669,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                     <div
                       key={idx}
                       className={clsx(
-                        'relative rounded-xl border-2 overflow-hidden aspect-[4/3] group bg-card',
+                        'relative rounded-xl border overflow-hidden aspect-[4/3] group bg-card',
                         borderClass,
                         ringClass
                       )}
@@ -722,7 +720,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   <div
                     key={idx}
                     className={clsx(
-                      'w-full p-4 rounded-xl border-2 text-left relative overflow-hidden transition-all flex items-start gap-3',
+                      'w-full p-4 rounded-xl border text-left relative overflow-hidden transition-all flex items-start gap-3',
                       stateClass
                     )}
                   >
@@ -756,45 +754,45 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
     return (
       <div className="flex flex-col h-full bg-muted relative">
-        {/* Detail Header */}
-        <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-20">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setViewMode('OVERVIEW')}
-            className="text-sm font-bold text-muted-foreground flex items-center gap-1 hover:text-muted-foreground transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {t('dashboard.topik.mobile.review.back', { defaultValue: 'Back' })}
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black bg-muted text-muted-foreground px-2 py-1 rounded-md">
+        <MobileImmersiveHeader
+          title={t('dashboard.topik.mobile.review.detailTitle', {
+            defaultValue: 'Question Review',
+          })}
+          subtitle={
+            reviewFilter === 'WRONG'
+              ? t('dashboard.topik.mobile.review.mistakeProgress', {
+                  current: currentFilterIndex + 1,
+                  total: questionsToShow.length,
+                  defaultValue: 'Mistake {{current}}/{{total}}',
+                })
+              : t('dashboard.topik.mobile.review.questionProgress', {
+                  current: currentQuestionIndex + 1,
+                  total: exam.questions.length,
+                  defaultValue: 'Question {{current}} of {{total}}',
+                })
+          }
+          eyebrow={t('nav.topik', { defaultValue: 'TOPIK' })}
+          onBack={() => setViewMode('OVERVIEW')}
+          backLabel={t('dashboard.topik.mobile.review.back', { defaultValue: 'Back' })}
+          status={
+            <span className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm">
               Q{exam.questions[currentQuestionIndex].number || currentQuestionIndex + 1}
             </span>
-            <span className="text-xs font-bold text-muted-foreground">
-              {reviewFilter === 'WRONG'
-                ? t('dashboard.topik.mobile.review.mistakeProgress', {
-                    current: currentFilterIndex + 1,
-                    total: questionsToShow.length,
-                    defaultValue: 'Mistake {{current}}/{{total}}',
-                  })
-                : t('dashboard.topik.mobile.review.allProgress', {
-                    total: exam.questions.length,
-                    defaultValue: '/ {{total}}',
-                  })}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setViewMode('OVERVIEW')}
-            className="p-2 bg-muted rounded-full text-muted-foreground"
-          >
-            <List className="w-4 h-4" />
-          </Button>
-        </header>
+          }
+          actions={
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={() => setViewMode('OVERVIEW')}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+            >
+              <List className="w-4 h-4 text-foreground" />
+            </Button>
+          }
+          className="sticky top-0 z-20"
+        />
 
-        <div className="flex-1 overflow-y-auto pb-safe" ref={detailScrollRef}>
+        <div className="flex-1 overflow-y-auto pb-mobile-safe" ref={detailScrollRef}>
           <div className="p-4 pb-32 max-w-lg mx-auto w-full">
             <ReviewResultBanner isCorrect={isCorrect} t={t} />
 
@@ -928,7 +926,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                       </div>
                       <div className="space-y-2">
                         {Object.entries(aiAnalysis.wrongOptions || {}).map(([key, value]) => (
-                          <div key={key} className="text-muted-foreground bg-card/60 p-3 rounded-xl text-sm">
+                          <div
+                            key={key}
+                            className="text-muted-foreground bg-card/60 p-3 rounded-xl text-sm"
+                          >
                             <span className="font-bold">
                               {t('common.option', { defaultValue: 'Option' })} {key}:
                             </span>{' '}
@@ -945,7 +946,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         </div>
 
         {/* Bottom Nav */}
-        <div className="bg-card border-t border-border px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-safe shadow-nav-up">
+        <div className="bg-card border-t border-border px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-mobile-safe shadow-nav-up">
           <Button
             variant="ghost"
             size="auto"

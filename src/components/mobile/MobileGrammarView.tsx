@@ -1,4 +1,5 @@
-import { Search, ChevronLeft } from 'lucide-react';
+import { Search, BookMarked } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { GrammarPointData } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { getLocalizedContent } from '../../utils/languageUtils';
@@ -10,8 +11,9 @@ import MobileUnitChips from './MobileUnitChips';
 import MobileGrammarFeed from './MobileGrammarFeed';
 import MobileGrammarDetailSheet from './MobileGrammarDetailSheet';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { Button } from '../ui';
-import { Input } from '../ui';
+import { buildLearningPickerPath } from '../../utils/learningFlow';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 interface MobileGrammarViewProps {
   readonly selectedUnit: number;
@@ -49,6 +51,21 @@ export default function MobileGrammarView({
   const { t, i18n } = useTranslation();
   const language = (i18n.language || 'zh') as never;
   const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
+  const switchMaterialPath = buildLearningPickerPath('grammar');
+
+  const handleBack = () => {
+    const returnTo = searchParams.get('returnTo');
+    if (hasSafeReturnTo(returnTo)) {
+      navigate(resolveSafeReturnTo(returnTo, '/courses'));
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/courses');
+  };
 
   // Filter grammar points based on search query
   const filteredPoints = grammarPoints.filter(g => {
@@ -67,53 +84,66 @@ export default function MobileGrammarView({
   });
 
   return (
-    <div className="min-h-screen bg-muted flex flex-col">
-      {/* Header with Search */}
-      <div className="bg-card px-4 py-3 sticky top-0 z-20 border-b border-border shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate(`/course/${instituteId}`)}
-            className="w-9 h-9 border-2 border-border rounded-xl flex items-center justify-center text-muted-foreground active:bg-muted shrink-0"
+    <div className="min-h-screen bg-background flex flex-col pb-mobile-nav">
+      <MobileWorkspaceHeader
+        title={t('nav.grammar', { defaultValue: 'Grammar Library' })}
+        subtitle={t('grammar.mobileSubtitle', {
+          defaultValue: 'Browse patterns, search explanations, and focus on one unit at a time.',
+        })}
+        eyebrow="Grammar"
+        onBack={handleBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        actions={
+          <button
+            type="button"
+            onClick={() => navigate(switchMaterialPath)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card text-slate-600 shadow-sm transition-all active:scale-95"
+            title={t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
+            aria-label={t('learningFlow.actions.switchMaterial', {
+              defaultValue: 'Switch textbook',
+            })}
           >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1 relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={e => onSearchChange(e.target.value)}
-              placeholder={t('search', { defaultValue: 'Search grammar...' })}
-              className="w-full bg-muted border-2 border-transparent focus:bg-card focus:border-foreground rounded-xl pl-9 pr-4 py-2 text-sm font-bold transition-all outline-none"
-            />
-          </div>
+            <BookMarked className="w-5 h-5" />
+          </button>
+        }
+        className="bg-white/80 border-slate-100"
+      >
+        <div className="relative group mb-3">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <input
+            id="mobile-grammar-search"
+            name="grammarSearch"
+            type="text"
+            value={searchQuery}
+            onChange={e => onSearchChange(e.target.value)}
+            placeholder={t('search', { defaultValue: 'Search patterns or usages...' })}
+            className="w-full h-12 bg-slate-100 border-transparent rounded-[1.25rem] pl-11 pr-4 text-sm font-bold text-slate-700 outline-none ring-2 ring-transparent focus:ring-indigo-500/10 focus:bg-white transition-all"
+          />
         </div>
 
-        {/* Unit Chips */}
         <MobileUnitChips
           totalUnits={totalUnits}
           selectedUnit={selectedUnit}
           onSelect={onSelectUnit}
         />
-      </div>
+      </MobileWorkspaceHeader>
 
-      {/* Feed */}
-      <div className="flex-1">
+      {/* Feed Area */}
+      <main className="flex-1">
         <MobileGrammarFeed
           grammarPoints={filteredPoints}
           onSelect={onSelectGrammar}
           onToggleStatus={onToggleStatus}
           isLoading={isLoading}
         />
-      </div>
+      </main>
 
-      {/* Detail Sheet */}
+      {/* Details (Overlay) */}
       <MobileGrammarDetailSheet
         grammar={selectedGrammar}
         onClose={() => onSelectGrammar(null)}
         onProficiencyUpdate={onProficiencyUpdate}
+        instituteId={instituteId}
       />
     </div>
   );

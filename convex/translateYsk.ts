@@ -413,7 +413,7 @@ Return a JSON object strictly matching this schema:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(requestPayload) },
@@ -585,7 +585,7 @@ Rules:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -705,7 +705,7 @@ Use natural learner-friendly translation and preserve core meaning.`;
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -845,7 +845,7 @@ Return strict JSON:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'gpt-5-nano',
+          model: 'mimo-v2-flash',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -1014,7 +1014,7 @@ Return a strictly valid JSON object matching this schema:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1155,7 +1155,7 @@ Return a JSON object exactly matching this schema:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'mimo-v2-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1425,7 +1425,7 @@ async function translateTranscriptBatch(
   if (items.length === 0) return [] as string[];
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-5-nano',
+    model: 'mimo-v2-flash',
     response_format: { type: 'json_object' },
     messages: [
       {

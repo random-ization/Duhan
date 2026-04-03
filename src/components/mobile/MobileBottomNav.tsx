@@ -7,7 +7,7 @@ import { getPathWithoutLang } from '../../utils/pathname';
 import { cn } from '../../lib/utils';
 
 type Tab = {
-  key: 'dashboard' | 'courses' | 'practice' | 'media' | 'profile';
+  key: 'dashboard' | 'learn' | 'practice' | 'media' | 'profile';
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   path: string;
   label: string;
@@ -27,10 +27,10 @@ export function MobileBottomNav() {
       label: t('nav.dashboard', { defaultValue: 'Dashboard' }),
     },
     {
-      key: 'courses',
+      key: 'learn',
       icon: BookOpen,
       path: '/courses',
-      label: t('nav.courses', { defaultValue: 'Courses' }),
+      label: t('nav.learn', { defaultValue: 'Learning' }),
     },
     {
       key: 'practice',
@@ -56,7 +56,7 @@ export function MobileBottomNav() {
     if (tab.key === 'dashboard') {
       return pathWithoutLang.startsWith('/dashboard') || pathWithoutLang.startsWith('/dictionary/');
     }
-    if (tab.key === 'courses') {
+    if (tab.key === 'learn') {
       return pathWithoutLang.startsWith('/courses') || pathWithoutLang.startsWith('/course/');
     }
     if (tab.key === 'practice') {
@@ -90,8 +90,8 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex h-[60px] items-center justify-around px-2">
+    <nav className="md:hidden fixed left-4 right-4 z-[40] pointer-events-none bottom-[calc(env(safe-area-inset-bottom)+16px)]">
+      <div className="pointer-events-auto flex h-16 items-center justify-around px-2 rounded-[2rem] border border-white/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {tabs.map(tab => {
           const isActive = isTabActive(tab);
           const Icon = tab.icon;
@@ -101,18 +101,26 @@ export function MobileBottomNav() {
               type="button"
               onClick={() => handleTabPress(tab.path)}
               className={cn(
-                'flex flex-1 flex-col items-center justify-center gap-1 h-full select-none transition-colors rounded-xl active:bg-zinc-100/50 dark:active:bg-zinc-800/50',
+                'relative flex flex-1 flex-col items-center justify-center gap-1.5 h-full select-none transition-all duration-300',
                 isActive
-                  ? 'text-zinc-900 dark:text-zinc-50 font-bold'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 font-medium'
+                  ? 'text-indigo-600 dark:text-indigo-400 scale-110'
+                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50'
               )}
+              data-active={isActive ? 'true' : 'false'}
               aria-label={tab.label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] sm:text-[11px] leading-none tracking-tight">
-                {tab.label}
-              </span>
+              {isActive && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 animate-in fade-in zoom-in duration-300" />
+                </div>
+              )}
+              <div className="relative z-10 flex flex-col items-center">
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[10px] font-bold mt-0.5 tracking-tight uppercase">
+                  {tab.label}
+                </span>
+              </div>
             </button>
           );
         })}

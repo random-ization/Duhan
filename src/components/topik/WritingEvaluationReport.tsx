@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { MobileImmersiveHeader } from '../mobile/MobileImmersiveHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,9 +147,10 @@ interface ScoreRingProps {
   score: number;
   maxScore: number;
   label: string;
+  compact?: boolean;
 }
 
-const ScoreRing: React.FC<ScoreRingProps> = ({ score, maxScore, label }) => {
+const ScoreRing: React.FC<ScoreRingProps> = ({ score, maxScore, label, compact = false }) => {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   const color = pct >= 80 ? 'text-emerald-500' : pct >= 60 ? 'text-amber-500' : 'text-rose-500';
 
@@ -156,7 +159,8 @@ const ScoreRing: React.FC<ScoreRingProps> = ({ score, maxScore, label }) => {
     <div className="flex flex-col items-center gap-1.5">
       <div
         className={cn(
-          'relative w-20 h-20 rounded-full border-4 flex items-center justify-center',
+          compact ? 'h-16 w-16 border-[3px]' : 'w-20 h-20 border-4',
+          'relative rounded-full flex items-center justify-center',
           pct >= 80
             ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
             : pct >= 60
@@ -164,7 +168,7 @@ const ScoreRing: React.FC<ScoreRingProps> = ({ score, maxScore, label }) => {
               : 'border-rose-400 bg-rose-50 dark:bg-rose-900/20'
         )}
       >
-        <span className={cn('text-xl font-black', color)}>{score}</span>
+        <span className={cn(compact ? 'text-base' : 'text-xl', 'font-black', color)}>{score}</span>
       </div>
       <span className="text-[11px] font-bold text-muted-foreground text-center">{label}</span>
       <span className="text-[10px] text-muted-foreground">
@@ -192,6 +196,7 @@ interface QuestionCardProps {
   originalAnswer?: string;
   questionMaxScore: number;
   defaultOpen?: boolean;
+  isMobile?: boolean;
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -199,6 +204,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   originalAnswer,
   questionMaxScore,
   defaultOpen = false,
+  isMobile = false,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -237,14 +243,22 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
         variant="ghost"
         size="auto"
         onClick={() => setIsOpen(v => !v)}
-        className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition text-left"
+        className={cn(
+          'w-full flex items-center justify-between hover:bg-muted/50 transition text-left',
+          isMobile ? 'p-4' : 'p-5'
+        )}
       >
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black text-sm shrink-0">
+        <div className={cn('flex items-center', isMobile ? 'gap-3' : 'gap-4')}>
+          <div
+            className={cn(
+              'rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black shrink-0',
+              isMobile ? 'h-10 w-10 text-xs' : 'w-11 h-11 text-sm'
+            )}
+          >
             #{evaluation.questionNumber}
           </div>
-          <div>
-            <div className="font-black text-foreground">
+          <div className="min-w-0">
+            <div className={cn('font-black text-foreground', isMobile ? 'text-sm' : '')}>
               {t('topikWriting.session.questionX', {
                 num: evaluation.questionNumber,
                 defaultValue: `Question ${evaluation.questionNumber}`,
@@ -268,18 +282,32 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
             </div>
           </div>
         </div>
-        {isOpen ? (
-          <ChevronUp size={18} className="text-muted-foreground" />
-        ) : (
-          <ChevronDown size={18} className="text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
+              pct >= 80
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                : pct >= 60
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+            )}
+          >
+            {pct}%
+          </span>
+          {isOpen ? (
+            <ChevronUp size={18} className="text-muted-foreground" />
+          ) : (
+            <ChevronDown size={18} className="text-muted-foreground" />
+          )}
+        </div>
       </Button>
 
       {/* Expanded content */}
       {isOpen && (
         <div className="border-t border-border divide-y divide-border">
           {/* Dimension bars */}
-          <div className="p-5 space-y-3">
+          <div className={cn(isMobile ? 'p-4' : 'p-5', 'space-y-3')}>
             <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider">
               {t('topikWriting.report.dimScores', { defaultValue: 'Dimension Scores' })}
             </h4>
@@ -296,12 +324,17 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           {(originalAnswer || evaluation.correctedText) && (
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
               {/* Original */}
-              <div className="p-5 space-y-2">
+              <div className={cn(isMobile ? 'p-4' : 'p-5', 'space-y-2')}>
                 <div className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-wide">
                   <BookOpen size={13} />
                   {t('topikWriting.report.originalText', { defaultValue: 'Your Original Answer' })}
                 </div>
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium bg-muted/40 rounded-xl p-3 min-h-[80px]">
+                <p
+                  className={cn(
+                    'text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium bg-muted/40 rounded-xl min-h-[80px]',
+                    isMobile ? 'p-3 text-[13px]' : 'p-3'
+                  )}
+                >
                   {originalAnswer?.trim() || (
                     <span className="text-muted-foreground italic">
                       {t('topikWriting.report.notAnswered', { defaultValue: '(Not answered)' })}
@@ -311,12 +344,17 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               </div>
 
               {/* AI corrected */}
-              <div className="p-5 space-y-2">
+              <div className={cn(isMobile ? 'p-4' : 'p-5', 'space-y-2')}>
                 <div className="flex items-center gap-2 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
                   <Sparkles size={13} />
                   {t('topikWriting.report.aiCorrected', { defaultValue: 'AI Polished Version' })}
                 </div>
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-400/20 rounded-xl p-3 min-h-[80px]">
+                <p
+                  className={cn(
+                    'text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-400/20 rounded-xl min-h-[80px]',
+                    isMobile ? 'p-3 text-[13px]' : 'p-3'
+                  )}
+                >
                   {correctedText ||
                     t('topikWriting.report.noCorrection', { defaultValue: '(No correction)' })}
                 </p>
@@ -325,12 +363,17 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
 
           {/* Feedback */}
-          <div className="p-5 space-y-2">
+          <div className={cn(isMobile ? 'p-4' : 'p-5', 'space-y-2')}>
             <div className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-wide">
               <Award size={13} />
               {t('topikWriting.report.feedback', { defaultValue: 'Overall Feedback' })}
             </div>
-            <div className="bg-muted/50 rounded-xl p-4 text-sm text-foreground leading-relaxed font-medium whitespace-pre-wrap">
+            <div
+              className={cn(
+                'bg-muted/50 rounded-xl text-sm text-foreground leading-relaxed font-medium whitespace-pre-wrap',
+                isMobile ? 'p-3 text-[13px]' : 'p-4'
+              )}
+            >
               {evaluation.feedbackText}
             </div>
           </div>
@@ -355,6 +398,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
   onBack,
 }) => {
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
   const result = useQuery(api.aiWritingEvaluation.getEvaluations, { sessionId });
   const retriggerEvaluation = useMutation(api.topikWriting.submitSession);
   const [retrying, setRetrying] = useState(false);
@@ -373,6 +417,25 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (result === undefined) {
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-background">
+          <MobileImmersiveHeader
+            eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+            title={t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
+            subtitle={t('topikWriting.report.loading', {
+              defaultValue: 'Loading evaluation results...',
+            })}
+            onBack={() => onBack?.()}
+            backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+          />
+          <div className="flex min-h-[calc(100dvh-var(--mobile-header-offset))] items-center justify-center px-4 pb-mobile-safe pt-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent" />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent" />
@@ -381,6 +444,41 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
   }
 
   if (result === null) {
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-background">
+          <MobileImmersiveHeader
+            eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+            title={t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
+            subtitle={t('topikWriting.report.loadingError', {
+              defaultValue: 'Failed to load evaluation, please refresh the page.',
+            })}
+            onBack={() => onBack?.()}
+            backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+          />
+          <div className="flex min-h-[calc(100dvh-var(--mobile-header-offset))] flex-col items-center justify-center gap-4 px-4 pb-mobile-safe text-center">
+            <div className="text-4xl">⚠️</div>
+            <p className="text-muted-foreground font-bold">
+              {t('topikWriting.report.loadingError', {
+                defaultValue: 'Failed to load evaluation, please refresh the page.',
+              })}
+            </p>
+            {onBack ? (
+              <Button
+                type="button"
+                variant="link"
+                size="auto"
+                onClick={onBack}
+                className="text-sm text-primary font-bold underline"
+              >
+                {t('topikWriting.report.back', { defaultValue: 'Back' })}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center">
         <div className="text-4xl">⚠️</div>
@@ -409,7 +507,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
 
   // ── Still evaluating ─────────────────────────────────────────────────────
   if (session.status === 'EVALUATING') {
-    return (
+    const evaluatingContent = (
       <EvaluatingScreen
         onRetry={() => {
           if (retryCooldownSeconds > 0) return;
@@ -436,6 +534,36 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
         retryCooldownSeconds={retryCooldownSeconds}
       />
     );
+
+    if (isMobile) {
+      return (
+        <div className="min-h-screen bg-background">
+          <MobileImmersiveHeader
+            eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+            title={t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
+            subtitle={t('topikWriting.report.evaluatingDesc', {
+              defaultValue:
+                'Analyzing based on official TOPIK grading criteria. Usually takes 30-60 seconds.',
+            })}
+            onBack={() => onBack?.()}
+            backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+            status={
+              <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                  {t('topikWriting.report.status', { defaultValue: 'Status' })}
+                </div>
+                <div className="mt-1 text-sm font-black text-foreground">
+                  {t('topikWriting.report.evaluatingShort', { defaultValue: 'AI review' })}
+                </div>
+              </div>
+            }
+          />
+          <div className="px-4 pb-mobile-safe pt-6">{evaluatingContent}</div>
+        </div>
+      );
+    }
+
+    return evaluatingContent;
   }
 
   // ── Computed stats ───────────────────────────────────────────────────────
@@ -461,136 +589,162 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
 
   // ── Full report ───────────────────────────────────────────────────────────
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 font-sans">
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-foreground">
-            {t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
-          </h1>
-          <p className="text-muted-foreground font-medium mt-1">
-            {t('topikWriting.report.subtitle', {
-              defaultValue: 'TOPIK II Writing · AI Evaluation',
-            })}
-          </p>
-        </div>
-        {onBack && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={onBack}
-            className="px-4 py-2 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
-          >
-            ← {t('topikWriting.report.back', { defaultValue: 'Back' })}
-          </Button>
-        )}
-      </div>
+    <div className="min-h-screen bg-background">
+      {isMobile ? (
+        <MobileImmersiveHeader
+          eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+          title={t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
+          subtitle={t('topikWriting.report.subtitle', {
+            defaultValue: 'TOPIK II Writing · AI Evaluation',
+          })}
+          onBack={() => onBack?.()}
+          backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+          status={
+            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                {t('topikWriting.report.totalScore', { defaultValue: 'Total Score:' })}
+              </div>
+              <div className="mt-1 text-sm font-black text-foreground">
+                {totalScore}/{maxPossible}
+              </div>
+            </div>
+          }
+        >
+          <div className="text-xs font-semibold text-muted-foreground">{passLabel}</div>
+        </MobileImmersiveHeader>
+      ) : null}
 
-      {/* ── Summary card ── */}
-      <div className="rounded-2xl border-2 border-border bg-card p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-        {/* Total score ring */}
-        <div className="col-span-2 md:col-span-1 flex justify-center">
-          <ScoreRing score={totalScore} maxScore={maxPossible} label={passLabel} />
-        </div>
-
-        {/* Per-question rings */}
-        {evaluations.map(e => (
-          <div key={e._id} className="flex justify-center">
-            <ScoreRing
-              score={e.score}
-              maxScore={QUESTION_MAX_SCORES[e.questionNumber] ?? 50}
-              label={t('topikWriting.session.questionX', {
-                num: e.questionNumber,
-                defaultValue: `Question ${e.questionNumber}`,
-              })}
-            />
+      <div className="mx-auto max-w-4xl space-y-8 px-4 py-8 font-sans md:py-8">
+        {!isMobile ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-black text-foreground">
+                {t('topikWriting.report.title', { defaultValue: 'Writing Evaluation Report' })}
+              </h1>
+              <p className="text-muted-foreground font-medium mt-1">
+                {t('topikWriting.report.subtitle', {
+                  defaultValue: 'TOPIK II Writing · AI Evaluation',
+                })}
+              </p>
+            </div>
+            {onBack && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="auto"
+                onClick={onBack}
+                className="px-4 py-2 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
+              >
+                ← {t('topikWriting.report.back', { defaultValue: 'Back' })}
+              </Button>
+            )}
           </div>
-        ))}
+        ) : null}
 
-        {/* Elapsed time */}
-        <div className="col-span-2 md:col-span-4 pt-4 border-t border-border flex flex-col items-start gap-2 text-sm text-muted-foreground font-medium sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {t('topikWriting.report.timeElapsed', { defaultValue: 'Time elapsed:' })}{' '}
-            <strong className="text-foreground">{elapsedStr}</strong>
-          </span>
-          <span>
-            {t('topikWriting.report.totalScore', { defaultValue: 'Total Score:' })}{' '}
-            <strong className="text-foreground">
-              {totalScore} / {maxPossible}
-            </strong>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-emerald-500" />
+        <div className="grid grid-cols-2 gap-4 rounded-2xl border-2 border-border bg-card p-5 md:grid-cols-4 md:gap-6 md:p-6">
+          <div className="col-span-2 flex justify-center md:col-span-1">
+            <ScoreRing score={totalScore} maxScore={maxPossible} label={passLabel} />
+          </div>
+
+          {evaluations.map(e => (
+            <div key={e._id} className="flex justify-center">
+              <ScoreRing
+                score={e.score}
+                maxScore={QUESTION_MAX_SCORES[e.questionNumber] ?? 50}
+                label={t('topikWriting.session.questionX', {
+                  num: e.questionNumber,
+                  defaultValue: `Question ${e.questionNumber}`,
+                })}
+                compact={isMobile}
+              />
+            </div>
+          ))}
+
+          <div className="col-span-2 flex flex-col items-start gap-2 border-t border-border pt-4 text-sm font-medium text-muted-foreground md:col-span-4 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              {t('topikWriting.report.aiDone', { defaultValue: 'AI Evaluation Complete' })}
+              {t('topikWriting.report.timeElapsed', { defaultValue: 'Time elapsed:' })}{' '}
+              <strong className="text-foreground">{elapsedStr}</strong>
             </span>
+            <span>
+              {t('topikWriting.report.totalScore', { defaultValue: 'Total Score:' })}{' '}
+              <strong className="text-foreground">
+                {totalScore} / {maxPossible}
+              </strong>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              <span>
+                {t('topikWriting.report.aiDone', { defaultValue: 'AI Evaluation Complete' })}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Aggregate dimension bars ── */}
-      {evaluations.length > 0 && (
-        <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
+        {evaluations.length > 0 ? (
+          <div className="rounded-2xl border-2 border-border bg-card p-5 md:p-6 space-y-4">
+            <h2 className="font-black text-base text-foreground">
+              {t('topikWriting.report.overallAnalysis', {
+                defaultValue: 'Overall Dimension Analysis',
+              })}
+            </h2>
+            {(
+              [
+                {
+                  key: 'taskAccomplishment',
+                  label: t('topikWriting.report.dimTask', { defaultValue: 'Task Accomplishment' }),
+                  color: 'bg-blue-500',
+                },
+                {
+                  key: 'developmentStructure',
+                  label: t('topikWriting.report.dimStructure', {
+                    defaultValue: 'Development & Structure',
+                  }),
+                  color: 'bg-violet-500',
+                },
+                {
+                  key: 'languageUse',
+                  label: t('topikWriting.report.dimLanguage', { defaultValue: 'Language Use' }),
+                  color: 'bg-emerald-500',
+                },
+                {
+                  key: 'wongojiRules',
+                  label: t('topikWriting.report.dimWongoji', {
+                    defaultValue: 'Wongoji Formatting',
+                  }),
+                  color: 'bg-amber-500',
+                },
+              ] as const
+            ).map(dim => {
+              const vals = evaluations
+                .map(e => e.dimensions[dim.key])
+                .filter((v): v is number => v !== undefined && v !== null);
+              if (vals.length === 0) return null;
+              const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+              return <DimensionBar key={dim.key} label={dim.label} value={avg} color={dim.color} />;
+            })}
+          </div>
+        ) : null}
+
+        <div className="space-y-4 pb-mobile-safe">
           <h2 className="font-black text-base text-foreground">
-            {t('topikWriting.report.overallAnalysis', {
-              defaultValue: 'Overall Dimension Analysis',
+            {t('topikWriting.report.questionFeedback', {
+              defaultValue: 'Detailed Feedback by Question',
             })}
           </h2>
-          {(
-            [
-              {
-                key: 'taskAccomplishment',
-                label: t('topikWriting.report.dimTask', { defaultValue: 'Task Accomplishment' }),
-                color: 'bg-blue-500',
-              },
-              {
-                key: 'developmentStructure',
-                label: t('topikWriting.report.dimStructure', {
-                  defaultValue: 'Development & Structure',
-                }),
-                color: 'bg-violet-500',
-              },
-              {
-                key: 'languageUse',
-                label: t('topikWriting.report.dimLanguage', { defaultValue: 'Language Use' }),
-                color: 'bg-emerald-500',
-              },
-              {
-                key: 'wongojiRules',
-                label: t('topikWriting.report.dimWongoji', { defaultValue: 'Wongoji Formatting' }),
-                color: 'bg-amber-500',
-              },
-            ] as const
-          ).map(dim => {
-            const vals = evaluations
-              .map(e => e.dimensions[dim.key])
-              .filter((v): v is number => v !== undefined && v !== null);
-            if (vals.length === 0) return null;
-            const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-            return <DimensionBar key={dim.key} label={dim.label} value={avg} color={dim.color} />;
-          })}
+          {evaluations.map((e, idx) => (
+            <QuestionCard
+              key={e._id}
+              evaluation={e}
+              originalAnswer={
+                originalAnswers[String(e.questionNumber)] ??
+                sessionAnswers[String(e.questionNumber)]
+              }
+              questionMaxScore={QUESTION_MAX_SCORES[e.questionNumber] ?? 50}
+              defaultOpen={idx === 0}
+              isMobile={isMobile}
+            />
+          ))}
         </div>
-      )}
-
-      {/* ── Per-question cards ── */}
-      <div className="space-y-4">
-        <h2 className="font-black text-base text-foreground">
-          {t('topikWriting.report.questionFeedback', {
-            defaultValue: 'Detailed Feedback by Question',
-          })}
-        </h2>
-        {evaluations.map((e, idx) => (
-          <QuestionCard
-            key={e._id}
-            evaluation={e}
-            originalAnswer={
-              originalAnswers[String(e.questionNumber)] ?? sessionAnswers[String(e.questionNumber)]
-            }
-            questionMaxScore={QUESTION_MAX_SCORES[e.questionNumber] ?? 50}
-            defaultOpen={idx === 0}
-          />
-        ))}
       </div>
     </div>
   );

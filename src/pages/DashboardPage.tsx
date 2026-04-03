@@ -157,7 +157,6 @@ type LearningEntranceCard = {
   badge: string;
   title: string;
   subtitle: string;
-  path: string;
   icon: string;
   bgClass: string;
   borderClass: string;
@@ -175,7 +174,6 @@ function buildLearningEntranceCards(t: DashboardTranslateFn): LearningEntranceCa
       subtitle: t('dashboard.learningFlow.grammar', {
         defaultValue: 'Pattern explanations and sentence structures',
       }),
-      path: '/dashboard/resources/grammar',
       icon: '⚡️',
       bgClass: 'bg-violet-50/80 dark:bg-violet-400/10',
       borderClass: 'border-violet-200 dark:border-violet-300/30',
@@ -190,7 +188,6 @@ function buildLearningEntranceCards(t: DashboardTranslateFn): LearningEntranceCa
       subtitle: t('dashboard.learningFlow.vocabulary', {
         defaultValue: 'Word mastery with active recall practice',
       }),
-      path: '/dashboard/resources/vocabulary',
       icon: '🧩',
       bgClass: 'bg-emerald-50/80 dark:bg-emerald-400/10',
       borderClass: 'border-emerald-200 dark:border-emerald-300/30',
@@ -205,7 +202,6 @@ function buildLearningEntranceCards(t: DashboardTranslateFn): LearningEntranceCa
       subtitle: t('dashboard.learningFlow.listening', {
         defaultValue: 'Audio comprehension with real-world Korean',
       }),
-      path: '/dashboard/resources/listening',
       icon: '🎧',
       bgClass: 'bg-amber-50/80 dark:bg-amber-400/10',
       borderClass: 'border-amber-200 dark:border-amber-300/30',
@@ -220,7 +216,6 @@ function buildLearningEntranceCards(t: DashboardTranslateFn): LearningEntranceCa
       subtitle: t('dashboard.learningFlow.reading', {
         defaultValue: 'Articles and text drills for reading fluency',
       }),
-      path: '/dashboard/resources/reading',
       icon: '📘',
       bgClass: 'bg-blue-50/80 dark:bg-blue-400/10',
       borderClass: 'border-blue-300 dark:border-blue-300/30',
@@ -903,7 +898,13 @@ export default function DashboardPage() {
   };
 
   if (isMobile) {
-    return <MobileDashboard />;
+    return (
+      <MobileDashboard
+        learningEntryTarget={learningEntryTarget}
+        institutes={institutes}
+        institutesLoading={institutesLoading}
+      />
+    );
   }
 
   const handleDragEnd = (event: DragEndEvent) => {

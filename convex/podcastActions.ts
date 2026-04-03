@@ -3,9 +3,27 @@ import { action } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import Parser from 'rss-parser';
 import { getPath, isRecord, readString } from './validation';
+import { fetchWithTimeout, retryAsync } from './aiReliability';
 
 // RSS Parser instance
 const parser = new Parser();
+
+async function parseFeedWithRetry(feedUrl: string) {
+  return retryAsync(
+    async () => {
+      const response = await fetchWithTimeout(feedUrl, {}, 12000);
+      if (!response.ok) {
+        throw new Error(`RSS fetch failed (${response.status})`);
+      }
+      const xml = await response.text();
+      return parser.parseString(xml);
+    },
+    {
+      retries: 2,
+      label: 'podcast_parse_feed',
+    }
+  );
+}
 
 const readImageUrl = (value: unknown, path: readonly string[]): string | undefined => {
   const raw = getPath(value, path);
@@ -33,7 +51,7 @@ const extractImageUrl = (value: unknown): string => {
 
 const readFeedLanguage = async (feedUrl: string): Promise<string | undefined> => {
   try {
-    const feed = await parser.parseURL(feedUrl);
+    const feed = await parseFeedWithRetry(feedUrl);
     return readString(feed as unknown, ['language']);
   } catch {
     return undefined;
@@ -57,7 +75,13 @@ export const searchPodcasts = action({
   handler: async (ctx, args) => {
     const url = `https://itunes.apple.com/search?term=${encodeURIComponent(args.term)}&media=podcast&entity=podcast&limit=15`;
 
-    const response = await fetch(url);
+    const response = await retryAsync(() => fetchWithTimeout(url, {}, 10000), {
+      retries: 2,
+      label: 'podcast_search_itunes',
+    });
+    if (!response.ok) {
+      throw new ConvexError({ code: 'PODCAST_SEARCH_FAILED' });
+    }
     const data: unknown = await response.json();
 
     if (!isRecord(data) || !Array.isArray(data.results)) return [];
@@ -118,7 +142,7 @@ export const getEpisodes = action({
   args: { feedUrl: v.string() },
   handler: async (ctx, args) => {
     try {
-      const feed = await parser.parseURL(args.feedUrl);
+      const feed = await parseFeedWithRetry(args.feedUrl);
       const channelImage = extractImageUrl(feed);
 
       const episodes = feed.items.slice(0, 50).map(item => ({
@@ -159,7 +183,10 @@ export const getTopKoreanPodcasts = action({
     const limit = Math.min(Math.max(args.limit ?? 12, 1), 50);
     const chartUrl = 'https://rss.marketingtools.apple.com/api/v2/kr/podcasts/top/50/podcasts.json';
 
-    const chartResponse = await fetch(chartUrl);
+    const chartResponse = await retryAsync(() => fetchWithTimeout(chartUrl, {}, 10000), {
+      retries: 2,
+      label: 'podcast_top_chart',
+    });
     if (!chartResponse.ok) {
       throw new ConvexError({ code: 'CHART_FETCH_FAILED' });
     }
@@ -188,7 +215,10 @@ export const getTopKoreanPodcasts = action({
       if (!itunesId) continue;
 
       const lookupUrl = `https://itunes.apple.com/lookup?id=${encodeURIComponent(itunesId)}`;
-      const lookupResponse = await fetch(lookupUrl);
+      const lookupResponse = await retryAsync(() => fetchWithTimeout(lookupUrl, {}, 10000), {
+        retries: 2,
+        label: 'podcast_lookup_itunes',
+      });
       if (!lookupResponse.ok) continue;
       const lookupData: unknown = await lookupResponse.json();
 

@@ -3,8 +3,9 @@ import { TopikExam, Language } from '../../../types';
 import { clsx } from 'clsx';
 import { useLayoutActions } from '../../../contexts/LayoutContext';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Play, Info, AlertCircle, Headphones, BookOpen } from 'lucide-react';
+import { Play, Info, AlertCircle, Headphones, BookOpen } from 'lucide-react';
 import { Button } from '../../ui';
+import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 
 interface MobileExamCoverProps {
   exam: TopikExam;
@@ -41,11 +42,11 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
   // bgPattern removed as unused
 
   return (
-    <div className="min-h-[100dvh] bg-muted relative flex flex-col">
+    <div className="relative flex min-h-[100dvh] flex-col bg-background">
       {/* 1. Hero Section */}
       <div
         className={clsx(
-          'relative overflow-hidden pb-10 rounded-b-[40px] shadow-2xl z-10 bg-gradient-to-br',
+          'relative overflow-hidden pb-10 rounded-b-[40px] shadow-lg z-10 bg-gradient-to-br',
           gradientClass
         )}
       >
@@ -53,42 +54,35 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
         <div className="absolute top-0 right-0 w-64 h-64 bg-card/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
 
-        {/* Header Nav */}
-        <div className="pt-safe px-4 h-16 flex items-center">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-card/20 text-white backdrop-blur-md active:scale-95 transition-transform"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1 text-center pr-10">
-            <img
-              src="/logo_BnW.svg"
-              alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
-              className="h-8 mx-auto opacity-80 invert brightness-0"
-            />
-            {/* Assuming a logo exists, or just use text if not */}
-          </div>
-        </div>
+        <MobileImmersiveHeader
+          title={`TOPIK II ${examTypeLabel}`}
+          subtitle={t('dashboard.topik.mobile.cover.roundMock', {
+            round: exam.round,
+            defaultValue: 'Round {{round}} Past Exam',
+          })}
+          eyebrow={t('dashboard.topik.mobile.cover.noticeTitle', {
+            defaultValue: 'Before You Start',
+          })}
+          onBack={onBack}
+          backLabel={t('common.back', { defaultValue: 'Back' })}
+          tone="inverse"
+          className="border-transparent bg-transparent"
+        />
 
         {/* Main Content */}
-        <div className="px-8 mt-6 text-center text-white">
+        <div className="px-8 mt-2 text-center text-white">
           <div className="w-20 h-20 mx-auto bg-card/20 rounded-3xl flex items-center justify-center backdrop-blur-xl shadow-lg mb-6 ring-4 ring-white/10">
             <Icon className="w-10 h-10 text-white" />
           </div>
 
-          <h1 className="text-4xl font-black mb-2 tracking-tight">
-            TOPIK II
-            <div className="text-2xl font-bold opacity-90 mt-1">{examTypeLabel}</div>
-          </h1>
-
           <p className="text-white/80 font-medium bg-card/10 inline-block px-4 py-1.5 rounded-full text-sm backdrop-blur-sm border border-white/10 mt-2">
-            {t('dashboard.topik.mobile.cover.roundMock', {
-              round: exam.round,
-              defaultValue: 'Round {{round}} Past Exam',
-            })}
+            {isListening
+              ? t('dashboard.topik.mobile.cover.listeningTipShort', {
+                  defaultValue: 'Audio required',
+                })
+              : t('dashboard.topik.mobile.cover.readingTipShort', {
+                  defaultValue: 'Quiet focus recommended',
+                })}
           </p>
 
           {/* Stats Grid */}
@@ -124,7 +118,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
       </div>
 
       {/* 2. Instructions Section */}
-      <div className="flex-1 px-5 -mt-6 z-20 pb-28">
+      <div className="flex-1 px-5 -mt-6 z-20 pb-[calc(var(--mobile-safe-bottom)+7rem)]">
         <div className="bg-card rounded-3xl shadow-xl p-6 border border-border">
           <h2 className="text-lg font-bold text-muted-foreground mb-6 flex items-center gap-2">
             <Info className="w-5 h-5 text-muted-foreground" />
@@ -135,7 +129,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
 
           <div className="space-y-6">
             <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border-2 border-border">
+              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border border-border pb-0.5">
                 1
               </div>
               <div>
@@ -154,7 +148,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
             </div>
 
             <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border-2 border-border">
+              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground font-bold flex items-center justify-center shrink-0 text-sm border border-border pb-0.5">
                 2
               </div>
               <div>
@@ -196,7 +190,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
       </div>
 
       {/* 3. Sticky Start Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] z-30 shadow-nav-up">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border px-5 pt-4 pb-mobile-safe z-30 shadow-nav-up">
         <Button
           variant="ghost"
           size="auto"
@@ -204,8 +198,8 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
           className={clsx(
             'w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2',
             isListening
-              ? 'bg-gradient-to-r from-indigo-600 to-blue-600 shadow-indigo-200'
-              : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-200'
+              ? 'bg-gradient-to-r from-indigo-600 to-blue-600 shadow-indigo-500/20'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/20'
           )}
         >
           <Play className="w-5 h-5 fill-current" />

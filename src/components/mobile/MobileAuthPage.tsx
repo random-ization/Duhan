@@ -185,8 +185,12 @@ export const MobileAuthPage: React.FC = () => {
                 className="w-10 h-10 object-contain"
               />
             </div>
-            <h1 className="text-2xl font-black text-primary-foreground mb-1 tracking-tight">{t('auth.brand')}</h1>
-            <p className="text-primary-foreground/80 font-bold text-xs tracking-wider uppercase">{t('auth.slogan')}</p>
+            <h1 className="text-2xl font-black text-primary-foreground mb-1 tracking-tight">
+              {t('auth.brand')}
+            </h1>
+            <p className="text-primary-foreground/80 font-bold text-xs tracking-wider uppercase">
+              {t('auth.slogan')}
+            </p>
           </div>
         </div>
 
@@ -212,7 +216,10 @@ export const MobileAuthPage: React.FC = () => {
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
+                  id="mobile-auth-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder={t('auth.placeholderName')}
                   className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
                   value={formData.name}
@@ -226,7 +233,10 @@ export const MobileAuthPage: React.FC = () => {
             <div className="relative group">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
+                id="mobile-auth-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder={t('auth.placeholderEmail')}
                 className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
                 value={formData.email}
@@ -239,7 +249,10 @@ export const MobileAuthPage: React.FC = () => {
             <div className="relative group">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
+                id="mobile-auth-password"
+                name="password"
                 type="password"
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
                 placeholder={t('auth.placeholderPassword')}
                 className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
                 value={formData.password}
@@ -251,19 +264,14 @@ export const MobileAuthPage: React.FC = () => {
             {/* Forgot Password */}
             {isLogin && (
               <div className="flex justify-end mt-1">
-                <Button
-                  asChild
-                  variant="link"
-                  size="auto"
-                  className="h-auto p-0 font-bold"
+                <LocalizedLink
+                  to="/forgot-password"
+                  aria-label={t('auth.forgotPassword')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground opacity-80 transition-opacity hover:opacity-100"
                 >
-                  <LocalizedLink to="/forgot-password" area-label={t('auth.forgotPassword')}>
-                    <span className="flex items-center gap-1.5 opacity-80 hover:opacity-100">
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span className="text-xs">{t('auth.forgotPassword')}</span>
-                    </span>
-                  </LocalizedLink>
-                </Button>
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>{t('auth.forgotPassword')}</span>
+                </LocalizedLink>
               </div>
             )}
 
@@ -276,7 +284,9 @@ export const MobileAuthPage: React.FC = () => {
               loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
               className="w-full h-[54px] rounded-[16px] flex items-center justify-center gap-2 mt-2"
             >
-              <span className="text-[15px]">{isLogin ? t('auth.loginButton') : t('auth.signupButton')}</span>
+              <span className="text-[15px]">
+                {isLogin ? t('auth.loginButton') : t('auth.signupButton')}
+              </span>
               <ArrowRight className="w-5 h-5" />
             </Button>
           </form>

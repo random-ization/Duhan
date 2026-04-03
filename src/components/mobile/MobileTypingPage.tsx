@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { ArrowLeft, X, RefreshCw, ChevronRight, Play } from 'lucide-react';
+import { X, RefreshCw, ChevronRight, Play } from 'lucide-react';
 import { useKoreanTyping, TypingStats } from '../../features/typing/hooks/useKoreanTyping';
 import { HiddenInput } from '../../features/typing/components/HiddenInput';
 import {
@@ -14,8 +14,12 @@ import { api } from '../../../convex/_generated/api';
 import toast from 'react-hot-toast';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogPortal } from '../ui';
 import { Button, Select } from '../ui';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
+import { MobileImmersiveHeader } from './MobileImmersiveHeader';
 
 // --- TYPES ---
 type TypingMode = 'sentence' | 'word' | 'paragraph';
@@ -44,12 +48,13 @@ const MobileLobby = ({
   onStart,
   activeTab,
   setActiveTab,
+  onBack,
 }: {
   onStart: (mode: TypingMode, data: any) => void;
   activeTab: TypingMode;
   setActiveTab: (m: TypingMode) => void;
+  onBack: () => void;
 }) => {
-  const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
 
   // Word Mode Data Fetching
@@ -76,26 +81,17 @@ const MobileLobby = ({
 
   return (
     <div className="flex flex-col h-full bg-muted">
-      {/* Header */}
-      <div className="px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 bg-card/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50 flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => navigate('/practice')}
-          className="p-2 -ml-2 rounded-full active:bg-muted text-muted-foreground"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Button>
-        <h1 className="text-base sm:text-xl font-black text-muted-foreground tracking-tight truncate">
-          {t('typingLobby.title', { defaultValue: 'Duhan Typing' })}
-        </h1>
-        <div className="w-8"></div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-4 sm:px-6 mt-4 mb-2 sticky top-[calc(env(safe-area-inset-top)+72px)] z-10 bg-muted pb-2">
-        <div className="flex p-1 bg-muted/60 rounded-2xl relative">
-          {/* Animated Background Indicator */}
+      <MobileImmersiveHeader
+        title={t('typingLobby.title', { defaultValue: 'Duhan Typing' })}
+        subtitle={t('typing.mobile.lobbyIntro', {
+          defaultValue: 'Build rhythm with sentence, word, and paragraph drills.',
+        })}
+        eyebrow={t('nav.practice', { defaultValue: 'Practice' })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        className="sticky top-0 z-20"
+      >
+        <div className="flex p-1 rounded-2xl bg-muted/70 relative">
           <div
             className="absolute top-1 bottom-1 bg-card rounded-xl shadow-sm transition-all duration-300 ease-out"
             style={{
@@ -144,7 +140,7 @@ const MobileLobby = ({
             {t('typingLobby.paragraph.title', { defaultValue: 'Paragraph' })}
           </Button>
         </div>
-      </div>
+      </MobileImmersiveHeader>
 
       {/* List Content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 pb-24 no-scrollbar">
@@ -412,54 +408,51 @@ const MobileSession = ({
       className={clsx('flex flex-col h-[100dvh] bg-muted relative overflow-hidden transition-all')}
       onClick={ensureFocus}
     >
-      {/* 1. Stats Header */}
-      <div className="flex items-center justify-between px-6 pt-8 pb-4 bg-card/90 backdrop-blur-sm z-30 border-b border-border">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={e => {
-            e.stopPropagation();
-            onExit();
-          }}
-          className="p-2 -ml-2 text-muted-foreground hover:text-muted-foreground rounded-full active:bg-muted"
-        >
-          <X className="w-6 h-6" />
-        </Button>
-
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              WPM
-            </span>
-            <span className="text-xl font-black text-muted-foreground leading-none font-mono">
-              {stats.wpm}
-            </span>
+      <MobileImmersiveHeader
+        title={t('typing.mobile.sessionTitle', { defaultValue: 'Typing session' })}
+        subtitle={t(`typingLobby.${mode}.title`, {
+          defaultValue: mode === 'word' ? 'Word' : mode === 'paragraph' ? 'Paragraph' : 'Sentence',
+        })}
+        eyebrow={t('sidebar.typing', { defaultValue: 'Typing' })}
+        onBack={() => onExit()}
+        backLabel={t('common.close', { defaultValue: 'Close' })}
+        backIcon={<X className="h-4 w-4 text-foreground" />}
+        status={
+          <div className="flex items-center gap-2">
+            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                WPM
+              </div>
+              <div className="text-base font-black leading-none text-foreground font-mono">
+                {stats.wpm}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                ACC
+              </div>
+              <div
+                className={clsx(
+                  'text-base font-black leading-none font-mono',
+                  stats.accuracy >= 98
+                    ? 'text-green-500 dark:text-green-300'
+                    : stats.accuracy >= 90
+                      ? 'text-indigo-500 dark:text-indigo-300'
+                      : 'text-amber-500 dark:text-amber-300'
+                )}
+              >
+                {stats.accuracy}%
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              ACC
-            </span>
-            <span
-              className={clsx(
-                'text-xl font-black leading-none font-mono',
-                stats.accuracy >= 98
-                  ? 'text-green-500 dark:text-green-300'
-                  : stats.accuracy >= 90
-                    ? 'text-indigo-500 dark:text-indigo-300'
-                    : 'text-amber-500 dark:text-amber-300'
-              )}
-            >
-              {stats.accuracy}%
-            </span>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. Main Content */}
       <div
         className={clsx(
           'flex-1 flex flex-col items-center justify-center px-6 transition-all duration-300 relative',
-          isKeyboardOpen ? 'pb-[40vh]' : 'pb-20' // Add safe padding for keyboard
+          isKeyboardOpen ? 'pb-[40vh]' : 'pb-[calc(var(--mobile-safe-bottom)+5rem)]'
         )}
       >
         {/* Progress Line */}
@@ -618,8 +611,16 @@ const MobileResults = ({
 // --- MAIN PAGE COMPONENT ---
 export const MobileTypingPage: React.FC = () => {
   const { t } = useTranslation();
+  const typingTabStorageKey = 'mobileTypingActiveTab';
+  const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
   const [gameState, setGameState] = useState<GameState>('lobby');
-  const [activeTab, setActiveTab] = useState<TypingMode>('sentence');
+  const [activeTab, setActiveTab] = useState<TypingMode>(() => {
+    if (globalThis.window === undefined) return 'sentence';
+    const saved = safeGetLocalStorageItem(typingTabStorageKey);
+    if (saved === 'word' || saved === 'paragraph') return saved;
+    return 'sentence';
+  });
   const [gameMode, setGameMode] = useState<TypingMode>('sentence');
   const [gameData, setGameData] = useState<any>(null); // CourseId, Category object, etc
   const [lastStats, setLastStats] = useState<TypingStats | null>(null);
@@ -695,10 +696,33 @@ export const MobileTypingPage: React.FC = () => {
     setGameState('playing');
   };
 
+  useEffect(() => {
+    if (globalThis.window === undefined) return;
+    safeSetLocalStorageItem(typingTabStorageKey, activeTab);
+  }, [activeTab]);
+
+  const handleBack = () => {
+    const returnTo = searchParams.get('returnTo');
+    if (hasSafeReturnTo(returnTo)) {
+      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/practice');
+  };
+
   return (
     <div className="h-[100dvh] w-full bg-muted overflow-hidden font-sans">
       {gameState === 'lobby' && (
-        <MobileLobby onStart={handleStart} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <MobileLobby
+          onStart={handleStart}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onBack={handleBack}
+        />
       )}
 
       {gameState === 'playing' && gameData && (

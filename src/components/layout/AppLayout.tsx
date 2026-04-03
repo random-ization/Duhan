@@ -33,6 +33,7 @@ export default function AppLayout() {
   const { setSidebarHidden } = useLayoutActions();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const routeUiConfig = getRouteUiConfig(pathWithoutLang);
+  const isMobileViewport = matchesMediaQuery('(max-width: 767px)');
 
   // Safety net: some fullscreen flows toggle sidebarHidden to hide mobile chrome.
   // If that state ever gets stuck (e.g. a component crashes/unmounts unexpectedly),
@@ -56,17 +57,18 @@ export default function AppLayout() {
     ? 'overflow-y-auto lg:overflow-hidden'
     : 'overflow-y-auto';
   const routeShellClass = routeUiConfig.lockMainScroll
-    ? 'h-full min-h-0 flex flex-col'
-    : 'min-h-full flex flex-col';
+    ? 'h-full min-h-0 flex w-full min-w-0 flex-col'
+    : 'min-h-full flex w-full min-w-0 flex-col';
   const routeContentClass = routeUiConfig.lockMainScroll
-    ? 'flex-1 min-h-0 w-full'
-    : 'flex-1 w-full';
-  const mainBackgroundStyle = routeUiConfig.usePatternBackground
-    ? {
-        backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
-        backgroundSize: '24px 24px',
-      }
-    : undefined;
+    ? 'flex-1 min-h-0 w-full min-w-0'
+    : 'flex-1 w-full min-w-0';
+  const mainBackgroundStyle =
+    routeUiConfig.usePatternBackground && !isMobileViewport
+      ? {
+          backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
+        }
+      : undefined;
 
   return (
     <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
@@ -83,6 +85,7 @@ export default function AppLayout() {
         )}
 
         <div
+          data-mobile-page-mode={routeUiConfig.mobilePageMode}
           className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
           {allowRouteMotion ? (
@@ -115,7 +118,7 @@ export default function AppLayout() {
           {shouldShowFooter && <Footer />}
         </div>
         {shouldShowMobileNav && (
-          <div className="h-[calc(env(safe-area-inset-bottom)+60px)] md:h-0 flex-shrink-0" />
+          <div className="h-[var(--mobile-bottom-nav-offset)] md:h-0 flex-shrink-0" />
         )}
       </main>
       {shouldShowMobileNav && <MobilePwaInstallPrompt />}

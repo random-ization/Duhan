@@ -278,7 +278,8 @@
       "topikGrammarCollection": "Bộ sưu tập Ngữ pháp TOPIK"
     },
     "otherPublisher": "Khác",
-    "viewAll": "Xem tất cả"
+    "viewAll": "Xem tất cả",
+    "loadError": "Không thể tải giáo trình lúc này. Vui lòng thử lại sau."
   },
   "landing": {
     "seo": {
@@ -755,6 +756,7 @@
   "nav": {
     "dashboard": "Trang chủ",
     "courses": "Khóa học",
+    "learn": "Học",
     "practice": "Luyện tập",
     "media": "Nội dung",
     "videos": "Video",
@@ -836,7 +838,7 @@
     "verifyEmailDescription": "Nhấn nút bên dưới để gửi email xác minh.",
     "loginRequired": "Vui lòng đăng nhập trước.",
     "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối và thử lại.",
-    "passwordMismatch": "The two password fields do not match."
+    "passwordMismatch": "Hai trường mật khẩu không khớp."
   },
   "common": {
     "appName": "Duhan",
@@ -1647,8 +1649,8 @@
       "srsDesc": "Các từ bạn chọn \"Không biết\" khi học từ vựng sẽ tự động được thêm vào đây",
       "dueNow": "Cần ôn tập",
       "totalWords": "từ vựng",
-      "dueCount": "{{count}} due",
-      "masteredCount": "{{count}} mastered"
+      "dueCount": "{{count}} cần ôn",
+      "masteredCount": "{{count}} đã thuộc"
     },
     "notes": {
       "label": "Sổ tay",
@@ -1783,6 +1785,8 @@
       "streakShort": "Chuỗi",
       "levelFallback": "Cấp 1",
       "chapterLabel": "Bài {{unit}}",
+      "resumeTitle": "Buổi học gần đây",
+      "swipeHint": "Vuốt để xem thêm",
       "bestScoreLabel": "Cao nhất: {{score}}",
       "latestEpisodes": "Tập mới nhất"
     },
@@ -1817,9 +1821,9 @@
       "emptyPublisher": "Nhóm nhà xuất bản này chưa có giáo trình.",
       "publishers": {
         "all": "Tất cả",
-        "yonsei": "Yonsei",
-        "seoul": "Seoul National",
-        "chungang": "Chung-Ang",
+        "yonsei": "Đại học Yonsei",
+        "seoul": "Đại học Quốc gia Seoul",
+        "chungang": "Đại học Chung-Ang",
         "oer": "OER",
         "topik": "TOPIK",
         "other": "Khác"
@@ -1841,6 +1845,36 @@
       "podcastDesc": "Nghe podcast chọn lọc để tăng cường ngâm ngữ hằng ngày.",
       "readingCourseTitle": "Đọc theo giáo trình",
       "readingCourseDesc": "Đọc các bài đọc gắn với giáo trình đã chọn."
+    },
+    "mobileHub": {
+      "title": "Chọn nội dung bạn muốn học hôm nay.",
+      "subtitle": "Hãy chọn kỹ năng trước, rồi vào giáo trình phù hợp với kỹ năng đó.",
+      "materialPickerTitle": "Chọn giáo trình",
+      "materialPickerSummary": "{{module}} · {{count}} giáo trình",
+      "pickMaterial": "Chọn giáo trình",
+      "selectMaterialHint": "Hãy chọn một giáo trình để bắt đầu lộ trình này.",
+      "selectMaterialCta": "Chọn giáo trình",
+      "resumeHint": "Mở tab học để chọn giáo trình cho kỹ năng này.",
+      "resumeFromUnit": "Bài gần đây {{unit}}",
+      "noMaterialSelected": "Chưa chọn giáo trình",
+      "notSelectedShort": "Chưa chọn",
+      "progressLabel": "Tiến độ",
+      "recentLabel": "Gần đây",
+      "vocabProgress": "Đã nắm {{mastered}} / {{total}}",
+      "grammarProgress": "Đã nắm {{mastered}} / {{total}}",
+      "unitProgress": "Hoàn thành {{completed}} / {{total}} bài",
+      "vocabulary": {
+        "description": "Flashcard, chế độ học và luyện nhớ chủ động."
+      },
+      "grammar": {
+        "description": "Mẫu câu, giải thích và cấu trúc ngữ pháp."
+      },
+      "listening": {
+        "description": "Âm thanh giáo trình, transcript và luyện nghe hiểu."
+      },
+      "reading": {
+        "description": "Bài đọc giáo trình, bài viết luyện tập và tra từ."
+      }
     },
     "actions": {
       "switchMaterial": "Đổi giáo trình"
@@ -2073,44 +2107,44 @@
         "slash": {
           "title": "Lệnh Slash",
           "text": {
-            "label": "Text",
-            "hint": "Plain paragraph text"
+            "label": "Văn bản",
+            "hint": "Đoạn văn bản thường"
           },
           "h1": {
-            "label": "Heading 1",
-            "hint": "Large section title"
+            "label": "Tiêu đề 1",
+            "hint": "Tiêu đề phần lớn"
           },
           "h2": {
-            "label": "Heading 2",
-            "hint": "Medium section heading"
+            "label": "Tiêu đề 2",
+            "hint": "Tiêu đề phần vừa"
           },
           "bullet": {
-            "label": "Bullet List",
-            "hint": "Simple bullet points"
+            "label": "Danh sách dấu đầu dòng",
+            "hint": "Dấu đầu dòng đơn giản"
           },
           "ordered": {
-            "label": "Numbered List",
-            "hint": "Ordered items"
+            "label": "Danh sách đánh số",
+            "hint": "Mục có thứ tự"
           },
           "todo": {
-            "label": "To-do List",
-            "hint": "Track tasks with checkboxes"
+            "label": "Danh sách việc cần làm",
+            "hint": "Theo dõi việc cần làm với hộp kiểm"
           },
           "quote": {
-            "label": "Quote",
-            "hint": "Emphasized quotation block"
+            "label": "Trích dẫn",
+            "hint": "Khối trích dẫn nhấn mạnh"
           },
           "code": {
-            "label": "Code Block",
-            "hint": "Formatted code snippet"
+            "label": "Khối mã",
+            "hint": "Đoạn mã định dạng"
           },
           "divider": {
-            "label": "Divider",
-            "hint": "Horizontal separator line"
+            "label": "Đường phân cách",
+            "hint": "Đường phân cách ngang"
           },
           "table": {
-            "label": "Table",
-            "hint": "Insert a 3x3 table"
+            "label": "Bảng",
+            "hint": "Chèn bảng 3x3"
           }
         },
         "colors": {
@@ -2118,50 +2152,50 @@
           "textTitle": "Màu chữ",
           "highlightTitle": "Màu tô sáng",
           "text": {
-            "default": "Default",
-            "gray": "Gray",
-            "brown": "Brown",
-            "orange": "Orange",
-            "yellow": "Yellow",
-            "green": "Green",
-            "blue": "Blue",
-            "purple": "Purple",
-            "pink": "Pink",
-            "red": "Red"
+            "default": "Mặc định",
+            "gray": "Xám",
+            "brown": "Nâu",
+            "orange": "Cam",
+            "yellow": "Vàng",
+            "green": "Xanh lá",
+            "blue": "Xanh dương",
+            "purple": "Tím",
+            "pink": "Hồng",
+            "red": "Đỏ"
           },
           "highlight": {
-            "default": "Default",
-            "grayBg": "Gray BG",
-            "brownBg": "Brown BG",
-            "orangeBg": "Orange BG",
-            "yellowBg": "Yellow BG",
-            "greenBg": "Green BG",
-            "blueBg": "Blue BG",
-            "purpleBg": "Purple BG",
-            "pinkBg": "Pink BG",
-            "redBg": "Red BG"
+            "default": "Mặc định",
+            "grayBg": "Nền xám",
+            "brownBg": "Nền nâu",
+            "orangeBg": "Nền cam",
+            "yellowBg": "Nền vàng",
+            "greenBg": "Nền xanh lá",
+            "blueBg": "Nền xanh dương",
+            "purpleBg": "Nền tím",
+            "pinkBg": "Nền hồng",
+            "redBg": "Nền đỏ"
           }
         },
         "actions": {
-          "bulletList": "Bullet List",
-          "numberedList": "Numbered List",
-          "taskList": "Task List",
-          "quote": "Quote",
-          "bold": "Bold",
-          "italic": "Italic",
-          "underline": "Underline",
-          "strike": "Strike",
-          "link": "Link",
-          "textAndHighlightColors": "Text and Highlight colors",
+          "bulletList": "Danh sách dấu đầu dòng",
+          "numberedList": "Danh sách đánh số",
+          "taskList": "Danh sách việc cần làm",
+          "quote": "Trích dẫn",
+          "bold": "In đậm",
+          "italic": "In nghiêng",
+          "underline": "Gạch chân",
+          "strike": "Gạch ngang",
+          "link": "Liên kết",
+          "textAndHighlightColors": "Màu chữ và màu nền",
           "moreTools": "Công cụ khác",
-          "h1": "Heading 1",
-          "h2": "Heading 2",
-          "h3": "Heading 3",
-          "codeBlock": "Code Block",
-          "table": "Table",
-          "divider": "Divider",
-          "undo": "Undo",
-          "redo": "Redo"
+          "h1": "Tiêu đề 1",
+          "h2": "Tiêu đề 2",
+          "h3": "Tiêu đề 3",
+          "codeBlock": "Khối mã",
+          "table": "Bảng",
+          "divider": "Đường phân cách",
+          "undo": "Hoàn tác",
+          "redo": "Làm lại"
         },
         "study": {
           "keyWord": "Từ khóa",
@@ -2542,7 +2576,9 @@
       "daily": "Hằng ngày",
       "news": "Tin tức",
       "picks": "Chọn lọc"
-    }
+    },
+    "emptyTrending": "Hiện chưa có podcast thịnh hành.",
+    "loadError": "Không thể tải dữ liệu podcast lúc này."
   },
   "vocabLabel": "Từ vựng",
   "profileLabel": "Hồ sơ",
@@ -2776,6 +2812,7 @@
       "subtitle": "Tự động lấy qua RSS, phù hợp đọc lướt và cập nhật thời sự",
       "manualRefresh": "Làm mới",
       "empty": "Chưa có dữ liệu tin tức. Hãy chạy ingest từ trang quản trị.",
+      "loadError": "Không thể tải tin tức lúc này.",
       "aiExtracted": "AI trích xuất {{count}} từ",
       "readingMinutes": "Khoảng {{minutes}} phút đọc",
       "autoRefreshed": "Đã tự động cập nhật đề xuất theo lịch sử đọc",
@@ -2817,6 +2854,11 @@
       "literatureSource": "Tác phẩm kinh điển công cộng",
       "literatureBadge": "C2 Bản ngữ • Thơ",
       "literatureBookmark": "Cảm thụ văn học"
+    },
+    "mobile": {
+      "globalInsights": "Góc nhìn toàn cầu",
+      "articlesToday": "{{count}} bài hôm nay",
+      "swipeHint": "Vuốt"
     },
     "footer": "Dữ liệu từ Convex newsIngestion:getUserFeed (tự động làm mới sau 24h kể từ khi đọc, làm mới thủ công tối đa 3 lần/ngày)"
   },
@@ -3094,8 +3136,8 @@
     "subtitle": "Video, podcast và bài đọc"
   },
   "relativeTime": {
-    "daysAgo": "{{count}} days ago",
-    "hoursAgo": "{{count}} hours ago",
-    "justNow": "Just now"
+    "daysAgo": "{{count}} ngày trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "justNow": "Vừa xong"
   }
 }

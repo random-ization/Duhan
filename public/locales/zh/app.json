@@ -1,0 +1,156 @@
+{
+  "nav": {
+    "videos": "精选视频",
+    "podcasts": "播客中心",
+    "reading": "阅读发现",
+    "practice": "综合练习",
+    "media": "媒体中心",
+    "learn": "课程路径"
+  },
+  "media": {
+    "videoLeadTitle": "学习适合您水平的微课",
+    "videoLeadSubtitle": "根据难度筛选，收藏并学习最重要的知识片段。",
+    "podcastLeadTitle": "记录您的每一次进步点亮听力之光",
+    "podcastLeadSubtitle": "继续未播完的内容，订阅您最喜欢的频道。",
+    "videoCountLabel": "{{count}} 节课程"
+  },
+  "podcast": {
+    "title": "播客中心",
+    "searchPlaceholder": "搜索播客或内容...",
+    "nowPlaying": "正在播放",
+    "mySubscriptions": "我的订阅",
+    "trendingThisWeek": "热门推荐此周",
+    "history": "播放历史",
+    "filterOptions": {
+      "all": "全部",
+      "beginner": "初级",
+      "intermediate": "中级",
+      "daily": "日常",
+      "news": "新闻"
+    }
+  },
+  "practice": {
+    "mobileTitle": "构建您的语言能力",
+    "mobileSubtitle": "记录您的每一次进步",
+    "mobileSkillLabel": {
+      "typing": "打字训练",
+      "spelling": "拼写练习",
+      "notebook": "笔记本复习"
+    },
+    "recommended": "为您推荐"
+  },
+  "readingDiscovery": {
+    "pictureBooks": {
+      "title": "绘本故事",
+      "viewAll": "查看全部绘本",
+      "openCard": "打开绘本 {{title}}"
+    },
+    "mobile": {
+      "swipeHint": "左右滑动浏览",
+      "globalInsights": "全球动态",
+      "articlesToday": "今日更新 {{count}} 篇"
+    },
+    "featured": {
+      "newsTitle": "每日韩语新闻推送",
+      "newsDesc": "AI 精选权威媒体资讯。阅读、学习并扩充您的词汇量。"
+    },
+    "news": {
+      "title": "实时新闻",
+      "updated": "每小时更新一次",
+      "loadError": "暂时无法加载新闻。",
+      "empty": "稍后再来查看新文章。"
+    },
+    "noContent": "暂无故事内容",
+    "readingHub": {
+      "mobileSubtitle": "精选新闻、故事与绘本，带您沉浸式学习。"
+    }
+  },
+  "courseDashboard": {
+    "modules": {
+      "vocabulary": "词汇积累",
+      "grammar": "语法要点",
+      "listening": "听力训练",
+      "reading": "阅读理解"
+    }
+  },
+  "learningFlow": {
+    "mobileHub": {
+      "title": "选择您今日的学习重点",
+      "subtitle": "先选择一项技能，然后进入最适合您的教材。",
+      "paths": "学习路径",
+      "vocabulary": {
+        "description": "单词卡片、学习模式以及主动回忆训练。"
+      },
+      "grammar": {
+        "description": "句型模式、详细解释以及句子结构剖析。"
+      },
+      "listening": {
+        "description": "课文音频、听力原文以及理解力练习。"
+      },
+      "reading": {
+        "description": "课文段落、文章演练以及即时查词工具。"
+      },
+      "selectMaterialHint": "请选择教材以开启此学习路径。",
+      "selectMaterialCta": "选择教材",
+      "resumeFromUnit": "从第 {{unit}} 单元继续",
+      "progressLabel": "当前进度",
+      "noMaterialSelected": "尚未选择",
+      "pickMaterial": "开启路径",
+      "materialPickerTitle": "选择教材",
+      "materialPickerSummary": "{{module}} · 共 {{count}} 本教材"
+    }
+  },
+  "coursesLibrary": {
+    "results": "搜索结果",
+    "searchPlaceholder": "搜索教材、级别或出版社...",
+    "loadError": "暂时无法加载教材列表。",
+    "otherPublisher": "其他出版",
+    "items": "单元",
+    "textbook": "教材内容"
+  },
+  "common": {
+    "back": "返回",
+    "search": "搜索",
+    "loading": "加载中...",
+    "retry": "重试",
+    "viewAll": "全部",
+    "recently": "最近播放",
+    "minutes": "分钟",
+    "streak": "活跃天数",
+    "appName": "Duhan 韩语",
+    "exams": "试卷"
+  },
+  "dashboard": {
+    "summary": {
+      "title": "今日目标进度"
+    },
+    "mobile": {
+      "streakShort": "连续天数",
+      "mainActions": "学习工作站",
+      "shortcutsTitle": "核心捷径",
+      "exploreLabel": "沉浸式体验",
+      "exploreTitle": "推荐频道",
+      "quickReviewSubtitle": "清理待复习词汇，保持肌肉记忆。",
+      "quickPracticeSubtitle": "打字训练、记事本攻克与针对性练习。",
+      "quickMediaSubtitle": "随时切换至播客、视频与阅读内容。",
+      "quickNotebookSubtitle": "记录错误并查漏补缺。"
+    },
+    "mobileFocus": {
+      "continue": "续点启程：继续之前的进度",
+      "choose": "今日启航：挑选一个学习板块"
+    },
+    "dictionary": {
+      "placeholder": "搜索词典内容..."
+    },
+    "textbook": {
+      "default": "教材"
+    },
+    "common": {
+      "continueLearning": "继续学习"
+    },
+    "podcast": {
+      "editorPicks": "馆长推荐",
+      "community": "热门排行"
+    }
+  }
+}

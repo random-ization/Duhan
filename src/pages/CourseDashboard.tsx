@@ -2,7 +2,6 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { ChevronRight, BookMarked } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileCourseDashboard } from '../components/mobile/MobileCourseDashboard';
 import { useConvex, useQuery } from 'convex/react';
 import { NoArgs, qRef, GRAMMARS, VOCAB } from '../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
@@ -591,18 +590,9 @@ export default function CourseDashboard() {
   }
 
   if (isMobile && instituteId) {
-    return (
-      <MobileCourseDashboard
-        courseName={courseName || ''}
-        instituteId={instituteId}
-        overallProgress={overallProgress}
-        currentUnit={lastUnitIndex || 1}
-        totalUnits={unitTotal}
-        publisher={coursePublisher}
-        displayLevel={displayLevel}
-        coverUrl={coverUrl}
-      />
-    );
+    // On mobile, we skip the middle-man "4-grid hub" and go straight to learning modules.
+    // Default to vocab for now, as it's the primary entry.
+    return <Navigate to={`/course/${instituteId}/vocab`} replace />;
   }
 
   const modules = buildModules({

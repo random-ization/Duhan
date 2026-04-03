@@ -15,6 +15,8 @@ import { getLocalizedContent } from '../utils/languageUtils';
 import { qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 
 type SavedWordRow = {
   id: string;
@@ -97,10 +99,17 @@ const useRouteInfo = (
 const useModuleNavigation = (
   isCourseRoute: boolean,
   instituteId: string | undefined,
-  navigate: LocalizedNavigate
+  navigate: LocalizedNavigate,
+  isMobile: boolean
 ) => {
   const handleBack = () => {
-    navigate(isCourseRoute && instituteId ? `/course/${instituteId}` : '/dashboard/course');
+    navigate(
+      isMobile
+        ? '/courses'
+        : isCourseRoute && instituteId
+          ? `/course/${instituteId}`
+          : '/dashboard/course'
+    );
   };
   return { handleBack };
 };
@@ -264,11 +273,13 @@ const ModulePage: React.FC = () => {
   const { t } = useTranslation();
   const { user, language } = useAuth();
   const { saveWord, recordMistake } = useUserActions();
+  const isMobile = useIsMobile();
   const { selectedInstitute, selectedLevel } = useLearningSelection();
   const {
     setActiveModule,
     setActiveCustomList,
     setActiveListType,
+    setRecentMaterial,
     setSelectedInstitute,
     setSelectedLevel,
   } = useLearningActions();
@@ -279,7 +290,7 @@ const ModulePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const listParam = searchParams.get('list');
   const { isCourseRoute, effectiveModuleParam } = useRouteInfo(moduleParam, instituteId, location);
-  const { handleBack } = useModuleNavigation(isCourseRoute, instituteId, navigate);
+  const { handleBack } = useModuleNavigation(isCourseRoute, instituteId, navigate, isMobile);
   const { savedWordsData, mistakesData } = useModuleData(listParam);
 
   // Sync instituteId from URL to LearningContext when using course routes
@@ -326,6 +337,10 @@ const ModulePage: React.FC = () => {
   });
   const moduleLabel = resolveModuleLabel(currentModule, t);
   const isReadingModule = currentModule === LearningModuleType.READING;
+  const effectiveInstituteRecord = useMemo(
+    () => institutes?.find(institute => institute.id === effectiveInstitute),
+    [effectiveInstitute, institutes]
+  );
 
   const isCustomList = listParam === 'saved' || listParam === 'mistakes';
 
@@ -345,6 +360,25 @@ const ModulePage: React.FC = () => {
       setActiveListType(null);
     }
   }, [currentModule, derivedCustomList, derivedListType, setActiveCustomList, setActiveListType]);
+
+  useEffect(() => {
+    if (!isCourseRoute || !effectiveInstitute || !currentModule) return;
+    const module = currentModule.toLowerCase() as Lowercase<LearningModuleType>;
+    if (module !== 'reading' && module !== 'listening') return;
+    setRecentMaterial(module, {
+      instituteId: effectiveInstitute,
+      level: effectiveInstituteRecord ? resolveInstituteDefaultLevel(effectiveInstituteRecord) : 1,
+      unit: user?.lastModule === currentModule ? user.lastUnit : undefined,
+    });
+  }, [
+    currentModule,
+    effectiveInstitute,
+    effectiveInstituteRecord,
+    isCourseRoute,
+    setRecentMaterial,
+    user?.lastModule,
+    user?.lastUnit,
+  ]);
 
   if (!user) return <Navigate to="/" replace />;
 

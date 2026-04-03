@@ -16,6 +16,8 @@ import { internal } from './_generated/api';
 import { v } from 'convex/values';
 import { getAuthUserId } from './utils';
 import type { Id } from './_generated/dataModel';
+import OpenAI from 'openai';
+import { parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
 
 // ─── Shared dimension schema ──────────────────────────────────────────────────
 
@@ -399,34 +401,26 @@ async function callOpenAI(
     });
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-5-nano',
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-    }),
-  });
+  const client = new OpenAI({ apiKey, timeout: 20000 });
+  const completion = await retryAsync(
+    () =>
+      client.chat.completions.create({
+        model: 'mimo-v2-flash',
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: userContent,
+          },
+        ],
+      }),
+    { retries: 2, label: `writing_eval_q${question.number}` }
+  );
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OpenAI API error ${response.status}: ${err}`);
-  }
-
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-  };
-
-  const raw = data.choices[0]?.message?.content ?? '{}';
-  const parsed = JSON.parse(raw) as {
+  const raw = completion.choices[0]?.message?.content ?? '{}';
+  const parsed = (parseJsonObjectFromModelContent(raw) || {}) as {
     score?: number;
     dimensions?: {
       taskAccomplishment?: number;

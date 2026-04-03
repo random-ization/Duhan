@@ -1,6 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   History,
   BookOpen,
   Headphones,
@@ -15,10 +14,14 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { qRef } from '../../utils/convexRefs';
 import { ExamAttempt, TopikExam } from '../../types';
 import { clsx } from 'clsx';
 import { Button } from '../ui';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 interface MobileTopikPageProps {
   onSelectExam: (examId: string) => void;
@@ -26,10 +29,22 @@ interface MobileTopikPageProps {
 }
 
 const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikExams }) => {
+  const filterStorageKey = 'mobileTopikFilterType';
   const { user } = useAuth();
   const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING' | 'WRITING'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING' | 'WRITING'>(() => {
+    if (globalThis.window === undefined) return 'ALL';
+    const saved = safeGetLocalStorageItem(filterStorageKey);
+    if (saved === 'READING' || saved === 'LISTENING' || saved === 'WRITING') return saved;
+    return 'ALL';
+  });
+
+  useEffect(() => {
+    if (globalThis.window === undefined) return;
+    safeSetLocalStorageItem(filterStorageKey, filterType);
+  }, [filterType]);
 
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -74,35 +89,41 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
     );
   };
 
+  const handleBack = () => {
+    const returnTo = searchParams.get('returnTo');
+    if (hasSafeReturnTo(returnTo)) {
+      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/practice');
+  };
+
   return (
-    <div className="min-h-screen bg-muted pb-[130px]">
-      {/* Header */}
-      <header className="bg-card px-4 sm:px-5 pt-[calc(env(safe-area-inset-top)+12px)] pb-4 border-b border-border sticky top-0 z-20">
-        <div className="flex items-center gap-3 mb-3">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/practice')}
-            className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
-          >
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-extrabold text-foreground">
-              {t('dashboard.topik.examCenter')}
-            </h1>
-          </div>
+    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
+      <MobileWorkspaceHeader
+        title={t('dashboard.topik.examCenter')}
+        subtitle={t('topik.mobileSubtitle', {
+          defaultValue: 'Choose a mock exam, track your scores, and keep your timing sharp.',
+        })}
+        eyebrow={t('nav.topik', { defaultValue: 'TOPIK' })}
+        onBack={handleBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        actions={
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate('/topik/history')}
-            className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
+            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+            aria-label={t('dashboard.topik.history', { defaultValue: 'History' })}
           >
-            <History className="w-4 h-4 text-muted-foreground" />
+            <History className="h-4 w-4 text-muted-foreground" />
           </Button>
-        </div>
-
-        {/* D-Day Banner */}
+        }
+      >
         <div className="rounded-xl bg-primary p-3 text-primary-foreground flex items-center gap-3">
           <div className="rounded bg-primary-foreground/20 px-2.5 py-1 text-sm font-extrabold text-primary-foreground">
             {upcomingExam
@@ -124,7 +145,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
             </div>
           </div>
         </div>
-      </header>
+      </MobileWorkspaceHeader>
 
       {/* Filter Tabs */}
       <div className="px-4 sm:px-5 py-3 flex gap-2 bg-card border-b border-border overflow-x-auto no-scrollbar">

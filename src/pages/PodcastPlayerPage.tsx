@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { useAction, useMutation, useQuery } from 'convex/react'; // Added hooks
+import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'; // Added hooks
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   Play,
   Pause,
   Repeat,
@@ -55,6 +57,7 @@ import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { ENTITLEMENTS } from '../utils/convexRefs';
 import { resolveSafeReturnTo } from '../utils/navigation';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 // Types
 interface TranscriptLine {
@@ -118,6 +121,8 @@ type UiCopy = {
   coverAlt: string;
   saving: string;
   seek: string;
+  showEpisodeTools: string;
+  hideEpisodeTools: string;
 };
 
 const UI_COPY: Record<UiLang, UiCopy> = {
@@ -173,6 +178,8 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     coverAlt: 'Cover',
     saving: 'Saving...',
     seek: 'Seek',
+    showEpisodeTools: 'Show episode tools',
+    hideEpisodeTools: 'Hide episode tools',
   },
   zh: {
     mockTranslations: [
@@ -227,6 +234,8 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     coverAlt: '\u5c01\u9762',
     saving: '\u4fdd\u5b58\u4e2d...',
     seek: '\u5feb\u8fdb/\u5feb\u9000',
+    showEpisodeTools: '\u5c55\u5f00\u672c\u96c6\u4fe1\u606f',
+    hideEpisodeTools: '\u6536\u8d77\u672c\u96c6\u4fe1\u606f',
   },
   vi: {
     mockTranslations: [
@@ -280,6 +289,8 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     coverAlt: 'Anh bia',
     saving: 'Dang luu...',
     seek: 'Tua',
+    showEpisodeTools: 'Mo thong tin tap',
+    hideEpisodeTools: 'An thong tin tap',
   },
   mn: {
     mockTranslations: [
@@ -333,6 +344,8 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     coverAlt: 'Ковер',
     saving: 'Хадгалж байна...',
     seek: 'Үсрэх',
+    showEpisodeTools: 'Дугаарын мэдээллийг нээх',
+    hideEpisodeTools: 'Дугаарын мэдээллийг хураах',
   },
 };
 
@@ -448,7 +461,7 @@ const TranscriptLineRow: React.FC<{
     <div
       id={`line-${index}`}
       className={`
-                                        group relative p-4 md:p-6 rounded-2xl transition-all duration-300 border-l-4
+                                        group relative p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 border-l-4
                                         ${
                                           isActive
                                             ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
@@ -456,14 +469,14 @@ const TranscriptLineRow: React.FC<{
                                         }
                                     `}
     >
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-3 md:gap-4 items-start">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => onSeek(line.start)}
           className={`
-                                                flex-none text-[11px] font-bold px-2 py-1 rounded-md transition-colors
+                                                flex-none text-[10px] md:text-[11px] font-bold px-2 py-1 rounded-md transition-colors
                                                 ${
                                                   isActive
                                                     ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
@@ -483,7 +496,7 @@ const TranscriptLineRow: React.FC<{
           <div className="flex w-full flex-col items-start space-y-2">
             <div
               className={`
-                                                    text-lg md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1 whitespace-normal break-words [overflow-wrap:anywhere]
+                                                    text-base md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1 whitespace-normal break-words [overflow-wrap:anywhere]
                                                     ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
                                                 `}
             >
@@ -514,7 +527,7 @@ const TranscriptLineRow: React.FC<{
             {showTranslation && (
               <p
                 className={`
-                                                        text-base leading-relaxed transition-colors border-l-2 pl-3 whitespace-normal break-words [overflow-wrap:anywhere]
+                                                        text-sm md:text-base leading-relaxed transition-colors border-l-2 pl-2.5 md:pl-3 whitespace-normal break-words [overflow-wrap:anywhere]
                                                         ${
                                                           isActive
                                                             ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
@@ -542,7 +555,7 @@ const TranscriptLineRow: React.FC<{
               }}
               aria-label={analyzeLabel}
               className={`
-                                                p-2 rounded-full transition-all flex-none
+                                                p-1.5 md:p-2 rounded-full transition-all flex-none
                                                 ${
                                                   isActive
                                                     ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
@@ -651,6 +664,99 @@ const PlayPauseIcon: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =>
   ) : (
     <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
   );
+
+const EpisodeUtilityControls: React.FC<{
+  mobile?: boolean;
+  showTranslation: boolean;
+  setShowTranslation: React.Dispatch<React.SetStateAction<boolean>>;
+  translationLabel: string;
+  copy: UiCopy;
+  transcriptLoading: boolean;
+  isGeneratingTranscript: boolean;
+  onRegenerate: () => void;
+  onToggleSubscription: () => void;
+  subscriptionPending: boolean;
+  isSubscribed: boolean;
+  onShare: () => void;
+}> = ({
+  mobile = false,
+  showTranslation,
+  setShowTranslation,
+  translationLabel,
+  copy,
+  transcriptLoading,
+  isGeneratingTranscript,
+  onRegenerate,
+  onToggleSubscription,
+  subscriptionPending,
+  isSubscribed,
+  onShare,
+}) => (
+  <div className={mobile ? 'space-y-3' : 'w-full space-y-4 md:mt-auto pb-4 md:pb-0'}>
+    <div
+      className={
+        mobile
+          ? 'flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/70 px-4 py-3'
+          : 'flex items-center justify-between p-4 bg-muted rounded-xl border border-border'
+      }
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-card rounded-lg shadow-sm text-indigo-500 dark:text-indigo-300">
+          <Languages className="w-5 h-5" />
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-bold text-muted-foreground">{copy.translationSubtitle}</p>
+          <p className="text-xs text-muted-foreground">
+            {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
+          </p>
+        </div>
+      </div>
+      <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
+    </div>
+
+    <Button
+      onClick={onRegenerate}
+      disabled={transcriptLoading || isGeneratingTranscript}
+      loading={isGeneratingTranscript}
+      loadingText={copy.generating}
+      loadingIconClassName="w-4 h-4"
+      variant="outline"
+      size="default"
+      className={
+        mobile
+          ? 'w-full gap-2 rounded-2xl border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300'
+          : 'w-full gap-2 border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300'
+      }
+    >
+      <RefreshCw className="w-4 h-4" />
+      {copy.regenerateSubtitle}
+    </Button>
+
+    <div className="grid grid-cols-2 gap-3">
+      <Button
+        variant="outline"
+        size="default"
+        onClick={onToggleSubscription}
+        disabled={subscriptionPending}
+        loading={subscriptionPending}
+        loadingText={copy.saving}
+        loadingIconClassName="w-4 h-4"
+        className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
+      >
+        <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
+        {isSubscribed ? copy.saved : copy.saveEpisode}
+      </Button>
+      <Button
+        variant="outline"
+        size="default"
+        onClick={onShare}
+        className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
+      >
+        <Share2 className="w-4 h-4" /> {copy.share}
+      </Button>
+    </div>
+  </div>
+);
 
 const PlaylistSheetBody: React.FC<{
   playlist: PodcastEpisode[];
@@ -1035,6 +1141,20 @@ function getTranscriptErrorMessage(error: unknown) {
   return 'Unknown error';
 }
 
+function toUserTranscriptError(message: string, copy: UiCopy) {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('daily_limit_reached') || normalized.includes('ai_credits_daily')) {
+    return copy.transcriptUnavailable;
+  }
+  if (normalized.includes('unauthorized') || normalized.includes('forbidden')) {
+    return copy.transcriptUnavailable;
+  }
+  if (normalized.includes('deepgram async request failed (429)')) {
+    return copy.transcriptTimeout;
+  }
+  return `${copy.failedPrefix}: ${message}`;
+}
+
 async function tryRecoverTranscriptConnectionError(args: {
   message: string;
   episodeId: string;
@@ -1125,6 +1245,7 @@ async function handleTranscriptLoadFailure(args: {
     mockTranscript,
   } = args;
   const message = getTranscriptErrorMessage(error);
+  const userMessage = toUserTranscriptError(message, copy);
   const recovered = await tryRecoverTranscriptConnectionError({
     message,
     episodeId,
@@ -1148,11 +1269,11 @@ async function handleTranscriptLoadFailure(args: {
   }
   if (import.meta.env.DEV) {
     setTranscript(mockTranscript);
-    setTranscriptError(`${copy.failedPrefix}: ${message}`);
+    setTranscriptError(userMessage);
     return;
   }
   setTranscript([]);
-  setTranscriptError(copy.transcriptUnavailable);
+  setTranscriptError(userMessage);
 }
 
 function formatPlaybackTime(seconds: number) {
@@ -1298,7 +1419,8 @@ const PodcastPlayerPage: React.FC = () => {
   const { state } = location;
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
-  const { language, user, viewerAccess } = useAuth();
+  const { language, user, viewerAccess, loading: authUserLoading } = useAuth();
+  const { isLoading: convexAuthLoading, isAuthenticated } = useConvexAuth();
   const { startUpgradeFlow } = useUpgradeFlow();
   const uiLang: UiLang = language;
   const copy = UI_COPY[uiLang];
@@ -1360,6 +1482,7 @@ const PodcastPlayerPage: React.FC = () => {
 
   // Playlist State
   const [showPlaylist, setShowPlaylist] = useState(false);
+  const [mobileInfoExpanded, setMobileInfoExpanded] = useState(false);
   const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const resumeCheckedRef = useRef<string | null>(null); // Track resume check to prevent override
@@ -1446,6 +1569,24 @@ const PodcastPlayerPage: React.FC = () => {
   const formatTime = formatPlaybackTime;
   const getEpisodeId = useCallback(() => getEpisodeIdForTranscript(episode), [episode]);
   const getEpisodeKey = useCallback(() => getEpisodeKeyForHistory(episode), [episode]);
+  const episodeArtwork = useMemo(
+    () =>
+      episode.image ||
+      episode.itunes?.image ||
+      channel.artworkUrl ||
+      channel.image ||
+      channel.artwork ||
+      episode.channelArtwork ||
+      'https://placehold.co/400x400',
+    [
+      channel.artwork,
+      channel.artworkUrl,
+      channel.image,
+      episode.channelArtwork,
+      episode.image,
+      episode.itunes?.image,
+    ]
+  );
   const fallbackDuration = useMemo(
     () => parseDurationToSeconds(episode.duration ?? episode.itunes?.duration),
     [episode.duration, episode.itunes?.duration]
@@ -1473,6 +1614,10 @@ const PodcastPlayerPage: React.FC = () => {
 
   useEffect(() => {
     setPlaybackUnlocked(false);
+  }, [episodeKey]);
+
+  useEffect(() => {
+    setMobileInfoExpanded(false);
   }, [episodeKey]);
 
   useEffect(() => {
@@ -1551,6 +1696,9 @@ const PodcastPlayerPage: React.FC = () => {
   const loadTranscriptChunked = useCallback(
     async (force = false) => {
       console.log('[Transcript] V4: Starting Deepgram URL Strategy');
+      if (convexAuthLoading || authUserLoading || !isAuthenticated) {
+        return;
+      }
       if (!episode.audioUrl) {
         setTranscript([]);
         setTranscriptLoading(false);
@@ -1675,8 +1823,11 @@ const PodcastPlayerPage: React.FC = () => {
       }
     },
     [
+      authUserLoading,
       copy,
+      convexAuthLoading,
       episode.audioUrl,
+      isAuthenticated,
       requestTranscript,
       getTranscript,
       getEpisodeId,
@@ -1693,10 +1844,17 @@ const PodcastPlayerPage: React.FC = () => {
 
   // 0. Transcript Load (also refresh on language change)
   useEffect(() => {
-    if (episode.audioUrl) {
+    if (!convexAuthLoading && !authUserLoading && isAuthenticated && episode.audioUrl) {
       loadTranscriptChunked();
     }
-  }, [episode.audioUrl, language, loadTranscriptChunked]);
+  }, [
+    authUserLoading,
+    convexAuthLoading,
+    episode.audioUrl,
+    isAuthenticated,
+    language,
+    loadTranscriptChunked,
+  ]);
 
   // 1. Initial Load & Analytics & Playlist
   useEffect(() => {
@@ -2097,33 +2255,31 @@ const PodcastPlayerPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-muted text-foreground overflow-hidden font-sans">
-      {/* Header - Fixed on Mobile, Part of layout on Desktop */}
-      <header className="flex-none flex items-center justify-between px-4 py-3 bg-card border-b border-border z-20 md:hidden">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(backPath)}
-          className="p-2 hover:bg-muted rounded-full"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <span className="font-bold text-sm truncate max-w-[200px]">{episode.title}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowPlaylist(true)}
-          className="p-2 hover:bg-muted rounded-full"
-        >
-          <ListMusic className="w-5 h-5" />
-        </Button>
-      </header>
+      <div className="md:hidden">
+        <MobileImmersiveHeader
+          title={episode.title}
+          subtitle={channel.title || episode.channelTitle}
+          onBack={() => navigate(backPath)}
+          backLabel={copy.back}
+          actions={
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => setShowPlaylist(true)}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+              aria-label={copy.playlist}
+            >
+              <ListMusic className="h-4 w-4" />
+            </Button>
+          }
+        />
+      </div>
 
       {/* Main Layout: Stack on Mobile, Split on Desktop */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         {/* Left Column: Meta & Controls (Sticky on Desktop) */}
-        <aside className="w-full md:w-[320px] lg:w-[380px] flex-none bg-card md:border-r border-border flex flex-col z-10">
+        <aside className="hidden md:flex md:w-[320px] lg:w-[380px] flex-none bg-card md:border-r border-border flex-col z-10">
           <div className="p-6 md:p-8 flex flex-col items-center md:items-start text-center md:text-left h-full overflow-y-auto">
             {/* Desktop Back Button */}
             <div className="hidden md:block mb-6 space-y-3">
@@ -2150,15 +2306,7 @@ const PodcastPlayerPage: React.FC = () => {
             {/* Cover Art */}
             <div className="relative group w-48 h-48 md:w-64 md:h-64 rounded-2xl shadow-xl overflow-hidden mb-6 flex-shrink-0">
               <img
-                src={
-                  episode.image ||
-                  episode.itunes?.image ||
-                  channel.artworkUrl ||
-                  channel.image ||
-                  channel.artwork ||
-                  episode.channelArtwork ||
-                  'https://placehold.co/400x400'
-                }
+                src={episodeArtwork}
                 alt={copy.coverAlt}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -2176,109 +2324,37 @@ const PodcastPlayerPage: React.FC = () => {
             </div>
 
             {/* Sidebar Controls */}
-            <div className="w-full space-y-4 md:mt-auto pb-4 md:pb-0">
-              {/* Translation Switch */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-xl border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-card rounded-lg shadow-sm text-indigo-500 dark:text-indigo-300">
-                    <Languages className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-bold text-muted-foreground">
-                      {copy.translationSubtitle}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
-                    </p>
-                  </div>
-                </div>
-                <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
-              </div>
-
-              {/* Regenerate Button (For fixing broken subtitles) */}
-              <Button
-                onClick={() => setShowTranscriptResetConfirm(true)}
-                disabled={transcriptLoading || isGeneratingTranscript}
-                loading={isGeneratingTranscript}
-                loadingText={copy.generating}
-                loadingIconClassName="w-4 h-4"
-                variant="outline"
-                size="default"
-                className="w-full gap-2 border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300"
-              >
-                <RefreshCw className="w-4 h-4" />
-                {copy.regenerateSubtitle}
-              </Button>
-              <AlertDialog
-                open={showTranscriptResetConfirm}
-                onOpenChange={setShowTranscriptResetConfirm}
-              >
-                <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="font-black text-foreground">
-                      {copy.regenerateTitle}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-sm font-semibold text-muted-foreground leading-relaxed">
-                      {copy.regenerateDescription}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="flex-row justify-end gap-2">
-                    <AlertDialogCancel onClick={() => setShowTranscriptResetConfirm(false)}>
-                      {copy.cancel}
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleConfirmRegenerateTranscript}
-                      loading={isGeneratingTranscript || transcriptLoading}
-                      loadingText={copy.processing}
-                    >
-                      {copy.confirmRegenerate}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={handleToggleSubscription}
-                  disabled={subscriptionPending}
-                  loading={subscriptionPending}
-                  loadingText={copy.saving}
-                  loadingIconClassName="w-4 h-4"
-                  className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
-                >
-                  <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
-                  {isSubscribed ? copy.saved : copy.saveEpisode}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="default"
-                  onClick={handleShareEpisode}
-                  className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
-                >
-                  <Share2 className="w-4 h-4" /> {copy.share}
-                </Button>
-              </div>
-            </div>
+            <EpisodeUtilityControls
+              showTranslation={showTranslation}
+              setShowTranslation={setShowTranslation}
+              translationLabel={translationLabel}
+              copy={copy}
+              transcriptLoading={transcriptLoading}
+              isGeneratingTranscript={isGeneratingTranscript}
+              onRegenerate={() => setShowTranscriptResetConfirm(true)}
+              onToggleSubscription={handleToggleSubscription}
+              subscriptionPending={subscriptionPending}
+              isSubscribed={isSubscribed}
+              onShare={handleShareEpisode}
+            />
           </div>
         </aside>
 
         {/* Right Column: Transcript Stream */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth bg-muted/50 pb-10 md:pb-12 relative"
+          className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth bg-muted/50 pb-[calc(var(--mobile-safe-bottom)+5.75rem)] md:pb-12 relative"
         >
           {/* Auto-Scroll Floating Toggle */}
-          <div className="sticky top-4 right-4 z-20 flex justify-end px-4 pointer-events-none">
+          <div className="sticky top-3 right-0 z-20 flex justify-end px-3 md:px-4 pointer-events-none">
             <Button
               type="button"
               variant="ghost"
               size="sm"
+              aria-label={autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
               onClick={() => setAutoScroll(!autoScroll)}
               className={`
-                                pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full shadow-lg backdrop-blur-md border transition-all
+                                pointer-events-auto flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg backdrop-blur-md border transition-all
                                 ${
                                   autoScroll
                                     ? 'bg-indigo-600/90 dark:bg-indigo-500/85 text-white dark:text-primary-foreground border-indigo-500 dark:border-indigo-300/50'
@@ -2287,13 +2363,88 @@ const PodcastPlayerPage: React.FC = () => {
                             `}
             >
               <ListMusic className="w-4 h-4" />
-              <span className="text-xs font-bold">
+              <span className="hidden md:inline text-xs font-bold">
                 {autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
               </span>
             </Button>
           </div>
 
-          <div className="max-w-3xl mx-auto p-4 md:p-8 lg:p-12 space-y-2">
+          <div className="max-w-3xl mx-auto p-3 md:p-8 lg:p-12 space-y-3 md:space-y-4">
+            <div className="md:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                size="auto"
+                onClick={() => setMobileInfoExpanded(current => !current)}
+                className="w-full rounded-[1.75rem] border border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur-md !flex !items-center !justify-start !whitespace-normal"
+                aria-expanded={mobileInfoExpanded}
+                aria-label={mobileInfoExpanded ? copy.hideEpisodeTools : copy.showEpisodeTools}
+              >
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-muted shadow-sm">
+                  <img
+                    src={episodeArtwork}
+                    alt={copy.coverAlt}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 px-3 text-left">
+                  <p className="line-clamp-1 text-sm font-black leading-tight text-foreground">
+                    {episode.title}
+                  </p>
+                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
+                    {channel.title || episode.channelTitle}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                  <span className="text-[11px] font-bold">
+                    {mobileInfoExpanded ? copy.hideEpisodeTools : copy.showEpisodeTools}
+                  </span>
+                  {mobileInfoExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
+              </Button>
+
+              {mobileInfoExpanded ? (
+                <div className="mt-3 rounded-[2rem] border border-border bg-card px-4 py-4 shadow-sm space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-[1.5rem] bg-muted shadow-sm">
+                      <img
+                        src={episodeArtwork}
+                        alt={copy.coverAlt}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 text-left">
+                      <h1 className="text-lg font-black leading-tight text-foreground line-clamp-3">
+                        {episode.title}
+                      </h1>
+                      <p className="mt-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300 line-clamp-2">
+                        {channel.title || episode.channelTitle}
+                      </p>
+                    </div>
+                  </div>
+
+                  <EpisodeUtilityControls
+                    mobile
+                    showTranslation={showTranslation}
+                    setShowTranslation={setShowTranslation}
+                    translationLabel={translationLabel}
+                    copy={copy}
+                    transcriptLoading={transcriptLoading}
+                    isGeneratingTranscript={isGeneratingTranscript}
+                    onRegenerate={() => setShowTranscriptResetConfirm(true)}
+                    onToggleSubscription={handleToggleSubscription}
+                    subscriptionPending={subscriptionPending}
+                    isSubscribed={isSubscribed}
+                    onShare={handleShareEpisode}
+                  />
+                </div>
+              ) : null}
+            </div>
+
             <TranscriptStreamBody
               showTranscriptLoader={showTranscriptLoader}
               isGeneratingTranscript={isGeneratingTranscript}
@@ -2311,10 +2462,10 @@ const PodcastPlayerPage: React.FC = () => {
             />
 
             {/* Player Bar (Aligned with Transcript Width) */}
-            <div className="sticky bottom-4 z-30 pt-6">
-              <div className="bg-card border border-border rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-4 md:px-6 py-3">
+            <div className="sticky bottom-mobile-safe z-30 pt-3 md:pt-6">
+              <div className="bg-card border border-border rounded-xl md:rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-3 md:px-6 py-2.5 md:py-3">
                 {/* Progress Slider */}
-                <div className="relative group mb-1 pt-2">
+                <div className="relative group mb-1 pt-1.5 md:pt-2">
                   <Button
                     type="button"
                     variant="ghost"
@@ -2347,7 +2498,7 @@ const PodcastPlayerPage: React.FC = () => {
                 {/* Controls Row */}
                 <div className="flex items-center justify-between">
                   {/* Left: Speed & Loop */}
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-1.5 md:gap-2 flex-1">
                     <Button
                       type="button"
                       variant="ghost"
@@ -2367,21 +2518,21 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={toggleLoop}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
+                      className={`flex items-center gap-1 px-1.5 md:px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
                     >
                       <Repeat className="w-3 h-3" />
-                      <span className="hidden md:inline">{getAbLoopLabel()}</span>
+                      <span className="hidden sm:inline">{getAbLoopLabel()}</span>
                     </Button>
                   </div>
 
                   {/* Center: Main Playback */}
-                  <div className="flex items-center gap-4 flex-none">
+                  <div className="flex items-center gap-3 md:gap-4 flex-none">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => skip(-10)}
-                      className="text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
+                      className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
                     >
                       <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
                     </Button>
@@ -2401,14 +2552,14 @@ const PodcastPlayerPage: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => skip(10)}
-                      className="text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
+                      className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
                     >
                       <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
                     </Button>
                   </div>
 
                   {/* Right: Tools / Volume */}
-                  <div className="flex items-center justify-end gap-3 flex-1">
+                  <div className="flex items-center justify-end gap-2 md:gap-3 flex-1">
                     <div className="hidden md:flex items-center gap-2 group w-20">
                       <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
                       <Slider
@@ -2474,6 +2625,31 @@ const PodcastPlayerPage: React.FC = () => {
       >
         <track kind="captions" />
       </audio>
+
+      <AlertDialog open={showTranscriptResetConfirm} onOpenChange={setShowTranscriptResetConfirm}>
+        <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black text-foreground">
+              {copy.regenerateTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-semibold text-muted-foreground leading-relaxed">
+              {copy.regenerateDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-end gap-2">
+            <AlertDialogCancel onClick={() => setShowTranscriptResetConfirm(false)}>
+              {copy.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRegenerateTranscript}
+              loading={isGeneratingTranscript || transcriptLoading}
+              loadingText={copy.processing}
+            >
+              {copy.confirmRegenerate}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Playlist Drawer */}
       <Sheet open={showPlaylist} onOpenChange={setShowPlaylist}>

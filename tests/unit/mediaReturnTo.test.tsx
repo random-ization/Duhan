@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 
 const navigateMock = vi.fn();
 
@@ -24,12 +24,14 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+      i18n: { language: 'en' },
     }),
   };
 });
 
 vi.mock('convex/react', () => ({
   useQuery: vi.fn(() => []),
+  useMutation: vi.fn(() => async () => undefined),
 }));
 
 import MediaHubPage from '../../src/pages/MediaHubPage';
@@ -37,6 +39,7 @@ import VideoLibraryPage from '../../src/pages/VideoLibraryPage';
 import { MobileMediaPage } from '../../src/components/mobile/MobileMediaPage';
 
 const useQueryMock = vi.mocked(useQuery);
+const useMutationMock = vi.mocked(useMutation);
 
 const renderWithRouter = (element: ReactElement, path: string) =>
   render(
@@ -51,7 +54,9 @@ describe('Media returnTo flow', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     useQueryMock.mockReset();
+    useMutationMock.mockReset();
     useQueryMock.mockReturnValue([]);
+    useMutationMock.mockReturnValue(async () => undefined);
   });
 
   it('passes returnTo when opening videos and podcasts from media hub', () => {
@@ -217,5 +222,30 @@ describe('Media returnTo flow', () => {
 
     expect(await screen.findByText('History Episode')).toBeInTheDocument();
     expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
+  });
+
+  it('preserves mobile media returnTo when opening storybooks from the reading tab', async () => {
+    useQueryMock
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => ({ internal: [], external: [] }))
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => [])
+      .mockImplementationOnce(() => [
+        {
+          _id: 'book-1',
+          slug: 'storybook',
+          title: 'Storybook',
+          coverImageUrl: 'https://example.com/storybook.png',
+          levelLabel: 'Level 1',
+        },
+      ])
+      .mockImplementationOnce(() => ({ news: [] }));
+
+    renderWithRouter(<MobileMediaPage />, '/media?tab=reading');
+
+    fireEvent.click(await screen.findByRole('button', { name: /open storybook/i }));
+    expect(navigateMock).toHaveBeenCalledWith(
+      '/reading/books/storybook?returnTo=%2Fmedia%3Ftab%3Dreading'
+    );
   });
 });

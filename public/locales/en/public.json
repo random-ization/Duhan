@@ -317,7 +317,8 @@
       "topikGrammarCollection": "TOPIK Grammar Collection"
     },
     "otherPublisher": "Other",
-    "viewAll": "View All"
+    "viewAll": "View All",
+    "loadError": "Unable to load textbooks right now."
   },
   "landing": {
     "seo": {
@@ -825,6 +826,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "courses": "Courses",
+    "learn": "Learning",
     "practice": "Practice",
     "media": "Media",
     "videos": "Videos",
@@ -1825,6 +1827,8 @@
       "streakShort": "Streak",
       "levelFallback": "Lvl 1",
       "chapterLabel": "Chapter {{unit}}",
+      "resumeTitle": "Recent session",
+      "swipeHint": "Swipe for more",
       "bestScoreLabel": "Best: {{score}}",
       "latestEpisodes": "Latest Episodes"
     },
@@ -1871,6 +1875,36 @@
       "podcastDesc": "Use curated episodes for daily listening immersion.",
       "readingCourseTitle": "Textbook Reading",
       "readingCourseDesc": "Read textbook passages linked to your selected course."
+    },
+    "mobileHub": {
+      "title": "Choose what you want to study today.",
+      "subtitle": "Pick a skill first, then jump into the textbook that fits that skill.",
+      "materialPickerTitle": "Select a textbook",
+      "materialPickerSummary": "{{module}} · {{count}} textbooks",
+      "pickMaterial": "Select textbook",
+      "selectMaterialHint": "Pick a textbook to start this learning path.",
+      "selectMaterialCta": "Choose textbook",
+      "resumeHint": "Open the learning tab to choose a textbook for this skill.",
+      "resumeFromUnit": "Recent unit {{unit}}",
+      "noMaterialSelected": "No textbook selected",
+      "notSelectedShort": "Not selected",
+      "progressLabel": "Progress",
+      "recentLabel": "Recent",
+      "vocabProgress": "{{mastered}} / {{total}} mastered",
+      "grammarProgress": "{{mastered}} / {{total}} mastered",
+      "unitProgress": "{{completed}} / {{total}} units completed",
+      "vocabulary": {
+        "description": "Flashcards, learn mode, and active recall drills."
+      },
+      "grammar": {
+        "description": "Patterns, explanations, and sentence structures."
+      },
+      "listening": {
+        "description": "Textbook audio, transcript, and comprehension practice."
+      },
+      "reading": {
+        "description": "Textbook passages, article drills, and lookup tools."
+      }
     },
     "actions": {
       "switchMaterial": "Switch textbook"
@@ -2543,7 +2577,9 @@
       "daily": "Daily",
       "news": "News",
       "picks": "Picks"
-    }
+    },
+    "emptyTrending": "No trending podcasts available right now.",
+    "loadError": "Unable to load podcast data right now."
   },
   "typing": {
     "label": "Typing Practice",
@@ -2777,6 +2813,7 @@
       "subtitle": "Auto-ingested by RSS, great for extensive reading and current affairs",
       "manualRefresh": "Refresh",
       "empty": "No news available yet. Please run ingestion from admin.",
+      "loadError": "Unable to load news right now.",
       "aiExtracted": "AI extracted {{count}} words",
       "readingMinutes": "~{{minutes}} min read",
       "autoRefreshed": "Recommendations updated automatically based on your reading activity",
@@ -2818,6 +2855,11 @@
       "literatureSource": "Public Domain Classics",
       "literatureBadge": "C2 Near-Native • Poetry",
       "literatureBookmark": "Literary Notes"
+    },
+    "mobile": {
+      "globalInsights": "Global Insights",
+      "articlesToday": "{{count}} Articles Today",
+      "swipeHint": "Swipe"
     },
     "footer": "Powered by Convex newsIngestion:getUserFeed (auto refresh after 24h post-read, manual refresh up to 3/day)"
   },

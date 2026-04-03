@@ -112,7 +112,7 @@ export const DesktopNotebookPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-[100dvh] bg-background">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-card/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-4">

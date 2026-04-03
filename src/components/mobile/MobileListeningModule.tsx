@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MobileAudioPlayer } from './MobileAudioPlayer';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 interface TranscriptSegment {
   start: number;
@@ -51,37 +52,31 @@ export function MobileListeningModule({
 
   return (
     <div className="flex flex-col h-screen bg-muted">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b border-border px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          onClick={onBack}
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <ArrowLeft size={20} className="text-muted-foreground" />
-        </Button>
-
-        <div className="flex flex-col items-center">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            {t('mobileListeningModule.listening', { defaultValue: 'Listening' })}
-          </span>
-          <h1 className="text-sm font-black text-foreground truncate max-w-[200px]">{unitTitle}</h1>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <MoreHorizontal size={20} className="text-muted-foreground" />
-        </Button>
-      </div>
+      <MobileWorkspaceHeader
+        title={unitTitle}
+        subtitle={t('mobileListeningModule.followAlong', {
+          defaultValue: 'Follow the transcript while the active line stays in focus.',
+        })}
+        eyebrow={t('mobileListeningModule.listening', { defaultValue: 'Listening' })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        actions={
+          <Button
+            variant="ghost"
+            size="auto"
+            type="button"
+            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+          >
+            <MoreHorizontal size={18} className="text-muted-foreground" />
+          </Button>
+        }
+      />
 
       {/* Transcript View */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 pb-48 space-y-6">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-6 pb-[calc(var(--mobile-safe-bottom)+9rem)] space-y-6"
+      >
         {transcriptData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <p className="font-bold">
@@ -98,7 +93,7 @@ export function MobileListeningModule({
                 className={cn(
                   'transition-all duration-500 p-4 rounded-2xl',
                   isActive
-                    ? 'bg-card shadow-lg shadow-indigo-100 scale-105 border border-indigo-100 opacity-100'
+                    ? 'bg-card shadow-lg shadow-primary/10 scale-105 border border-primary/20 opacity-100'
                     : 'opacity-60 grayscale-[0.5] scale-100'
                 )}
               >

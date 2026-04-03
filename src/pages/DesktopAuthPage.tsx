@@ -224,7 +224,10 @@ export default function DesktopAuthPage() {
                   size={20}
                 />
                 <Input
+                  id="desktop-auth-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder={t('auth.placeholderName')}
                   className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                   value={formData.name}
@@ -240,7 +243,10 @@ export default function DesktopAuthPage() {
                 size={20}
               />
               <Input
+                id="desktop-auth-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder={t('auth.placeholderEmail')}
                 className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.email}
@@ -255,7 +261,10 @@ export default function DesktopAuthPage() {
                 size={20}
               />
               <Input
+                id="desktop-auth-password"
+                name="password"
                 type="password"
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
                 placeholder={t('auth.placeholderPassword')}
                 className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
                 value={formData.password}
@@ -267,16 +276,13 @@ export default function DesktopAuthPage() {
             {/* Forgot Password Link */}
             {isLogin && (
               <div className="flex justify-end">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="auto"
-                  className="text-xs font-bold text-slate-400 hover:text-indigo-600 inline-flex items-center gap-1 transition"
+                <LocalizedLink
+                  to="/forgot-password"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 transition hover:text-indigo-600"
                 >
-                  <LocalizedLink to="/forgot-password">
-                    <HelpCircle size={14} /> {t('auth.forgotPassword')}
-                  </LocalizedLink>
-                </Button>
+                  <HelpCircle size={14} />
+                  <span>{t('auth.forgotPassword')}</span>
+                </LocalizedLink>
               </div>
             )}
 

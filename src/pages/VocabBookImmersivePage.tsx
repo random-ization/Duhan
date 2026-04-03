@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import { ArrowLeft, Eye, EyeOff, ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
+import { Eye, EyeOff, ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
 import { motion, type PanInfo } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +26,7 @@ import {
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Language } from '../types';
 import { getPosColorClass } from '../utils/posColors';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 type ImmersiveMode = 'BROWSE' | 'RECALL';
 const SWIPE_DISTANCE_THRESHOLD = 80;
@@ -730,59 +731,52 @@ const VocabBookImmersivePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-indigo-400/8 dark:via-background dark:to-indigo-300/8 text-foreground">
-      <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-indigo-100 dark:border-indigo-300/20">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+      <MobileImmersiveHeader
+        title={labels.vocab?.modeImmersive || 'Immersive'}
+        subtitle={
+          loadingMore
+            ? labels.common?.loading || 'Loading...'
+            : 'Swipe, reveal, and master words in sequence.'
+        }
+        eyebrow={labels.dashboard?.vocab?.title || 'Vocab'}
+        onBack={() => navigate(backPath)}
+        backLabel={labels.dashboard?.common?.back || 'Back'}
+        status={
+          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+              Progress
+            </div>
+            <div className="text-base font-black text-foreground">
+              {total === 0 ? '0/0' : `${safeIndex + 1}/${total}`}
+            </div>
+          </div>
+        }
+        actions={
           <Button
             type="button"
             variant="ghost"
             size="auto"
-            onClick={() => navigate(backPath)}
-            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 transition-all duration-200"
-            aria-label={labels.dashboard?.common?.back || 'Back'}
+            onClick={() => {
+              setMode(m => (m === 'BROWSE' ? 'RECALL' : 'BROWSE'));
+              setRevealed(false);
+            }}
+            className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-black text-muted-foreground shadow-sm active:scale-95"
           >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Button>
-
-          <div className="text-center">
-            <p className="text-xs font-black tracking-widest text-indigo-600 dark:text-indigo-200 uppercase">
-              {labels.vocab?.modeImmersive || 'Immersive'}
-            </p>
-            <p className="text-sm font-black text-muted-foreground">
-              {total === 0 ? '0/0' : `${safeIndex + 1}/${total}`}
-            </p>
-            {loadingMore && (
-              <p className="text-[10px] font-bold text-muted-foreground">
-                {labels.common?.loading || 'Loading...'}
-              </p>
+            {mode === 'BROWSE' ? (
+              <span className="inline-flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-muted-foreground" />
+                {labels.vocab?.recallMode || 'Recall'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <Eye className="w-4 h-4 text-muted-foreground" />
+                {labels.vocab?.browseMode || 'Browse'}
+              </span>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => {
-                setMode(m => (m === 'BROWSE' ? 'RECALL' : 'BROWSE'));
-                setRevealed(false);
-              }}
-              className="px-3 py-2 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 text-xs font-black text-muted-foreground transition-all duration-200"
-            >
-              {mode === 'BROWSE' ? (
-                <span className="inline-flex items-center gap-2">
-                  <EyeOff className="w-4 h-4 text-muted-foreground" />
-                  {labels.vocab?.recallMode || 'Recall'}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-muted-foreground" />
-                  {labels.vocab?.browseMode || 'Browse'}
-                </span>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+          </Button>
+        }
+        className="sticky top-0 z-20 border-b-[3px] border-indigo-100 dark:border-indigo-300/20 bg-card/80"
+      />
 
       {loading ? (
         <ImmersiveContent
@@ -805,7 +799,7 @@ const VocabBookImmersivePage: React.FC = () => {
           enableSwipe={isMobile}
         />
       ) : (
-        <div className="max-w-3xl mx-auto px-4 py-10">
+        <div className="max-w-3xl mx-auto px-4 py-10 pb-[calc(var(--mobile-safe-bottom)+2rem)]">
           <ImmersiveContent
             loading={loading}
             total={total}

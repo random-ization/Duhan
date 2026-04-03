@@ -278,7 +278,8 @@
       "topikGrammarCollection": "TOPIK дүрмийн эмхэтгэл"
     },
     "otherPublisher": "Бусад",
-    "viewAll": "Бүгдийг үзэх"
+    "viewAll": "Бүгдийг үзэх",
+    "loadError": "Одоогоор сурах бичгийг ачаалж чадсангүй. Дараа дахин оролдоно уу."
   },
   "landing": {
     "seo": {
@@ -516,7 +517,7 @@
       "nextSentence": "Daraagiin uguulber",
       "focusInput": "Orolt deer tuvluruh",
       "wpm": "WPM",
-      "acc": "ACC"
+      "acc": "Нарийвчлал"
     }
   },
   "pricing": {
@@ -755,6 +756,7 @@
   "nav": {
     "dashboard": "Нүүр",
     "courses": "Хичээлүүд",
+    "learn": "Суралцах",
     "practice": "Дасгал",
     "media": "Медиа",
     "videos": "Видео",
@@ -1647,8 +1649,8 @@
       "srsDesc": "Суралцах явцдаа \"Мэдэхгүй\" гэж тэмдэглэсэн үгс энд автоматаар нэмэгдэнэ",
       "dueNow": "Одоо давтах",
       "totalWords": "нийт үг",
-      "dueCount": "{{count}} due",
-      "masteredCount": "{{count}} mastered"
+      "dueCount": "{{count}} давталт",
+      "masteredCount": "{{count}} эзэмшсэн"
     },
     "notes": {
       "label": "Тэмдэглэл",
@@ -1783,6 +1785,8 @@
       "streakShort": "Цуврал",
       "levelFallback": "Түвшин 1",
       "chapterLabel": "Хичээл {{unit}}",
+      "resumeTitle": "Сүүлийн хичээл",
+      "swipeHint": "Илүүг харахын тулд шударна уу",
       "bestScoreLabel": "Шилдэг: {{score}}",
       "latestEpisodes": "Сүүлийн ангиуд"
     },
@@ -1817,9 +1821,9 @@
       "emptyPublisher": "Энэ хэвлэлийн бүлэгт сурах бичиг алга байна.",
       "publishers": {
         "all": "Бүгд",
-        "yonsei": "Yonsei",
-        "seoul": "Seoul National",
-        "chungang": "Chung-Ang",
+        "yonsei": "Ёнсэ их сургууль",
+        "seoul": "Сөүлийн үндэсний их сургууль",
+        "chungang": "Чүнган их сургууль",
         "oer": "OER",
         "topik": "TOPIK",
         "other": "Бусад"
@@ -1841,6 +1845,36 @@
       "podcastDesc": "Сонгосон подкастуудаар өдөр тутмын сонсголын дадлага хийнэ.",
       "readingCourseTitle": "Сурах бичгийн уншлага",
       "readingCourseDesc": "Сонгосон сурах бичигтэй холбоотой унших агуулгыг судална."
+    },
+    "mobileHub": {
+      "title": "Өнөөдөр сурах зүйлээ сонгоно уу.",
+      "subtitle": "Эхлээд чадвараа сонгоод, дараа нь тухайн чадварт тохирох сурах бичиг рүү орно уу.",
+      "materialPickerTitle": "Сурах бичиг сонгох",
+      "materialPickerSummary": "{{module}} · {{count}} сурах бичиг",
+      "pickMaterial": "Сурах бичиг сонгох",
+      "selectMaterialHint": "Энэ урсгалыг эхлүүлэхийн тулд сурах бичиг сонгоно уу.",
+      "selectMaterialCta": "Сурах бичиг сонгох",
+      "resumeHint": "Энэ чадварт сурах бичиг сонгохын тулд суралцах табыг нээнэ үү.",
+      "resumeFromUnit": "Сүүлд үзсэн нэгж {{unit}}",
+      "noMaterialSelected": "Сурах бичиг сонгоогүй",
+      "notSelectedShort": "Сонгоогүй",
+      "progressLabel": "Явц",
+      "recentLabel": "Сүүлд",
+      "vocabProgress": "{{mastered}} / {{total}} эзэмшсэн",
+      "grammarProgress": "{{mastered}} / {{total}} эзэмшсэн",
+      "unitProgress": "{{completed}} / {{total}} нэгж дууссан",
+      "vocabulary": {
+        "description": "Флашкарт, сурах горим, идэвхтэй санах дасгал."
+      },
+      "grammar": {
+        "description": "Өгүүлбэрийн хэв загвар, тайлбар болон дүрмийн бүтэц."
+      },
+      "listening": {
+        "description": "Сурах бичгийн аудио, transcript, сонсголын дасгал."
+      },
+      "reading": {
+        "description": "Сурах бичгийн уншлага, өгүүллийн дасгал, үг хайх хэрэгсэл."
+      }
     },
     "actions": {
       "switchMaterial": "Сурах бичиг солих"
@@ -2073,44 +2107,44 @@
         "slash": {
           "title": "Slash команд",
           "text": {
-            "label": "Text",
-            "hint": "Plain paragraph text"
+            "label": "Текст",
+            "hint": "Энгийн догол мөр текст"
           },
           "h1": {
-            "label": "Heading 1",
-            "hint": "Large section title"
+            "label": "Гарчиг 1",
+            "hint": "Том хэсгийн гарчиг"
           },
           "h2": {
-            "label": "Heading 2",
-            "hint": "Medium section heading"
+            "label": "Гарчиг 2",
+            "hint": "Дунд хэмжээний хэсгийн гарчиг"
           },
           "bullet": {
-            "label": "Bullet List",
-            "hint": "Simple bullet points"
+            "label": "Цэгтэй жагсаалт",
+            "hint": "Энгийн цэгтэй жагсаалт"
           },
           "ordered": {
-            "label": "Numbered List",
-            "hint": "Ordered items"
+            "label": "Дугаарласан жагсаалт",
+            "hint": "Дараалсан зүйлс"
           },
           "todo": {
-            "label": "To-do List",
-            "hint": "Track tasks with checkboxes"
+            "label": "Ажлын жагсаалт",
+            "hint": "Хяналтын хайрцагтай ажлыг хянах"
           },
           "quote": {
-            "label": "Quote",
-            "hint": "Emphasized quotation block"
+            "label": "Ишлэл",
+            "hint": "Онцолсон ишлэлийн блок"
           },
           "code": {
-            "label": "Code Block",
-            "hint": "Formatted code snippet"
+            "label": "Кодын блок",
+            "hint": "Форматлагдсан код хэсэг"
           },
           "divider": {
-            "label": "Divider",
-            "hint": "Horizontal separator line"
+            "label": "Тусгаарлагч",
+            "hint": "Хэвтээ тусгаарлагч шугам"
           },
           "table": {
-            "label": "Table",
-            "hint": "Insert a 3x3 table"
+            "label": "Хүснэгт",
+            "hint": "3x3 хүснэгт оруулах"
           }
         },
         "colors": {
@@ -2118,50 +2152,50 @@
           "textTitle": "Текстийн өнгө",
           "highlightTitle": "Тодруулгын өнгө",
           "text": {
-            "default": "Default",
-            "gray": "Gray",
-            "brown": "Brown",
-            "orange": "Orange",
-            "yellow": "Yellow",
-            "green": "Green",
-            "blue": "Blue",
-            "purple": "Purple",
-            "pink": "Pink",
-            "red": "Red"
+            "default": "Өгөгдмөл",
+            "gray": "Саарал",
+            "brown": "Бор",
+            "orange": "Улбар шар",
+            "yellow": "Шар",
+            "green": "Ногоон",
+            "blue": "Цэнхэр",
+            "purple": "Нил ягаан",
+            "pink": "Ягаан",
+            "red": "Улаан"
           },
           "highlight": {
-            "default": "Default",
-            "grayBg": "Gray BG",
-            "brownBg": "Brown BG",
-            "orangeBg": "Orange BG",
-            "yellowBg": "Yellow BG",
-            "greenBg": "Green BG",
-            "blueBg": "Blue BG",
-            "purpleBg": "Purple BG",
-            "pinkBg": "Pink BG",
-            "redBg": "Red BG"
+            "default": "Өгөгдмөл",
+            "grayBg": "Саарал дэвсгэр",
+            "brownBg": "Бор дэвсгэр",
+            "orangeBg": "Улбар шар дэвсгэр",
+            "yellowBg": "Шар дэвсгэр",
+            "greenBg": "Ногоон дэвсгэр",
+            "blueBg": "Цэнхэр дэвсгэр",
+            "purpleBg": "Нил ягаан дэвсгэр",
+            "pinkBg": "Ягаан дэвсгэр",
+            "redBg": "Улаан дэвсгэр"
           }
         },
         "actions": {
-          "bulletList": "Bullet List",
-          "numberedList": "Numbered List",
-          "taskList": "Task List",
-          "quote": "Quote",
-          "bold": "Bold",
-          "italic": "Italic",
-          "underline": "Underline",
-          "strike": "Strike",
-          "link": "Link",
-          "textAndHighlightColors": "Text and Highlight colors",
+          "bulletList": "Цэгтэй жагсаалт",
+          "numberedList": "Дугаарласан жагсаалт",
+          "taskList": "Ажлын жагсаалт",
+          "quote": "Ишлэл",
+          "bold": "Тод",
+          "italic": "Налуу",
+          "underline": "Доогуур зураас",
+          "strike": "Зураас",
+          "link": "Холбоос",
+          "textAndHighlightColors": "Текст болон тодруулагч өнгө",
           "moreTools": "Нэмэлт хэрэгсэл",
-          "h1": "Heading 1",
-          "h2": "Heading 2",
-          "h3": "Heading 3",
-          "codeBlock": "Code Block",
-          "table": "Table",
-          "divider": "Divider",
-          "undo": "Undo",
-          "redo": "Redo"
+          "h1": "Гарчиг 1",
+          "h2": "Гарчиг 2",
+          "h3": "Гарчиг 3",
+          "codeBlock": "Кодын блок",
+          "table": "Хүснэгт",
+          "divider": "Тусгаарлагч шугам",
+          "undo": "Буцаах",
+          "redo": "Дахин хийх"
         },
         "study": {
           "keyWord": "Гол үг",
@@ -2542,7 +2576,9 @@
       "daily": "Өдөр тутмын",
       "news": "Мэдээ",
       "picks": "Сонголт"
-    }
+    },
+    "emptyTrending": "Одоогоор тренд подкаст алга байна.",
+    "loadError": "Одоогоор подкастын өгөгдлийг ачаалж чадсангүй."
   },
   "vocabLabel": "Үгсийн сан",
   "profileLabel": "Профайл",
@@ -2776,6 +2812,7 @@
       "subtitle": "RSS-ээр автоматаар татагдана, өргөн уншлага ба цаг үеийн мэдээлэлд тохиромжтой",
       "manualRefresh": "Шинэчлэх",
       "empty": "Мэдээний өгөгдөл алга. Админ хэсгээс ingestion ажиллуулна уу.",
+      "loadError": "Одоогоор мэдээг ачаалж чадсангүй.",
       "aiExtracted": "AI {{count}} үг ялгав",
       "readingMinutes": "{{minutes}} минутын уншлага",
       "autoRefreshed": "Таны уншлагын түүх дээр үндэслэн санал автоматаар шинэчлэгдлээ",
@@ -2817,6 +2854,11 @@
       "literatureSource": "Нийтийн өмчийн сонгодог зохиол",
       "literatureBadge": "C2 Төрөлх түвшин • Шүлэг",
       "literatureBookmark": "Уран зохиолын тэмдэглэл"
+    },
+    "mobile": {
+      "globalInsights": "Дэлхийн тойм",
+      "articlesToday": "Өнөөдөр {{count}} нийтлэл",
+      "swipeHint": "Шударна уу"
     },
     "footer": "Convex newsIngestion:getUserFeed-ээс өгөгдөл авна (уншсанаас 24 цагийн дараа автоматаар шинэчилнэ, гараар өдөрт 3 хүртэл)"
   },
@@ -3094,8 +3136,8 @@
     "subtitle": "Видео, подкаст ба уншлага"
   },
   "relativeTime": {
-    "daysAgo": "{{count}} days ago",
-    "hoursAgo": "{{count}} hours ago",
-    "justNow": "Just now"
+    "daysAgo": "{{count}} өдрийн өмнө",
+    "hoursAgo": "{{count}} цагийн өмнө",
+    "justNow": "Яг одоо"
   }
 }

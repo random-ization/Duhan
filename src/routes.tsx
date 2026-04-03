@@ -32,7 +32,6 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const LearningResourcePickerPage = lazy(() => import('./pages/LearningResourcePickerPage'));
 const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
@@ -144,10 +143,6 @@ const LanguageAwareRoutes: React.FC = () => {
           <Route element={withPageLoader(<AppLayout />)}>
             <Route path="profile" element={<ProfilePage language={language} />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route
-              path="dashboard/resources/:moduleType"
-              element={<LearningResourcePickerPage />}
-            />
             <Route path="dashboard/course" element={<CourseDashboard />} />
             <Route path="dashboard/:moduleParam" element={<ModulePage />} />
             {/* Courses */}

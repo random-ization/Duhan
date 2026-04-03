@@ -1,7 +1,6 @@
 import React, { useLayoutEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
-import { ArrowLeft } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +9,6 @@ import { getLocalizedContent } from '../utils/languageUtils';
 import VocabQuiz from '../features/vocab/components/VocabQuiz';
 import type { LearningSessionSnapshot } from '../features/vocab/components/VocabQuiz';
 import { VocabBookSpellingSkeleton } from '../components/common';
-import { Button } from '../components/ui';
 import { buildVocabBookPath } from '../utils/vocabBookRoutes';
 import {
   matchesVocabBookPracticeCategory,
@@ -24,6 +22,7 @@ import {
   persistLearningSessionSnapshot,
 } from '../utils/vocabLearningSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
+import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 const PAGE_SIZE = 120;
 
@@ -128,29 +127,22 @@ const VocabBookSpellingPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:from-emerald-400/8 dark:via-background dark:to-emerald-300/8">
-        <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-emerald-100 dark:border-emerald-300/20">
-          <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
-            <Button
-              onClick={() => navigate(backPath)}
-              variant="ghost"
-              size="auto"
-              className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-emerald-300 dark:hover:border-emerald-300/35 transition-all duration-200"
-              aria-label={t('topikWriting.report.back', { defaultValue: 'Back' })}
-            >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            </Button>
-            <div className="text-center">
-              <p className="text-xs font-black text-emerald-600 dark:text-emerald-300 tracking-wider uppercase">
-                {t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
-              </p>
-              <p className="text-sm font-black text-muted-foreground" />
-              <p className="text-[10px] font-bold text-muted-foreground mt-1">
-                {t('common.loading', { defaultValue: 'Loading...' })}
-              </p>
+        <MobileImmersiveHeader
+          title={t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
+          subtitle={t('common.loading', { defaultValue: 'Loading...' })}
+          eyebrow={t('dashboard.vocab.title', { defaultValue: 'Vocab' })}
+          onBack={() => navigate(backPath)}
+          backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+          status={
+            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                Progress
+              </div>
+              <div className="text-base font-black text-foreground">0</div>
             </div>
-            <div className="w-12" />
-          </div>
-        </div>
+          }
+          className="sticky top-0 z-20 border-b-[3px] border-emerald-100 dark:border-emerald-300/20 bg-card/80"
+        />
         <VocabBookSpellingSkeleton />
       </div>
     );
@@ -158,35 +150,26 @@ const VocabBookSpellingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:from-emerald-400/8 dark:via-background dark:to-emerald-300/8">
-      <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-emerald-100 dark:border-emerald-300/20">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
-          <Button
-            onClick={() => navigate(backPath)}
-            variant="ghost"
-            size="auto"
-            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-emerald-300 dark:hover:border-emerald-300/35 transition-all duration-200"
-            aria-label={t('topikWriting.report.back', { defaultValue: 'Back' })}
-          >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <div className="text-center">
-            <p className="text-xs font-black text-emerald-600 dark:text-emerald-300 tracking-wider uppercase">
-              {t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
-            </p>
-            <p className="text-sm font-black text-muted-foreground">
-              {loading
-                ? ''
-                : t('dashboard.vocab.count', {
-                    count: words.length,
-                    defaultValue: '{{count}} words',
-                  })}
-            </p>
+      <MobileImmersiveHeader
+        title={t('vocab.modeSpelling', { defaultValue: 'Spelling' })}
+        subtitle={t('vocab.spellingSubtitle', {
+          defaultValue: 'Type the Korean word from its meaning prompt.',
+        })}
+        eyebrow={t('dashboard.vocab.title', { defaultValue: 'Vocab' })}
+        onBack={() => navigate(backPath)}
+        backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
+        status={
+          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+              Words
+            </div>
+            <div className="text-base font-black text-foreground">{words.length}</div>
           </div>
-          <div className="w-12" />
-        </div>
-      </div>
+        }
+        className="sticky top-0 z-20 border-b-[3px] border-emerald-100 dark:border-emerald-300/20 bg-card/80"
+      />
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8 pb-[calc(var(--mobile-safe-bottom)+2rem)]">
         <VocabQuiz
           words={words}
           language={language}

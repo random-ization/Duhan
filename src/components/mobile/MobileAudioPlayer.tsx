@@ -112,7 +112,7 @@ export function MobileAudioPlayer({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
+    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-mobile-safe pt-4 px-6 shadow-lg shadow-black/5 rounded-t-[2rem]">
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       {/* Progress Info */}
@@ -158,7 +158,7 @@ export function MobileAudioPlayer({
           size="auto"
           type="button"
           onClick={togglePlay}
-          className="w-16 h-16 rounded-[24px] bg-primary text-white flex items-center justify-center shadow-xl shadow-slate-900/20 active:scale-95 transition-transform"
+          className="w-16 h-16 rounded-[24px] bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/25 active:scale-95 transition-transform"
         >
           {isPlaying ? (
             <Pause size={28} fill="currentColor" />

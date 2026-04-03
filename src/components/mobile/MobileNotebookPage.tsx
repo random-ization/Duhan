@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui';
 import type { JSONContent } from '@tiptap/core';
+import { useSearchParams } from 'react-router-dom';
 
 import type { Id } from '../../../convex/_generated/dataModel';
 import {
@@ -47,6 +48,8 @@ import {
   toPreviewHtml,
   toRichHtml,
 } from '../../pages/NotebookV2Page';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 
 const OfficialTiptapEditor = lazy(() => import('../notebook/OfficialTiptapEditor'));
 
@@ -91,6 +94,7 @@ interface MobileNotebookPageProps {
 }
 
 export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
+  const [searchParams] = useSearchParams();
   const {
     t,
     navigate,
@@ -122,47 +126,55 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
     handleOpenSource,
   } = props;
 
+  const handleBack = () => {
+    const returnTo = searchParams.get('returnTo');
+    if (hasSafeReturnTo(returnTo)) {
+      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/practice');
+  };
+
   return (
-    <div className="min-h-screen bg-muted/30 pb-[130px] flex flex-col font-sans">
-      {/* Header - Glassmorphism */}
-      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm">
-        <div className="px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-3 rounded-full"
-                onClick={() => navigate('/practice')}
-              >
-                <ArrowLeft className="w-6 h-6 text-foreground" />
-              </Button>
-              <h1 className="text-2xl font-black text-foreground">
-                {t('notes.v2.page.titleAllNotes', { defaultValue: 'Smart Notebook' })}
-              </h1>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCreateNote}
-              className="bg-primary/10 text-primary rounded-full hover:bg-primary/20"
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={t('notes.v2.page.searchPlaceholder', {
-                defaultValue: 'Search quote or note...',
-              })}
-              className="w-full bg-muted/60 border-transparent rounded-[1.2rem] py-3 pl-11 pr-4 text-sm font-medium focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
-            />
-          </div>
+    <div className="min-h-[100dvh] bg-background pb-mobile-nav flex flex-col font-sans">
+      <MobileWorkspaceHeader
+        title={t('notes.v2.page.titleAllNotes', { defaultValue: 'Smart Notebook' })}
+        subtitle={t('notes.mobileSubtitle', {
+          defaultValue: 'Capture quotes, track mistakes, and keep your review queue moving.',
+        })}
+        eyebrow={t('nav.notebook', { defaultValue: 'Notebook' })}
+        onBack={handleBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        actions={
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={handleCreateNote}
+            className="grid h-11 w-11 place-items-center rounded-2xl bg-primary/10 text-primary shadow-sm hover:bg-primary/20"
+            aria-label={t('notes.v2.page.newNote', { defaultValue: 'Create note' })}
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        }
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            id="mobile-notebook-search"
+            name="notebookSearch"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={t('notes.v2.page.searchPlaceholder', {
+              defaultValue: 'Search quote or note...',
+            })}
+            className="w-full bg-muted/60 border-transparent rounded-[1.2rem] py-3 pl-11 pr-4 text-sm font-medium focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
+          />
         </div>
-      </div>
+      </MobileWorkspaceHeader>
 
       <div className="px-5 py-6 space-y-8 flex-1">
         {/* Smart Review CTA */}

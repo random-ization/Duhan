@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, Trophy, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Trophy, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -35,6 +35,7 @@ interface MobileGrammarDetailSheetProps {
     proficiency: number,
     status: GrammarPointData['status']
   ) => void;
+  readonly instituteId: string;
 }
 
 type AiCheckResponse = {
@@ -426,12 +427,15 @@ export default function MobileGrammarDetailSheet({
   grammar,
   onClose,
   onProficiencyUpdate,
+  instituteId: _instituteId,
 }: MobileGrammarDetailSheetProps) {
   const { i18n, t } = useTranslation();
   const [practiceSentence, setPracticeSentence] = useState('');
   const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const dragStartY = useRef<number>(0);
   const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return safeGetLocalStorageItem(RED_EYE_STORAGE_KEY) === '1';
@@ -557,91 +561,130 @@ export default function MobileGrammarDetailSheet({
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
   const isCheckDisabled = isChecking || isEmptySentence(practiceSentence);
 
+  const handleDragStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartY.current = clientY;
+  };
+
+  const handleDragEnd = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
+    const delta = dragStartY.current - clientY;
+    if (delta > 40) setIsExpanded(true); // swipe up → expand
+    if (delta < -40) setIsExpanded(false); // swipe down → collapse
+  };
+
   return (
     <Sheet open onOpenChange={open => !open && onClose()}>
       <SheetPortal>
-        <SheetOverlay unstyled className="fixed inset-0 bg-primary/60 z-[60] backdrop-blur-sm" />
+        <SheetOverlay unstyled className="fixed inset-0 bg-black/50 z-[60] backdrop-blur-sm" />
         <SheetContent
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className="fixed bottom-0 left-0 right-0 bg-card rounded-t-[2rem] z-[61] h-[85dvh] flex flex-col shadow-2xl overflow-hidden"
+          className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-950 rounded-t-[2rem] z-[61] flex flex-col shadow-2xl overflow-hidden border-t border-border transition-[height] duration-300 ease-out ${
+            isExpanded ? 'h-[92dvh]' : 'h-[50dvh]'
+          }`}
         >
-          {/* Header */}
+          {/* Drag Handle + Header */}
           <div
-            className="bg-muted p-6 pb-4 border-b border-border flex items-start justify-between shrink-0 select-none print:hidden"
-            onCopy={e => e.preventDefault()}
-            onContextMenu={e => e.preventDefault()}
-            onDragStart={e => e.preventDefault()}
+            className="shrink-0 cursor-grab active:cursor-grabbing select-none"
+            onTouchStart={handleDragStart}
+            onTouchEnd={handleDragEnd}
+            onMouseDown={handleDragStart}
+            onMouseUp={handleDragEnd}
+            onClick={() => setIsExpanded(prev => !prev)}
           >
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-black uppercase">
-                  {grammar.type}
-                </span>
-                <span className="text-xs font-bold text-muted-foreground">{grammar.level}</span>
-              </div>
-              <h2 className="text-3xl font-black text-foreground leading-tight mb-2">
-                {localizedTitle}
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 w-24 h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${status === 'MASTERED' ? 'bg-green-500' : 'bg-amber-500'}`}
-                    style={{ width: `${proficiency}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-muted-foreground">{proficiency}%</span>
-              </div>
+            {/* Pill handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-border" />
             </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={() => setRedEyeEnabled(prev => !prev)}
-                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                  redEyeEnabled
-                    ? 'bg-red-50 border-red-300 text-red-600'
-                    : 'bg-card border-border text-muted-foreground'
-                }`}
-              >
-                {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={handleToggleStatus}
-                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                  status === 'MASTERED'
-                    ? 'bg-green-100 border-green-500 text-green-600'
-                    : 'bg-card border-border text-muted-foreground'
-                }`}
-              >
-                <Trophy className="w-4 h-4" />
-              </Button>
+
+            {/* Header content */}
+            <div
+              className="px-5 pt-3 pb-4 border-b border-border flex items-start justify-between relative z-10"
+              onCopy={e => e.preventDefault()}
+              onContextMenu={e => e.preventDefault()}
+            >
+              <div className="flex-1 min-w-0 pr-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                    {grammar.type}
+                  </span>
+                  <span className="text-xs font-bold text-muted-foreground">{grammar.level}</span>
+                </div>
+                <h2 className="text-2xl font-black text-foreground leading-tight mb-2 truncate">
+                  {localizedTitle}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${status === 'MASTERED' ? 'bg-green-500' : 'bg-amber-500'}`}
+                      style={{ width: `${proficiency}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-muted-foreground shrink-0">
+                    {proficiency}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => setRedEyeEnabled(prev => !prev)}
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+                    redEyeEnabled
+                      ? 'bg-red-50 border-red-300 text-red-600'
+                      : 'bg-muted border-border text-muted-foreground'
+                  }`}
+                >
+                  {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={handleToggleStatus}
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+                    status === 'MASTERED'
+                      ? 'bg-green-100 border-green-500 text-green-600'
+                      : 'bg-muted border-border text-muted-foreground'
+                  }`}
+                >
+                  <Trophy className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Content */}
+          {/* Summary — always visible (collapsed & expanded) */}
           <div
-            className="flex-1 overflow-y-auto p-6 space-y-6 select-none print:hidden"
+            className="px-5 pt-4 pb-2 shrink-0 select-none"
+            onClick={() => setIsExpanded(prev => !prev)}
+            onCopy={e => e.preventDefault()}
+          >
+            <div className="text-sm font-semibold text-muted-foreground leading-relaxed bg-muted/60 px-4 py-3 rounded-2xl border border-border">
+              <Sparkles className="w-3.5 h-3.5 mb-1.5 text-indigo-400 inline-block" />
+              <span className={isExpanded ? '' : 'line-clamp-2'}>{localizedSummary}</span>
+            </div>
+          </div>
+
+          {/* Full content — only visible when expanded */}
+          <div
+            className={`flex-1 overflow-y-auto px-5 py-2 space-y-5 select-none print:hidden transition-opacity duration-200 ${
+              isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none h-0'
+            }`}
             onCopy={e => e.preventDefault()}
             onContextMenu={e => e.preventDefault()}
             onDragStart={e => e.preventDefault()}
           >
-            {/* Summary */}
-            <div className="text-base font-bold text-muted-foreground leading-relaxed bg-yellow-50 p-4 rounded-xl border-2 border-yellow-100">
-              {localizedSummary}
-            </div>
-
             {/* Explanation */}
             <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none">
               <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
@@ -650,18 +693,18 @@ export default function MobileGrammarDetailSheet({
             {/* Rules */}
             {Object.keys(rulesObject).length > 0 && (
               <div>
-                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
+                <h3 className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-4">
                   {t('grammarDetail.rules')}
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {Object.entries(rulesObject).map(([key, val]) => (
                     <div
                       key={key}
-                      className="flex items-center bg-card border border-border rounded-lg px-3 py-2 shadow-sm"
+                      className="flex items-center bg-card/40 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-2.5 shadow-xl rim-light"
                     >
-                      <span className="font-bold text-muted-foreground mr-2">{key}</span>
-                      <span className="text-muted-foreground mr-2">→</span>
-                      <span className="font-bold text-indigo-600">{String(val)}</span>
+                      <span className="font-black text-xs text-muted-foreground mr-3">{key}</span>
+                      <span className="text-indigo-400 font-black mr-3">→</span>
+                      <span className="font-black text-sm text-foreground">{String(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -670,17 +713,19 @@ export default function MobileGrammarDetailSheet({
 
             {/* Examples */}
             <div>
-              <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
+              <h3 className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-4">
                 {t('grammarDetail.examples')}
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {examples.map((ex, i) => (
                   <div
                     key={i}
-                    className="bg-muted border-2 border-border rounded-xl p-4 active:bg-muted transition-colors"
+                    className="bg-card/40 backdrop-blur-md border border-white/10 rounded-[2rem] p-5 active:scale-[0.98] active:bg-muted/30 transition-all shadow-xl rim-light grain-overlay"
                   >
-                    <p className="font-bold text-foreground mb-1">{ex.kr}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-black text-lg text-foreground mb-1 leading-tight tracking-tight italic">
+                      {ex.kr}
+                    </p>
+                    <p className="text-sm text-muted-foreground/80 font-semibold italic">
                       {getExampleTranslation(ex, language)}
                     </p>
                   </div>
@@ -701,27 +746,27 @@ export default function MobileGrammarDetailSheet({
           </div>
 
           {/* AI Practice input fixed at bottom */}
-          <div className="p-4 bg-card border-t border-border pb-safe">
+          <div className="px-5 py-4 bg-white dark:bg-zinc-950 border-t border-border pb-safe relative z-10">
             {aiFeedback && (
               <div
-                className={`mb-3 p-3 rounded-lg text-sm font-bold flex items-start gap-2 ${aiFeedback.isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
+                className={`mb-4 p-4 rounded-2xl text-sm font-black italic tracking-tight flex items-start gap-3 shadow-xl rim-light ${aiFeedback.isCorrect ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}
               >
                 {aiFeedback.isCorrect ? (
-                  <Trophy className="w-4 h-4 shrink-0 mt-0.5" />
+                  <Trophy className="w-5 h-5 shrink-0 mt-0.5 text-emerald-500" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
                 )}
                 <div>
-                  <p>{aiFeedback.feedback}</p>
+                  <p className="leading-tight">{aiFeedback.feedback}</p>
                 </div>
               </div>
             )}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Input
                 value={practiceSentence}
                 onChange={e => setPracticeSentence(e.target.value)}
-                placeholder={t('grammarDetail.practicePlaceholder')}
-                className="flex-1 bg-muted border-border font-bold"
+                placeholder={t('grammarDetail.practicePlaceholder', { title: localizedTitle })}
+                className="flex-1 h-12 bg-muted/50 border border-white/10 rounded-2xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:bg-card transition-all shadow-inner px-5"
                 onKeyDown={e => e.key === 'Enter' && handleCheck()}
               />
               <Button
@@ -729,8 +774,8 @@ export default function MobileGrammarDetailSheet({
                 disabled={isCheckDisabled}
                 loading={isChecking}
                 loadingText={t('grammarDetail.checking')}
-                loadingIconClassName="w-3 h-3"
-                className="bg-primary text-white font-black"
+                loadingIconClassName="w-4 h-4"
+                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-[0_8px_16px_rgba(79,70,229,0.3)] active:translate-y-1 active:shadow-none transition-all rim-light"
               >
                 {t('grammarDetail.check')}
               </Button>

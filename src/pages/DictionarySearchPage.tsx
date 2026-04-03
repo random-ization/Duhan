@@ -211,7 +211,7 @@ export default function DictionarySearchPage() {
   }, [detailEntry]);
 
   return (
-    <div className="min-h-[100dvh] bg-muted pb-safe">
+    <div className="min-h-[100dvh] bg-background pb-safe">
       <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-lg border-b border-border px-4 md:px-8 py-3 md:py-4">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center gap-3 mb-3 md:mb-4">

@@ -1,5 +1,5 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import {
   ArrowLeft,
   BookOpen,
@@ -8,12 +8,14 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Languages,
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { READING_BOOKS } from '../utils/convexRefs';
+import { READING_BOOKS, AI } from '../utils/convexRefs';
 import type { PictureBook, PictureBookPage } from '../types';
 import { cn } from '../lib/utils';
 import { resolveSafeReturnTo } from '../utils/navigation';
@@ -128,12 +130,19 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const [overlayPageData, setOverlayPageData] = useState<BookPageQuery>(null);
   const [showOverlayPage, setShowOverlayPage] = useState(false);
   const [pageOrientations, setPageOrientations] = useState<Record<string, ReaderLayout>>({});
+  const [showTranslations, setShowTranslations] = useState(false);
+  const [translatedPages, setTranslatedPages] = useState<Record<number, string[]>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const activeSentenceBtnRef = useRef<HTMLButtonElement | null>(null);
   const activeSentenceIndexRef = useRef(0);
   const autoFlipRef = useRef(true);
   const pageSnapshotRef = useRef<BookPageQuery>(null);
   const pendingAutoplayRef = useRef(false);
   const pendingSentenceResetRef = useRef(false);
+  const subtitleScrollRef = useRef<HTMLDivElement>(null);
   const playSentenceRef = useRef<(index: number, restart?: boolean) => Promise<void>>(
     async () => {}
   );
@@ -151,6 +160,134 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const displayBook = book ?? null;
   const incomingPageData = pageData ?? null;
   const renderedPageData = visiblePageData;
+
+  const translateReadingParagraphs = useAction(AI.translateReadingParagraphs);
+
+  const handleToggleTranslation = useCallback(async () => {
+    if (showTranslations) {
+      setShowTranslations(false);
+      return;
+    }
+
+    setShowTranslations(true);
+
+    if (!incomingPageData || translatedPages[effectivePageIndex]) {
+      return;
+    }
+
+    setTranslationError(null);
+    const timeoutId = setTimeout(() => {
+      setIsTranslating(prev => {
+        if (prev) {
+          setTranslationError(
+            t('pictureBookReader.translationTimeout', {
+              defaultValue: 'Translation timed out. Please try again.',
+            })
+          );
+          return false;
+        }
+        return prev;
+      });
+    }, 30000);
+
+    try {
+      setIsTranslating(true);
+      const sortedSentences = [...(incomingPageData.page?.sentences ?? [])].sort(
+        (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
+      );
+      const sentences = sortedSentences.map(s => s.text);
+      const result = await translateReadingParagraphs({
+        title: displayBook?.title ?? 'Picture Book',
+        paragraphs: sentences,
+        language: 'zh',
+      });
+
+      if (result?.translations) {
+        setTranslatedPages(prev => ({
+          ...prev,
+          [effectivePageIndex]: result.translations,
+        }));
+      }
+    } catch (err) {
+      console.error('Translation failed:', err);
+      setTranslationError(
+        t('pictureBookReader.translationFailed', {
+          defaultValue: 'Translation failed. Please check your connection.',
+        })
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      setIsTranslating(false);
+    }
+  }, [
+    showTranslations,
+    incomingPageData,
+    translatedPages,
+    effectivePageIndex,
+    translateReadingParagraphs,
+    displayBook?.title,
+    t,
+  ]);
+
+  // Auto-translate on page change if active
+  useEffect(() => {
+    if (
+      showTranslations &&
+      incomingPageData &&
+      !translatedPages[effectivePageIndex] &&
+      !isTranslating
+    ) {
+      void (async () => {
+        setTranslationError(null);
+        const timeoutId = setTimeout(() => {
+          setIsTranslating(prev => {
+            if (prev) {
+              setTranslationError(
+                t('pictureBookReader.translationTimeout', {
+                  defaultValue: 'Translation timed out. Please try again.',
+                })
+              );
+              return false;
+            }
+            return prev;
+          });
+        }, 30000);
+
+        try {
+          setIsTranslating(true);
+          const sortedSentences = [...(incomingPageData.page?.sentences ?? [])].sort(
+            (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
+          );
+          const sentences = sortedSentences.map(s => s.text);
+          const result = await translateReadingParagraphs({
+            title: displayBook?.title ?? 'Picture Book',
+            paragraphs: sentences,
+            language: 'zh',
+          });
+          if (result?.translations) {
+            setTranslatedPages(prev => ({
+              ...prev,
+              [effectivePageIndex]: result.translations,
+            }));
+          }
+        } catch (err) {
+          console.error('Auto-translation failed:', err);
+        } finally {
+          clearTimeout(timeoutId);
+          setIsTranslating(false);
+        }
+      })();
+    }
+  }, [
+    showTranslations,
+    effectivePageIndex,
+    incomingPageData,
+    translatedPages,
+    isTranslating,
+    translateReadingParagraphs,
+    displayBook?.title,
+    t,
+  ]);
   const currentVisiblePageId = visiblePageData?.page?._id ?? null;
 
   const currentPage = renderedPageData?.page ?? null;
@@ -397,6 +534,23 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     });
   }, [autoFlip, effectivePageIndex, playbackRate, safeActiveSentenceIndex, sessionStorageKey]);
 
+  // Auto-scroll active subtitle to center on mobile
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const btn = activeSentenceBtnRef.current;
+      const container = subtitleScrollRef.current;
+      if (!btn || !container) return;
+      const btnRect = btn.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const targetScrollTop =
+        container.scrollTop +
+        (btnRect.top - containerRect.top) -
+        (container.clientHeight - btn.clientHeight) / 2;
+      container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [safeActiveSentenceIndex, showTranslations, translatedPages, effectivePageIndex]);
+
   const handlePageChange = useCallback(
     (nextPageIndex: number) => {
       if (!renderedPageData) return;
@@ -538,7 +692,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         <div className={getPageTextRegionClass(layerLayout, layerPage.layoutClass)}>
           {layerSentences.length > 0 ? (
             <div className={getTextBlockClass(layerLayout, layerPage.layoutClass)}>
-              {layerSentences.map(sentence => {
+              {layerSentences.map((sentence, idx) => {
                 const isActive = sentence.sentenceIndex === safeSentenceIndex;
                 return (
                   <div
@@ -571,8 +725,18 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                         !isInteractive && 'pointer-events-none'
                       )}
                     >
-                      <span className={cn(layerLayout === 'split' && 'block')}>
-                        {sentence.text}
+                      <span className="flex flex-col">
+                        <span>{sentence.text}</span>
+                        {showTranslations && translatedPages[layerPageData.pageIndex]?.[idx] && (
+                          <span
+                            className={cn(
+                              'mt-0.5 font-medium leading-tight opacity-70',
+                              layerLayout === 'stacked' ? 'text-[0.65em]' : 'text-sm'
+                            )}
+                          >
+                            {translatedPages[layerPageData.pageIndex][idx]}
+                          </span>
+                        )}
                       </span>
                     </button>
                   </div>
@@ -597,8 +761,168 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1820px] flex-col overflow-hidden px-1 py-1 sm:px-3 lg:px-4">
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[2.25rem] border border-[#dbe5f2] bg-gradient-to-br from-[#eaf2ff] via-[#f7faff] to-[#eef5ff] p-1 shadow-sm sm:p-1.5">
-        <div className="absolute left-4 top-4 z-20 flex items-start gap-3">
+      {/* ─── MOBILE LAYOUT (hidden on lg+) ─── */}
+      <div className="flex lg:hidden flex-col h-full min-h-0 overflow-hidden rounded-[2rem] border border-[#dbe5f2] bg-white relative">
+        {/* Header */}
+        <div className="shrink-0 flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-3 border-b border-slate-100">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(backPath)}
+            className="h-10 w-10 shrink-0 rounded-full border-slate-200"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="min-w-0 text-right flex-1">
+            <div className="truncate text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {t('nav.reading', { defaultValue: 'Reading' })}
+            </div>
+            <div className="truncate text-sm font-black text-slate-800">{displayBook.title}</div>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleToggleTranslation}
+            className={cn(
+              'h-10 w-10 shrink-0 rounded-full transition-all border border-slate-100',
+              showTranslations
+                ? 'bg-primary/10 text-primary border-primary/20'
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+            )}
+          >
+            {isTranslating ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Languages className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+
+        {/* Image — fills all remaining space */}
+        <div className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-white">
+          {currentPage && getSafeImageSrc(currentPage.imageUrl) ? (
+            <img
+              src={getSafeImageSrc(currentPage.imageUrl)!}
+              alt={t('pictureBookReader.pageImageAlt', {
+                defaultValue: '{{title}} page {{page}}',
+                title: displayBook.title,
+                page: renderedPageData.pageIndex + 1,
+              })}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-slate-50">
+              <BookOpen className="h-16 w-16 text-slate-200" />
+            </div>
+          )}
+          <div className="absolute bottom-3 right-3 rounded-full bg-black/30 px-3 py-1 text-xs font-black text-white backdrop-blur-sm">
+            {renderedPageData.pageIndex + 1} / {renderedPageData.pageCount}
+          </div>
+        </div>
+
+        {/* Subtitle scroll area */}
+        <div
+          ref={subtitleScrollRef}
+          className="shrink-0 max-h-[30dvh] overflow-y-auto border-t border-slate-100 bg-white px-4 py-2 space-y-1"
+        >
+          {currentSentences.length > 0 ? (
+            currentSentences.map((sentence, idx) => {
+              const isActive = sentence.sentenceIndex === safeActiveSentenceIndex;
+              return (
+                <button
+                  key={sentence._id ?? `${sentence.sentenceIndex}`}
+                  type="button"
+                  ref={isActive ? activeSentenceBtnRef : undefined}
+                  onClick={() => void playSentence(sentence.sentenceIndex, true)}
+                  className={cn(
+                    'w-full rounded-xl px-3 py-2.5 text-left text-base leading-snug font-semibold transition-colors active:scale-[0.98]',
+                    isActive ? 'bg-[#f6e78b] text-slate-900' : 'text-slate-700'
+                  )}
+                >
+                  <div className="flex flex-col">
+                    <div className={cn(showTranslations && 'mb-0.5')}>{sentence.text}</div>
+                    {showTranslations && translatedPages[renderedPageData.pageIndex]?.[idx] && (
+                      <div className="text-sm font-medium text-slate-500/80 leading-tight italic">
+                        {translatedPages[renderedPageData.pageIndex][idx]}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <p className="py-4 text-center text-sm text-slate-400 font-semibold">
+              {t('pictureBookReader.currentSentenceEmpty', {
+                defaultValue: 'Tap a sentence to start playback.',
+              })}
+            </p>
+          )}
+        </div>
+
+        {/* Bottom controls */}
+        <div className="shrink-0 flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
+            disabled={!renderedPageData.hasPreviousPage}
+            className="rounded-full border-slate-200 px-4"
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('pictureBookReader.prev', { defaultValue: 'Prev' })}
+          </Button>
+          <Button
+            type="button"
+            variant={isPlaying ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => void handleTogglePlay()}
+            disabled={currentSentences.length === 0}
+            className="rounded-full px-5"
+          >
+            {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
+            {isPlaying
+              ? t('pictureBookReader.pause', { defaultValue: 'Pause' })
+              : t('pictureBookReader.play', { defaultValue: 'Play' })}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
+            disabled={!renderedPageData.hasNextPage}
+            className="rounded-full border-slate-200 px-4"
+          >
+            {t('pictureBookReader.next', { defaultValue: 'Next' })}
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+
+        {audioError && (
+          <div className="absolute inset-x-4 top-20 z-30 flex justify-center">
+            <div className="rounded-full border border-red-200 bg-red-50/95 px-4 py-2 text-sm font-semibold text-red-700 shadow-lg backdrop-blur">
+              {audioError}
+            </div>
+          </div>
+        )}
+
+        {translationError && (
+          <div className="absolute inset-x-4 top-20 z-30 flex justify-center">
+            <div
+              className="rounded-full border border-amber-200 bg-amber-50/95 px-4 py-2 text-sm font-semibold text-amber-700 shadow-lg backdrop-blur cursor-pointer"
+              onClick={() => setTranslationError(null)}
+            >
+              {translationError}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── DESKTOP LAYOUT (≥ lg) — UNCHANGED ─── */}
+      <div className="hidden lg:flex relative min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[2.25rem] border border-[#dbe5f2] bg-gradient-to-br from-[#eaf2ff] via-[#f7faff] to-[#eef5ff] p-1 shadow-sm sm:p-1.5">
+        <div className="absolute inset-x-4 top-[calc(var(--mobile-safe-top)+12px)] z-20 flex items-start justify-between gap-3">
           <Button
             type="button"
             variant="outline"
@@ -607,6 +931,28 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             className="h-14 w-14 rounded-full border-white/70 bg-white/90 text-foreground shadow-lg backdrop-blur"
           >
             <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-right shadow-lg backdrop-blur flex-1">
+            <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              {t('nav.reading', { defaultValue: 'Reading' })}
+            </div>
+            <div className="truncate text-sm font-black text-slate-800">{displayBook.title}</div>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleToggleTranslation}
+            className={cn(
+              'h-14 w-14 rounded-full border border-white/70 bg-white/90 shadow-lg backdrop-blur transition-all',
+              showTranslations ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-white'
+            )}
+          >
+            {isTranslating ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <Languages className="h-6 w-6" />
+            )}
           </Button>
         </div>
 
@@ -648,6 +994,24 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             )}
           >
             {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleToggleTranslation}
+            className={cn(
+              'h-16 w-16 rounded-full border-white/70 shadow-lg backdrop-blur transition-all',
+              showTranslations
+                ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl scale-105'
+                : 'bg-white/92 text-slate-900 hover:bg-white'
+            )}
+          >
+            {isTranslating ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <Languages className="h-6 w-6" />
+            )}
           </Button>
           <Button
             type="button"
@@ -722,7 +1086,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             })}
         </div>
 
-        <div className="absolute inset-x-4 bottom-4 z-20 flex flex-wrap items-center justify-center gap-2 lg:hidden">
+        <div className="absolute inset-x-4 bottom-mobile-safe z-20 flex flex-wrap items-center justify-center gap-2 lg:hidden">
           <Button
             type="button"
             variant="outline"
