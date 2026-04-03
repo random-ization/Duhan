@@ -1024,7 +1024,6 @@ export const handleDeepgramCallback = action({
 export const getTranscript = action({
   args: { episodeId: v.string(), language: v.optional(v.string()) },
   handler: async (ctx, args): Promise<{ segments: TranscriptSegment[] | null }> => {
-    const userId = await requireAuthenticatedUser(ctx);
     const record = (await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
       episodeId: args.episodeId,
     })) as TranscriptRecord | null;
@@ -1048,21 +1047,35 @@ export const getTranscript = action({
       return { segments: merged };
     }
 
-    await enforceAiDailyLimit(ctx, userId, 'get_transcript');
-    const translations = await translateSegmentTexts(record.segments, normalizedTargetLang);
-    if (translations.length > 0) {
-      await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
-        episodeId: args.episodeId,
-        language: normalizedTargetLang,
-        translations,
-      });
+    const userId = (await getAuthUserId(ctx).catch(() => null)) as Id<'users'> | null;
+    if (!userId) {
+      return { segments: record.segments };
     }
 
-    const merged =
-      translations.length > 0
-        ? applyTranslationsToSegments(record.segments, translations, normalizedTargetLang === 'zh')
-        : record.segments;
-    return { segments: merged };
+    try {
+      await enforceAiDailyLimit(ctx, userId, 'get_transcript');
+      const translations = await translateSegmentTexts(record.segments, normalizedTargetLang);
+      if (translations.length > 0) {
+        await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
+          episodeId: args.episodeId,
+          language: normalizedTargetLang,
+          translations,
+        });
+      }
+
+      const merged =
+        translations.length > 0
+          ? applyTranslationsToSegments(
+              record.segments,
+              translations,
+              normalizedTargetLang === 'zh'
+            )
+          : record.segments;
+      return { segments: merged };
+    } catch (error) {
+      console.warn('[AI] getTranscript translation fallback:', toErrorMessage(error));
+      return { segments: record.segments };
+    }
   },
 });
 
@@ -1428,12 +1441,7 @@ const normalizeTopikAnalysisText = (value?: string) =>
 const inferTopikQuestionAnalysisMode = (
   args: Pick<AnalyzeTopikQuestionArgs, 'question' | 'instruction' | 'passage' | 'contextBox'>
 ): TopikQuestionAnalysisMode => {
-  const haystack = [
-    args.question,
-    args.instruction,
-    args.passage,
-    args.contextBox,
-  ]
+  const haystack = [args.question, args.instruction, args.passage, args.contextBox]
     .map(normalizeTopikAnalysisText)
     .join('\n');
 
