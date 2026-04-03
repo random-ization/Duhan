@@ -11,7 +11,12 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Doc, Id } from './_generated/dataModel';
 import { createPresignedUploadUrl } from './storagePresign';
 import { assertProductionRuntimeEnv } from './env';
-import { fetchWithTimeout, parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
+import {
+  fetchWithTimeout,
+  isRetryableHttpStatus,
+  parseJsonObjectFromModelContent,
+  retryAsync,
+} from './aiReliability';
 
 assertProductionRuntimeEnv();
 
@@ -19,6 +24,7 @@ assertProductionRuntimeEnv();
 const logAI = (msg: string) => console.log(`[AI] ${msg}`);
 
 const logUsageMutation = internal.aiUsageLogs.logUsage;
+const logFailureMutation = internal.aiUsageLogs.logFailure;
 const logInvocationMutation = internal.aiUsageLogs.logInvocation;
 const getAiCacheByKeyQuery = internal.aiCache.getByKey;
 const upsertAiCacheMutation = internal.aiCache.upsert;
@@ -73,6 +79,64 @@ type SupportedTranslationLanguage = 'zh' | 'en' | 'vi' | 'mn';
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+function resolveErrorHttpStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const candidate = error as Record<string, unknown>;
+  if (typeof candidate.status === 'number') return candidate.status;
+  if (
+    candidate.response &&
+    typeof candidate.response === 'object' &&
+    typeof (candidate.response as Record<string, unknown>).status === 'number'
+  ) {
+    return (candidate.response as Record<string, unknown>).status as number;
+  }
+  return undefined;
+}
+
+function resolveErrorCode(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'UNKNOWN';
+  const candidate = error as Record<string, unknown>;
+  if (typeof candidate.code === 'string' && candidate.code.trim()) {
+    return candidate.code.trim().toUpperCase();
+  }
+  const status = resolveErrorHttpStatus(error);
+  if (status) return `HTTP_${status}`;
+  const message = toErrorMessage(error).toLowerCase();
+  if (message.includes('timeout') || message.includes('timed out')) return 'TIMEOUT';
+  if (message.includes('rate limit') || message.includes('429')) return 'RATE_LIMIT';
+  if (message.includes('unauthorized') || message.includes('forbidden')) return 'AUTH';
+  return 'UNKNOWN';
+}
+
+async function logAiFailure(
+  ctx: ActionCtx,
+  args: {
+    userId?: Id<'users'>;
+    feature: string;
+    model: string;
+    provider?: string;
+    retries?: number;
+    startedAt?: number;
+    error: unknown;
+  }
+) {
+  try {
+    await ctx.runMutation(logFailureMutation, {
+      userId: args.userId,
+      feature: args.feature,
+      model: args.model,
+      provider: args.provider,
+      errorCode: resolveErrorCode(args.error),
+      errorMessage: toErrorMessage(args.error),
+      retries: args.retries,
+      durationMs: args.startedAt ? Date.now() - args.startedAt : undefined,
+      httpStatus: resolveErrorHttpStatus(args.error),
+    });
+  } catch (logError) {
+    console.warn('[AI] Failed to log AI failure:', toErrorMessage(logError));
+  }
 }
 
 async function requireAuthenticatedUser(ctx: ActionCtx): Promise<Id<'users'>> {
@@ -690,6 +754,7 @@ async function translateSegmentTexts(
       segmentTexts: string[],
       strictJsonMode: boolean
     ): Promise<string[]> => {
+      let retryCount = 0;
       const completion = await retryAsync(
         () =>
           client.chat.completions.create({
@@ -714,8 +779,21 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
         {
           retries: 2,
           label: `translate_segments_${strictJsonMode ? 'strict' : 'normal'}`,
+          onRetry: () => {
+            retryCount += 1;
+          },
+          shouldRetry: error => {
+            const status = resolveErrorHttpStatus(error);
+            return isRetryableHttpStatus(status);
+          },
         }
       );
+
+      if (retryCount > 0) {
+        console.warn(
+          `[AI] translateSegmentTexts recovered after ${retryCount} retries (strict=${strictJsonMode})`
+        );
+      }
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
@@ -1472,6 +1550,7 @@ export const analyzeReadingArticle = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_reading_article');
+    const startedAt = Date.now();
     const { code: responseLanguageCode, label: responseLanguageLabel } =
       resolveReadingResponseLanguage(args.language);
     const trimmedBody = args.bodyText.trim().slice(0, 7000);
@@ -1551,6 +1630,9 @@ export const analyzeReadingArticle = action({
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        status: 'success',
+        provider: 'openai',
+        durationMs: Date.now() - startedAt,
       });
 
       const content = completion.choices[0].message.content;
@@ -1578,6 +1660,14 @@ export const analyzeReadingArticle = action({
       return result;
     } catch (error) {
       console.error('[AI] analyzeReadingArticle failed:', toErrorMessage(error));
+      await logAiFailure(ctx, {
+        userId,
+        feature: 'analyze_reading_article',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
       return null;
     }
   },
@@ -1591,6 +1681,7 @@ export const explainWordFallback = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'dictionary_fallback');
+    const startedAt = Date.now();
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return null;
@@ -1648,6 +1739,9 @@ export const explainWordFallback = action({
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        status: 'success',
+        provider: 'openai',
+        durationMs: Date.now() - startedAt,
       });
 
       const content = completion.choices[0].message.content;
@@ -1670,6 +1764,14 @@ export const explainWordFallback = action({
       };
     } catch (error) {
       console.error('[AI] explainWordFallback failed:', toErrorMessage(error));
+      await logAiFailure(ctx, {
+        userId,
+        feature: 'dictionary_fallback',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
       return null;
     }
   },
