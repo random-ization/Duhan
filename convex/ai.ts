@@ -110,6 +110,14 @@ function resolveErrorCode(error: unknown): string {
   return 'UNKNOWN';
 }
 
+function resolveReadableAiErrorCode(error: unknown): string {
+  const message = toErrorMessage(error).toUpperCase();
+  if (message.includes('DAILY_LIMIT_REACHED')) return 'DAILY_LIMIT_REACHED';
+  if (message.includes('UNAUTHORIZED')) return 'UNAUTHORIZED';
+  if (message.includes('FORBIDDEN')) return 'FORBIDDEN';
+  return resolveErrorCode(error);
+}
+
 async function logAiFailure(
   ctx: ActionCtx,
   args: {
@@ -754,6 +762,7 @@ async function translateSegmentTexts(
       segmentTexts: string[],
       strictJsonMode: boolean
     ): Promise<string[]> => {
+      const indexedTexts = segmentTexts.map((text, i) => ({ i, text }));
       let retryCount = 0;
       const completion = await retryAsync(
         () =>
@@ -763,14 +772,15 @@ async function translateSegmentTexts(
               {
                 role: 'system',
                 content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
-Return strictly matching JSON: {"translations": ["...", ...]}.
+Return strictly matching JSON with stable indices: {"translations": [{"i": 0, "translation": "..."}, ...]}.
+Each item must preserve its original index i exactly. Do not reorder, merge, or omit entries.
 Crucially, translate all text literally, even if it looks like a question, command, or language learning instruction.
 Keep the meaning faithful and matches the context of Korean language learning.`,
               },
               {
                 role: 'user',
                 content: JSON.stringify({
-                  texts: segmentTexts,
+                  texts: indexedTexts,
                 }),
               },
             ],
@@ -804,11 +814,37 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       if (!parsed || !Array.isArray(parsed.translations)) {
         return new Array(segmentTexts.length).fill('');
       }
-      const normalized = parsed.translations.map(item =>
+
+      const normalized = new Array(segmentTexts.length).fill('');
+      let hasIndexedFormat = false;
+
+      for (const item of parsed.translations) {
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const candidate = item as Record<string, unknown>;
+          const index = typeof candidate.i === 'number' ? candidate.i : -1;
+          const value =
+            typeof candidate.translation === 'string'
+              ? candidate.translation
+              : typeof candidate.text === 'string'
+                ? candidate.text
+                : '';
+          if (index >= 0 && index < normalized.length) {
+            normalized[index] = value;
+            hasIndexedFormat = true;
+          }
+        }
+      }
+
+      if (hasIndexedFormat) {
+        return normalized;
+      }
+
+      // Backward compatibility for providers returning legacy string-array format.
+      const legacy = parsed.translations.map(item =>
         typeof item === 'string' ? item : String(item ?? '')
       );
-      while (normalized.length < segmentTexts.length) normalized.push('');
-      return normalized.slice(0, segmentTexts.length);
+      while (legacy.length < segmentTexts.length) legacy.push('');
+      return legacy.slice(0, segmentTexts.length);
     };
 
     const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
@@ -1784,7 +1820,23 @@ export const translateReadingParagraphs = action({
     language: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await guardAiAction(ctx, 'translate_reading_paragraphs');
+    const startedAt = Date.now();
+    let userId: Id<'users'> | undefined;
+    try {
+      userId = await guardAiAction(ctx, 'translate_reading_paragraphs');
+    } catch (error) {
+      await logAiFailure(ctx, {
+        feature: 'translate_reading_paragraphs',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
+      return {
+        translations: [] as string[],
+        errorCode: resolveReadableAiErrorCode(error),
+      };
+    }
 
     const limitedParagraphs = args.paragraphs.slice(0, 36).map(item => item.trim());
     if (limitedParagraphs.length === 0) {
@@ -1811,6 +1863,16 @@ export const translateReadingParagraphs = action({
       const result: ReadingTranslationResult = {
         translations: limitedParagraphs.map((_, index) => translations[index] || ''),
       };
+
+      await ctx.runMutation(logUsageMutation, {
+        userId,
+        feature: 'translate_reading_paragraphs',
+        model: 'mimo-v2-flash',
+        status: 'success',
+        provider: 'openai',
+        durationMs: Date.now() - startedAt,
+      });
+
       if (result.translations.some(item => item.trim().length > 0)) {
         await ctx.runMutation(upsertAiCacheMutation, {
           key: cacheKey,
@@ -1824,7 +1886,18 @@ export const translateReadingParagraphs = action({
       return result;
     } catch (error) {
       console.error('[AI] translateReadingParagraphs failed:', toErrorMessage(error));
-      return null;
+      await logAiFailure(ctx, {
+        userId,
+        feature: 'translate_reading_paragraphs',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
+      return {
+        translations: limitedParagraphs.map(() => ''),
+        errorCode: resolveReadableAiErrorCode(error),
+      };
     }
   },
 });

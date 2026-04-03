@@ -1129,9 +1129,14 @@ function applyLoadedTranscript(args: {
     setTranscriptLoading,
     transcriptLoadedKeyRef,
   } = args;
-  setTranscript(segments);
+  const normalizedSegments = segments.map((segment, index) => ({
+    ...segment,
+    start: Number.isFinite(segment.start) ? segment.start : index,
+    end: Number.isFinite(segment.end) ? segment.end : index + 0.001,
+  }));
+  setTranscript(normalizedSegments);
   if (setTranscriptLoading) setTranscriptLoading(false);
-  if (shouldMarkTranscriptLoaded(segments, targetLanguage)) {
+  if (shouldMarkTranscriptLoaded(normalizedSegments, targetLanguage)) {
     transcriptLoadedKeyRef.current = loadKey;
   }
 }

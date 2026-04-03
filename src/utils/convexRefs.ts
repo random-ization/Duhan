@@ -94,6 +94,7 @@ export const AI = {
     },
     {
       translations: string[];
+      errorCode?: string;
     } | null
   >('ai:translateReadingParagraphs'),
   adminClassifyTopikBySemantics: aRef<

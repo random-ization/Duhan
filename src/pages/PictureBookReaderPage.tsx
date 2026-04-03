@@ -38,6 +38,42 @@ type BookPageQuery = {
 const PLAYBACK_RATES = [0.8, 1, 1.2, 1.5] as const;
 type ReaderLayout = 'stacked' | 'split';
 
+function toPictureBookTranslationError(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (raw.includes('DAILY_LIMIT_REACHED') || raw.includes('ai_credits_daily')) {
+    return t('pictureBookReader.translationDailyLimit', {
+      defaultValue: "Today's AI translation quota has been used up. Please try again tomorrow.",
+    });
+  }
+  if (raw.includes('UNAUTHORIZED')) {
+    return t('pictureBookReader.translationAuthRequired', {
+      defaultValue: 'Please sign in to use translation.',
+    });
+  }
+  return t('pictureBookReader.translationFailed', {
+    defaultValue: 'Translation failed. Please check your connection.',
+  });
+}
+
+function toPictureBookTranslationErrorFromCode(
+  errorCode: string | undefined,
+  t: ReturnType<typeof useTranslation>['t']
+) {
+  if (errorCode === 'DAILY_LIMIT_REACHED') {
+    return t('pictureBookReader.translationDailyLimit', {
+      defaultValue: "Today's AI translation quota has been used up. Please try again tomorrow.",
+    });
+  }
+  if (errorCode === 'UNAUTHORIZED' || errorCode === 'FORBIDDEN') {
+    return t('pictureBookReader.translationAuthRequired', {
+      defaultValue: 'Please sign in to use translation.',
+    });
+  }
+  return t('pictureBookReader.translationFailed', {
+    defaultValue: 'Translation is currently unavailable. Please try again later.',
+  });
+}
+
 function getLevelNumber(levelLabel?: string) {
   const match = levelLabel?.match(/(\d+)/);
   return match ? Number.parseInt(match[1], 10) : null;
@@ -132,6 +168,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const [pageOrientations, setPageOrientations] = useState<Record<string, ReaderLayout>>({});
   const [showTranslations, setShowTranslations] = useState(false);
   const [translatedPages, setTranslatedPages] = useState<Record<number, string[]>>({});
+  const [translationFailedPages, setTranslationFailedPages] = useState<Record<number, boolean>>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -163,6 +200,71 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
   const translateReadingParagraphs = useAction(AI.translateReadingParagraphs);
 
+  const requestPageTranslation = useCallback(
+    async (targetPageIndex: number, targetPageData: BookPageQuery | null) => {
+      if (!targetPageData) return;
+
+      const sortedSentences = [...(targetPageData.page?.sentences ?? [])].sort(
+        (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
+      );
+      const sentences = sortedSentences.map(s => s.text).filter(Boolean);
+      if (sentences.length === 0) return;
+
+      setTranslationError(null);
+      setIsTranslating(true);
+      const timeoutId = setTimeout(() => {
+        setIsTranslating(prev => {
+          if (!prev) return prev;
+          setTranslationError(
+            t('pictureBookReader.translationTimeout', {
+              defaultValue: 'Translation timed out. Please try again.',
+            })
+          );
+          return false;
+        });
+      }, 30000);
+
+      try {
+        const result = await translateReadingParagraphs({
+          title: displayBook?.title ?? 'Picture Book',
+          paragraphs: sentences,
+          language: 'zh',
+        });
+
+        if (result?.translations) {
+          const hasAny = result.translations.some(item => item.trim().length > 0);
+          if (!hasAny) {
+            setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+            setTranslationError(toPictureBookTranslationErrorFromCode(result.errorCode, t));
+            return;
+          }
+          setTranslatedPages(prev => ({
+            ...prev,
+            [targetPageIndex]: result.translations,
+          }));
+          setTranslationFailedPages(prev => {
+            if (!prev[targetPageIndex]) return prev;
+            const next = { ...prev };
+            delete next[targetPageIndex];
+            return next;
+          });
+          return;
+        }
+
+        setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+        setTranslationError(toPictureBookTranslationErrorFromCode(result?.errorCode, t));
+      } catch (err) {
+        console.error('Translation failed:', err);
+        setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+        setTranslationError(toPictureBookTranslationError(err, t));
+      } finally {
+        clearTimeout(timeoutId);
+        setIsTranslating(false);
+      }
+    },
+    [displayBook?.title, t, translateReadingParagraphs]
+  );
+
   const handleToggleTranslation = useCallback(async () => {
     if (showTranslations) {
       setShowTranslations(false);
@@ -170,64 +272,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     }
 
     setShowTranslations(true);
-
-    if (!incomingPageData || translatedPages[effectivePageIndex]) {
-      return;
-    }
-
     setTranslationError(null);
-    const timeoutId = setTimeout(() => {
-      setIsTranslating(prev => {
-        if (prev) {
-          setTranslationError(
-            t('pictureBookReader.translationTimeout', {
-              defaultValue: 'Translation timed out. Please try again.',
-            })
-          );
-          return false;
-        }
-        return prev;
-      });
-    }, 30000);
-
-    try {
-      setIsTranslating(true);
-      const sortedSentences = [...(incomingPageData.page?.sentences ?? [])].sort(
-        (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
-      );
-      const sentences = sortedSentences.map(s => s.text);
-      const result = await translateReadingParagraphs({
-        title: displayBook?.title ?? 'Picture Book',
-        paragraphs: sentences,
-        language: 'zh',
-      });
-
-      if (result?.translations) {
-        setTranslatedPages(prev => ({
-          ...prev,
-          [effectivePageIndex]: result.translations,
-        }));
-      }
-    } catch (err) {
-      console.error('Translation failed:', err);
-      setTranslationError(
-        t('pictureBookReader.translationFailed', {
-          defaultValue: 'Translation failed. Please check your connection.',
-        })
-      );
-    } finally {
-      clearTimeout(timeoutId);
-      setIsTranslating(false);
-    }
-  }, [
-    showTranslations,
-    incomingPageData,
-    translatedPages,
-    effectivePageIndex,
-    translateReadingParagraphs,
-    displayBook?.title,
-    t,
-  ]);
+    setTranslationFailedPages(prev => {
+      if (!prev[effectivePageIndex]) return prev;
+      const next = { ...prev };
+      delete next[effectivePageIndex];
+      return next;
+    });
+  }, [showTranslations, effectivePageIndex]);
 
   // Auto-translate on page change if active
   useEffect(() => {
@@ -235,58 +287,19 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       showTranslations &&
       incomingPageData &&
       !translatedPages[effectivePageIndex] &&
+      !translationFailedPages[effectivePageIndex] &&
       !isTranslating
     ) {
-      void (async () => {
-        setTranslationError(null);
-        const timeoutId = setTimeout(() => {
-          setIsTranslating(prev => {
-            if (prev) {
-              setTranslationError(
-                t('pictureBookReader.translationTimeout', {
-                  defaultValue: 'Translation timed out. Please try again.',
-                })
-              );
-              return false;
-            }
-            return prev;
-          });
-        }, 30000);
-
-        try {
-          setIsTranslating(true);
-          const sortedSentences = [...(incomingPageData.page?.sentences ?? [])].sort(
-            (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
-          );
-          const sentences = sortedSentences.map(s => s.text);
-          const result = await translateReadingParagraphs({
-            title: displayBook?.title ?? 'Picture Book',
-            paragraphs: sentences,
-            language: 'zh',
-          });
-          if (result?.translations) {
-            setTranslatedPages(prev => ({
-              ...prev,
-              [effectivePageIndex]: result.translations,
-            }));
-          }
-        } catch (err) {
-          console.error('Auto-translation failed:', err);
-        } finally {
-          clearTimeout(timeoutId);
-          setIsTranslating(false);
-        }
-      })();
+      void requestPageTranslation(effectivePageIndex, incomingPageData);
     }
   }, [
     showTranslations,
     effectivePageIndex,
     incomingPageData,
     translatedPages,
+    translationFailedPages,
     isTranslating,
-    translateReadingParagraphs,
-    displayBook?.title,
-    t,
+    requestPageTranslation,
   ]);
   const currentVisiblePageId = visiblePageData?.page?._id ?? null;
 
