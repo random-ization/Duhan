@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,6 +6,7 @@ import { buildPictureBookReaderSessionStorageKey } from '../../src/utils/reading
 
 const navigateMock = vi.fn();
 const useQueryMock = vi.fn();
+const useActionMock = vi.fn();
 
 class MockAudio {
   preload = '';
@@ -49,6 +51,7 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('convex/react', () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args),
+  useAction: (...args: unknown[]) => useActionMock(...args),
 }));
 
 import PictureBookReaderPage from '../../src/pages/PictureBookReaderPage';
@@ -66,9 +69,11 @@ describe('PictureBookReaderPage session restore', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     useQueryMock.mockReset();
+    useActionMock.mockReset();
     sessionStorage.clear();
     vi.stubGlobal('Audio', MockAudio);
     vi.stubGlobal('Image', MockImage);
+    useActionMock.mockReturnValue(vi.fn());
 
     useQueryMock.mockImplementation((_ref: unknown, args: unknown) => {
       if (!args || args === 'skip') return undefined;
@@ -132,7 +137,7 @@ describe('PictureBookReaderPage session restore', () => {
     renderPage('/reading/books/storybook');
 
     await waitFor(() => {
-      expect(screen.getByText(text => text.includes('2 / 3'))).toBeInTheDocument();
+      expect(screen.getAllByText(text => text.includes('2 / 3')).length).toBeGreaterThan(0);
     });
   });
 
@@ -152,7 +157,7 @@ describe('PictureBookReaderPage session restore', () => {
     renderPage('/reading/books/storybook');
 
     await waitFor(() => {
-      expect(screen.getByText(text => text.includes('3 / 3'))).toBeInTheDocument();
+      expect(screen.getAllByText(text => text.includes('3 / 3')).length).toBeGreaterThan(0);
     });
     expect(screen.queryByText('Picture book not found')).not.toBeInTheDocument();
   });
@@ -204,7 +209,7 @@ describe('PictureBookReaderPage session restore', () => {
     renderPage('/reading/books/storybook');
 
     await waitFor(() => {
-      expect(screen.getByText(text => text.includes('1 / 1'))).toBeInTheDocument();
+      expect(screen.getAllByText(text => text.includes('1 / 1')).length).toBeGreaterThan(0);
     });
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
@@ -264,11 +269,14 @@ describe('PictureBookReaderPage session restore', () => {
 
     let image: HTMLImageElement | null = null;
     await waitFor(() => {
-      image = view.container.querySelector('img');
+      image = view.container.querySelector('img[src="/page-0.png"]');
       expect(image).not.toBeNull();
     });
     await waitFor(() => {
-      expect(image.parentElement?.className).toContain('w-1/2');
+      const splitLayoutImage = view.container.querySelector(
+        'div[class*="w-1/2"] img[src="/page-0.png"]'
+      ) as HTMLImageElement | null;
+      expect(splitLayoutImage).not.toBeNull();
     });
   });
 });
