@@ -113,6 +113,7 @@ export const MobileSubscriptionPage: React.FC = () => {
           locale: i18n.language,
           source: 'mobile_subscription',
           returnTo: '/dashboard',
+          appOrigin: globalThis.location.origin,
         },
         { retries: 1, initialDelayMs: 250 }
       );
@@ -202,7 +203,9 @@ export const MobileSubscriptionPage: React.FC = () => {
                 >
                   <Icon className="w-6 h-6" />
                 </div>
-                <h3 className={`text-lg font-black mb-2 ${isDarkCard ? 'text-primary-foreground' : 'text-foreground'}`}>
+                <h3
+                  className={`text-lg font-black mb-2 ${isDarkCard ? 'text-primary-foreground' : 'text-foreground'}`}
+                >
                   {card.title}
                 </h3>
                 <p
@@ -232,7 +235,9 @@ export const MobileSubscriptionPage: React.FC = () => {
         <div>
           <div className="text-center mb-6">
             <h3 className="text-2xl font-black text-foreground">{pageCopy.comparisonTitle}</h3>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">{pageCopy.comparisonSubtitle}</p>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              {pageCopy.comparisonSubtitle}
+            </p>
           </div>
 
           <div className="grid gap-3">
@@ -241,11 +246,15 @@ export const MobileSubscriptionPage: React.FC = () => {
                 <div className="font-bold text-base mb-3 text-foreground">{row.label}</div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-secondary/50 rounded-xl p-3 border border-border/50">
-                    <div className="text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider">{t('free')}</div>
+                    <div className="text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider">
+                      {t('free')}
+                    </div>
                     <div className="font-medium text-muted-foreground">{row.free}</div>
                   </div>
                   <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-                    <div className="text-[10px] font-black text-primary mb-1 uppercase tracking-wider">Pro / Lifetime</div>
+                    <div className="text-[10px] font-black text-primary mb-1 uppercase tracking-wider">
+                      Pro / Lifetime
+                    </div>
                     <div className="font-bold text-foreground">{row.paid}</div>
                   </div>
                 </div>

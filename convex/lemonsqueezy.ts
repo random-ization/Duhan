@@ -9,6 +9,7 @@ import { getPath, isRecord, parseJson, readString } from './validation';
 import { assertProductionRuntimeEnv } from './env';
 import { captureServerException, captureServerMessage } from './sentry';
 import { captureServerPostHogEvent } from './posthog';
+import { resolveCheckoutBaseUrl, resolveCheckoutPlanFromSource } from './lemonsqueezyHelpers';
 
 assertProductionRuntimeEnv();
 
@@ -104,6 +105,7 @@ const VARIANT_MAP: Record<string, Record<string, string>> = {
 };
 
 const LEMONSQUEEZY_API_URL = 'https://api.lemonsqueezy.com/v1';
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set<string>(['active', 'on_trial']);
 
 const LEMONSQUEEZY_SUPPORTED_LOCALES = new Set<string>([
   'bg',
@@ -235,6 +237,7 @@ export const createCheckout = action({
     locale: v.optional(v.string()),
     source: v.optional(v.string()),
     returnTo: v.optional(v.string()),
+    appOrigin: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const apiKey = process.env[API_KEY_ENV];
@@ -254,7 +257,11 @@ export const createCheckout = action({
       throw new Error(`Invalid plan: ${args.plan} for region ${region}. No variant ID configured.`);
     }
 
-    const appUrl = process.env.VITE_APP_URL || 'http://localhost:3000';
+    const appUrl = resolveCheckoutBaseUrl({
+      appOrigin: args.appOrigin,
+      fallbackAppUrl: process.env.VITE_APP_URL,
+      siteUrl: process.env.SITE_URL,
+    });
     const successParams = new URLSearchParams({ plan: args.plan });
     if (args.source) successParams.set('source', args.source);
     if (args.returnTo) successParams.set('returnTo', args.returnTo);
@@ -337,6 +344,7 @@ export const createCheckout = action({
           locale: checkoutLocale,
           source: args.source,
           returnTo: args.returnTo,
+          appOrigin: args.appOrigin,
           variantId,
         },
       });
@@ -545,9 +553,16 @@ async function processWebhookEvent(
 
   if (eventName === 'order_created') {
     if (userEmail) {
+      const plan = resolveCheckoutPlanFromSource({
+        explicitPlan: planFromCustom,
+        variantId: readStringish(attributes, ['first_order_item', 'variant_id']),
+        variantName: readString(attributes, ['first_order_item', 'variant_name']),
+        variantMap: VARIANT_MAP,
+        fallbackPlan: 'LIFETIME',
+      });
       const result = await ctx.runMutation(grantAccessMutation, {
         customerEmail: userEmail,
-        plan: planFromCustom ?? 'LIFETIME',
+        plan,
         userId,
       });
       if (result.success) {
@@ -562,9 +577,22 @@ async function processWebhookEvent(
           },
           properties: {
             trigger: eventName,
-            plan: planFromCustom ?? 'LIFETIME',
+            plan,
           },
         });
+      } else {
+        await captureServerMessage(
+          'Deferred LemonSqueezy order grant because user was not found',
+          'warning',
+          {
+            module: 'lemonsqueezy',
+            operation: 'processWebhookEvent',
+            trigger: eventName,
+            userEmail,
+            userId,
+            plan,
+          }
+        );
       }
     }
     return;
@@ -593,9 +621,13 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
     case 'subscription_resumed':
     case 'subscription_unpaused':
       if (userEmail) {
-        const variantName = readString(attributes, ['variant_name']);
-        const plan =
-          planFromCustom ?? (variantName?.toLowerCase().includes('annual') ? 'ANNUAL' : 'MONTHLY');
+        const plan = resolveCheckoutPlanFromSource({
+          explicitPlan: planFromCustom,
+          variantId: readStringish(attributes, ['variant_id']),
+          variantName: readString(attributes, ['variant_name']),
+          variantMap: VARIANT_MAP,
+          fallbackPlan: 'MONTHLY',
+        });
 
         const result = await ctx.runMutation(grantAccessMutation, {
           customerEmail: userEmail,
@@ -618,6 +650,19 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
               subscriptionStatus: readString(attributes, ['status']),
             },
           });
+        } else {
+          await captureServerMessage(
+            'Deferred LemonSqueezy subscription grant because user was not found',
+            'warning',
+            {
+              module: 'lemonsqueezy',
+              operation: 'handleSubscriptionEvent',
+              trigger: eventName,
+              userEmail,
+              userId,
+              plan,
+            }
+          );
         }
       }
       break;
@@ -668,7 +713,13 @@ async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData)
 
   if (status === 'active' || status === 'on_trial') {
     if (userEmail) {
-      const plan = planFromCustom ?? 'MONTHLY';
+      const plan = resolveCheckoutPlanFromSource({
+        explicitPlan: planFromCustom,
+        variantId: readStringish(attributes, ['variant_id']),
+        variantName: readString(attributes, ['variant_name']),
+        variantMap: VARIANT_MAP,
+        fallbackPlan: 'MONTHLY',
+      });
       const result = await ctx.runMutation(grantAccessMutation, {
         customerEmail: userEmail,
         plan,
@@ -715,3 +766,132 @@ async function handleSubscriptionUpdated(ctx: ActionCtx, data: WebhookEventData)
     }
   }
 }
+
+async function fetchLemonSqueezyCollection(
+  apiKey: string,
+  pathWithQuery: string
+): Promise<Array<{ id?: string; attributes?: unknown }>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${LEMONSQUEEZY_API_URL}${pathWithQuery}`, {
+      headers: {
+        Accept: 'application/vnd.api+json',
+        'Content-Type': 'application/vnd.api+json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Lemon Squeezy API error: ${response.status} ${errorText}`);
+    }
+
+    const payload = (await response.json()) as { data?: unknown };
+    if (!Array.isArray(payload.data)) {
+      return [];
+    }
+
+    return payload.data.filter(isRecord).map(entry => ({
+      id: typeof entry.id === 'string' ? entry.id : undefined,
+      attributes: entry.attributes,
+    }));
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export const reconcileCustomerAccess = action({
+  args: {
+    userEmail: v.string(),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const apiKey = process.env[API_KEY_ENV];
+    const storeId = process.env[STORE_ID_ENV];
+    const userEmail = normalizeEmail(args.userEmail);
+
+    if (!apiKey) {
+      throw new Error(`Missing ${API_KEY_ENV} environment variable`);
+    }
+    if (!storeId) {
+      throw new Error(`Missing ${STORE_ID_ENV} environment variable`);
+    }
+    if (!userEmail) {
+      return { reconciled: false, source: null, plan: null };
+    }
+
+    try {
+      const encodedEmail = encodeURIComponent(userEmail);
+      const encodedStoreId = encodeURIComponent(storeId);
+      const subscriptions = await fetchLemonSqueezyCollection(
+        apiKey,
+        `/subscriptions?filter[store_id]=${encodedStoreId}&filter[user_email]=${encodedEmail}&page[size]=100`
+      );
+
+      const activeSubscription = subscriptions.find(entry => {
+        const status = readString(entry, ['attributes', 'status'])?.trim().toLowerCase();
+        return status ? ACTIVE_SUBSCRIPTION_STATUSES.has(status) : false;
+      });
+
+      if (activeSubscription) {
+        const plan = resolveCheckoutPlanFromSource({
+          explicitPlan: undefined,
+          variantId: readStringish(activeSubscription, ['attributes', 'variant_id']),
+          variantName: readString(activeSubscription, ['attributes', 'variant_name']),
+          variantMap: VARIANT_MAP,
+          fallbackPlan: 'MONTHLY',
+        });
+        const result = await ctx.runMutation(grantAccessMutation, {
+          customerEmail: userEmail,
+          plan,
+          userId: args.userId,
+        });
+        return { reconciled: result.success, source: 'subscription' as const, plan };
+      }
+
+      const orders = await fetchLemonSqueezyCollection(
+        apiKey,
+        `/orders?filter[store_id]=${encodedStoreId}&filter[user_email]=${encodedEmail}&page[size]=100`
+      );
+
+      const paidOrder = orders.find(entry => {
+        const status = readString(entry, ['attributes', 'status'])?.trim().toLowerCase();
+        const refunded = getPath(entry, ['attributes', 'refunded']) === true;
+        return status === 'paid' && !refunded;
+      });
+
+      if (paidOrder) {
+        const plan = resolveCheckoutPlanFromSource({
+          explicitPlan: undefined,
+          variantId: readStringish(paidOrder, ['attributes', 'first_order_item', 'variant_id']),
+          variantName: readString(paidOrder, ['attributes', 'first_order_item', 'variant_name']),
+          variantMap: VARIANT_MAP,
+          fallbackPlan: 'LIFETIME',
+        });
+        const result = await ctx.runMutation(grantAccessMutation, {
+          customerEmail: userEmail,
+          plan,
+          userId: args.userId,
+        });
+        return { reconciled: result.success, source: 'order' as const, plan };
+      }
+
+      return { reconciled: false, source: null, plan: null };
+    } catch (error: unknown) {
+      await captureServerException(error, {
+        module: 'lemonsqueezy',
+        operation: 'reconcileCustomerAccess',
+        userEmail,
+        userId: args.userId,
+      });
+      throw error instanceof Error ? error : new Error(toErrorMessage(error));
+    }
+  },
+});

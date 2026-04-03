@@ -20,6 +20,7 @@ export type LemonSqueezyCheckoutRequest = {
   locale?: string;
   source?: string;
   returnTo?: string;
+  appOrigin?: string;
 };
 
 export type LemonSqueezyCheckoutResult = {

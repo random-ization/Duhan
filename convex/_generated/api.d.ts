@@ -41,6 +41,7 @@ import type * as kiwi from '../kiwi.js';
 import type * as learningStats from '../learningStats.js';
 import type * as legal from '../legal.js';
 import type * as lemonsqueezy from '../lemonsqueezy.js';
+import type * as lemonsqueezyHelpers from '../lemonsqueezyHelpers.js';
 import type * as migrations_migrateAudioToSpaces from '../migrations/migrateAudioToSpaces.js';
 import type * as migrations_migrateAudioToSpacesQueries from '../migrations/migrateAudioToSpacesQueries.js';
 import type * as migrations_migrateVocabNotebooks from '../migrations/migrateVocabNotebooks.js';
@@ -135,6 +136,7 @@ declare const fullApi: ApiFromModules<{
   learningStats: typeof learningStats;
   legal: typeof legal;
   lemonsqueezy: typeof lemonsqueezy;
+  lemonsqueezyHelpers: typeof lemonsqueezyHelpers;
   'migrations/migrateAudioToSpaces': typeof migrations_migrateAudioToSpaces;
   'migrations/migrateAudioToSpacesQueries': typeof migrations_migrateAudioToSpacesQueries;
   'migrations/migrateVocabNotebooks': typeof migrations_migrateVocabNotebooks;

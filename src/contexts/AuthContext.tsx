@@ -8,10 +8,10 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { useQuery, useConvexAuth, useMutation } from 'convex/react';
+import { useAction, useQuery, useConvexAuth, useMutation } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { User, Language, TextbookContent, TopikExam } from '../types';
-import { ENTITLEMENTS, NoArgs, mRef, qRef } from '../utils/convexRefs';
+import { ENTITLEMENTS, NoArgs, aRef, mRef, qRef } from '../utils/convexRefs';
 import { logger } from '../utils/logger';
 import { normalizeLanguage } from '../utils/languageUtils';
 import { clearDashboardUpgradeBannerSession } from '../utils/upgradeReminder';
@@ -67,6 +67,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfileMutation = useMutation(
     mRef<{ name?: string; avatar?: string }, void>('auth:updateProfile')
   );
+  const reconcileCustomerAccess = useAction(
+    aRef<
+      { userEmail: string; userId?: string },
+      { reconciled: boolean; source: 'subscription' | 'order' | null; plan: string | null }
+    >('lemonsqueezy:reconcileCustomerAccess')
+  );
 
   const setLanguage = useCallback((lang: Language) => {
     safeSetLocalStorageItem('preferredLanguage', lang);
@@ -83,11 +89,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'), isAuthenticated ? {} : 'skip');
   const viewerAccessQuery = useQuery(ENTITLEMENTS.viewerAccess, {});
   const attemptedSessionRepairRef = useRef(false);
+  const attemptedBillingRepairRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
       attemptedSessionRepairRef.current = false;
+      attemptedBillingRepairRef.current.clear();
       return;
     }
 
@@ -116,6 +124,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     () => (viewerAccessQuery === undefined ? null : viewerAccessQuery),
     [viewerAccessQuery]
   );
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email || !user.id) {
+      return;
+    }
+    if (viewerAccessQuery === undefined || viewerAccessQuery?.isPremium) {
+      return;
+    }
+
+    const attemptKey = `${user.id}:${user.email}`;
+    if (attemptedBillingRepairRef.current.has(attemptKey)) {
+      return;
+    }
+    attemptedBillingRepairRef.current.add(attemptKey);
+
+    void reconcileCustomerAccess({
+      userEmail: user.email,
+      userId: user.id,
+    }).catch(error => {
+      logger.warn('Subscription reconciliation failed after sign-in', error);
+      attemptedBillingRepairRef.current.delete(attemptKey);
+    });
+  }, [isAuthenticated, reconcileCustomerAccess, user?.email, user?.id, viewerAccessQuery]);
 
   // Legacy manual loadUser effect removed
   /*

@@ -1,6 +1,29 @@
-import { internalMutation } from './_generated/server';
+import { internalMutation, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { asId } from './id';
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+async function findUserByEmail(ctx: MutationCtx, rawEmail: string) {
+  const normalizedEmail = normalizeEmail(rawEmail);
+
+  const exactMatch = await ctx.db
+    .query('users')
+    .withIndex('email', q => q.eq('email', normalizedEmail))
+    .first();
+  if (exactMatch) return exactMatch;
+
+  const legacyExact = await ctx.db
+    .query('users')
+    .withIndex('email', q => q.eq('email', rawEmail.trim()))
+    .first();
+  if (legacyExact) return legacyExact;
+
+  const allUsers = await ctx.db.query('users').collect();
+  return allUsers.find(user => normalizeEmail(user.email) === normalizedEmail) ?? null;
+}
 
 // Internal mutation to grant premium access
 export const grantAccess = internalMutation({
@@ -15,10 +38,7 @@ export const grantAccess = internalMutation({
       user = await ctx.db.get(asId<'users'>(args.userId));
     }
 
-    user ??= await ctx.db
-      .query('users')
-      .withIndex('email', q => q.eq('email', args.customerEmail))
-      .first();
+    user ??= await findUserByEmail(ctx, args.customerEmail);
 
     if (!user) {
       console.error(`User not found for email: ${args.customerEmail} or id: ${args.userId}`);
@@ -63,10 +83,7 @@ export const revokeAccess = internalMutation({
       user = await ctx.db.get(asId<'users'>(args.userId));
     }
 
-    user ??= await ctx.db
-      .query('users')
-      .withIndex('email', q => q.eq('email', args.customerEmail))
-      .first();
+    user ??= await findUserByEmail(ctx, args.customerEmail);
 
     if (!user) {
       console.error(`User not found for email: ${args.customerEmail}`);

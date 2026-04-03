@@ -282,6 +282,7 @@ const DesktopSubscriptionPage: React.FC = () => {
                   locale: i18n.language,
                   source: 'desktop_subscription',
                   returnTo: '/dashboard',
+                  appOrigin: globalThis.location.origin,
                 },
                 { retries: 0 }
               );

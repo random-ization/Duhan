@@ -445,6 +445,7 @@ export default function PricingDetailsPage() {
           locale: i18n.language,
           source: checkoutSource,
           returnTo: returnToPath,
+          appOrigin: globalThis.location.origin,
         },
         { retries: 1, initialDelayMs: 250 }
       );
