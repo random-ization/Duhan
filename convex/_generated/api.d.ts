@@ -15,6 +15,7 @@ import type * as admin from '../admin.js';
 import type * as adminUserUtils from '../adminUserUtils.js';
 import type * as ai from '../ai.js';
 import type * as aiCache from '../aiCache.js';
+import type * as aiReliability from '../aiReliability.js';
 import type * as aiUsageLogs from '../aiUsageLogs.js';
 import type * as aiWritingEvaluation from '../aiWritingEvaluation.js';
 import type * as analytics from '../analytics.js';
@@ -110,6 +111,7 @@ declare const fullApi: ApiFromModules<{
   adminUserUtils: typeof adminUserUtils;
   ai: typeof ai;
   aiCache: typeof aiCache;
+  aiReliability: typeof aiReliability;
   aiUsageLogs: typeof aiUsageLogs;
   aiWritingEvaluation: typeof aiWritingEvaluation;
   analytics: typeof analytics;
