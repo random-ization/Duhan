@@ -861,6 +861,13 @@ export default defineSchema({
     completionTokens: v.optional(v.number()),
     totalTokens: v.optional(v.number()),
     costUsd: v.optional(v.number()),
+    status: v.optional(v.union(v.literal('success'), v.literal('error'))),
+    provider: v.optional(v.string()),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    retries: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    httpStatus: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index('by_createdAt', ['createdAt'])

@@ -6,6 +6,7 @@ type RetryOptions = {
   maxDelayMs?: number;
   label?: string;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
+  onRetry?: (args: { error: unknown; attempt: number; maxAttempts: number }) => void;
 };
 
 type FetchInit = Record<string, unknown> & {
@@ -82,6 +83,7 @@ export async function retryAsync<T>(
           `[AI][Retry] ${options.label} failed (attempt ${attempt}/${retries + 1}): ${toErrorMessage(error)}`
         );
       }
+      options?.onRetry?.({ error, attempt, maxAttempts: retries + 1 });
       await wait(getBackoffDelay(attempt, baseDelayMs, maxDelayMs));
     }
   }
