@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -19,6 +19,11 @@ export const MobilePictureBookCard: React.FC<MobilePictureBookCardProps> = ({
   onClick,
   ariaLabel,
 }) => {
+  const normalizedCoverUrl = coverUrl?.trim() || '';
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+
+  const showCoverImage = Boolean(normalizedCoverUrl) && failedCoverUrl !== normalizedCoverUrl;
+
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
@@ -28,11 +33,12 @@ export const MobilePictureBookCard: React.FC<MobilePictureBookCardProps> = ({
     >
       {/* Book Cover Container */}
       <div className="relative aspect-[10/13] w-full rounded-[2rem] overflow-hidden border border-white/20 bg-muted shadow-2xl transition-all duration-300 group-hover:shadow-indigo-500/20 group-hover:-translate-y-2 rim-light grain-overlay">
-        {coverUrl ? (
+        {showCoverImage ? (
           <img
-            src={coverUrl}
+            src={normalizedCoverUrl}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={() => setFailedCoverUrl(normalizedCoverUrl)}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
