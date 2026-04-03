@@ -1,6 +1,12 @@
 import { Institute } from '../types';
 
 export type LearningFlowModule = 'grammar' | 'vocabulary' | 'listening' | 'reading';
+export type LearningMaterialSelection = {
+  instituteId: string;
+  level: number;
+  unit?: number;
+  updatedAt?: number;
+};
 
 type ResolveLearningEntryTargetArgs = {
   institutes: Institute[] | undefined;
@@ -76,4 +82,19 @@ export const buildLearningModulePath = (
   if (module === 'vocabulary') return `/course/${instituteId}/vocab`;
   if (module === 'listening') return `/course/${instituteId}/listening`;
   return `/course/${instituteId}/reading`;
+};
+
+export const buildLearningPickerPath = (module: LearningFlowModule): string =>
+  `/courses?module=${module}`;
+
+export const normalizeLearningFlowModule = (
+  value: string | null | undefined
+): LearningFlowModule | null => {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'vocab' || normalized === 'vocabulary') return 'vocabulary';
+  if (normalized === 'grammar') return 'grammar';
+  if (normalized === 'listening') return 'listening';
+  if (normalized === 'reading') return 'reading';
+  return null;
 };
