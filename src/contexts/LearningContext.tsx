@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode, useCallback } from 'react';
 import { LearningModuleType, VocabularyItem, Mistake } from '../types';
 import { useAuth } from './AuthContext';
+import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
+import type { LearningFlowModule, LearningMaterialSelection } from '../utils/learningFlow';
 
 type CustomList = VocabularyItem[] | Mistake[];
 type ListType = 'SAVED' | 'MISTAKES';
+type LearningMaterialMap = Partial<Record<LearningFlowModule, LearningMaterialSelection>>;
+const RECENT_MATERIALS_STORAGE_KEY = 'duhan:learning:recent-materials:v1';
 
 interface LearningSelectionState {
   selectedInstitute: string;
   selectedLevel: number;
+  recentMaterials: LearningMaterialMap;
 }
 
 interface LearningSessionState {
@@ -19,6 +24,8 @@ interface LearningSessionState {
 interface LearningActions {
   setSelectedInstitute: (id: string) => void;
   setSelectedLevel: (level: number) => void;
+  setRecentMaterial: (module: LearningFlowModule, material: LearningMaterialSelection) => void;
+  getRecentMaterial: (module: LearningFlowModule) => LearningMaterialSelection | null;
   setActiveModule: (module: LearningModuleType | null) => void;
   setActiveCustomList: (list: CustomList | null) => void;
   setActiveListType: (type: ListType | null) => void;
@@ -55,6 +62,8 @@ export const useLearningActions = () => {
   return context;
 };
 
+export const useOptionalLearningActions = () => useContext(LearningActionsContext);
+
 export const useLearning = () => {
   const selection = useLearningSelection();
   const session = useLearningSession();
@@ -73,6 +82,16 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
   const { user } = useAuth();
   const [selectedInstituteOverride, setSelectedInstituteOverride] = useState<string | null>(null);
   const [selectedLevelOverride, setSelectedLevelOverride] = useState<number | null>(null);
+  const [recentMaterials, setRecentMaterials] = useState<LearningMaterialMap>(() => {
+    const raw = safeGetLocalStorageItem(RECENT_MATERIALS_STORAGE_KEY);
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw) as LearningMaterialMap;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
   const [activeModule, setActiveModule] = useState<LearningModuleType | null>(null);
   const [activeCustomList, setActiveCustomList] = useState<CustomList | null>(null);
   const [activeListType, setActiveListType] = useState<ListType | null>(null);
@@ -82,23 +101,46 @@ export const LearningProvider: React.FC<LearningProviderProps> = ({ children }) 
 
   const setSelectedInstitute = useCallback((id: string) => setSelectedInstituteOverride(id), []);
   const setSelectedLevel = useCallback((level: number) => setSelectedLevelOverride(level), []);
+  const setRecentMaterial = useCallback(
+    (module: LearningFlowModule, material: LearningMaterialSelection) => {
+      setRecentMaterials(prev => {
+        const next = {
+          ...prev,
+          [module]: {
+            ...material,
+            updatedAt: material.updatedAt ?? Date.now(),
+          },
+        };
+        safeSetLocalStorageItem(RECENT_MATERIALS_STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+  const getRecentMaterial = useCallback(
+    (module: LearningFlowModule) => recentMaterials[module] ?? null,
+    [recentMaterials]
+  );
   const actions = useMemo<LearningActions>(
     () => ({
       setSelectedInstitute,
       setSelectedLevel,
+      setRecentMaterial,
+      getRecentMaterial,
       setActiveModule,
       setActiveCustomList,
       setActiveListType,
     }),
-    [setSelectedInstitute, setSelectedLevel]
+    [getRecentMaterial, setRecentMaterial, setSelectedInstitute, setSelectedLevel]
   );
 
   const selectionState = useMemo<LearningSelectionState>(
     () => ({
       selectedInstitute,
       selectedLevel,
+      recentMaterials,
     }),
-    [selectedInstitute, selectedLevel]
+    [recentMaterials, selectedInstitute, selectedLevel]
   );
 
   const sessionState = useMemo<LearningSessionState>(

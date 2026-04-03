@@ -6,6 +6,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
+import { useOptionalLearningActions } from '../contexts/LearningContext';
 import GrammarDirectorySidebar from '../components/grammar/GrammarDirectorySidebar';
 import GrammarDetailPane from '../components/grammar/GrammarDetailPane';
 import { GrammarPointData } from '../types';
@@ -19,6 +20,7 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
+import { buildLearningPickerPath, resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal } from '../components/ui/sheet';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
@@ -36,6 +38,7 @@ const GrammarModulePage: React.FC = () => {
   const isMobile = useIsMobile();
   const navigate = useLocalizedNavigate();
   const { clearContextualSidebar } = useLayoutActions();
+  const learningActions = useOptionalLearningActions();
 
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +97,15 @@ const GrammarModulePage: React.FC = () => {
       lastModule: 'GRAMMAR',
     });
   }, [updateLearningProgressMutation, instituteId, activeSelectedUnit]);
+
+  useEffect(() => {
+    if (!instituteId) return;
+    learningActions?.setRecentMaterial('grammar', {
+      instituteId,
+      level: instituteQuery ? resolveInstituteDefaultLevel(instituteQuery) : 1,
+      unit: activeSelectedUnit,
+    });
+  }, [activeSelectedUnit, instituteId, instituteQuery, learningActions]);
 
   useEffect(() => {
     safeSetLocalStorageItem(AI_PANEL_STORAGE_KEY, isAiPanelOpen ? '1' : '0');
@@ -341,7 +353,7 @@ const GrammarModulePage: React.FC = () => {
                 <Button
                   variant="outline"
                   className="border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  onClick={() => navigate('/dashboard/resources/grammar')}
+                  onClick={() => navigate(buildLearningPickerPath('grammar'))}
                 >
                   {t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
                 </Button>

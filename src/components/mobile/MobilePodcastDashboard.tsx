@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
-import { Search, ArrowLeft, Pause, PlayCircle } from 'lucide-react';
+import { Search, ArrowLeft, PlayCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { NoArgs, qRef } from '../../utils/convexRefs';
@@ -10,6 +10,7 @@ import { resolveSafeReturnTo } from '../../utils/navigation';
 import { buildPodcastChannelPath, buildPodcastSearchPath } from '../../utils/podcastRoutes';
 import { formatSafeDateLabel } from '../../utils/dateLabel';
 import { Button, Input } from '../ui';
+import { motion } from 'framer-motion';
 
 interface PodcastChannel {
   _id?: string;
@@ -84,6 +85,28 @@ export const MobilePodcastDashboard: React.FC = () => {
   }, [trendingData, trendingTab]);
 
   const latestHistory = history[0];
+  const loadingTrending = trendingData === undefined;
+  const loadingHistory = Boolean(user) && historyData === undefined;
+  const loadingSubscriptions = Boolean(user) && subscriptionsData === undefined;
+  const [showLoadingIssue, setShowLoadingIssue] = useState(false);
+
+  useEffect(() => {
+    const isLoading = loadingTrending || loadingHistory || loadingSubscriptions;
+    if (!isLoading) return;
+    const timer = globalThis.setTimeout(() => {
+      setShowLoadingIssue(true);
+    }, 7000);
+    return () => {
+      globalThis.clearTimeout(timer);
+    };
+  }, [loadingTrending, loadingHistory, loadingSubscriptions]);
+
+  const retryLoading = () => {
+    setShowLoadingIssue(false);
+    if (typeof window !== 'undefined') window.location.reload();
+  };
+  const isLoadingAny = loadingTrending || loadingHistory || loadingSubscriptions;
+  const shouldShowLoadingIssue = isLoadingAny && showLoadingIssue;
 
   const navigateToChannel = (channel: PodcastChannel) => {
     navigate(buildPodcastChannelPath(channel, currentPath), { state: { channel } });
@@ -114,19 +137,21 @@ export const MobilePodcastDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-muted pb-[130px]">
       {/* Header */}
-      <header className="bg-card px-5 pt-5 pb-4 border-b border-border sticky top-0 z-20">
-        <div className="flex items-center gap-3 mb-3">
+      <header className="bg-card/80 backdrop-blur-xl px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-6 border-b border-border/40 sticky top-0 z-30 rounded-b-[2.5rem] shadow-sm">
+        <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigate(backPath)}
-            className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center active:scale-95 transition-transform"
+            className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center active:scale-95 transition-all border border-border/20"
             aria-label={t('common.back', { defaultValue: 'Back' })}
           >
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+            <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={3} />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-extrabold text-foreground">{t('podcast.title')}</h1>
+            <h1 className="text-2xl font-black text-foreground italic tracking-tighter leading-none">
+              {t('podcast.title', { defaultValue: 'Podcast' })}
+            </h1>
           </div>
         </div>
         {/* Search */}
@@ -141,7 +166,7 @@ export const MobilePodcastDashboard: React.FC = () => {
               event.preventDefault();
               handleSearchSubmit();
             }}
-            className="w-full !h-auto !bg-muted !rounded-lg !py-2.5 !pl-9 !pr-4 text-sm font-medium focus-visible:!ring-2 focus-visible:!ring-primary/30 transition-all !border-0 !shadow-none"
+            className="w-full !h-12 !bg-muted/50 !rounded-2xl !py-3 !pl-11 !pr-4 text-sm font-bold focus-visible:!ring-2 focus-visible:!ring-primary/30 transition-all !border-border/20 !shadow-none"
           />
           <Button
             type="button"
@@ -179,37 +204,83 @@ export const MobilePodcastDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Continue Listening (Compact Hero) */}
+      {shouldShowLoadingIssue && (
+        <div className="px-5 py-2">
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="text-sm font-bold text-muted-foreground mb-3">
+              {t('podcast.loadError', {
+                defaultValue: 'Unable to load podcast data right now.',
+              })}
+            </p>
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={retryLoading}
+              className="h-11 px-4 rounded-xl border border-border bg-background font-bold"
+            >
+              {t('common.retry', { defaultValue: 'Retry' })}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Continue Listening (2.0 Hero) */}
       {latestHistory && (
-        <div className="px-5 py-3">
+        <div className="px-6 py-4">
           <Button
             variant="ghost"
             size="auto"
             onClick={() => navigateToEpisode(latestHistory)}
-            className="w-full bg-primary rounded-xl p-3 !flex items-center gap-3 text-primary-foreground text-left active:scale-[0.99] transition-transform"
+            className="w-full bg-indigo-600 rounded-[2rem] p-6 !flex items-center gap-4 text-white text-left active:scale-[0.98] transition-all shadow-xl shadow-indigo-600/20 relative overflow-hidden group"
           >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-[40px] rounded-full -mr-16 -mt-16" />
+
             <div
-              className="w-12 h-12 bg-indigo-500 dark:bg-indigo-400/70 rounded-lg shrink-0 bg-cover bg-center"
+              className="w-16 h-16 bg-black/20 rounded-2xl shrink-0 bg-cover bg-center border border-white/20 shadow-lg relative z-10"
               style={{ backgroundImage: `url(${latestHistory.channelImage || '/logo.png'})` }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold text-green-400 dark:text-green-300 mb-0.5">
-                {t('podcast.nowPlaying')}
-              </div>
-              <h3 className="font-bold text-sm truncate">{latestHistory.episodeTitle}</h3>
-              <div className="h-1 bg-muted rounded-full mt-1.5 overflow-hidden">
-                <div className="h-full bg-green-400 dark:bg-green-300 w-1/2" />
+            >
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                <PlayCircle className="w-8 h-8 text-white fill-current" />
               </div>
             </div>
-            <div className="w-9 h-9 bg-card rounded-full flex items-center justify-center text-foreground">
-              <Pause className="w-4 h-4 fill-current" />
+            <div className="flex-1 min-w-0 relative z-10">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">
+                  {t('podcast.nowPlaying', { defaultValue: 'Resuming' })}
+                </span>
+              </div>
+              <h3 className="font-black text-lg italic tracking-tight leading-tight line-clamp-1 mb-2">
+                {latestHistory.episodeTitle}
+              </h3>
+              <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '45%' }} // Simulated progress
+                  className="h-full bg-green-400 rounded-full"
+                />
+              </div>
             </div>
           </Button>
         </div>
       )}
 
       {/* Subscriptions Row */}
-      {user && subscriptions.length > 0 && (
+      {user && loadingSubscriptions && (
+        <section className="pt-2 pb-2">
+          <div className="px-5 mb-3 h-4 w-36 bg-muted rounded animate-pulse" />
+          <div className="flex gap-3 overflow-x-auto px-5" style={{ scrollbarWidth: 'none' }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="min-w-[100px] animate-pulse">
+                <div className="w-16 h-16 mx-auto bg-muted rounded-xl mb-2" />
+                <div className="h-3 bg-muted rounded w-20 mx-auto" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {user && !loadingSubscriptions && subscriptions.length > 0 && (
         <section className="pt-2 pb-2">
           <div className="flex items-center justify-between px-5 mb-3">
             <h2 className="font-bold text-foreground text-sm">{t('podcast.mySubscriptions')}</h2>
@@ -274,41 +345,65 @@ export const MobilePodcastDashboard: React.FC = () => {
             </Button>
           </div>
         </div>
-        <div
-          className="flex gap-3 overflow-x-auto px-5"
-          style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {trending.map((pod, idx) => (
-            <Button
-              variant="ghost"
-              size="auto"
-              key={pod.id || pod._id}
-              onClick={() => navigateToChannel(pod)}
-              className="min-w-[120px] bg-card rounded-xl border border-border p-2.5 text-left snap-start relative active:scale-[0.98] transition-transform !block !whitespace-normal"
-            >
-              <span className="absolute top-1.5 left-1.5 bg-indigo-600 dark:bg-indigo-400/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                #{idx + 1}
-              </span>
-              <div
-                className="w-full aspect-square bg-gradient-to-br from-rose-100 to-rose-200 dark:from-rose-400/16 dark:to-rose-500/20 rounded-lg mb-2 bg-cover bg-center"
-                style={{ backgroundImage: `url(${pod.artworkUrl || pod.artwork || '/logo.png'})` }}
-              />
-              <h4 className="font-bold text-xs text-foreground truncate">{pod.title}</h4>
-              <p className="text-[10px] text-muted-foreground font-medium truncate">{pod.author}</p>
-            </Button>
-          ))}
-          {trending.length === 0 && !trendingData && (
-            <>
-              {[1, 2, 3].map(i => (
-                <div key={i} className="min-w-[120px] animate-pulse">
-                  <div className="w-full aspect-square bg-muted rounded-lg mb-2" />
-                  <div className="h-3 bg-muted rounded w-3/4 mb-1" />
-                  <div className="h-2 bg-muted rounded w-1/2" />
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+        {loadingTrending ? (
+          <div
+            className="flex gap-3 overflow-x-auto px-5"
+            style={{
+              scrollSnapType: 'x mandatory',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {[1, 2, 3].map(i => (
+              <div key={i} className="min-w-[120px] animate-pulse">
+                <div className="w-full aspect-square bg-muted rounded-lg mb-2" />
+                <div className="h-3 bg-muted rounded w-3/4 mb-1" />
+                <div className="h-2 bg-muted rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : trending.length === 0 ? (
+          <div className="px-5">
+            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm font-bold text-muted-foreground">
+              {t('podcast.emptyTrending', {
+                defaultValue: 'No trending podcasts available right now.',
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            className="flex gap-3 overflow-x-auto px-5"
+            style={{
+              scrollSnapType: 'x mandatory',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {trending.map((pod, idx) => (
+              <Button
+                variant="ghost"
+                size="auto"
+                key={pod.id || pod._id}
+                onClick={() => navigateToChannel(pod)}
+                className="min-w-[120px] bg-card rounded-xl border border-border p-2.5 text-left snap-start relative active:scale-[0.98] transition-transform !block !whitespace-normal"
+              >
+                <span className="absolute top-1.5 left-1.5 bg-indigo-600 dark:bg-indigo-400/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                  #{idx + 1}
+                </span>
+                <div
+                  className="w-full aspect-square bg-gradient-to-br from-rose-100 to-rose-200 dark:from-rose-400/16 dark:to-rose-500/20 rounded-lg mb-2 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${pod.artworkUrl || pod.artwork || '/logo.png'})`,
+                  }}
+                />
+                <h4 className="font-bold text-xs text-foreground truncate">{pod.title}</h4>
+                <p className="text-[10px] text-muted-foreground font-medium truncate">
+                  {pod.author}
+                </p>
+              </Button>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* History Section */}
