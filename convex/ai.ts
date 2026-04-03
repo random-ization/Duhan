@@ -1118,6 +1118,26 @@ export const handleDeepgramCallback = action({
       // IMPORTANT: Keep callback fast to avoid Deepgram timeout.
       // Store transcript in DB for reliable retrieval.
       await upsertTranscript(ctx, args.episodeId, baseSegments);
+
+      const normalizedTargetLang = normalizeTargetLanguage(args.language);
+      if (normalizedTargetLang) {
+        try {
+          const translations = await translateSegmentTexts(baseSegments, normalizedTargetLang);
+          if (translations.length > 0) {
+            await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
+              episodeId: args.episodeId,
+              language: normalizedTargetLang,
+              translations,
+            });
+          }
+        } catch (translationError) {
+          console.warn(
+            '[AI] Deepgram callback translation failed:',
+            toErrorMessage(translationError)
+          );
+        }
+      }
+
       // Best-effort CDN cache (optional)
       await cacheTranscriptToSpaces(args.episodeId, baseSegments);
 
@@ -1161,13 +1181,20 @@ export const getTranscript = action({
     }
 
     try {
-      await enforceAiDailyLimit(ctx, userId, 'get_transcript');
       const translations = await translateSegmentTexts(record.segments, normalizedTargetLang);
       if (translations.length > 0) {
         await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
           episodeId: args.episodeId,
           language: normalizedTargetLang,
           translations,
+        });
+
+        await ctx.runMutation(logUsageMutation, {
+          userId,
+          feature: 'get_transcript_translation',
+          model: 'mimo-v2-flash',
+          status: 'success',
+          provider: 'openai',
         });
       }
 

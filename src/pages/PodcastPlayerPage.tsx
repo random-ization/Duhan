@@ -1659,6 +1659,34 @@ const PodcastPlayerPage: React.FC = () => {
     [getTranscript]
   );
 
+  const waitForTranscriptWithTranslationReady = useCallback(
+    async (episodeId: string, targetLanguage: string) => {
+      const pollDelays = [0, 2000, 3000, 5000, 8000, 10000, 12000, 15000];
+      let fallbackSegments: TranscriptLine[] | null = null;
+
+      for (const delay of pollDelays) {
+        if (delay > 0) {
+          await waitMilliseconds(delay);
+        }
+        const result = await getTranscript({ episodeId, language: targetLanguage });
+        const segments = result?.segments;
+        if (!segments || segments.length === 0) continue;
+
+        fallbackSegments = segments;
+        const hasTranslation = segments.some(
+          segment =>
+            typeof segment.translation === 'string' && segment.translation.trim().length > 0
+        );
+        if (hasTranslation) {
+          return segments;
+        }
+      }
+
+      return fallbackSegments;
+    },
+    [getTranscript]
+  );
+
   const hydrateTranscriptTranslationsInBackground = useCallback(
     (episodeId: string, targetLanguage: string, loadKey: string) => {
       if (!targetLanguage) return;
@@ -1789,7 +1817,9 @@ const PodcastPlayerPage: React.FC = () => {
         const kickoffError = getTranscriptKickoffError(kickoff);
         if (kickoffError) throw new Error(kickoffError);
 
-        const readySegments = await waitForTranscriptReady(episodeId);
+        const readySegments = targetLanguage
+          ? await waitForTranscriptWithTranslationReady(episodeId, targetLanguage)
+          : await waitForTranscriptReady(episodeId);
         if (readySegments && readySegments.length > 0) {
           applyLoadedTranscript({
             segments: readySegments,
@@ -1840,6 +1870,7 @@ const PodcastPlayerPage: React.FC = () => {
       resolveTranscriptAudioUrl,
       retryLoadTranscriptFromS3,
       waitForTranscriptReady,
+      waitForTranscriptWithTranslationReady,
       hydrateTranscriptTranslationsInBackground,
       language,
     ]
