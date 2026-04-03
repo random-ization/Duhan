@@ -10,6 +10,13 @@ export const logUsage = internalMutation({
     completionTokens: v.optional(v.number()),
     totalTokens: v.optional(v.number()),
     costUsd: v.optional(v.number()),
+    status: v.optional(v.union(v.literal('success'), v.literal('error'))),
+    provider: v.optional(v.string()),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    retries: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    httpStatus: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert('ai_usage_logs', {
@@ -30,6 +37,28 @@ export const logInvocation = internalMutation({
       userId: args.userId,
       feature: args.feature,
       model: 'invocation',
+      createdAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+export const logFailure = internalMutation({
+  args: {
+    userId: v.optional(v.id('users')),
+    feature: v.string(),
+    model: v.string(),
+    provider: v.optional(v.string()),
+    errorCode: v.optional(v.string()),
+    errorMessage: v.string(),
+    retries: v.optional(v.number()),
+    durationMs: v.optional(v.number()),
+    httpStatus: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert('ai_usage_logs', {
+      ...args,
+      status: 'error',
       createdAt: Date.now(),
     });
     return { success: true };
