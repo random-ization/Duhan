@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
@@ -9,7 +10,13 @@ import {
   Settings,
   Camera,
   LogOut,
+  Sparkles,
+  Trophy,
+  History,
+  BookMarked,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../../lib/utils';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
@@ -33,6 +40,7 @@ import {
   uploadAvatarImage,
   validateAvatarFile,
 } from '../../utils/storageUpload';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 
 const MobileAvatarContent = ({
   isUploadingAvatar,
@@ -51,8 +59,9 @@ const MobileAvatarContent = ({
 };
 
 export const MobileProfilePage: React.FC = () => {
-  const { user, updateUser, language } = useAuth();
+  const { user, updateUser, language, viewerAccess } = useAuth();
   const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
   const { signOut, signIn } = useAuthActions();
   const { t } = useTranslation();
 
@@ -172,12 +181,50 @@ export const MobileProfilePage: React.FC = () => {
     }
   };
 
+  const handleDisplayNameUpdate = async (nextName: string) => {
+    if (!nextName.trim() || nextName === user?.name) return;
+    await updateUser({ name: nextName });
+    toast.success(t('profileUpdated', { defaultValue: 'Profile updated' }));
+  };
+
   if (!user) return <Loading fullScreen />;
 
   const displayName = user.name || t('profile.unnamed', { defaultValue: 'User' });
   const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
   const dayStreak = userStats?.streak ?? 0;
   const savedWordsCount = userStats?.totalWordsLearned ?? vocabBookCount?.count ?? 0;
+  const averageScoreLabel = averageScore > 0 ? `${averageScore}` : '—';
+
+  const overviewStats = [
+    {
+      id: 'streak',
+      label: t('dashboard.mobile.streakShort', { defaultValue: 'Streak' }),
+      value: `${dayStreak}`,
+      icon: <Trophy className="w-3.5 h-3.5" />,
+      tone: 'text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-400/10 border-amber-100 dark:border-amber-400/20',
+    },
+    {
+      id: 'words',
+      label: t('profile.savedWords', { defaultValue: 'Words' }),
+      value: `${savedWordsCount}`,
+      icon: <BookMarked className="w-3.5 h-3.5" />,
+      tone: 'text-indigo-600 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-400/10 border-indigo-100 dark:border-indigo-400/20',
+    },
+    {
+      id: 'exams',
+      label: t('profile.examsTaken', { defaultValue: 'Exams' }),
+      value: `${examsTaken}`,
+      icon: <History className="w-3.5 h-3.5" />,
+      tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-400/10 border-emerald-100 dark:border-emerald-400/20',
+    },
+    {
+      id: 'score',
+      label: t('profile.avgScore', { defaultValue: 'Score' }),
+      value: averageScoreLabel,
+      icon: <BarChart3 className="w-3.5 h-3.5" />,
+      tone: 'text-rose-600 bg-rose-50 dark:text-rose-300 dark:bg-rose-400/10 border-rose-100 dark:border-rose-400/20',
+    },
+  ];
 
   // Helper for accounts
   const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);
@@ -187,17 +234,27 @@ export const MobileProfilePage: React.FC = () => {
       : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-400/12 dark:text-indigo-200';
   const tabContentByKey = {
     info: (
-      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
+      >
         <ProfileInfoTab
           labels={labels}
           user={user}
           displayName={displayName}
           userIdDisplay={userIdDisplay}
+          isPremium={Boolean(viewerAccess?.isPremium)}
+          onNameUpdate={handleDisplayNameUpdate}
         />
-      </div>
+      </motion.div>
     ),
     stats: (
-      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
+      >
         <ProfileStatsTab
           labels={labels}
           dayStreak={dayStreak}
@@ -206,10 +263,14 @@ export const MobileProfilePage: React.FC = () => {
           averageScore={averageScore}
           examHistory={examHistory}
         />
-      </div>
+      </motion.div>
     ),
     security: (
-      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
+      >
         <ProfileSecurityTab
           labels={labels}
           handlePasswordChange={handlePasswordChange}
@@ -235,96 +296,210 @@ export const MobileProfilePage: React.FC = () => {
           error={toast.error}
           toErrorMessage={toErrorMessage}
         />
-      </div>
+      </motion.div>
     ),
     settings: (
-      <div className="bg-card p-6 rounded-3xl border border-border shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
+      >
         <ProfileSettingsTab labels={labels} />
-      </div>
+      </motion.div>
     ),
   } as const;
 
+  const tabMetaByKey = {
+    info: {
+      title: t('profile.tabInfoTitle', { defaultValue: 'Profile details' }),
+      subtitle: t('profile.tabInfoSubtitle', {
+        defaultValue:
+          'Update your identity, avatar, and the personal details tied to your learning.',
+      }),
+    },
+    stats: {
+      title: t('profile.tabStatsTitle', { defaultValue: 'Learning overview' }),
+      subtitle: t('profile.tabStatsSubtitle', {
+        defaultValue: 'Review streaks, exam momentum, and the progress signals that matter most.',
+      }),
+    },
+    security: {
+      title: t('profile.tabSecurityTitle', { defaultValue: 'Security and linked accounts' }),
+      subtitle: t('profile.tabSecuritySubtitle', {
+        defaultValue:
+          'Manage password changes and the sign-in providers connected to this account.',
+      }),
+    },
+    settings: {
+      title: t('profile.tabSettingsTitle', { defaultValue: 'Preferences' }),
+      subtitle: t('profile.tabSettingsSubtitle', {
+        defaultValue: 'Tune notifications, language, and product defaults to fit your routine.',
+      }),
+    },
+  } as const;
+
+  const returnTo = searchParams.get('returnTo');
+  const shouldShowBack = hasSafeReturnTo(returnTo);
+
+  const handleBack = () => {
+    navigate(resolveSafeReturnTo(returnTo, '/dashboard'));
+  };
+
   return (
-    <div className="min-h-[100dvh] bg-muted pb-[130px]">
-      {/* Header */}
-      <div className="bg-card p-6 pb-8 rounded-b-[2.5rem] shadow-sm z-10 relative">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/dashboard')}
-            className="p-2 -ml-2 bg-muted rounded-full"
-          >
-            <ArrowLeft className="w-6 h-6 text-foreground" />
-          </Button>
+    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
+      {/* Premium Profile Header */}
+      <div className="relative overflow-hidden rounded-b-[3rem] bg-card px-6 pb-12 pt-8 shadow-sm">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.15),transparent_60%)]" />
+
+        <div className="relative mb-10 flex items-center justify-between">
+          {shouldShowBack ? (
+            <Button
+              variant="ghost"
+              size="auto"
+              onClick={handleBack}
+              className="h-10 w-10 items-center justify-center rounded-full bg-muted shadow-sm transition-all active:scale-90"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </Button>
+          ) : (
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 backdrop-blur-sm dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200">
+              <Sparkles className="w-3 h-3 h-3" />
+              {t('nav.profile', { defaultValue: 'Profile' })}
+            </div>
+          )}
           <Button
             variant="ghost"
             size="auto"
             onClick={() => signOut()}
-            className="p-2 -mr-2 text-muted-foreground"
+            className="h-10 rounded-xl border border-border bg-card px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="h-3.5 w-3.5 mr-2" />
+            {t('common.signOut', { defaultValue: 'Sign Out' })}
           </Button>
         </div>
 
-        <div className="flex flex-col items-center">
-          <div className="relative mb-4">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-border shadow-lg bg-muted relative">
-              <MobileAvatarContent
-                isUploadingAvatar={isUploadingAvatar}
-                avatar={user.avatar}
-                altLabel={t('profile.title', { defaultValue: 'Profile' })}
+        <div className="relative z-10">
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="relative mb-6">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="relative h-28 w-28 overflow-hidden rounded-[2.25rem] border-4 border-card shadow-2xl bg-muted"
+              >
+                <MobileAvatarContent
+                  isUploadingAvatar={isUploadingAvatar}
+                  avatar={user.avatar}
+                  altLabel={displayName}
+                />
+              </motion.div>
+              <Button
+                variant="ghost"
+                size="auto"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 h-10 w-10 rounded-2xl bg-indigo-600 text-white shadow-xl flex items-center justify-center transition-transform active:scale-90 border-2 border-card"
+              >
+                <Camera className="w-4 h-4" />
+              </Button>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
               />
             </div>
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-2 bg-indigo-600 dark:bg-indigo-400/80 rounded-full text-primary-foreground shadow-md active:scale-95 transition-transform"
-            >
-              <Camera className="w-4 h-4" />
-            </Button>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarUpload}
-            />
+
+            <h1 className="text-3xl font-black text-foreground tracking-tight italic mb-2 leading-none">
+              {displayName}
+            </h1>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+              <span className="font-mono text-foreground opacity-80">ID: {userIdDisplay}</span>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-foreground mb-1">{displayName}</h1>
-          <p className="text-sm font-bold text-muted-foreground font-mono">ID: {userIdDisplay}</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            {overviewStats.map(stat => (
+              <motion.div
+                key={stat.id}
+                whileTap={{ scale: 0.98 }}
+                className={cn('rounded-2xl border p-4 shadow-sm flex flex-col', stat.tone)}
+              >
+                <div className="flex items-center gap-2 mb-2 opacity-70">
+                  {stat.icon}
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    {stat.label}
+                  </span>
+                </div>
+                <div className="text-2xl font-black">{stat.value}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Tab Nav */}
-      <div className="px-4 -mt-6 relative z-20">
-        <div className="bg-card/90 backdrop-blur-md p-1.5 rounded-2xl shadow-lg border border-border flex justify-between">
+      {/* Floating Modern Tab Nav */}
+      <div className="sticky top-4 z-40 px-6 -mt-8 mb-8">
+        <div className="flex justify-between rounded-[2rem] border border-white/20 bg-white/70 dark:bg-zinc-900/70 p-1.5 shadow-2xl backdrop-blur-xl">
           {[
-            { id: 'info', icon: UserIcon },
-            { id: 'stats', icon: BarChart3 },
-            { id: 'security', icon: Lock },
-            { id: 'settings', icon: Settings },
-          ].map(item => (
-            <Button
-              variant="ghost"
-              size="auto"
-              key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
-              className={`flex-1 flex items-center justify-center py-3 rounded-xl transition-all ${
-                activeTab === item.id
-                  ? 'bg-indigo-600 dark:bg-indigo-400/80 text-primary-foreground shadow-md'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-            </Button>
-          ))}
+            {
+              id: 'info',
+              icon: UserIcon,
+              label: t('profile.tabInfoShort', { defaultValue: 'Info' }),
+            },
+            {
+              id: 'stats',
+              icon: BarChart3,
+              label: t('profile.tabStatsShort', { defaultValue: 'Stats' }),
+            },
+            {
+              id: 'security',
+              icon: Lock,
+              label: t('profile.tabSecurityShort', { defaultValue: 'Security' }),
+            },
+            {
+              id: 'settings',
+              icon: Settings,
+              label: t('profile.tabSettingsShort', { defaultValue: 'Settings' }),
+            },
+          ].map(item => {
+            const isActive = activeTab === item.id;
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                size="auto"
+                onClick={() => setActiveTab(item.id as any)}
+                className={cn(
+                  'relative flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300',
+                  isActive
+                    ? 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-400/10 shadow-sm'
+                    : 'text-muted-foreground'
+                )}
+              >
+                <item.icon className={cn('w-4 h-4', isActive ? 'stroke-[2.5px]' : 'stroke-2')} />
+                <span className="text-[9px] font-black uppercase tracking-widest leading-none">
+                  {item.label}
+                </span>
+              </Button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Content Body */}
-      <div className="p-4 pt-6">{tabContentByKey[activeTab]}</div>
+      {/* Modern Tab Content Header & Body */}
+      <main className="px-6 pb-12">
+        <div className="mb-6 px-1">
+          <h2 className="text-2xl font-black text-foreground italic tracking-tight mb-2">
+            {tabMetaByKey[activeTab].title}
+          </h2>
+          <p className="text-sm font-semibold text-muted-foreground leading-relaxed">
+            {tabMetaByKey[activeTab].subtitle}
+          </p>
+        </div>
+
+        <AnimatePresence mode="wait">
+          <div key={activeTab}>{tabContentByKey[activeTab]}</div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

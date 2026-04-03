@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import { BookMarked, Newspaper, Sparkles, ChevronRight } from 'lucide-react';
+import { BookMarked, Newspaper, Sparkles, ChevronRight, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { READING_BOOKS, NEWS } from '../../utils/convexRefs';
 import { MobilePictureBookCard } from './MobilePictureBookCard';
 import { MobileNewsCard } from './MobileNewsCard';
@@ -21,6 +23,7 @@ type MobilePictureBook = {
   slug: string;
   title: string;
   author?: string;
+  coverImageUrl?: string;
   coverUrl?: string;
   levelLabel?: string;
 };
@@ -52,10 +55,13 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const language = i18n.language || 'zh';
   const [feedReadyUserId, setFeedReadyUserId] = useState<string | null>(null);
   const [feedInitError, setFeedInitError] = useState(false);
   const [feedInitVersion, setFeedInitVersion] = useState(0);
+  const [showAllBooks, setShowAllBooks] = useState(false);
+  const [bookLevelFilter, setBookLevelFilter] = useState<string>('ALL');
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
 
   // --- DATA FETCHING ---
@@ -91,7 +97,25 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const newsLoading =
     !feedInitError && (!user?.id || feedReadyUserId === user.id) && newsFeed === undefined;
   const showNewsError = Boolean(user?.id) && feedInitError;
-  const currentPath = '/reading?tab=reading';
+  const currentPath = `${location.pathname}${location.search}`;
+
+  // Available levels for filter chips
+  const availableLevels = useMemo(() => {
+    const levels = new Set<string>();
+    books.forEach(b => {
+      if (b.levelLabel) levels.add(b.levelLabel);
+    });
+    return Array.from(levels).sort((a, b) => {
+      const na = parseInt(a.match(/(\d+)/)?.[1] || '0');
+      const nb = parseInt(b.match(/(\d+)/)?.[1] || '0');
+      return na - nb;
+    });
+  }, [books]);
+
+  const filteredBooks = useMemo(
+    () => (bookLevelFilter === 'ALL' ? books : books.filter(b => b.levelLabel === bookLevelFilter)),
+    [books, bookLevelFilter]
+  );
 
   const retryNewsFeed = () => {
     setFeedReadyUserId(null);
@@ -101,7 +125,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   if (!active) return null;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto no-scrollbar pb-32 px-6 pt-6 animate-in fade-in slide-in-from-right-4 duration-300 mesh-gradient grain-overlay">
+    <div className="absolute inset-0 overflow-y-auto no-scrollbar pb-mobile-nav px-6 pt-6 animate-in fade-in slide-in-from-right-4 duration-300">
       {/* 1. Storybooks Section */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-6">
@@ -121,7 +145,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate('/reading')}
+            onClick={() => setShowAllBooks(true)}
             className="flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
             aria-label={t('readingDiscovery.pictureBooks.viewAll', {
               defaultValue: 'View all storybooks',
@@ -148,16 +172,13 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
             </p>
           </div>
         ) : (
-          <div
-            className="flex gap-5 overflow-x-auto no-scrollbar -mx-6 px-6 snap-x snap-mandatory pb-4"
-            style={{ touchAction: 'pan-x' }}
-          >
-            {books.slice(0, 10).map(book => (
-              <div key={book._id} className="snap-start">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
+            {books.map(book => (
+              <div key={book._id} className="shrink-0">
                 <MobilePictureBookCard
                   title={book.title}
                   author={book.author}
-                  coverUrl={book.coverUrl}
+                  coverUrl={book.coverImageUrl || book.coverUrl}
                   level={book.levelLabel || 'Level 1'}
                   ariaLabel={t('readingDiscovery.pictureBooks.openCard', {
                     defaultValue: 'Open storybook {{title}}',
@@ -170,6 +191,128 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           </div>
         )}
       </section>
+
+      {/* All Books Full-Screen Sheet – rendered via portal to escape stacking context */}
+      {showAllBooks &&
+        ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom-8 duration-300">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+
+            {/* Header */}
+            <div className="shrink-0 px-5 pt-3 pb-3 border-b border-border bg-background">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-black text-foreground tracking-tighter italic leading-none">
+                    {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Storybooks' })}
+                  </h2>
+                  <p className="text-xs text-muted-foreground font-semibold mt-1">
+                    {filteredBooks.length} / {books.length}{' '}
+                    {t('readingDiscovery.pictureBooks.total', { defaultValue: 'books' })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => setShowAllBooks(false)}
+                  className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-all"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Level filter chips */}
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {['ALL', ...availableLevels].map(level => {
+                  const active = bookLevelFilter === level;
+                  const label =
+                    level === 'ALL'
+                      ? t('common.all', { defaultValue: 'All' })
+                      : level.replace('단계', '단계');
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => setBookLevelFilter(level)}
+                      className={`shrink-0 h-8 px-4 rounded-full text-xs font-black tracking-tight transition-all active:scale-95 ${
+                        active
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                          : 'bg-muted text-muted-foreground border border-border'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Book Grid */}
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+              {filteredBooks.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground text-sm font-semibold">
+                  {t('readingDiscovery.noContent', { defaultValue: 'No stories available yet' })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-6">
+                  {filteredBooks.map(book => {
+                    const coverUrl = (book.coverImageUrl || book.coverUrl || '').trim();
+                    const levelNum = book.levelLabel?.match(/(\d+)/)?.[1] ?? '';
+                    return (
+                      <button
+                        key={book._id}
+                        onClick={() => {
+                          setShowAllBooks(false);
+                          navigate(buildPictureBookPath(book.slug, currentPath));
+                        }}
+                        className="flex flex-col gap-2 text-left group active:scale-95 transition-transform"
+                      >
+                        {/* Cover */}
+                        <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden border border-border bg-muted shadow-sm">
+                          {coverUrl ? (
+                            <img
+                              src={coverUrl}
+                              alt={book.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center">
+                              <BookMarked className="w-10 h-10 text-indigo-300" />
+                            </div>
+                          )}
+                          {/* Level badge */}
+                          {levelNum && (
+                            <div className="absolute top-2 left-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-lg px-2 py-0.5 shadow-sm border border-border/50">
+                              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                                Lv.{levelNum}
+                              </span>
+                            </div>
+                          )}
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-black/0 group-active:bg-black/10 transition-colors" />
+                        </div>
+                        {/* Title & Author */}
+                        <div className="px-0.5">
+                          <p className="text-sm font-black text-foreground leading-snug line-clamp-2 group-active:text-indigo-600 transition-colors">
+                            {book.title}
+                          </p>
+                          {book.author && (
+                            <p className="text-[10px] font-semibold text-muted-foreground mt-0.5 truncate">
+                              {book.author}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* 2. Global Insights Bento Block */}
       <section className="mb-10">

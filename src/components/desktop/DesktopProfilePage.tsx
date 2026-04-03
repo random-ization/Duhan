@@ -318,6 +318,7 @@ export const DesktopProfilePage: React.FC<ProfileProps> = ({ language }) => {
         user={user}
         displayName={displayName}
         userIdDisplay={userIdDisplay}
+        isPremium={Boolean(viewerAccess?.isPremium)}
       />
     ),
     security: (
