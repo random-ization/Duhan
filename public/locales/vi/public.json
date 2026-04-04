@@ -279,7 +279,10 @@
     },
     "otherPublisher": "Khác",
     "viewAll": "Xem tất cả",
-    "loadError": "Không thể tải giáo trình lúc này. Vui lòng thử lại sau."
+    "loadError": "Không thể tải giáo trình lúc này. Vui lòng thử lại sau.",
+    "results": "Kết quả",
+    "items": "mục",
+    "textbook": "Giáo trình"
   },
   "landing": {
     "seo": {
@@ -762,6 +765,9 @@
     "videos": "Video",
     "podcasts": "Podcast",
     "topik": "TOPIK",
+    "reading": "Đọc",
+    "grammar": "Ngữ pháp",
+    "notebook": "Sổ tay",
     "profile": "Hồ sơ",
     "typing": "Gõ phím"
   },
@@ -858,22 +864,36 @@
     "backHome": "Về trang chủ",
     "continue": "Tiếp tục",
     "viewAll": "Xem tất cả",
+    "all": "Tất cả",
+    "details": "Chi tiết",
     "exams": "Đề thi",
     "currentFocus": "Trọng tâm hiện tại",
     "more": "Thêm thao tác",
     "favorite": "Yêu thích",
     "unfavorite": "Bỏ yêu thích",
     "share": "Chia sẻ",
+    "shareFailed": "Chia sẻ thất bại",
     "fontSize": "Cỡ chữ",
     "gotIt": "OK",
     "noMatches": "Không có kết quả phù hợp",
     "notFound": "Không tìm thấy trang",
     "notFoundHint": "Trang bạn tìm không tồn tại.",
+    "linkCopied": "Đã sao chép liên kết",
     "off": "Tắt",
     "on": "Bật",
+    "play": "Phát",
+    "pause": "Tạm dừng",
     "page": "Trang",
     "breadcrumb": "Điều hướng breadcrumb",
     "search": "Tìm kiếm",
+    "filter": "Bộ lọc",
+    "option": "Tùy chọn",
+    "minutes": "Phút",
+    "recently": "Gần đây",
+    "reset": "Đặt lại",
+    "retry": "Thử lại",
+    "signOut": "Đăng xuất",
+    "switchTab": "Chuyển tab",
     "loading": "Đang tải...",
     "error": "Đã xảy ra lỗi.",
     "allRightsReserved": "Bảo lưu mọi quyền."
@@ -1328,6 +1348,7 @@
       "back": "Quay lại",
       "read": "Đọc to",
       "addVocab": "Thêm vào từ vựng",
+      "close": "Đóng",
       "error": "Lỗi tải dữ liệu",
       "noMeaning": "Không có nghĩa",
       "favorite": "Yêu thích",
@@ -1555,6 +1576,7 @@
     "readingHub": {
       "title": "Khám phá đọc hiểu",
       "subtitle": "Nguồn đọc tiếng Hàn và công cụ chú thích",
+      "mobileSubtitle": "Tin tức, truyện và sách tranh để nhập vai.",
       "tagNews": "Tin tức",
       "tagArticles": "Bài viết"
     },
@@ -1650,14 +1672,16 @@
       "dueNow": "Cần ôn tập",
       "totalWords": "từ vựng",
       "dueCount": "{{count}} cần ôn",
-      "masteredCount": "{{count}} đã thuộc"
+      "masteredCount": "{{count}} đã thuộc",
+      "startChallenge": "Bắt đầu thử thách"
     },
     "notes": {
       "label": "Sổ tay",
       "title": "Ghi chú học tập",
       "subtitle": "Lỗi sai và ghi chú",
       "mistake": "Lỗi",
-      "memo": "Ghi"
+      "memo": "Ghi",
+      "openNotebook": "Mở sổ tay"
     },
     "library": {
       "back": "Quay lại",
@@ -1767,18 +1791,24 @@
       "keepMomentum": "Giữ vững phong độ!",
       "continue": "Tiếp tục",
       "review": "Ôn tập",
+      "quickReviewSubtitle": "Dọn các thẻ đến hạn.",
       "due": "Cần ôn",
       "notes": "Ghi chú",
+      "quickNotebookSubtitle": "Ghi lại lỗi sai và lấp lỗ hổng.",
       "mistakes": "Lỗi sai",
       "check": "Kiểm tra",
       "typing": "Gõ phím",
       "practice": "Luyện tập",
+      "quickPracticeSubtitle": "Đi thẳng vào các bài luyện trọng tâm.",
       "start": "Bắt đầu",
       "exam": "Bài thi",
       "listen": "Nghe",
       "watch": "Xem",
       "immersion": "Thực hành",
+      "exploreTitle": "Nhập vai",
+      "shortcutsTitle": "Trung tâm học",
       "videoLibrary": "Thư viện Video",
+      "topikShortcutSubtitle": "Thi thử, xem lại và theo dõi điểm số.",
       "leftMinutes": "Còn {{count}} phút",
       "minutesShort": "Phút",
       "dueShort": "Ôn",
@@ -1789,6 +1819,14 @@
       "swipeHint": "Vuốt để xem thêm",
       "bestScoreLabel": "Cao nhất: {{score}}",
       "latestEpisodes": "Tập mới nhất"
+    },
+    "mobileFocus": {
+      "continue": "Tiếp tục từ chỗ đang dở.",
+      "choose": "Chọn một lộ trình để bắt đầu."
+    },
+    "practice": {
+      "recommended": "Gợi ý tiếp theo",
+      "subtitle": "Sắp xếp tài nguyên và bắt đầu thử thách hôm nay"
     },
     "learningFlow": {
       "badge": "Luồng học",
@@ -3131,6 +3169,17 @@
   },
   "practiceHub": {
     "subtitle": "TOPIK, luyện gõ và luyện từ vựng"
+  },
+  "practice": {
+    "mobileTitle": "Xây dựng kỹ năng",
+    "mobileSubtitle": "Bắt đầu ôn tập, gõ phím và làm sổ tay từ hàng đợi luyện tập trọng tâm của bạn.",
+    "mobileRecommendedDue": "{{count}} thẻ đã sẵn sàng để ôn tập.",
+    "mobileRecommendedNotebook": "Xem lại ghi chú và lỗi sai gần đây.",
+    "mobileSkillLabel": {
+      "typing": "Luyện tốc độ",
+      "spelling": "Luyện hồi tưởng",
+      "notebook": "Không gian ôn tập"
+    }
   },
   "mediaHub": {
     "subtitle": "Video, podcast và bài đọc"

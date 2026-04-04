@@ -611,6 +611,14 @@ export default defineSchema({
         mn: v.optional(v.array(v.string())),
       })
     ),
+    translationLeases: v.optional(
+      v.object({
+        zh: v.optional(v.number()),
+        en: v.optional(v.number()),
+        vi: v.optional(v.number()),
+        mn: v.optional(v.number()),
+      })
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index('by_episode', ['episodeId']),

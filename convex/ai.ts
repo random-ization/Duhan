@@ -1,5 +1,5 @@
 'use node';
-import { action, type ActionCtx } from './_generated/server';
+import { action, internalAction, type ActionCtx } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { api, internal } from './_generated/api';
 import { makeFunctionReference } from 'convex/server';
@@ -13,10 +13,16 @@ import { createPresignedUploadUrl } from './storagePresign';
 import { assertProductionRuntimeEnv } from './env';
 import {
   fetchWithTimeout,
+  isLikelyTransientError,
   isRetryableHttpStatus,
   parseJsonObjectFromModelContent,
   retryAsync,
 } from './aiReliability';
+import {
+  isModelAccessError,
+  resolveChatProviderConfigs,
+  type ChatProviderConfig,
+} from './aiProviders';
 
 assertProductionRuntimeEnv();
 
@@ -443,6 +449,24 @@ type WhisperSegment = {
 
 type TranscriptRecord = Doc<'podcast_transcripts'>;
 type TranscriptSegment = TranscriptRecord['segments'][number];
+type ChatCompletionLike = {
+  choices: Array<{ message?: { content?: string | null } }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+};
+
+type ChatCompletionWithProvider<T extends ChatCompletionLike> = {
+  completion: T;
+  provider: ChatProviderConfig;
+};
+
+type SegmentTranslationResult = {
+  translations: string[];
+  provider: ChatProviderConfig | null;
+};
 type SegmentInput = {
   start?: number;
   end?: number;
@@ -450,6 +474,46 @@ type SegmentInput = {
   translation?: string;
   words?: TranscriptSegment['words'];
 };
+
+function createChatClient(config: ChatProviderConfig, timeout = 25000) {
+  return new OpenAI({
+    apiKey: config.apiKey,
+    ...(config.baseURL ? { baseURL: config.baseURL } : {}),
+    timeout,
+  });
+}
+
+async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
+  request: (args: { client: OpenAI; provider: ChatProviderConfig }) => Promise<T>,
+  options?: { label?: string; timeoutMs?: number }
+): Promise<ChatCompletionWithProvider<T>> {
+  const providers = resolveChatProviderConfigs(process.env);
+  if (providers.length === 0) {
+    throw new Error('No AI chat provider configured');
+  }
+
+  let lastError: unknown;
+
+  for (const provider of providers) {
+    try {
+      const client = createChatClient(provider, options?.timeoutMs ?? 25000);
+      const completion = await request({ client, provider });
+      return { completion, provider };
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `[AI] ${options?.label || 'chat_completion'} failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
+      );
+
+      // Try the next provider for model access issues and transient outages alike.
+      if (provider !== providers[providers.length - 1]) {
+        continue;
+      }
+    }
+  }
+
+  throw lastError ?? new Error('All AI chat providers failed');
+}
 
 function normalizeTranscriptWords(input: unknown): TranscriptSegment['words'] {
   if (!Array.isArray(input)) return undefined;
@@ -722,27 +786,82 @@ function applyTranslationsToSegments(
   }));
 }
 
+function compactComparableText(value: string): string {
+  return value
+    .normalize('NFKC')
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+    .trim()
+    .toLowerCase();
+}
+
+function countHangulCharacters(value: string): number {
+  const matches = value.match(/[가-힣]/g);
+  return matches ? matches.length : 0;
+}
+
+function isSuspiciousUntranslatedLine(
+  source: string,
+  translation: string,
+  targetLanguage: SupportedTranslationLanguage
+): boolean {
+  const normalizedSource = compactComparableText(source);
+  const normalizedTranslation = compactComparableText(translation);
+  if (!normalizedSource || !normalizedTranslation) return false;
+  if (normalizedSource === normalizedTranslation) return true;
+
+  const hangulCount = countHangulCharacters(translation);
+  const visibleLength = translation.replace(/\s+/g, '').length || 1;
+  const hangulRatio = hangulCount / visibleLength;
+
+  if (targetLanguage === 'zh' && hangulRatio > 0.55) {
+    return true;
+  }
+
+  return false;
+}
+
+function looksLikeUntranslatedBatch(
+  sourceTexts: string[],
+  translations: string[],
+  targetLanguage: SupportedTranslationLanguage
+): boolean {
+  if (sourceTexts.length === 0 || translations.length === 0) return false;
+  let suspiciousCount = 0;
+
+  for (let index = 0; index < sourceTexts.length; index += 1) {
+    const source = sourceTexts[index] || '';
+    const translation = translations[index] || '';
+    if (!translation.trim()) continue;
+    if (isSuspiciousUntranslatedLine(source, translation, targetLanguage)) {
+      suspiciousCount += 1;
+    }
+  }
+
+  const filledCount = translations.filter(item => item.trim().length > 0).length;
+  if (filledCount === 0) return false;
+  return suspiciousCount / filledCount >= 0.6;
+}
+
 async function translateSegmentTexts(
   baseSegments: Array<{ text: string }>,
   normalizedTargetLang: SupportedTranslationLanguage | ''
-): Promise<string[]> {
-  if (baseSegments.length === 0) return [];
-  if (!normalizedTargetLang) return [];
+): Promise<SegmentTranslationResult> {
+  if (baseSegments.length === 0 || !normalizedTargetLang) {
+    return { translations: [], provider: null };
+  }
 
-  const apiKey = process.env.MIMO_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) return [];
-
-  const baseURL = process.env.MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1';
+  const providers = resolveChatProviderConfigs(process.env);
+  if (providers.length === 0) {
+    return { translations: [], provider: null };
+  }
 
   try {
-    const client = new OpenAI({ apiKey, baseURL, timeout: 25000 });
-
     const MAX_TRANSLATE_SEGMENTS = 2000;
     if (baseSegments.length > MAX_TRANSLATE_SEGMENTS) {
       console.warn(
         `[AI] Skipping translation for ${baseSegments.length} segments (limit ${MAX_TRANSLATE_SEGMENTS}).`
       );
-      return [];
+      return { translations: [], provider: null };
     }
 
     const BATCH_SIZE = 40;
@@ -760,14 +879,15 @@ async function translateSegmentTexts(
 
     const requestBatchTranslations = async (
       segmentTexts: string[],
-      strictJsonMode: boolean
+      strictJsonMode: boolean,
+      provider: ChatProviderConfig
     ): Promise<string[]> => {
       const indexedTexts = segmentTexts.map((text, i) => ({ i, text }));
       let retryCount = 0;
       const completion = await retryAsync(
         () =>
-          client.chat.completions.create({
-            model: 'mimo-v2-flash',
+          createChatClient(provider).chat.completions.create({
+            model: provider.model,
             messages: [
               {
                 role: 'system',
@@ -788,11 +908,12 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
           }),
         {
           retries: 2,
-          label: `translate_segments_${strictJsonMode ? 'strict' : 'normal'}`,
+          label: `translate_segments_${provider.provider}_${strictJsonMode ? 'strict' : 'normal'}`,
           onRetry: () => {
             retryCount += 1;
           },
           shouldRetry: error => {
+            if (isModelAccessError(error)) return false;
             const status = resolveErrorHttpStatus(error);
             return isRetryableHttpStatus(status);
           },
@@ -801,7 +922,7 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
 
       if (retryCount > 0) {
         console.warn(
-          `[AI] translateSegmentTexts recovered after ${retryCount} retries (strict=${strictJsonMode})`
+          `[AI] translateSegmentTexts recovered after ${retryCount} retries (${provider.provider}, strict=${strictJsonMode})`
         );
       }
 
@@ -847,41 +968,59 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       return legacy.slice(0, segmentTexts.length);
     };
 
-    const processBatch = async (chunk: { index: number; segments: Array<{ text: string }> }) => {
+    const processBatch = async (chunk: {
+      index: number;
+      segments: Array<{ text: string }>;
+    }): Promise<{
+      index: number;
+      translations: string[];
+      provider: ChatProviderConfig | null;
+    }> => {
       const segmentTexts = chunk.segments.map(s => s.text);
-      let translations: string[] = [];
+      let chosenProvider: ChatProviderConfig | null = null;
+      let translations = new Array(chunk.segments.length).fill('');
 
-      try {
-        // Try without strict JSON mode first for better compatibility with 3rd party providers
-        translations = await requestBatchTranslations(segmentTexts, false);
-      } catch (e) {
-        console.warn(
-          `[AI] Batch ${chunk.index} primary translation failed:`,
-          e instanceof Error ? e.message : e
-        );
-      }
-
-      if (!translations.some(item => item.trim().length > 0)) {
+      for (const provider of providers) {
         try {
-          // Fallback to strict mode if necessary
-          translations = await requestBatchTranslations(segmentTexts, true);
-        } catch (e) {
-          console.error(
-            `[AI] Batch ${chunk.index} strict-mode fallback failed:`,
-            e instanceof Error ? e.message : e
+          translations = await requestBatchTranslations(segmentTexts, false, provider);
+        } catch (error) {
+          console.warn(
+            `[AI] Batch ${chunk.index} primary translation failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
           );
+        }
+
+        if (!translations.some(item => item.trim().length > 0)) {
+          try {
+            translations = await requestBatchTranslations(segmentTexts, true, provider);
+          } catch (error) {
+            console.warn(
+              `[AI] Batch ${chunk.index} strict translation failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
+            );
+          }
+        }
+
+        if (looksLikeUntranslatedBatch(segmentTexts, translations, normalizedTargetLang)) {
+          console.warn(
+            `[AI] Batch ${chunk.index} from ${provider.provider}:${provider.model} looks untranslated; trying fallback provider`
+          );
+          translations = new Array(chunk.segments.length).fill('');
+        }
+
+        if (translations.some(item => item.trim().length > 0)) {
+          chosenProvider = provider;
+          break;
         }
       }
 
-      if (!translations.some(item => item.trim().length > 0)) {
-        translations = new Array(chunk.segments.length).fill('');
-      }
-
-      return { index: chunk.index, translations };
+      return { index: chunk.index, translations, provider: chosenProvider };
     };
 
     const CONCURRENCY = 5;
-    let allResults: { index: number; translations: string[] }[] = [];
+    let allResults: {
+      index: number;
+      translations: string[];
+      provider: ChatProviderConfig | null;
+    }[] = [];
 
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
       const slice = chunks.slice(i, i + CONCURRENCY);
@@ -891,11 +1030,146 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
 
     allResults.sort((a, b) => a.index - b.index);
     const flatTranslations = allResults.flatMap(r => r.translations);
+    const resolvedProvider = allResults.find(result => result.provider)?.provider ?? null;
 
-    return flatTranslations;
+    return { translations: flatTranslations, provider: resolvedProvider };
   } catch (translateErr) {
     console.error('[AI] Translation failed:', translateErr);
-    return [];
+    return { translations: [], provider: null };
+  }
+}
+
+async function translateSingleTextDirect(
+  sourceText: string,
+  normalizedTargetLang: SupportedTranslationLanguage
+): Promise<{ translation: string; provider: ChatProviderConfig | null }> {
+  const providers = resolveChatProviderConfigs(process.env);
+  if (providers.length === 0) {
+    return { translation: '', provider: null };
+  }
+
+  const targetLanguageLabel = TARGET_LANGUAGE_LABELS[normalizedTargetLang];
+
+  for (const provider of providers) {
+    try {
+      const completion = await retryAsync(
+        () =>
+          createChatClient(provider).chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `Translate Korean into ${targetLanguageLabel}. Return only the translated ${targetLanguageLabel} text. Do not explain. Do not keep Korean unless it is a proper noun.`,
+              },
+              {
+                role: 'user',
+                content: sourceText,
+              },
+            ],
+          }),
+        {
+          retries: 2,
+          label: `translate_single_direct_${provider.provider}`,
+          shouldRetry: error => {
+            if (isModelAccessError(error)) return false;
+            const status = resolveErrorHttpStatus(error);
+            return isRetryableHttpStatus(status);
+          },
+        }
+      );
+
+      const rawContent = completion.choices[0]?.message?.content?.trim() ?? '';
+      const translation = rawContent
+        .replace(/^(?:翻译|中文翻译|简体中文翻译)\s*[:：]\s*/u, '')
+        .replace(/^["'“”]|["'“”]$/gu, '')
+        .trim();
+
+      if (!translation) {
+        continue;
+      }
+
+      if (isSuspiciousUntranslatedLine(sourceText, translation, normalizedTargetLang)) {
+        console.warn(
+          `[AI] direct single translation looks untranslated on ${provider.provider}:${provider.model}`
+        );
+        continue;
+      }
+
+      return { translation, provider };
+    } catch (error) {
+      console.warn(
+        `[AI] direct single translation failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
+      );
+    }
+  }
+
+  const emergencyTranslation = await translateSingleTextWithEmergencyFallback(
+    sourceText,
+    normalizedTargetLang
+  );
+  if (emergencyTranslation) {
+    return { translation: emergencyTranslation, provider: null };
+  }
+
+  return { translation: '', provider: null };
+}
+
+const EMERGENCY_TRANSLATION_TARGET_CODES: Record<SupportedTranslationLanguage, string> = {
+  zh: 'zh-CN',
+  en: 'en',
+  vi: 'vi',
+  mn: 'mn',
+};
+
+async function translateSingleTextWithEmergencyFallback(
+  sourceText: string,
+  normalizedTargetLang: SupportedTranslationLanguage
+): Promise<string> {
+  const targetCode = EMERGENCY_TRANSLATION_TARGET_CODES[normalizedTargetLang];
+  const url = new URL('https://translate.googleapis.com/translate_a/single');
+  url.searchParams.set('client', 'gtx');
+  url.searchParams.set('sl', 'ko');
+  url.searchParams.set('tl', targetCode);
+  url.searchParams.set('dt', 't');
+  url.searchParams.set('q', sourceText);
+
+  try {
+    const response = await fetchWithTimeout(
+      url.toString(),
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+        },
+      },
+      10000
+    );
+    if (!response.ok) {
+      console.warn(`[AI] emergency translation fallback failed with ${response.status}`);
+      return '';
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
+      return '';
+    }
+
+    const translation = (payload[0] as unknown[])
+      .map(item => (Array.isArray(item) && typeof item[0] === 'string' ? item[0] : ''))
+      .join('')
+      .trim();
+
+    if (!translation) {
+      return '';
+    }
+
+    if (isSuspiciousUntranslatedLine(sourceText, translation, normalizedTargetLang)) {
+      return '';
+    }
+
+    return translation;
+  } catch (error) {
+    console.warn(`[AI] emergency translation fallback error: ${toErrorMessage(error)}`);
+    return '';
   }
 }
 
@@ -926,6 +1200,55 @@ async function upsertTranscript(ctx: ActionCtx, episodeId: string, segments: Tra
     episodeId,
     segments,
   });
+}
+
+async function translateAndStoreTranscriptIfNeeded(
+  ctx: ActionCtx,
+  args: {
+    episodeId: string;
+    baseSegments: TranscriptSegment[];
+    language: SupportedTranslationLanguage | '';
+  }
+): Promise<SegmentTranslationResult> {
+  const language = args.language || '';
+  if (!language || args.baseSegments.length === 0) {
+    return { translations: [], provider: null };
+  }
+
+  const lease = await ctx.runMutation(internal.podcastTranscripts.tryStartTranslation, {
+    episodeId: args.episodeId,
+    language,
+  });
+  if (!lease.started) {
+    return { translations: [], provider: null };
+  }
+
+  try {
+    const result = await translateSegmentTexts(args.baseSegments, language);
+    if (result.translations.length > 0) {
+      await retryAsync(
+        () =>
+          ctx.runMutation(internal.podcastTranscripts.setTranslations, {
+            episodeId: args.episodeId,
+            language,
+            translations: result.translations,
+          }),
+        {
+          retries: 3,
+          label: 'transcript_set_translations',
+          shouldRetry: error => isLikelyTransientError(error),
+        }
+      );
+      return result;
+    }
+  } finally {
+    await ctx.runMutation(internal.podcastTranscripts.releaseTranslationLease, {
+      episodeId: args.episodeId,
+      language,
+    });
+  }
+
+  return { translations: [], provider: null };
 }
 
 // Helper: Delete transcript (action since "use node" requires actions only)
@@ -1002,20 +1325,18 @@ export const generateTranscript = action({
 
     // 2. Translation Logic (Batched & Parallel using OpenAI 4o-mini)
     const normalizedTargetLang = normalizeTargetLanguage(targetLang);
-    const translations = await translateSegmentTexts(baseSegments, normalizedTargetLang);
+    await upsertTranscript(ctx, args.episodeId, baseSegments);
+
+    const translationResult = await translateAndStoreTranscriptIfNeeded(ctx, {
+      episodeId: args.episodeId,
+      baseSegments,
+      language: normalizedTargetLang,
+    });
+    const translations = translationResult.translations;
     const merged =
       translations.length > 0
         ? applyTranslationsToSegments(baseSegments, translations, normalizedTargetLang === 'zh')
         : baseSegments;
-
-    await upsertTranscript(ctx, args.episodeId, baseSegments);
-    if (translations.length > 0 && normalizedTargetLang) {
-      await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
-        episodeId: args.episodeId,
-        language: normalizedTargetLang,
-        translations,
-      });
-    }
     // Best-effort CDN cache (optional)
     await cacheTranscriptToSpaces(args.episodeId, baseSegments);
     return { success: true, data: { segments: merged } };
@@ -1122,14 +1443,11 @@ export const handleDeepgramCallback = action({
       const normalizedTargetLang = normalizeTargetLanguage(args.language);
       if (normalizedTargetLang) {
         try {
-          const translations = await translateSegmentTexts(baseSegments, normalizedTargetLang);
-          if (translations.length > 0) {
-            await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
-              episodeId: args.episodeId,
-              language: normalizedTargetLang,
-              translations,
-            });
-          }
+          await translateAndStoreTranscriptIfNeeded(ctx, {
+            episodeId: args.episodeId,
+            baseSegments,
+            language: normalizedTargetLang,
+          });
         } catch (translationError) {
           console.warn(
             '[AI] Deepgram callback translation failed:',
@@ -1166,7 +1484,20 @@ export const getTranscript = action({
     }
 
     const existingTranslations = record.translations?.[normalizedTargetLang];
-    if (existingTranslations && existingTranslations.length === record.segments.length) {
+    const hasSuspiciousCachedTranslations =
+      Array.isArray(existingTranslations) &&
+      existingTranslations.length === record.segments.length &&
+      looksLikeUntranslatedBatch(
+        record.segments.map(segment => segment.text),
+        existingTranslations,
+        normalizedTargetLang
+      );
+
+    if (
+      existingTranslations &&
+      existingTranslations.length === record.segments.length &&
+      !hasSuspiciousCachedTranslations
+    ) {
       const merged = applyTranslationsToSegments(
         record.segments,
         existingTranslations,
@@ -1175,26 +1506,35 @@ export const getTranscript = action({
       return { segments: merged };
     }
 
+    if (hasSuspiciousCachedTranslations) {
+      console.warn(
+        `[AI] Ignoring suspicious cached transcript translation for ${args.episodeId} (${normalizedTargetLang})`
+      );
+      await ctx.runMutation(internal.podcastTranscripts.clearTranslationsForLanguage, {
+        episodeId: args.episodeId,
+        language: normalizedTargetLang,
+      });
+    }
+
     const userId = (await getAuthUserId(ctx).catch(() => null)) as Id<'users'> | null;
     if (!userId) {
       return { segments: record.segments };
     }
 
     try {
-      const translations = await translateSegmentTexts(record.segments, normalizedTargetLang);
+      const translationResult = await translateAndStoreTranscriptIfNeeded(ctx, {
+        episodeId: args.episodeId,
+        baseSegments: record.segments,
+        language: normalizedTargetLang,
+      });
+      const translations = translationResult.translations;
       if (translations.length > 0) {
-        await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
-          episodeId: args.episodeId,
-          language: normalizedTargetLang,
-          translations,
-        });
-
         await ctx.runMutation(logUsageMutation, {
           userId,
           feature: 'get_transcript_translation',
-          model: 'mimo-v2-flash',
+          model: translationResult.provider?.model || 'unknown',
           status: 'success',
-          provider: 'openai',
+          provider: translationResult.provider?.provider || 'unknown',
         });
       }
 
@@ -1218,13 +1558,11 @@ export const analyzeText = action({
   args: { text: v.string() },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_text');
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.warn('OPENAI_API_KEY not set');
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
+      console.warn('No AI chat provider configured');
       return null;
     }
-
-    const client = new OpenAI({ apiKey });
 
     // Skip analysis for very short texts
     if (!args.text || args.text.trim().length < 10) {
@@ -1232,12 +1570,14 @@ export const analyzeText = action({
     }
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a Korean linguistics expert. Analyze the provided text for language learners.
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a Korean linguistics expert. Analyze the provided text for language learners.
 
 Task: Perform morphological analysis (Lemmatization).
 1. Break down the text into meaningful tokens (words, particles, endings).
@@ -1257,21 +1597,24 @@ Return a JSON object with a "tokens" key containing an array of:
   "length": number (character length of surface form), 
   "pos": string (e.g., "Verb", "Noun", "Adjective", "Particle", "Adverb", "Pronoun", "Number", "Determiner") 
 }`,
-          },
-          { role: 'user', content: args.text },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 4000,
-      });
+              },
+              { role: 'user', content: args.text },
+            ],
+            response_format: { type: 'json_object' },
+            max_tokens: 4000,
+          }),
+        { label: 'analyze_text' }
+      );
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_text',
-        model: 'mimo-v2-flash',
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        provider: provider.provider,
       });
 
       const content = completion.choices[0].message.content;
@@ -1295,30 +1638,22 @@ export const analyzeSentence = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_sentence');
-    const mimoApiKey = process.env.MIMO_API_KEY;
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    const apiKey = mimoApiKey || openaiApiKey;
-    if (!apiKey) {
-      console.warn('MIMO_API_KEY / OPENAI_API_KEY not set');
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
+      console.warn('No AI chat provider configured');
       return null;
     }
-
-    const client = new OpenAI({
-      apiKey,
-      ...(mimoApiKey
-        ? { baseURL: process.env.MIMO_API_BASE_URL || 'https://api.xiaomimimo.com/v1' }
-        : {}),
-    });
     const responseLanguage = resolveAiOutputLanguage(args.language);
-    const model = mimoApiKey ? process.env.MIMO_CHAT_MODEL || 'mimo-v2-flash' : 'mimo-v2-flash';
 
     try {
-      const completion = await client.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a strict Korean language teacher. Analyze the given sentence for a language learner.
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a strict Korean language teacher. Analyze the given sentence for a language learner.
 The user is validating a sentence they wrote based on a specific grammar point (Context).
 All explanatory text must be in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
 
@@ -1335,23 +1670,26 @@ Return a JSON object with:
   "nuance": string (If correct: "Correct! [Reason]". If incorrect: "Incorrect. [Detailed correction]"),
   "corrected": string (The corrected sentence if there were errors, otherwise null)
 }`,
-          },
-          {
-            role: 'user',
-            content: args.sentence + (args.context ? `\n\nContext: ${args.context}` : ''),
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
+              },
+              {
+                role: 'user',
+                content: args.sentence + (args.context ? `\n\nContext: ${args.context}` : ''),
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        { label: 'analyze_sentence' }
+      );
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_sentence',
-        model,
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        provider: provider.provider,
       });
 
       const content = completion.choices[0].message.content;
@@ -1381,13 +1719,11 @@ export const grammarTutorChat = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'grammar_tutor_chat');
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.warn('OPENAI_API_KEY not set');
-      return { success: false, error: 'OPENAI_API_KEY not set' };
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
+      console.warn('No AI chat provider configured');
+      return { success: false, error: 'AI chat provider not configured' };
     }
-
-    const client = new OpenAI({ apiKey });
     const responseLanguage = resolveAiOutputLanguage(args.language);
 
     const safeTitle = normalizeInlineWhitespace(args.grammarTitle).slice(0, 120);
@@ -1403,38 +1739,43 @@ export const grammarTutorChat = action({
       .slice(-8);
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a concise Korean grammar tutor for language learners.
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a concise Korean grammar tutor for language learners.
 Always respond in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
 Use a warm and practical teaching tone.
 Keep answers focused, concrete, and easy to apply.
 When useful, provide 1 short Korean example sentence with translation.
 If the learner asks for correction, explain what is wrong and give a corrected sentence.`,
-          },
-          {
-            role: 'system',
-            content: `Current grammar context:
+              },
+              {
+                role: 'system',
+                content: `Current grammar context:
 Title: ${safeTitle}
 Summary: ${safeSummary || 'N/A'}
 Explanation: ${safeExplanation || 'N/A'}`,
-          },
-          ...normalizedMessages,
-        ],
-      });
+              },
+              ...normalizedMessages,
+            ],
+          }),
+        { label: 'grammar_tutor_chat' }
+      );
 
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'grammar_tutor_chat',
-        model: 'mimo-v2-flash',
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        provider: provider.provider,
       });
 
       const reply = completion.choices[0]?.message?.content?.trim();
@@ -1465,21 +1806,21 @@ export const analyzeQuestion = action({
   },
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'analyze_topik_question');
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return null;
-
-    const client = new OpenAI({ apiKey });
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) return null;
     const responseLanguage = resolveAiOutputLanguage(args.language);
     const analysisMode = inferTopikQuestionAnalysisMode(args);
     const questionContext = buildTopikQuestionAnalysisContext(args);
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a TOPIK exam tutor.
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a TOPIK exam tutor.
 Respond in ${responseLanguage.nativeLabel} (${responseLanguage.englishLabel}).
 Return strict JSON only:
 {
@@ -1501,34 +1842,37 @@ When the problem is an insertion / <보기> question:
 - Explain the local coherence clue before and after the insertion point.
 - Mention why neighboring sentences make that location correct.
 Do not include markdown or extra text.`,
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              analysisMode,
-              responseLanguage: responseLanguage.nativeLabel,
-              questionContext,
-              answerGuide: {
-                correctOptionNumber: args.correctAnswer + 1,
-                options: args.options.map((option, index) => ({
-                  number: index + 1,
-                  text: normalizeTopikAnalysisText(option),
-                })),
               },
-            }),
-          },
-        ],
-        response_format: { type: 'json_object' },
-      });
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  analysisMode,
+                  responseLanguage: responseLanguage.nativeLabel,
+                  questionContext,
+                  answerGuide: {
+                    correctOptionNumber: args.correctAnswer + 1,
+                    options: args.options.map((option, index) => ({
+                      number: index + 1,
+                      text: normalizeTopikAnalysisText(option),
+                    })),
+                  },
+                }),
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        { label: 'analyze_topik_question' }
+      );
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_topik_question',
-        model: 'mimo-v2-flash',
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
+        provider: provider.provider,
       });
 
       const content = completion.choices[0].message.content;
@@ -1634,21 +1978,22 @@ export const analyzeReadingArticle = action({
       return cachedResult;
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
       return null;
     }
-    const client = new OpenAI({ apiKey });
 
     try {
-      const completion = await retryAsync(
-        () =>
-          client.chat.completions.create({
-            model: 'mimo-v2-flash',
-            messages: [
-              {
-                role: 'system',
-                content: `你是韩语阅读教练。请基于文章生成学习卡片，并严格返回 JSON。
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          retryAsync(
+            () =>
+              client.chat.completions.create({
+                model: provider.model,
+                messages: [
+                  {
+                    role: 'system',
+                    content: `你是韩语阅读教练。请基于文章生成学习卡片，并严格返回 JSON。
 
 输出语言：${responseLanguageLabel}
 返回格式：
@@ -1669,32 +2014,34 @@ export const analyzeReadingArticle = action({
 4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
 5. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
 6. 只返回 JSON，不要任何额外文本。`,
-              },
-              {
-                role: 'user',
-                content: JSON.stringify({
-                  title: args.title,
-                  summaryHint: trimmedSummary || null,
-                  bodyText: trimmedBody,
-                }),
-              },
-            ],
-            response_format: { type: 'json_object' },
-          }),
-        { retries: 2, label: 'analyze_reading_article' }
+                  },
+                  {
+                    role: 'user',
+                    content: JSON.stringify({
+                      title: args.title,
+                      summaryHint: trimmedSummary || null,
+                      bodyText: trimmedBody,
+                    }),
+                  },
+                ],
+                response_format: { type: 'json_object' },
+              }),
+            { retries: 2, label: `analyze_reading_article_${provider.provider}` }
+          ),
+        { label: 'analyze_reading_article' }
       );
 
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'analyze_reading_article',
-        model: 'mimo-v2-flash',
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
         status: 'success',
-        provider: 'openai',
+        provider: provider.provider,
         durationMs: Date.now() - startedAt,
       });
 
@@ -1726,8 +2073,8 @@ export const analyzeReadingArticle = action({
       await logAiFailure(ctx, {
         userId,
         feature: 'analyze_reading_article',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        model: providers[0]?.model || 'unknown',
+        provider: providers[0]?.provider || 'unknown',
         startedAt,
         error,
       });
@@ -1745,26 +2092,27 @@ export const explainWordFallback = action({
   handler: async (ctx, args) => {
     const userId = await guardAiAction(ctx, 'dictionary_fallback');
     const startedAt = Date.now();
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
       return null;
     }
 
     const term = args.word.trim();
     if (!term) return null;
 
-    const client = new OpenAI({ apiKey });
     const { label: responseLanguageLabel } = resolveReadingResponseLanguage(args.language);
 
     try {
-      const completion = await retryAsync(
-        () =>
-          client.chat.completions.create({
-            model: 'mimo-v2-flash',
-            messages: [
-              {
-                role: 'system',
-                content: `你是韩语词典助手。用户词典未命中时，你需要给出简洁、可学习的解释。严格返回 JSON。
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          retryAsync(
+            () =>
+              client.chat.completions.create({
+                model: provider.model,
+                messages: [
+                  {
+                    role: 'system',
+                    content: `你是韩语词典助手。用户词典未命中时，你需要给出简洁、可学习的解释。严格返回 JSON。
 输出语言：${responseLanguageLabel}
 返回格式：
 {
@@ -1779,31 +2127,33 @@ export const explainWordFallback = action({
 2. meaning 用输出语言，简洁准确。
 3. example 尽量结合给定上下文。
 4. note 给出一个学习提示（搭配、语感或近义区分）。`,
-              },
-              {
-                role: 'user',
-                content: JSON.stringify({
-                  word: term,
-                  context: args.context?.trim() || '',
-                }),
-              },
-            ],
-            response_format: { type: 'json_object' },
-          }),
-        { retries: 2, label: 'explain_word_fallback' }
+                  },
+                  {
+                    role: 'user',
+                    content: JSON.stringify({
+                      word: term,
+                      context: args.context?.trim() || '',
+                    }),
+                  },
+                ],
+                response_format: { type: 'json_object' },
+              }),
+            { retries: 2, label: `explain_word_fallback_${provider.provider}` }
+          ),
+        { label: 'explain_word_fallback' }
       );
 
       const usage = completion.usage;
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'dictionary_fallback',
-        model: 'mimo-v2-flash',
+        model: provider.model,
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
         costUsd: 0,
         status: 'success',
-        provider: 'openai',
+        provider: provider.provider,
         durationMs: Date.now() - startedAt,
       });
 
@@ -1830,8 +2180,8 @@ export const explainWordFallback = action({
       await logAiFailure(ctx, {
         userId,
         feature: 'dictionary_fallback',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        model: providers[0]?.model || 'unknown',
+        provider: providers[0]?.provider || 'unknown',
         startedAt,
         error,
       });
@@ -1886,7 +2236,8 @@ export const translateReadingParagraphs = action({
 
     try {
       const segments = limitedParagraphs.map(text => ({ text }));
-      const translations = await translateSegmentTexts(segments, normalizedTargetLang);
+      const translationResult = await translateSegmentTexts(segments, normalizedTargetLang);
+      const translations = translationResult.translations;
       const result: ReadingTranslationResult = {
         translations: limitedParagraphs.map((_, index) => translations[index] || ''),
       };
@@ -1894,9 +2245,9 @@ export const translateReadingParagraphs = action({
       await ctx.runMutation(logUsageMutation, {
         userId,
         feature: 'translate_reading_paragraphs',
-        model: 'mimo-v2-flash',
+        model: translationResult.provider?.model || 'unknown',
         status: 'success',
-        provider: 'openai',
+        provider: translationResult.provider?.provider || 'unknown',
         durationMs: Date.now() - startedAt,
       });
 
@@ -1940,8 +2291,99 @@ export const batchTranslate = action({
       return { translations: [] };
     }
     const segments = args.texts.map(text => ({ text }));
-    const translations = await translateSegmentTexts(segments, normalizedTargetLang);
-    return { translations };
+    const translationResult = await translateSegmentTexts(segments, normalizedTargetLang);
+    return { translations: translationResult.translations };
+  },
+});
+
+export const adminRepairTranscriptTranslation = internalAction({
+  args: {
+    episodeId: v.string(),
+    targetLang: v.string(),
+    chunkSize: v.optional(v.number()),
+    startIndex: v.optional(v.number()),
+    endIndex: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const normalizedTargetLang = normalizeTargetLanguage(args.targetLang);
+    if (!normalizedTargetLang) {
+      throw new ConvexError('INVALID_TARGET_LANGUAGE');
+    }
+
+    const record = await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
+      episodeId: args.episodeId,
+    });
+    if (!record || record.segments.length === 0) {
+      throw new ConvexError('TRANSCRIPT_NOT_FOUND');
+    }
+
+    const requestedChunkSize = Math.floor(args.chunkSize ?? 1);
+    const chunkSize = Math.max(1, Math.min(5, requestedChunkSize));
+    const startIndex = Math.max(0, Math.floor(args.startIndex ?? 0));
+    const endIndex = Math.min(
+      record.segments.length,
+      Math.max(startIndex, Math.floor(args.endIndex ?? record.segments.length))
+    );
+    const targetSegments = record.segments.slice(startIndex, endIndex);
+    const translations: string[] = [];
+    let providerUsed: string | null = null;
+
+    for (let index = 0; index < targetSegments.length; index += chunkSize) {
+      const chunk = targetSegments
+        .slice(index, index + chunkSize)
+        .map(segment => ({ text: segment.text }));
+
+      const result = await translateSegmentTexts(chunk, normalizedTargetLang);
+      for (let offset = 0; offset < chunk.length; offset += 1) {
+        const source = chunk[offset]?.text ?? '';
+        let translation = result.translations[offset] ?? '';
+
+        if (
+          !translation.trim() ||
+          isSuspiciousUntranslatedLine(source, translation, normalizedTargetLang)
+        ) {
+          const directFallback = await translateSingleTextDirect(source, normalizedTargetLang);
+          translation = directFallback.translation;
+          providerUsed = providerUsed ?? directFallback.provider?.provider ?? null;
+        }
+
+        if (!translation.trim()) {
+          throw new ConvexError(`EMPTY_TRANSCRIPT_TRANSLATION_AT_${startIndex + index + offset}`);
+        }
+        if (isSuspiciousUntranslatedLine(source, translation, normalizedTargetLang)) {
+          throw new ConvexError(
+            `SUSPICIOUS_TRANSCRIPT_TRANSLATION_AT_${startIndex + index + offset}`
+          );
+        }
+
+        translations.push(translation);
+      }
+
+      providerUsed = providerUsed ?? result.provider?.provider ?? null;
+    }
+
+    const mergedTranslations = Array.from(
+      { length: record.segments.length },
+      (_, index) => record.translations?.[normalizedTargetLang]?.[index] ?? ''
+    );
+    translations.forEach((translation, index) => {
+      mergedTranslations[startIndex + index] = translation;
+    });
+
+    await ctx.runMutation(internal.podcastTranscripts.setTranslations, {
+      episodeId: args.episodeId,
+      language: normalizedTargetLang,
+      translations: mergedTranslations,
+    });
+
+    return {
+      success: true,
+      count: translations.length,
+      startIndex,
+      endIndex,
+      provider: providerUsed,
+      sample: translations.slice(0, 3),
+    };
   },
 });
 
@@ -2017,37 +2459,42 @@ export const generateVideoAnalysis = action({
       console.log(`[AI] Translating ${baseSegments.length} segments to ${targetLangLabel}...`);
 
       if (baseSegments.length > 0) {
-        const response = await client.chat.completions.create({
-          model: 'mimo-v2-flash',
-          messages: [
-            {
-              role: 'system',
-              content: `Translate the following Korean video transcript segments into ${targetLangLabel}.
+        const { completion, provider } = await runChatCompletionWithFallback(
+          ({ client, provider }) =>
+            client.chat.completions.create({
+              model: provider.model,
+              messages: [
+                {
+                  role: 'system',
+                  content: `Translate the following Korean video transcript segments into ${targetLangLabel}.
               Return a JSON object with a "translations" array of strings, strictly matching the order and count of the input.
               Keep the translation concise and natural for subtitles.`,
-            },
-            {
-              role: 'user',
-              content: JSON.stringify({
-                segments: baseSegments.map(s => s.text),
-              }),
-            },
-          ],
-          response_format: { type: 'json_object' },
-        });
+                },
+                {
+                  role: 'user',
+                  content: JSON.stringify({
+                    segments: baseSegments.map(s => s.text),
+                  }),
+                },
+              ],
+              response_format: { type: 'json_object' },
+            }),
+          { label: 'translate_video' }
+        );
 
-        const usage = response.usage;
+        const usage = completion.usage;
         await ctx.runMutation(logUsageMutation, {
           userId,
           feature: 'translate_video',
-          model: 'mimo-v2-flash',
+          model: provider.model,
           promptTokens: usage?.prompt_tokens,
           completionTokens: usage?.completion_tokens,
           totalTokens: usage?.total_tokens,
           costUsd: 0,
+          provider: provider.provider,
         });
 
-        const content = response.choices[0].message.content;
+        const content = completion.choices[0].message.content;
         if (content) {
           const parsed = JSON.parse(content) as { translations?: string[] };
           const translations = Array.isArray(parsed.translations) ? parsed.translations : [];
@@ -2075,10 +2522,10 @@ export const generateGrammarQuiz = action({
     examples: v.string(),
   },
   handler: async (_ctx, args) => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return { success: false, error: 'OPENAI_API_KEY not set', quizItems: [] };
-
-    const client = new OpenAI({ apiKey });
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) {
+      return { success: false, error: 'AI chat provider not configured', quizItems: [] };
+    }
 
     const systemPrompt = `You are a Korean language teaching assistant generating practice quiz items.
 CRITICAL RULES:
@@ -2105,18 +2552,22 @@ Example answer format for Korean sentences:
   en: "하나마나 실패할 거예요. (It will fail regardless.)"
   zh: "하나마나 실패할 거예요.（不管怎样都会失败。）"
 
-Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},"answer":{"zh":"...","en":"...","vi":"...","mn":"..."}}, ...]}`;
+    Return JSON: {"items": [{"prompt":{"zh":"...","en":"...","vi":"...","mn":"..."},"answer":{"zh":"...","en":"...","vi":"...","mn":"..."}}, ...]}`;
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: { type: 'json_object' as const },
-        temperature: 0.7,
-      });
+      const { completion } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' as const },
+            temperature: 0.7,
+          }),
+        { label: 'generate_grammar_quiz' }
+      );
 
       const content = completion.choices[0]?.message?.content;
       if (!content) return { success: false, error: 'Empty response', quizItems: [] };
@@ -2158,10 +2609,8 @@ export const classifyGrammars = action({
     ),
   },
   handler: async (_ctx, args) => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return { success: false, error: 'OPENAI_API_KEY not set' };
-
-    const client = new OpenAI({ apiKey });
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) return { success: false, error: 'AI chat provider not configured' };
 
     const categories = [
       '1: 猜测与推断 (Speculation)',
@@ -2189,14 +2638,18 @@ ${categories.join('\n')}
 Grammar points:
 ${args.grammars.map(g => `ID: ${g.id} | Title: ${g.title} | Summary: ${g.summary}`).join('\n')}
 
-Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
+    Return JSON: {"classifications": {"id1": 1, "id2": 5, ...}}`;
 
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' as const },
-      });
+      const { completion } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [{ role: 'user', content: prompt }],
+            response_format: { type: 'json_object' as const },
+          }),
+        { label: 'classify_grammars' }
+      );
 
       const content = completion.choices[0]?.message?.content;
       if (!content) return { success: false, error: 'Empty response' };
@@ -2444,12 +2897,16 @@ ${args.items
       evidence?: string;
     }> = [];
     try {
-      const completion = await client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        messages: [{ role: 'user', content: llmPrompt }],
-        response_format: { type: 'json_object' as const },
-        temperature: 0.1,
-      });
+      const { completion } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [{ role: 'user', content: llmPrompt }],
+            response_format: { type: 'json_object' as const },
+            temperature: 0.1,
+          }),
+        { label: 'admin_classify_topik_semantics' }
+      );
       const content = completion.choices[0]?.message?.content || '';
       const parsed = JSON.parse(content) as {
         results?: Array<{
@@ -2665,9 +3122,8 @@ export const translateGrammarSections = action({
     targetLangs: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
-    const client = new OpenAI({ apiKey });
+    const providers = resolveChatProviderConfigs(process.env);
+    if (providers.length === 0) throw new Error('AI chat provider is not configured');
 
     const prompt = `You are a professional translator for a Korean learning platform. 
 Translate the following English content into these languages: ${args.targetLangs.join(', ')}.
@@ -2685,14 +3141,18 @@ Return a raw JSON object only:
   ${args.targetLangs.map(lang => `"${lang}": "translated string..."`).join(',\n')}
 }`;
 
-    const response = await client.chat.completions.create({
-      model: 'mimo-v2-flash',
-      messages: [
-        { role: 'system', content: 'You return only raw JSON.' },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
-    });
+    const { completion: response } = await runChatCompletionWithFallback(
+      ({ client, provider }) =>
+        client.chat.completions.create({
+          model: provider.model,
+          messages: [
+            { role: 'system', content: 'You return only raw JSON.' },
+            { role: 'user', content: prompt },
+          ],
+          response_format: { type: 'json_object' },
+        }),
+      { label: 'translate_grammar_sections' }
+    );
 
     const content = response.choices[0].message.content;
     if (!content) return null;

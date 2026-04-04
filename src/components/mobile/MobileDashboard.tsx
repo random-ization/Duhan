@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
-import { Headphones, Tv, ChevronRight, BookMarked, Sparkles } from 'lucide-react';
+import { Headphones, Tv, ChevronRight, BookMarked, Sparkles, Search } from 'lucide-react';
 import {
   VocabIcon,
   GrammarIcon,
@@ -11,11 +11,13 @@ import {
   StreakIcon,
   GoalIcon,
   TrophyIcon,
+  TopikIcon,
 } from '../ui/CustomIcons';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLearningSelection } from '../../contexts/LearningContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { useTopikExams } from '../../hooks/useTopikExams';
 import { qRef, NoArgs } from '../../utils/convexRefs';
 import {
   buildLearningModulePath,
@@ -93,6 +95,7 @@ const MobileDashboardLayout = ({
   navigate,
   stats,
   savedWordsCount,
+  topikExamCount,
   resumeModule,
   resumeMaterialName,
   resumePath,
@@ -101,6 +104,7 @@ const MobileDashboardLayout = ({
   navigate: ReturnType<typeof useLocalizedNavigate>;
   stats: LearnerStatsDto;
   savedWordsCount: number;
+  topikExamCount: number;
   resumeModule: LearningFlowModule | null;
   resumeMaterialName: string;
   resumePath: string;
@@ -132,6 +136,17 @@ const MobileDashboardLayout = ({
       value: `${stats.reviewStats.savedWords || stats.vocabStats.total}`,
       icon: TrophyIcon,
       path: '/notebook',
+    },
+    {
+      id: 'topik',
+      label: t('nav.topik', { defaultValue: 'TOPIK' }),
+      title: t('nav.topik', { defaultValue: 'TOPIK' }),
+      subtitle: t('dashboard.mobile.topikShortcutSubtitle', {
+        defaultValue: 'Mock exams, review, and score tracking.',
+      }),
+      value: `${topikExamCount}`,
+      icon: TopikIcon,
+      path: '/topik',
     },
   ];
 
@@ -246,6 +261,28 @@ const MobileDashboardLayout = ({
           </div>
         </section>
 
+        <section className="mb-10 px-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="auto"
+            onClick={() => navigate('/dictionary/search')}
+            className="flex h-14 w-full items-center justify-start gap-3 rounded-[1.75rem] border border-indigo-100/30 bg-card/70 px-4 text-left shadow-lg backdrop-blur-md active:scale-[0.99] transition-all rim-light"
+          >
+            <div className="grid h-9 w-9 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
+              <Search className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-black tracking-tight text-foreground">
+                {t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
+              </p>
+              <p className="text-[11px] font-bold text-muted-foreground">
+                {t('dashboard.dictionary.placeholder', { defaultValue: 'Search dictionary' })}
+              </p>
+            </div>
+          </Button>
+        </section>
+
         {/* Study Hub Grid */}
         <section className="space-y-6 mb-12">
           <MobileSectionHeader
@@ -345,6 +382,7 @@ export const MobileDashboard: React.FC<{
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { recentMaterials } = useLearningSelection();
+  const topikExams = useTopikExams();
 
   // -- Data Fetching (Replicated from DashboardPage & LearnerSummaryCard) --
 
@@ -412,6 +450,7 @@ export const MobileDashboard: React.FC<{
       navigate={navigate}
       stats={stats}
       savedWordsCount={savedWordsCount}
+      topikExamCount={topikExams.length}
       resumeModule={resumeModule}
       resumeMaterialName={resumeMaterialName}
       resumePath={resumePath}

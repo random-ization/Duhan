@@ -1,6 +1,15 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
-import { Puzzle, Zap, Headphones, BookOpen, Target, Flame, Trophy } from 'lucide-react';
+import {
+  Puzzle,
+  Zap,
+  Headphones,
+  BookOpen,
+  Target,
+  Flame,
+  Trophy,
+  GraduationCap,
+} from 'lucide-react';
 
 interface IconProps {
   className?: string;
@@ -104,5 +113,15 @@ export const TrophyIcon = ({ className, size = 20 }: IconProps) => (
     className={cn('rounded-xl p-2', className)}
   >
     <Trophy size={size} className="text-white" fill="currentColor" />
+  </IconWrapper>
+);
+
+export const TopikIcon = ({ className, size = 20 }: IconProps) => (
+  <IconWrapper
+    gradient="bg-gradient-to-br from-sky-400 to-indigo-600"
+    glow="bg-sky-300"
+    className={cn('rounded-xl p-2', className)}
+  >
+    <GraduationCap size={size} className="text-white" strokeWidth={2.5} />
   </IconWrapper>
 );

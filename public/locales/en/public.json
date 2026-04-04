@@ -271,22 +271,36 @@
     "backHome": "Back to Home",
     "continue": "Continue",
     "viewAll": "View all",
+    "all": "All",
+    "details": "Details",
     "exams": "Exams",
     "currentFocus": "Current Focus",
     "more": "More actions",
     "favorite": "Favorite",
     "unfavorite": "Unfavorite",
     "share": "Share",
+    "shareFailed": "Failed to share",
     "fontSize": "Font size",
     "gotIt": "Got it",
     "noMatches": "No matches",
     "notFound": "Page not found",
     "notFoundHint": "The page you are looking for doesn't exist.",
+    "linkCopied": "Link copied",
     "off": "Off",
     "on": "On",
+    "play": "Play",
+    "pause": "Pause",
     "page": "Page",
     "breadcrumb": "Breadcrumb",
     "search": "Search",
+    "filter": "Filter",
+    "option": "Option",
+    "minutes": "Minutes",
+    "recently": "Recently",
+    "reset": "Reset",
+    "retry": "Retry",
+    "signOut": "Sign out",
+    "switchTab": "Switch tab",
     "loading": "Loading...",
     "error": "Something went wrong.",
     "allRightsReserved": "All rights reserved."
@@ -318,7 +332,10 @@
     },
     "otherPublisher": "Other",
     "viewAll": "View All",
-    "loadError": "Unable to load textbooks right now."
+    "loadError": "Unable to load textbooks right now.",
+    "results": "Results",
+    "items": "Items",
+    "textbook": "Textbook"
   },
   "landing": {
     "seo": {
@@ -832,6 +849,9 @@
     "videos": "Videos",
     "podcasts": "Podcasts",
     "topik": "TOPIK",
+    "reading": "Reading",
+    "grammar": "Grammar",
+    "notebook": "Notebook",
     "profile": "Profile",
     "typing": "Typing"
   },
@@ -1352,6 +1372,7 @@
       "streak": "Streak Challenge",
       "days": "{{count}} days",
       "continueLearning": "Continue Learning",
+      "close": "Close",
       "lastStudied": "Last Studied",
       "noCourse": "No textbook started yet. Pick one from \"Curriculum\"!",
       "weeklyStudyTime": "Weekly Study Time (min)",
@@ -1597,6 +1618,7 @@
     "readingHub": {
       "title": "Reading Discovery",
       "subtitle": "Korean reading feed and annotation tools",
+      "mobileSubtitle": "News, stories, and picture books for immersion.",
       "tagNews": "News",
       "tagArticles": "Article"
     },
@@ -1692,7 +1714,8 @@
       "srsDesc": "Words you pick as \"Don't know\" in word learning will be automatically added here",
       "dueNow": "Due Now",
       "totalWords": "Total words",
-      "subtitle": "Saved words and meanings"
+      "subtitle": "Saved words and meanings",
+      "startChallenge": "Start Challenge"
     },
     "quiz": {
       "progress": "Progress",
@@ -1741,7 +1764,8 @@
       "title": "Study Notes",
       "subtitle": "Mistakes and memos",
       "mistake": "Err",
-      "memo": "Mem"
+      "memo": "Mem",
+      "openNotebook": "Open Notebook"
     },
     "summary": {
       "title": "Learning Overview",
@@ -1809,18 +1833,24 @@
       "keepMomentum": "Keep up the momentum!",
       "continue": "Continue",
       "review": "Review",
+      "quickReviewSubtitle": "Clear due cards.",
       "due": "Due",
       "notes": "Notes",
+      "quickNotebookSubtitle": "Weak spots.",
       "mistakes": "Mistakes",
       "check": "Check",
       "typing": "Typing",
       "practice": "Practice",
+      "quickPracticeSubtitle": "Focus drills.",
       "start": "Start",
       "exam": "Exam",
       "listen": "Listen",
       "watch": "Watch",
       "immersion": "Immersion",
+      "exploreTitle": "Immersion",
+      "shortcutsTitle": "Learning Hub",
       "videoLibrary": "Video Library",
+      "topikShortcutSubtitle": "Mock exams, review, and score tracking.",
       "leftMinutes": "{{count}} left",
       "minutesShort": "Mins",
       "dueShort": "Due",
@@ -1831,6 +1861,14 @@
       "swipeHint": "Swipe for more",
       "bestScoreLabel": "Best: {{score}}",
       "latestEpisodes": "Latest Episodes"
+    },
+    "mobileFocus": {
+      "continue": "Pick up progress.",
+      "choose": "Start a path."
+    },
+    "practice": {
+      "recommended": "Recommended next",
+      "subtitle": "Organize your resources and start today challenge"
     },
     "alt": {
       "tigerCoach": "Tiger coach"
@@ -3132,6 +3170,17 @@
   },
   "practiceHub": {
     "subtitle": "TOPIK, typing and vocab drills"
+  },
+  "practice": {
+    "mobileTitle": "Build your skills",
+    "mobileSubtitle": "Jump into reviews, typing, and notebook work from your focused practice queue.",
+    "mobileRecommendedDue": "{{count}} cards are ready for review.",
+    "mobileRecommendedNotebook": "Review recent notes and mistakes.",
+    "mobileSkillLabel": {
+      "typing": "Speed Drill",
+      "spelling": "Recall Drill",
+      "notebook": "Review Workspace"
+    }
   },
   "mediaHub": {
     "subtitle": "Videos, podcasts and reading"

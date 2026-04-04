@@ -32,6 +32,7 @@ describe('isLikelyTransientError', () => {
   it('detects transient by message', () => {
     expect(isLikelyTransientError(new Error('request timed out'))).toBe(true);
     expect(isLikelyTransientError(new Error('socket hang up'))).toBe(true);
+    expect(isLikelyTransientError(new Error('optimistic concurrency control conflict'))).toBe(true);
   });
 
   it('does not classify permanent validation errors as transient', () => {

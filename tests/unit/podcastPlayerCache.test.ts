@@ -32,6 +32,15 @@ describe('podcast player transcript cache helpers', () => {
     expect(loadTranscriptFromLocalCache('episode-1', 'zh')).toBeNull();
   });
 
+  it('ignores cached transcripts when translation is just the original Korean text', () => {
+    saveTranscriptToLocalCache('episode-1', 'zh', [
+      { start: 0, end: 1, text: '안녕하세요', translation: '안녕하세요' },
+      { start: 1, end: 2, text: '반갑습니다', translation: '반갑습니다' },
+    ]);
+
+    expect(loadTranscriptFromLocalCache('episode-1', 'zh')).toBeNull();
+  });
+
   it('clears cached transcripts without throwing when storage is blocked', () => {
     const originalLocalStorage = window.localStorage;
 

@@ -279,7 +279,10 @@
     },
     "otherPublisher": "Бусад",
     "viewAll": "Бүгдийг үзэх",
-    "loadError": "Одоогоор сурах бичгийг ачаалж чадсангүй. Дараа дахин оролдоно уу."
+    "loadError": "Одоогоор сурах бичгийг ачаалж чадсангүй. Дараа дахин оролдоно уу.",
+    "results": "Илэрц",
+    "items": "зүйлс",
+    "textbook": "Сурах бичиг"
   },
   "landing": {
     "seo": {
@@ -762,6 +765,9 @@
     "videos": "Видео",
     "podcasts": "Подкаст",
     "topik": "TOPIK",
+    "reading": "Унших",
+    "grammar": "Хэл зүй",
+    "notebook": "Тэмдэглэл",
     "profile": "Профайл",
     "typing": "Бичих"
   },
@@ -858,22 +864,36 @@
     "backHome": "Нүүр хуудас руу буцах",
     "continue": "Үргэлжлүүлэх",
     "viewAll": "Бүгдийг харах",
+    "all": "Бүгд",
+    "details": "Дэлгэрэнгүй",
     "exams": "Шалгалтууд",
     "currentFocus": "Одоогийн төвлөрөл",
     "more": "Илүү үйлдэл",
     "favorite": "Дуртай",
     "unfavorite": "Дуртайгаас хасах",
     "share": "Хуваалцах",
+    "shareFailed": "Хуваалцаж чадсангүй",
     "fontSize": "Үсгийн хэмжээ",
     "gotIt": "Ойлголоо",
     "noMatches": "Тохирох илэрц алга",
     "notFound": "Хуудас олдсонгүй",
     "notFoundHint": "Таны хайсан хуудас байхгүй байна.",
+    "linkCopied": "Холбоос хуулагдлаа",
     "off": "Унтраалттай",
     "on": "Асаалттай",
+    "play": "Тоглуулах",
+    "pause": "Түр зогсоох",
     "page": "Хуудас",
     "breadcrumb": "Breadcrumb навигаци",
     "search": "Хайх",
+    "filter": "Шүүлтүүр",
+    "option": "Сонголт",
+    "minutes": "Минут",
+    "recently": "Саяхан",
+    "reset": "Дахин тохируулах",
+    "retry": "Дахин оролдох",
+    "signOut": "Гарах",
+    "switchTab": "Таб солих",
     "loading": "Уншиж байна...",
     "error": "Алдаа гарлаа.",
     "allRightsReserved": "Бүх эрх хуулиар хамгаалагдсан."
@@ -1304,6 +1324,7 @@
       "streak": "Цувралын сорилт",
       "days": "{{count}} өдөр",
       "continueLearning": "Үргэлжлүүлэн сурах",
+      "close": "Хаах",
       "lastStudied": "Сүүлд судалсан",
       "noCourse": "Та одоогоор сурах бичиг эхлээгүй байна. \"Хөтөлбөр\"-өөс сонгоорой!",
       "weeklyStudyTime": "7 хоногийн сургалтын хугацаа (мин)",
@@ -1555,6 +1576,7 @@
     "readingHub": {
       "title": "Унших нээлт",
       "subtitle": "Солонгос уншлагын feed ба тайлбарын хэрэгслүүд",
+      "mobileSubtitle": "Мэдээ, өгүүллэг, зурагт номоор дүрж суралц.",
       "tagNews": "Мэдээ",
       "tagArticles": "Нийтлэл"
     },
@@ -1650,14 +1672,16 @@
       "dueNow": "Одоо давтах",
       "totalWords": "нийт үг",
       "dueCount": "{{count}} давталт",
-      "masteredCount": "{{count}} эзэмшсэн"
+      "masteredCount": "{{count}} эзэмшсэн",
+      "startChallenge": "Сорилт эхлүүлэх"
     },
     "notes": {
       "label": "Тэмдэглэл",
       "title": "Сургалтын тэмдэглэл",
       "subtitle": "Алдаа болон тэмдэглэл",
       "mistake": "Алд",
-      "memo": "Тэм"
+      "memo": "Тэм",
+      "openNotebook": "Тэмдэглэл нээх"
     },
     "library": {
       "back": "Буцах",
@@ -1767,18 +1791,24 @@
       "keepMomentum": "Эрч хүчээ хадгалаарай!",
       "continue": "Үргэлжлүүлэх",
       "review": "Давтах",
+      "quickReviewSubtitle": "Давтах картуудаа цэвэрлэ.",
       "due": "Давтах",
       "notes": "Тэмдэглэл",
+      "quickNotebookSubtitle": "Алдаа, сул талыг тэмдэглэж нөхнө.",
       "mistakes": "Алдаа",
       "check": "Шалгах",
       "typing": "Бичих",
       "practice": "Дасгал",
+      "quickPracticeSubtitle": "Төвлөрсөн дасгалууд руу шууд ор.",
       "start": "Эхлэх",
       "exam": "Шалгалт",
       "listen": "Сонсох",
       "watch": "Үзэх",
       "immersion": "Дадлага",
+      "exploreTitle": "Дадлага",
+      "shortcutsTitle": "Суралцах төв",
       "videoLibrary": "Видео сан",
+      "topikShortcutSubtitle": "Жишиг шалгалт, дүн шинжилгээ, онооны хяналт.",
       "leftMinutes": "{{count}} минут үлдлээ",
       "minutesShort": "Мин",
       "dueShort": "Давт",
@@ -1789,6 +1819,14 @@
       "swipeHint": "Илүүг харахын тулд шударна уу",
       "bestScoreLabel": "Шилдэг: {{score}}",
       "latestEpisodes": "Сүүлийн ангиуд"
+    },
+    "mobileFocus": {
+      "continue": "Сүүлд зогссон газраасаа үргэлжлүүл.",
+      "choose": "Суралцах замаа сонгоод эхэл."
+    },
+    "practice": {
+      "recommended": "Дараагийн санал",
+      "subtitle": "Нөөцөө цэгцлээд өнөөдрийн сорилтоо эхлүүл"
     },
     "learningFlow": {
       "badge": "Суралцах урсгал",
@@ -3131,6 +3169,17 @@
   },
   "practiceHub": {
     "subtitle": "TOPIK, бичих дасгал ба үгсийн сангийн дасгал"
+  },
+  "practice": {
+    "mobileTitle": "Чадвараа хөгжүүл",
+    "mobileSubtitle": "Төвлөрсөн дасгалын жагсаалтаасаа давтлага, бичих дасгал, тэмдэглэл рүү шууд ор.",
+    "mobileRecommendedDue": "{{count}} карт давтахад бэлэн байна.",
+    "mobileRecommendedNotebook": "Сүүлийн тэмдэглэл, алдаагаа давт.",
+    "mobileSkillLabel": {
+      "typing": "Хурдны дасгал",
+      "spelling": "Сэргээн санах дасгал",
+      "notebook": "Давтлагын орон зай"
+    }
   },
   "mediaHub": {
     "subtitle": "Видео, подкаст ба уншлага"

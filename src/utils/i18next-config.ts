@@ -8,11 +8,14 @@ i18n
   .init({
     fallbackLng: 'en',
     lng: 'en', // Default start language, AuthContext updates this
+    ns: ['public', 'app'],
+    defaultNS: 'public',
+    fallbackNS: 'app',
     backend: {
       loadPath:
         globalThis.window === undefined
-          ? `${import.meta.env.BASE_URL}locales/{{lng}}/public.json`
-          : `${globalThis.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}/public.json`,
+          ? `${import.meta.env.BASE_URL}locales/{{lng}}/{{ns}}.json`
+          : `${globalThis.location.origin}${import.meta.env.BASE_URL}locales/{{lng}}/{{ns}}.json`,
       queryStringParams: {
         v: import.meta.env.VITE_I18N_VERSION,
       },

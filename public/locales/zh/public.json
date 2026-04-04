@@ -271,22 +271,36 @@
     "backHome": "返回首页",
     "continue": "继续",
     "viewAll": "查看全部",
+    "all": "全部",
+    "details": "详情",
     "exams": "考试",
     "currentFocus": "当前焦点",
     "more": "更多操作",
     "favorite": "收藏",
     "unfavorite": "取消收藏",
     "share": "分享",
+    "shareFailed": "分享失败",
     "fontSize": "字体大小",
     "gotIt": "知道了",
     "noMatches": "没有匹配结果",
     "notFound": "页面未找到",
     "notFoundHint": "你访问的页面不存在。",
+    "linkCopied": "链接已复制",
     "on": "开启",
     "off": "关闭",
+    "play": "播放",
+    "pause": "暂停",
     "page": "页面",
     "breadcrumb": "面包屑导航",
     "search": "搜索",
+    "filter": "筛选",
+    "option": "选项",
+    "minutes": "分钟",
+    "recently": "最近",
+    "reset": "重置",
+    "retry": "重试",
+    "signOut": "退出登录",
+    "switchTab": "切换标签",
     "loading": "正在加载...",
     "error": "出了点问题。",
     "allRightsReserved": "保留所有权利。"
@@ -318,7 +332,10 @@
     },
     "otherPublisher": "其他",
     "viewAll": "查看全部",
-    "loadError": "当前无法加载教材，请稍后重试。"
+    "loadError": "当前无法加载教材，请稍后重试。",
+    "results": "结果",
+    "items": "项",
+    "textbook": "教材"
   },
   "landing": {
     "seo": {
@@ -801,6 +818,9 @@
     "videos": "视频",
     "podcasts": "播客",
     "topik": "TOPIK",
+    "reading": "阅读",
+    "grammar": "语法",
+    "notebook": "笔记本",
     "profile": "我的",
     "typing": "打字"
   },
@@ -1340,6 +1360,7 @@
       "streak": "连胜挑战",
       "days": "{{count}} 天",
       "continueLearning": "继续学习",
+      "close": "关闭",
       "lastStudied": "上次学到",
       "noCourse": "还没有开始学习的教材，去\"课程\"里挑一本吧！",
       "weeklyStudyTime": "本周学习时长 (分钟)",
@@ -1586,6 +1607,7 @@
     "readingHub": {
       "title": "阅读发现",
       "subtitle": "韩语资讯阅读与标注工具",
+      "mobileSubtitle": "用新闻、故事和绘本做沉浸式输入。",
       "tagNews": "新闻",
       "tagArticles": "文章"
     },
@@ -1681,7 +1703,8 @@
       "srsDesc": "在单词学习中选择\"不认识\"的词会自动加入这里",
       "dueNow": "待复习",
       "totalWords": "个生词",
-      "subtitle": "收藏的单词和释义"
+      "subtitle": "收藏的单词和释义",
+      "startChallenge": "开始挑战"
     },
     "pos": {
       "noun": "n. 名词",
@@ -1739,7 +1762,8 @@
       "title": "学习笔记",
       "subtitle": "错题记录和学习心得",
       "mistake": "错",
-      "memo": "记"
+      "memo": "记",
+      "openNotebook": "打开笔记本"
     },
     "summary": {
       "title": "学习概览",
@@ -1807,18 +1831,24 @@
       "keepMomentum": "保持学习势头！",
       "continue": "继续",
       "review": "复习",
+      "quickReviewSubtitle": "清理待复习卡片，保持记忆热度。",
       "due": "待复习",
       "notes": "笔记",
+      "quickNotebookSubtitle": "记录错误并查漏补缺。",
       "mistakes": "错题",
       "check": "检查",
       "typing": "打字",
       "practice": "练习",
+      "quickPracticeSubtitle": "进入打字、拼写和专项练习。",
       "start": "开始",
       "exam": "测验",
       "listen": "听力",
       "watch": "视频",
       "immersion": "沉浸",
+      "exploreTitle": "沉浸内容",
+      "shortcutsTitle": "核心捷径",
       "videoLibrary": "视频库",
+      "topikShortcutSubtitle": "模考、复盘与分数追踪。",
       "leftMinutes": "还剩 {{count}} 分钟",
       "minutesShort": "分钟",
       "dueShort": "待复习",
@@ -1829,6 +1859,14 @@
       "swipeHint": "左右滑动查看更多",
       "bestScoreLabel": "最高：{{score}}",
       "latestEpisodes": "最新剧集"
+    },
+    "mobileFocus": {
+      "continue": "接着上次的进度继续。",
+      "choose": "选择一条学习路径开始。"
+    },
+    "practice": {
+      "recommended": "推荐下一步",
+      "subtitle": "整理你的练习资源，开始今天的挑战"
     },
     "learningFlow": {
       "badge": "学习流程",
@@ -3143,6 +3181,17 @@
   },
   "practiceHub": {
     "subtitle": "TOPIK、打字与词汇练习"
+  },
+  "practice": {
+    "mobileTitle": "打磨你的能力",
+    "mobileSubtitle": "从你的专项练习队列中进入复习、打字和笔记训练。",
+    "mobileRecommendedDue": "{{count}} 张卡片已准备好复习。",
+    "mobileRecommendedNotebook": "回顾最近的笔记和错题。",
+    "mobileSkillLabel": {
+      "typing": "速度训练",
+      "spelling": "回忆训练",
+      "notebook": "复习空间"
+    }
   },
   "mediaHub": {
     "subtitle": "视频、播客与阅读"

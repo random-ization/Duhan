@@ -45,6 +45,8 @@ export const isLikelyTransientError = (error: unknown): boolean => {
     message.includes('abort') ||
     message.includes('rate limit') ||
     message.includes('temporar') ||
+    message.includes('write conflict') ||
+    message.includes('optimistic concurrency control') ||
     message.includes('econnreset') ||
     message.includes('enotfound') ||
     message.includes('socket hang up')

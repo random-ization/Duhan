@@ -1015,6 +1015,13 @@ function getHistoryBaseRecord(
 const CDN_DOMAIN = import.meta.env.VITE_CDN_URL ?? '';
 const MAX_SAFE_URL_LENGTH = 8000;
 
+function shouldUseTranscriptCdn() {
+  if (!CDN_DOMAIN) return false;
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname.toLowerCase();
+  return hostname !== 'localhost' && hostname !== '127.0.0.1';
+}
+
 // Mock transcript for fallback
 const MOCK_TRANSCRIPT_BASE: Omit<TranscriptLine, 'translation'>[] = [
   {
@@ -1048,6 +1055,48 @@ function getTranscriptCacheKey(id: string, language: string) {
   return `transcript_${id}_${language}`;
 }
 
+function compactTranscriptComparableText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isSuspiciousTranscriptTranslation(
+  text: string,
+  translation: string,
+  language: string
+): boolean {
+  const normalizedText = compactTranscriptComparableText(text);
+  const normalizedTranslation = compactTranscriptComparableText(translation);
+  if (!normalizedText || !normalizedTranslation) return false;
+  if (normalizedText === normalizedTranslation) return true;
+
+  if (language === 'zh') {
+    const hangulCount = (translation.match(/[가-힣]/g) || []).length;
+    const visibleLength = translation.replace(/\s+/g, '').length || 1;
+    if (hangulCount / visibleLength > 0.55) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasUsableTranscriptTranslation(segments: TranscriptLine[], language: string) {
+  if (!language) return true;
+  const translatedSegments = segments.filter(
+    segment => typeof segment.translation === 'string' && segment.translation.trim().length > 0
+  );
+  if (translatedSegments.length === 0) return false;
+
+  const suspiciousSegments = translatedSegments.filter(segment =>
+    isSuspiciousTranscriptTranslation(segment.text, segment.translation, language)
+  );
+  return suspiciousSegments.length / translatedSegments.length < 0.6;
+}
+
 export function loadTranscriptFromLocalCache(
   id: string,
   language: string
@@ -1062,6 +1111,9 @@ export function loadTranscriptFromLocalCache(
     };
     if (parsed.language && parsed.language !== language) return null;
     if (!parsed.segments || parsed.segments.length === 0) return null;
+    if (!hasUsableTranscriptTranslation(parsed.segments, language)) {
+      return null;
+    }
     console.log('[Transcript] Loaded from localStorage (instant)');
     return parsed.segments;
   } catch {
@@ -1098,9 +1150,7 @@ export function clearTranscriptLocalCache(episodeId: string, languages: string[]
 
 function shouldMarkTranscriptLoaded(segments: TranscriptLine[], targetLanguage: string) {
   if (!targetLanguage) return true;
-  return segments.some(
-    segment => typeof segment.translation === 'string' && segment.translation.trim().length > 0
-  );
+  return hasUsableTranscriptTranslation(segments, targetLanguage);
 }
 
 function shouldSkipTranscriptLoad(
@@ -1165,6 +1215,10 @@ async function tryRecoverTranscriptConnectionError(args: {
   episodeId: string;
   targetLanguage: string;
   loadKey: string;
+  getTranscript: (args: {
+    episodeId: string;
+    language?: string;
+  }) => Promise<{ segments?: TranscriptLine[] | null } | null | undefined>;
   retryLoadTranscriptFromS3: (episodeId: string) => Promise<TranscriptLine[] | null>;
   setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
   setTranscriptLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -1177,6 +1231,7 @@ async function tryRecoverTranscriptConnectionError(args: {
     episodeId,
     targetLanguage,
     loadKey,
+    getTranscript,
     retryLoadTranscriptFromS3,
     setTranscript,
     setTranscriptLoading,
@@ -1186,6 +1241,24 @@ async function tryRecoverTranscriptConnectionError(args: {
   } = args;
   if (!message.includes('Connection lost while action was in flight')) {
     return false;
+  }
+  const dbFallback = await getTranscript({
+    episodeId,
+    ...(targetLanguage ? { language: targetLanguage } : {}),
+  });
+  if (dbFallback?.segments && dbFallback.segments.length > 0) {
+    applyLoadedTranscript({
+      segments: dbFallback.segments,
+      targetLanguage,
+      loadKey,
+      setTranscript,
+      setTranscriptLoading,
+      transcriptLoadedKeyRef,
+    });
+    saveTranscriptToLocalCache(episodeId, targetLanguage, dbFallback.segments);
+    setIsGeneratingTranscript(false);
+    transcriptLoadKeyRef.current = null;
+    return true;
   }
   const s3Fallback = await retryLoadTranscriptFromS3(episodeId);
   if (!s3Fallback) return false;
@@ -1224,6 +1297,10 @@ async function handleTranscriptLoadFailure(args: {
   episodeId: string;
   targetLanguage: string;
   loadKey: string;
+  getTranscript: (args: {
+    episodeId: string;
+    language?: string;
+  }) => Promise<{ segments?: TranscriptLine[] | null } | null | undefined>;
   retryLoadTranscriptFromS3: (episodeId: string) => Promise<TranscriptLine[] | null>;
   setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
   setTranscriptLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -1239,6 +1316,7 @@ async function handleTranscriptLoadFailure(args: {
     episodeId,
     targetLanguage,
     loadKey,
+    getTranscript,
     retryLoadTranscriptFromS3,
     setTranscript,
     setTranscriptLoading,
@@ -1256,6 +1334,7 @@ async function handleTranscriptLoadFailure(args: {
     episodeId,
     targetLanguage,
     loadKey,
+    getTranscript,
     retryLoadTranscriptFromS3,
     setTranscript,
     setTranscriptLoading,
@@ -1272,6 +1351,19 @@ async function handleTranscriptLoadFailure(args: {
     setIsGeneratingTranscript(false);
     return;
   }
+
+  const normalized = message.toLowerCase();
+  const isHardLimitError =
+    normalized.includes('daily_limit_reached') ||
+    normalized.includes('ai_credits_daily') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('forbidden');
+
+  if (isHardLimitError) {
+    // Prevent retry storm for the same episode/language key during this page session.
+    transcriptLoadedKeyRef.current = loadKey;
+  }
+
   if (import.meta.env.DEV) {
     setTranscript(mockTranscript);
     setTranscriptError(userMessage);
@@ -1337,7 +1429,7 @@ function getEpisodeKeyForHistory(episode: Pick<PodcastEpisode, 'guid' | 'title' 
 }
 
 async function loadTranscriptFromS3Cache(episodeId: string) {
-  if (!CDN_DOMAIN) return null;
+  if (!shouldUseTranscriptCdn()) return null;
   try {
     const s3Url = `${CDN_DOMAIN}/transcripts/${episodeId}.json`;
     const response = await fetch(s3Url);
@@ -1352,7 +1444,7 @@ async function loadTranscriptFromS3Cache(episodeId: string) {
 const waitMilliseconds = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function waitForTranscriptFromS3WithDelays(episodeId: string, delays: number[]) {
-  if (!CDN_DOMAIN) return null;
+  if (!shouldUseTranscriptCdn()) return null;
   for (const delay of delays) {
     await waitMilliseconds(delay);
     const data = await loadTranscriptFromS3Cache(episodeId);
@@ -1769,7 +1861,28 @@ const PodcastPlayerPage: React.FC = () => {
       }
 
       try {
-        // Step 1: S3 Cache
+        // Step 1: Convex DB
+        const dbResult = await getTranscript({
+          episodeId,
+          ...(targetLanguage ? { language: targetLanguage } : {}),
+        });
+        if (dbResult?.segments && dbResult.segments.length > 0) {
+          applyLoadedTranscript({
+            segments: dbResult.segments,
+            targetLanguage,
+            loadKey,
+            setTranscript,
+            setTranscriptLoading,
+            transcriptLoadedKeyRef,
+          });
+          saveTranscriptToLocalCache(episodeId, targetLanguage, dbResult.segments);
+          if (!shouldMarkTranscriptLoaded(dbResult.segments, targetLanguage)) {
+            hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+          }
+          return;
+        }
+
+        // Step 1.5: CDN Cache fallback
         const s3Segments = await loadTranscriptFromS3Cache(episodeId);
         if (s3Segments && Array.isArray(s3Segments) && s3Segments.length > 0) {
           applyLoadedTranscript({
@@ -1784,22 +1897,6 @@ const PodcastPlayerPage: React.FC = () => {
           if (!shouldMarkTranscriptLoaded(s3Segments, targetLanguage)) {
             hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           }
-          return;
-        }
-
-        // Step 1.5: Convex DB fallback (if CDN missing)
-        const dbResult = await getTranscript({ episodeId });
-        if (dbResult?.segments && dbResult.segments.length > 0) {
-          applyLoadedTranscript({
-            segments: dbResult.segments,
-            targetLanguage,
-            loadKey,
-            setTranscript,
-            setTranscriptLoading,
-            transcriptLoadedKeyRef,
-          });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, dbResult.segments);
-          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           return;
         }
 
@@ -1841,6 +1938,7 @@ const PodcastPlayerPage: React.FC = () => {
           episodeId,
           targetLanguage,
           loadKey,
+          getTranscript,
           retryLoadTranscriptFromS3,
           setTranscript,
           setTranscriptLoading,
