@@ -13,11 +13,12 @@ import {
   Video,
   Image,
   FileText,
-  Brain,
 } from 'lucide-react';
+import { logError, logWarn } from '../../utils/logger';
+import { Brain } from 'lucide-react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useFileUpload } from '../../hooks/useFileUpload';
-import { NoArgs, mRef, qRef } from '../../utils/convexRefs';
+import { NoArgs, aRef, mRef, qRef } from '../../utils/convexRefs';
 
 interface VideoLesson {
   id: string;
@@ -175,7 +176,7 @@ export default function VideoManager() {
                     const { url: thumbUrl } = await uploadFile(thumbFile);
                     setThumbnailUrl(thumbUrl);
                   } catch (err) {
-                    console.warn('Auto-thumbnail upload failed:', err);
+                    logWarn('Auto-thumbnail upload failed:', err);
                   } finally {
                     setUploadingThumbnail(false);
                   }
@@ -186,13 +187,13 @@ export default function VideoManager() {
             );
           }
         } catch (err) {
-          console.warn('Failed to capture thumbnail:', err);
+          logWarn('Failed to capture thumbnail:', err);
         }
         URL.revokeObjectURL(video.src);
       };
       video.src = URL.createObjectURL(file);
     } catch (error) {
-      console.error('Video upload failed:', error);
+      logError('Video upload failed:', error);
       alert(`视频上传失败: ${(error as Error).message}`);
     } finally {
       setUploadingVideo(false);
@@ -208,7 +209,7 @@ export default function VideoManager() {
       const { url } = await uploadFile(file);
       setThumbnailUrl(url);
     } catch (error) {
-      console.error('Thumbnail upload failed:', error);
+      logError('Thumbnail upload failed:', error);
       alert('封面上传失败');
     } finally {
       setUploadingThumbnail(false);
@@ -244,10 +245,10 @@ export default function VideoManager() {
   // AI Analysis
   const [analyzing, setAnalyzing] = useState(false);
   const generateAnalysis = useAction(
-    mRef<
+    aRef<
       { videoUrl: string; language?: string },
       { success: boolean; data?: unknown; error?: string }
-    >('ai:generateVideoAnalysis') as any
+    >('ai:generateVideoAnalysis')
   );
 
   const handleAIAnalyze = async () => {
@@ -271,7 +272,7 @@ export default function VideoManager() {
         alert(`生成失败: ${result.error || '未知错误'}`);
       }
     } catch (e) {
-      console.error('AI Analysis error:', e);
+      logError('AI Analysis error:', e);
       alert('生成请求失败，请检查网络或日志');
     } finally {
       setAnalyzing(false);
@@ -286,7 +287,7 @@ export default function VideoManager() {
 
     setSaving(true);
     try {
-      let transcriptData: any = undefined;
+      let transcriptData: unknown = undefined;
       if (transcriptJson.trim()) {
         try {
           transcriptData = JSON.parse(transcriptJson);
@@ -325,7 +326,7 @@ export default function VideoManager() {
       setShowModal(false);
       resetForm();
     } catch (error) {
-      console.error('Save failed:', error);
+      logError('Save failed:', error);
       alert('保存失败');
     } finally {
       setSaving(false);
@@ -337,7 +338,7 @@ export default function VideoManager() {
     try {
       await deleteVideo({ id });
     } catch (error) {
-      console.error('Delete failed:', error);
+      logError('Delete failed:', error);
       alert('删除失败');
     }
   };
@@ -657,7 +658,7 @@ export default function VideoManager() {
                             // Reset input value to allow re-uploading same file if needed
                             e.target.value = '';
                           } catch (err) {
-                            console.error('SRT Parse Error', err);
+                            logError('SRT Parse Error', err);
                             alert('解析 SRT 文件失败');
                           }
                         }}

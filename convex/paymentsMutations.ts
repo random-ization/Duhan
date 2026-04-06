@@ -1,6 +1,7 @@
 import { internalMutation, type MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
 import { asId } from './id';
+import { paymentLogger } from './logger';
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
@@ -41,7 +42,7 @@ export const grantAccess = internalMutation({
     user ??= await findUserByEmail(ctx, args.customerEmail);
 
     if (!user) {
-      console.error(`User not found for email: ${args.customerEmail} or id: ${args.userId}`);
+      paymentLogger.error(`User not found for email: ${args.customerEmail} or id: ${args.userId}`);
       return { success: false, error: 'User not found' };
     }
 
@@ -66,7 +67,7 @@ export const grantAccess = internalMutation({
       subscriptionExpiry,
     });
 
-    console.log(`Granted ${args.plan} access to ${args.customerEmail}`);
+    paymentLogger.info(`Granted ${args.plan} access to ${args.customerEmail}`);
     return { success: true };
   },
 });
@@ -86,7 +87,7 @@ export const revokeAccess = internalMutation({
     user ??= await findUserByEmail(ctx, args.customerEmail);
 
     if (!user) {
-      console.error(`User not found for email: ${args.customerEmail}`);
+      paymentLogger.error(`User not found for email: ${args.customerEmail}`);
       return { success: false };
     }
 
@@ -96,7 +97,7 @@ export const revokeAccess = internalMutation({
       subscriptionExpiry: undefined,
     });
 
-    console.log(`Revoked access from ${args.customerEmail}`);
+    paymentLogger.info(`Revoked access from ${args.customerEmail}`);
     return { success: true };
   },
 });

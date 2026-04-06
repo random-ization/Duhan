@@ -4,6 +4,7 @@ import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator } from 'convex/server';
 import { MAX_INSTITUTES_FALLBACK } from './queryLimits';
 import { requireAdmin } from './utils';
+import { adminLogger } from './logger';
 import {
   buildExamScoreInfo,
   countCorrectAnswers,
@@ -1163,7 +1164,7 @@ export const getAiUsageStats = query({
     } catch (error) {
       // In local dev, hot reloads can invalidate a pagination cursor mid-scan.
       // Return whatever was aggregated so the admin dashboard still renders.
-      console.warn('admin:getAiUsageStats pagination degraded', error);
+      adminLogger.warn('getAiUsageStats pagination degraded', { error: error instanceof Error ? error.message : String(error) });
     }
 
     const daily = [...dailyMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1));

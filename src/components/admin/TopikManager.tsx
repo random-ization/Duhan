@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react';
+import { logInfo, logError } from '../../utils/logger';
 import {
   FileText,
   Headphones,
@@ -216,7 +217,7 @@ export const TopikManager: React.FC = () => {
       const { url } = await uploadFile(file);
       onSuccess(url);
     } catch (e) {
-      console.error(e);
+      logError('Upload failed', e);
       alert('Upload failed. Please try again.');
     } finally {
       setUploadingItems(prev => {
@@ -308,7 +309,7 @@ export const TopikManager: React.FC = () => {
   // Individual image processor for bulk upload
   const processBulkImage = async (file: File, questionsRef: TopikQuestion[]) => {
     const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-    console.log(`Processing file: ${file.name} -> parsed name: ${fileName}`);
+    logInfo(`Processing file: ${file.name} -> parsed name: ${fileName}`);
 
     // Parse filename: Q1_Option1, Q1_1, 1_1, Q1O1, etc.
     const patterns = [
@@ -324,7 +325,7 @@ export const TopikManager: React.FC = () => {
       if (match) {
         questionNum = Number.parseInt(match[1]);
         optionNum = Number.parseInt(match[2]);
-        console.log(`Matched pattern: Q${questionNum}, Option${optionNum}`);
+        logInfo(`Matched pattern: Q${questionNum}, Option${optionNum}`);
         break;
       }
     }
@@ -363,12 +364,12 @@ export const TopikManager: React.FC = () => {
   // Bulk upload option images - parses filenames like Q1_Option1.png, Q1_1.png, 1_1.png
   const handleBulkImageUpload = async (files: FileList) => {
     if (!selectedExam || !selectedExam.questions) {
-      console.log('No exam selected or no questions');
+      logInfo('No exam selected or no questions');
       alert('请先选择一套试卷');
       return;
     }
 
-    console.log(`Starting bulk upload of ${files.length} files`);
+    logInfo(`Starting bulk upload of ${files.length} files`);
 
     // Store questions reference at start (for finding question by number)
     const questionsRef = selectedExam.questions;
@@ -434,7 +435,7 @@ export const TopikManager: React.FC = () => {
       // Convex queries will auto-refresh
       alert('保存成功！');
     } catch (e) {
-      console.error('Save failed', e);
+      logError('Save failed', e);
       alert('保存失败');
     } finally {
       setSaving(false);
@@ -449,7 +450,7 @@ export const TopikManager: React.FC = () => {
       setSelectedExam(null);
       setSelectedExamId(null);
     } catch (e) {
-      console.error('Delete failed', e);
+      logError('Delete failed', e);
       alert('删除失败');
     }
   };
@@ -542,7 +543,7 @@ export const TopikManager: React.FC = () => {
 
       const excelData = jsonData as ExcelImportRow[];
 
-      console.log('Excel Import: Processing', excelData.length, 'rows');
+      logInfo('Excel Import: Processing', { rows: excelData.length });
 
       const processExcelRow = (row: ExcelImportRow) => {
         const idNum = getExcelRowQuestionId(row);
@@ -578,7 +579,7 @@ export const TopikManager: React.FC = () => {
       // Reset input
       e.target.value = '';
     } catch (error) {
-      console.error(error);
+      logError('Excel parsing failed', error);
       alert('解析表格失败，请确保格式正确');
     }
   };

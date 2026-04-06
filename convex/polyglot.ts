@@ -54,8 +54,7 @@ export const replaceGrammarContent = mutation({
         if (!target) throw new Error(`Target grammar not found: ${args.targetId}`);
 
         // Copy TOPIK's rich content fields, preserving target's identity
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const patch: Record<string, any> = {
+        const patch: Record<string, unknown> = {
             // Core content
             summary: source.summary,
             explanation: source.explanation,

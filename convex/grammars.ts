@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import { evaluateCourseUnitAccess, getViewerEntitlementSnapshot } from './entitlements';
 import { toErrorMessage } from './errors';
+import { grammarLogger } from './logger';
 import type { Id } from './_generated/dataModel';
 
 interface GrammarExample {
@@ -807,7 +808,7 @@ export const getUnitGrammar = query({
 
       return results.filter((g): g is UnitGrammarDto => g !== null);
     } catch (error: unknown) {
-      console.error('[getUnitGrammar] Error:', toErrorMessage(error));
+      grammarLogger.error('getUnitGrammar error', error);
       throw error;
     }
   },

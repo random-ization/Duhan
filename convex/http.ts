@@ -1,7 +1,7 @@
 import { httpRouter, makeFunctionReference } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { auth } from './auth';
-import { toErrorMessage } from './errors';
+import { paymentLogger, podcastLogger } from './logger';
 
 type WebhookResult = { success: boolean; error?: string };
 type LemonWebhookArgs = { body: string; signature: string };
@@ -37,7 +37,7 @@ http.route({
     const signature = request.headers.get('X-Signature');
 
     if (!signature) {
-      console.error('Missing X-Signature header for Lemon Squeezy webhook');
+      paymentLogger.error('Missing X-Signature header for Lemon Squeezy webhook');
       return new Response('Missing signature', { status: 400 });
     }
 
@@ -54,7 +54,7 @@ http.route({
         return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
       }
     } catch (error: unknown) {
-      console.error('Lemon Squeezy webhook error:', toErrorMessage(error));
+      paymentLogger.error('Lemon Squeezy webhook error', error);
       return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     }
   }),
@@ -72,7 +72,7 @@ http.route({
     const callbackToken = url.searchParams.get('token')?.trim();
 
     if (!expectedDgToken && !expectedCallbackToken) {
-      console.error('Deepgram webhook auth is not configured');
+      podcastLogger.error('Deepgram webhook auth is not configured');
       return new Response('Webhook auth not configured', { status: 500 });
     }
 
@@ -93,7 +93,7 @@ http.route({
     try {
       payload = await request.json();
     } catch (error: unknown) {
-      console.error('Deepgram webhook JSON parse error:', toErrorMessage(error));
+      podcastLogger.error('Deepgram webhook JSON parse error', error);
       return new Response('Invalid JSON payload', { status: 400 });
     }
 
@@ -109,7 +109,7 @@ http.route({
       }
       return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     } catch (error: unknown) {
-      console.error('Deepgram webhook error:', toErrorMessage(error));
+      podcastLogger.error('Deepgram webhook error', error);
       return new Response(WEBHOOK_ERROR_RESPONSE, { status: 400 });
     }
   }),

@@ -1,4 +1,7 @@
 import { internalMutation } from './_generated/server';
+import { createLogger } from './logger';
+
+const log = createLogger('SETUP');
 
 const PHRASES = [
   {
@@ -68,7 +71,7 @@ export const seed = internalMutation({
   handler: async ctx => {
     const existing = await ctx.db.query('daily_phrases').collect();
     if (existing.length > 0) {
-      console.log('Daily phrases already initialized.');
+      log.info('Daily phrases already initialized.');
       return;
     }
 
@@ -77,6 +80,6 @@ export const seed = internalMutation({
       await ctx.db.insert('daily_phrases', phrase);
       count++;
     }
-    console.log(`Seeded ${count} daily phrases.`);
+    log.info(`Seeded ${count} daily phrases.`);
   },
 });

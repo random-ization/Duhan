@@ -8,6 +8,7 @@ import { toErrorMessage } from './errors';
 import { getPath, isRecord, parseJson, readString } from './validation';
 import { assertProductionRuntimeEnv } from './env';
 import { captureServerException, captureServerMessage } from './sentry';
+import { paymentLogger } from './logger';
 import { captureServerPostHogEvent } from './posthog';
 import { resolveCheckoutBaseUrl, resolveCheckoutPlanFromSource } from './lemonsqueezyHelpers';
 
@@ -304,7 +305,7 @@ export const createCheckout = action({
       },
     };
 
-    console.log('[LemonSqueezy] Creating checkout for plan:', args.plan);
+    paymentLogger.info('Creating checkout for plan: ' + args.plan);
 
     try {
       const response = await fetch(`${LEMONSQUEEZY_API_URL}/checkouts`, {
@@ -319,7 +320,7 @@ export const createCheckout = action({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[LemonSqueezy] API Error:', response.status, errorText);
+        paymentLogger.error('API Error: ' + response.status, errorText);
         throw new Error(`Lemon Squeezy API error: ${response.status}`);
       }
 
@@ -330,7 +331,7 @@ export const createCheckout = action({
         throw new Error('No checkout URL returned from Lemon Squeezy');
       }
 
-      console.log('[LemonSqueezy] Checkout created:', checkoutUrl);
+      paymentLogger.info('Checkout created: ' + checkoutUrl);
       await captureBillingEvent({
         event: 'server_checkout_created',
         distinctContext: {
@@ -350,7 +351,7 @@ export const createCheckout = action({
       });
       return { checkoutUrl };
     } catch (error: unknown) {
-      console.error('[LemonSqueezy] Error creating checkout:', toErrorMessage(error));
+      paymentLogger.error('Error creating checkout', error);
       await captureServerException(error, {
         module: 'lemonsqueezy',
         operation: 'createCheckout',
@@ -369,7 +370,7 @@ export const getVariantPrices = action({
   handler: async () => {
     const apiKey = process.env[API_KEY_ENV];
     if (!apiKey) {
-      console.warn(`[LemonSqueezy] ${API_KEY_ENV} missing, returning empty prices.`);
+      paymentLogger.warn(`${API_KEY_ENV} missing, returning empty prices.`);
       return emptyVariantPrices();
     }
 
@@ -381,7 +382,7 @@ export const getVariantPrices = action({
     );
 
     if (configuredVariantIds.size === 0) {
-      console.warn('[LemonSqueezy] No variant IDs configured, returning empty prices.');
+      paymentLogger.warn('No variant IDs configured, returning empty prices.');
       return prices;
     }
 
@@ -402,14 +403,14 @@ export const getVariantPrices = action({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[LemonSqueezy] Failed to fetch variants:', response.status, errorText);
+        paymentLogger.error('Failed to fetch variants: ' + response.status, errorText);
         return prices;
       }
 
       const data: unknown = await response.json();
       variants = parseVariantPrices(data);
     } catch (error: unknown) {
-      console.error('[LemonSqueezy] Failed to load variant prices:', toErrorMessage(error));
+      paymentLogger.error('Failed to load variant prices', error);
       await captureServerException(error, {
         module: 'lemonsqueezy',
         operation: 'getVariantPrices',
@@ -478,7 +479,7 @@ export const handleWebhook = action({
     const webhookSecret = process.env[WEBHOOK_SECRET_ENV];
 
     if (!webhookSecret) {
-      console.error(`Missing ${WEBHOOK_SECRET_ENV} environment variable`);
+      paymentLogger.error(`Missing ${WEBHOOK_SECRET_ENV} environment variable`);
       await captureServerMessage(`Missing ${WEBHOOK_SECRET_ENV}`, 'error', {
         module: 'lemonsqueezy',
         operation: 'handleWebhook',
@@ -488,7 +489,7 @@ export const handleWebhook = action({
 
     // Verify signature
     if (!verifySignature(args.body, args.signature, webhookSecret)) {
-      console.error('[LemonSqueezy] Invalid webhook signature');
+      paymentLogger.error('Invalid webhook signature');
       await captureServerMessage('Invalid LemonSqueezy webhook signature', 'warning', {
         module: 'lemonsqueezy',
         operation: 'handleWebhook',
@@ -501,7 +502,7 @@ export const handleWebhook = action({
     try {
       payload = parseJson(args.body);
     } catch {
-      console.error('[LemonSqueezy] Failed to parse webhook body');
+      paymentLogger.error('Failed to parse webhook body');
       await captureServerMessage('Failed to parse LemonSqueezy webhook payload', 'warning', {
         module: 'lemonsqueezy',
         operation: 'handleWebhook',
@@ -518,7 +519,7 @@ export const handleWebhook = action({
     const customerId = readStringish(payload, ['data', 'attributes', 'customer_id']);
     const subscriptionOrOrderId = readStringish(payload, ['data', 'id']);
 
-    console.log(`[LemonSqueezy] Webhook received: ${eventName ?? 'unknown'}`);
+    paymentLogger.info(`Webhook received: ${eventName ?? 'unknown'}`);
 
     try {
       await processWebhookEvent(ctx, eventName, {
@@ -532,7 +533,7 @@ export const handleWebhook = action({
 
       return { success: true };
     } catch (error: unknown) {
-      console.error('[LemonSqueezy] Error processing webhook:', toErrorMessage(error));
+      paymentLogger.error('Error processing webhook', error);
       await captureServerException(error, {
         module: 'lemonsqueezy',
         operation: 'handleWebhook',
@@ -566,7 +567,7 @@ async function processWebhookEvent(
         userId,
       });
       if (result.success) {
-        console.log(`[LemonSqueezy] Granted access for order: ${userEmail}`);
+        paymentLogger.info(`Granted access for order: ${userEmail}`);
         await captureBillingEvent({
           event: 'server_access_granted',
           distinctContext: {
@@ -608,7 +609,7 @@ async function processWebhookEvent(
       attributes,
     });
   } else {
-    console.log(`[LemonSqueezy] Unhandled event: ${eventName}`);
+    paymentLogger.warn(`Unhandled event: ${eventName}`);
   }
 }
 
@@ -635,7 +636,7 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
           userId,
         });
         if (result.success) {
-          console.log(`[LemonSqueezy] Granted subscription access: ${userEmail}`);
+          paymentLogger.info(`Granted subscription access: ${userEmail}`);
           await captureBillingEvent({
             event: 'server_access_granted',
             distinctContext: {
@@ -676,7 +677,7 @@ async function handleSubscriptionEvent(ctx: ActionCtx, eventName: string, data: 
           userId,
         });
         if (result.success) {
-          console.log(`[LemonSqueezy] Revoked access: ${userEmail}`);
+          paymentLogger.info(`Revoked access: ${userEmail}`);
           await captureBillingEvent({
             event: 'server_access_revoked',
             distinctContext: {

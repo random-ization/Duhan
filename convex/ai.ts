@@ -23,11 +23,11 @@ import {
   resolveChatProviderConfigs,
   type ChatProviderConfig,
 } from './aiProviders';
+import { aiLogger } from './logger';
 
 assertProductionRuntimeEnv();
 
-// Helper: No-op fallback for logging
-const logAI = (msg: string) => console.log(`[AI] ${msg}`);
+const logAI = (msg: string) => aiLogger.info(msg);
 
 const logUsageMutation = internal.aiUsageLogs.logUsage;
 const logFailureMutation = internal.aiUsageLogs.logFailure;
@@ -541,12 +541,14 @@ type DeepgramUtterance = {
   start?: number;
   end?: number;
   transcript?: string;
+  words?: unknown;
 };
 
 type DeepgramParagraphSentence = {
   start?: number;
   end?: number;
   text?: string;
+  words?: unknown;
 };
 
 type DeepgramParagraph = {
@@ -645,8 +647,7 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           end: typeof u.end === 'number' ? u.end : undefined,
           text: typeof u.transcript === 'string' ? u.transcript.trim() : '',
           translation: '',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          words: normalizeTranscriptWords((u as any).words),
+          words: normalizeTranscriptWords(u.words),
         })
       )
       .filter(segment => Boolean(segment.text));
@@ -662,8 +663,7 @@ function extractSegmentsFromDeepgramResult(result: unknown): TranscriptSegment[]
           end: typeof s.end === 'number' ? s.end : undefined,
           text: typeof s.text === 'string' ? s.text.trim() : '',
           translation: '',
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          words: normalizeTranscriptWords((s as any).words),
+          words: normalizeTranscriptWords(s.words),
         })
       )
       .filter(segment => Boolean(segment.text));

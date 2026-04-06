@@ -52,13 +52,16 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   ],
   callbacks: {
     async redirect({ redirectTo }) {
-      // Whitelist allowed frontend domains
-      const allowedOrigins = [
-        'https://koreanstudy.me',
-        'https://www.koreanstudy.me',
-        'http://localhost:5173',
-        'http://localhost:3000',
-      ];
+      // Get allowed origins from environment variable
+      const envOrigins = process.env.AUTH_ALLOWED_ORIGINS;
+      const allowedOrigins = envOrigins 
+        ? envOrigins.split(',').map(origin => origin.trim())
+        : [
+            'https://koreanstudy.me',
+            'https://www.koreanstudy.me',
+            'http://localhost:5173',
+            'http://localhost:3000',
+          ];
 
       try {
         const url = new URL(redirectTo);

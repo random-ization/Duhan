@@ -3,6 +3,9 @@ import { createRequire } from 'node:module';
 import { gunzipSync } from 'node:zlib';
 import { KiwiBuilder } from 'kiwi-nlp';
 import type { Kiwi, TokenInfo } from 'kiwi-nlp';
+import { createLogger } from './logger';
+
+const log = createLogger('KIWI');
 
 type KiwiModelFiles = Record<string, Uint8Array>;
 
@@ -79,7 +82,7 @@ async function fetchFirstOk(urls: string[]): Promise<ArrayBuffer> {
   let lastError: unknown = null;
   for (const url of urls) {
     try {
-      console.log(`[Kiwi] Downloading model from: ${url}`);
+      log.info(`Downloading model from: ${url}`);
       const res = await fetch(url);
       if (!res.ok) {
         lastError = new Error(`Failed to fetch model: ${res.status} ${url}`);
@@ -94,9 +97,9 @@ async function fetchFirstOk(urls: string[]): Promise<ArrayBuffer> {
 }
 
 async function loadModelFiles(): Promise<KiwiModelFiles> {
-  console.log('[Kiwi] Starting model download...');
+  log.info('Starting model download...');
   const tarGz = await fetchFirstOk(DEFAULT_MODEL_URLS);
-  console.log(`[Kiwi] Model downloaded, size: ${tarGz.byteLength} bytes`);
+  log.info(`Model downloaded, size: ${tarGz.byteLength} bytes`);
   return parseTarGz(tarGz);
 }
 

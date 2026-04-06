@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { CheckCircle2, Loader2, Upload, FileSpreadsheet } from 'lucide-react';
+import { logError } from '../../utils/logger';
 import { INSTITUTES, VOCAB } from '../../utils/convexRefs';
+import type { InstituteClientDto } from '../../../convex/institutes';
 
 interface FormState {
   word: string;
@@ -164,7 +166,7 @@ interface BulkImportResult {
 
 async function processBatches(
   items: BulkImportItem[],
-  bulkImportMutation: any,
+  bulkImportMutation: (args: { items: BulkImportItem[] }) => Promise<BulkImportResult>,
   setStatus: (msg: string | null) => void
 ) {
   const BATCH_SIZE = 50;
@@ -191,10 +193,11 @@ async function processBatches(
         smartFilledCount += r.smartFilled;
         if (r.errors) allErrors.push(...r.errors);
       }
-    } catch (err: any) {
-      console.error(`Batch ${i + 1} failed:`, err);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logError(`Batch ${i + 1} failed:`, err);
       failedCount += batch.length;
-      allErrors.push(`Batch ${i + 1} Error: ${err.message}`);
+      allErrors.push(`Batch ${i + 1} Error: ${errorMsg}`);
     }
   }
 
@@ -252,9 +255,10 @@ const VocabImporter: React.FC = () => {
       });
       setStatus('已保存单词并同步到 Convex');
       setForm(prev => ({ ...DEFAULT_FORM, courseId: prev.courseId }));
-    } catch (error: any) {
-      console.error(error);
-      setStatus(error?.message || '保存失败');
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logError('Save failed', error);
+      setStatus(errorMsg || '保存失败');
     } finally {
       setSubmitting(false);
     }
@@ -303,9 +307,10 @@ const VocabImporter: React.FC = () => {
         setStatus(parts.join('，'));
       }
       setBulkText('');
-    } catch (error: any) {
-      console.error(error);
-      setStatus(error?.message || '批量导入失败');
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logError('Bulk import failed', error);
+      setStatus(errorMsg || '批量导入失败');
     } finally {
       setSubmitting(false);
     }
@@ -328,12 +333,13 @@ const VocabImporter: React.FC = () => {
             onChange={e => setForm(prev => ({ ...prev, courseId: e.target.value }))}
             className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium"
           >
-            {(institutes || []).map((inst: any) => {
+            {(institutes || []).map((inst: InstituteClientDto) => {
               let displayName = inst.name || '';
               if (inst.displayLevel) displayName += ` ${inst.displayLevel}`;
               if (inst.volume) displayName += ` ${inst.volume}`;
+              const instId = inst.id || inst._id;
               return (
-                <option key={inst.id || inst._id} value={inst.id || inst._id}>
+                <option key={instId} value={instId}>
                   {displayName}
                 </option>
               );
@@ -500,7 +506,7 @@ const VocabImporter: React.FC = () => {
                       );
                     })
                     .catch(err => {
-                      console.error('Excel load failed:', err);
+                      logError('Excel load failed:', err);
                       setStatus('加载 Excel 文件失败');
                     });
                 } else {
@@ -513,7 +519,7 @@ const VocabImporter: React.FC = () => {
                       );
                     })
                     .catch(err => {
-                      console.error('Text file load failed:', err);
+                      logError('Text file load failed:', err);
                       setStatus('加载文本文件失败');
                     });
                 }

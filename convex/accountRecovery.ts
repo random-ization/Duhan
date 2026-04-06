@@ -8,6 +8,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { hashSync } from 'bcryptjs';
 import { Resend } from 'resend';
 import { makeFunctionReference } from 'convex/server';
+import { authLogger } from './logger';
 import type { FunctionReference } from 'convex/server';
 import { assertProductionRuntimeEnv } from './env';
 
@@ -190,7 +191,7 @@ async function sendRecoveryEmail(args: {
   const from = process.env.RESEND_FROM_EMAIL?.trim() || process.env.EMAIL_FROM?.trim();
 
   if (!apiKey || !from) {
-    console.warn(`[accountRecovery] Email provider not configured. To=${args.to}`);
+    authLogger.warn(`Email provider not configured. To=${args.to}`);
     return;
   }
 

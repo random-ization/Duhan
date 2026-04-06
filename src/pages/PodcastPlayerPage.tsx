@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'; // Added hooks
+import { logInfo, logError } from '../utils/logger';
 import {
   ArrowLeft,
   ChevronDown,
@@ -1114,7 +1115,7 @@ export function loadTranscriptFromLocalCache(
     if (!hasUsableTranscriptTranslation(parsed.segments, language)) {
       return null;
     }
-    console.log('[Transcript] Loaded from localStorage (instant)');
+    logInfo('[Transcript] Loaded from localStorage (instant)');
     return parsed.segments;
   } catch {
     return null;
@@ -1820,7 +1821,7 @@ const PodcastPlayerPage: React.FC = () => {
   // V4: Deepgram URL Strategy (Simple)
   const loadTranscriptChunked = useCallback(
     async (force = false) => {
-      console.log('[Transcript] V4: Starting Deepgram URL Strategy');
+      logInfo('[Transcript] V4: Starting Deepgram URL Strategy');
       if (convexAuthLoading || authUserLoading || !isAuthenticated) {
         return;
       }
@@ -1932,7 +1933,7 @@ const PodcastPlayerPage: React.FC = () => {
           throw new Error(copy.transcriptTimeout);
         }
       } catch (err) {
-        console.error('Transcript failed:', err);
+        logError('Transcript failed:', err);
         await handleTranscriptLoadFailure({
           error: err,
           episodeId,
@@ -2009,7 +2010,7 @@ const PodcastPlayerPage: React.FC = () => {
             setPlaylist(episodes);
           }
         } catch (e) {
-          console.error('Failed to load playlist', e);
+          logError('Failed to load playlist', e);
         }
       };
       fetchPlaylist();
@@ -2030,7 +2031,7 @@ const PodcastPlayerPage: React.FC = () => {
           feedUrl: channel.feedUrl || undefined,
           artworkUrl: channel.artworkUrl || channel.artwork || episode.channelArtwork || '',
         },
-      }).catch(console.error);
+      }).catch(logError);
 
       if (historyBase.episodeUrl) {
         const resolvedDuration = effectiveDuration || undefined;
@@ -2038,7 +2039,7 @@ const PodcastPlayerPage: React.FC = () => {
           ...historyBase,
           progress: Math.floor(currentTime),
           duration: resolvedDuration,
-        }).catch(console.error);
+        }).catch(logError);
       }
     }
 
@@ -2069,13 +2070,13 @@ const PodcastPlayerPage: React.FC = () => {
         );
 
         if (record && record.progress > 0 && record.progress < (record.duration || 3600) - 10) {
-          console.log(`[Resume] Found progress: ${record.progress}s`);
+          logInfo(`[Resume] Found progress: ${record.progress}s`);
           setResumeTime(record.progress);
           setCurrentTime(record.progress); // Update UI immediately
           resumeCheckedRef.current = episodeKey;
         }
       } catch (err) {
-        console.error('[Resume] Failed to check history', err);
+        logError('[Resume] Failed to check history', err);
       }
     };
     checkResume();
@@ -2084,7 +2085,7 @@ const PodcastPlayerPage: React.FC = () => {
   // 1.6 Apply Resume Time (Wait for Metadata)
   useEffect(() => {
     if (resumeTime !== null && audioRef.current && effectiveDuration > 0 && !isLoading) {
-      console.log(`[Resume] Seeking to ${resumeTime}s`);
+      logInfo(`[Resume] Seeking to ${resumeTime}s`);
       audioRef.current.currentTime = resumeTime;
       setResumeTime(null); // Clear once applied
     }
@@ -2268,7 +2269,7 @@ const PodcastPlayerPage: React.FC = () => {
       });
       notify.success(result.isSubscribed ? 'Saved to your subscriptions' : 'Removed from saved');
     } catch (error) {
-      console.error('Failed to toggle subscription', error);
+      logError('Failed to toggle subscription', error);
       notify.error('Failed to update saved status. Please try again.');
     } finally {
       setSubscriptionPending(false);
@@ -2309,7 +2310,7 @@ const PodcastPlayerPage: React.FC = () => {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
-      console.error('Failed to share episode', error);
+      logError('Failed to share episode', error);
       notify.error('Unable to share this episode right now.');
     }
   };
@@ -2326,7 +2327,7 @@ const PodcastPlayerPage: React.FC = () => {
       // Force reload from API
       await loadTranscriptChunked(true);
     } catch (e) {
-      console.error(e);
+      logError('Failed to regenerate transcript', e);
       setTranscriptError(copy.resetFailed);
       setTranscriptLoading(false);
     }
@@ -2365,7 +2366,7 @@ const PodcastPlayerPage: React.FC = () => {
         setAnalysisData(result.data);
       }
     } catch (e) {
-      console.error(e);
+      logError('Failed to analyze sentence', e);
     } finally {
       setAnalysisLoading(false);
     }

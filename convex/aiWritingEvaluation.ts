@@ -13,6 +13,7 @@
 
 import { action, internalMutation, internalQuery, query } from './_generated/server';
 import { internal } from './_generated/api';
+import { aiLogger } from './logger';
 import { v } from 'convex/values';
 import { getAuthUserId } from './utils';
 import type { Id } from './_generated/dataModel';
@@ -211,7 +212,7 @@ export const evaluateSubmission = action({
           const result = await callOpenAI(apiKey, q, answerText, responseLanguage);
           return { question: q, result };
         } catch (error) {
-          console.warn(`OpenAI evaluation failed for Q${q.number}, fallback to mock`, error);
+          aiLogger.warn(`OpenAI evaluation failed for Q${q.number}, fallback to mock`, { error: error instanceof Error ? error.message : String(error) });
           return { question: q, result: mockEvaluation(q, answerText, responseLanguage) };
         }
       })

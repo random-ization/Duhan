@@ -4,6 +4,7 @@ import { v, ConvexError } from 'convex/values';
 import Parser from 'rss-parser';
 import { getPath, isRecord, readString } from './validation';
 import { fetchWithTimeout, retryAsync } from './aiReliability';
+import { podcastLogger } from './logger';
 
 // RSS Parser instance
 const parser = new Parser();
@@ -168,7 +169,7 @@ export const getEpisodes = action({
         episodes: episodes.filter(ep => ep.audioUrl),
       };
     } catch (error) {
-      console.error('[RSS Parse Error]', error);
+      podcastLogger.error('RSS Parse Error', error);
       throw new ConvexError({ code: 'RSS_PARSE_FAILED' });
     }
   },

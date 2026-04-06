@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfirmDialog } from '../contexts/ConfirmDialogContext';
 import { useNotebookPicker } from '../contexts/NotebookPickerContext';
 import { toErrorMessage } from '../utils/errors';
+import { logError } from '../utils/logger';
 import { mRef, NOTE_PAGES } from '../utils/convexRefs';
 import { createLearningSessionId, useLearningAnalytics } from './useLearningAnalytics';
 
@@ -168,7 +169,7 @@ export const useUserActions = () => {
           },
         });
       } catch (e) {
-        console.error('Failed to save word', e);
+        logError('Failed to save word', e);
       }
     },
     [trackLearningEvent, user, saveSavedWordMutation]
@@ -202,7 +203,7 @@ export const useUserActions = () => {
           },
         });
       } catch (e) {
-        console.error('Failed to save mistake', toErrorMessage(e));
+        logError('Failed to save mistake', toErrorMessage(e));
       }
     },
     [trackLearningEvent, user, saveMistakeMutation]
@@ -218,7 +219,7 @@ export const useUserActions = () => {
     });
     if (!confirmed) return;
     clearMistakesMutation({}).catch(e =>
-      console.error('Failed to clear mistakes', toErrorMessage(e))
+      logError('Failed to clear mistakes', toErrorMessage(e))
     );
   }, [clearMistakesMutation, confirm]);
 
@@ -358,7 +359,7 @@ export const useUserActions = () => {
           },
         });
       } catch (apiError) {
-        console.error('Failed to save annotation to server:', apiError);
+        logError('Failed to save annotation to server:', apiError);
       }
     },
     [
@@ -388,7 +389,7 @@ export const useUserActions = () => {
           answers: normalizeExamAnswers(attempt.userAnswers),
         });
       } catch (e) {
-        console.error('Failed to save exam attempt', toErrorMessage(e));
+        logError('Failed to save exam attempt', toErrorMessage(e));
       }
     },
     [user, saveExamAttemptMutation]
@@ -400,7 +401,7 @@ export const useUserActions = () => {
       try {
         await deleteExamAttemptMutation({ attemptId: attemptId as Id<'exam_attempts'> });
       } catch (e) {
-        console.error('Failed to delete exam attempt', toErrorMessage(e));
+        logError('Failed to delete exam attempt', toErrorMessage(e));
       }
     },
     [user, deleteExamAttemptMutation]
@@ -418,7 +419,7 @@ export const useUserActions = () => {
           lastModule: module,
         });
       } catch (e) {
-        console.error('Failed to update learning progress', toErrorMessage(e));
+        logError('Failed to update learning progress', toErrorMessage(e));
       }
     },
     [user, updateLearningProgressMutation]

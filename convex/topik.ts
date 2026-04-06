@@ -5,6 +5,7 @@ import type { FunctionReference } from 'convex/server';
 import { getAuthUserId, requireAdmin } from './utils';
 import type { Doc, Id } from './_generated/dataModel';
 import { normalizeAnswerMap } from './validation';
+import { topikLogger } from './logger';
 import {
   evaluateTopikExamAccess,
   resolveEntitlementPlan,
@@ -473,7 +474,7 @@ export const submitExam = mutation({
         await ctx.scheduler.cancel(session.scheduledJobId);
       } catch (e) {
         // Job may have already run or been cancelled
-        console.warn('Could not cancel scheduled job:', e);
+        topikLogger.warn('Could not cancel scheduled job', { error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -494,20 +495,20 @@ export const autoSubmit = internalMutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
-      console.log('[autoSubmit] Session not found:', args.sessionId);
+      topikLogger.info('autoSubmit: Session not found: ' + args.sessionId);
       return;
     }
 
     // Only auto-submit if still in progress
     if (session.status !== 'IN_PROGRESS') {
-      console.log('[autoSubmit] Session already completed:', session.status);
+      topikLogger.info('autoSubmit: Session already completed: ' + session.status);
       return;
     }
 
     // Get exam and questions
     const exam = await ctx.db.get(session.examId);
     if (!exam) {
-      console.log('[autoSubmit] Exam not found');
+      topikLogger.info('autoSubmit: Exam not found');
       return;
     }
 
@@ -532,7 +533,7 @@ export const autoSubmit = internalMutation({
       completedAt: Date.now(),
     });
 
-    console.log('[autoSubmit] Session auto-submitted:', args.sessionId, 'Score:', score);
+    topikLogger.info(`autoSubmit: Session auto-submitted: ${args.sessionId} Score: ${score}`);
   },
 });
 
@@ -690,7 +691,7 @@ export const updateQ46QuestionText = mutation({
     const allQuestions = await ctx.db.query('topik_questions').collect();
     const q46Questions = allQuestions.filter(q => q.number === 46);
 
-    console.log(`Found ${q46Questions.length} Q46 questions to update`);
+    topikLogger.info(`Found ${q46Questions.length} Q46 questions to update`);
 
     let updatedCount = 0;
     for (const q of q46Questions) {

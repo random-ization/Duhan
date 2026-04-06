@@ -6,6 +6,9 @@ import { api, internal } from './_generated/api';
 import OpenAI from 'openai';
 import { type Id } from './_generated/dataModel';
 import { type FunctionReference } from 'convex/server';
+import { createLogger } from './logger';
+
+const log = createLogger('TRANSLATE');
 
 type TranslateYskInternalRefs = {
   getItemsToTranslate: FunctionReference<
@@ -372,7 +375,7 @@ export const run = action({
       limit,
     });
 
-    console.log(`[Translate YSK] Found ${items.length} items needing translation.`);
+    log.info(`Found ${items.length} items needing translation.`);
 
     if (items.length === 0) {
       return { success: true, message: 'No items to translate' };
@@ -384,9 +387,7 @@ export const run = action({
 
     for (let i = 0; i < items.length; i += CHUNK_SIZE) {
       const chunk = items.slice(i, i + CHUNK_SIZE);
-      console.log(
-        `[Translate YSK] Translating chunk ${i / CHUNK_SIZE + 1} (${chunk.length} items)`
-      );
+      log.info(`Translating chunk ${i / CHUNK_SIZE + 1} (${chunk.length} items)`);
 
       const requestPayload = chunk.map((item: TranslationItem) => ({
         id: item.appearanceId,
@@ -441,12 +442,12 @@ Return a JSON object strictly matching this schema:
           }
         }
       } catch (err) {
-        console.error('[Translate YSK] OpenAI error:', err);
+        log.error('OpenAI error', err);
       }
     }
 
     if (updates.length > 0) {
-      console.log(`[Translate YSK] Saving ${updates.length} translations to DB...`);
+      log.info(`Saving ${updates.length} translations to DB...`);
       const updatedCount: number = (await ctx.runMutation(translateYskInternal.saveTranslations, {
         updates,
       })) as number;
@@ -620,7 +621,7 @@ Rules:
           });
         }
       } catch (error) {
-        console.error('[Translate YSK][Vocab] Failed chunk:', error);
+        log.error('Vocab translation failed chunk', error);
       }
     }
 
@@ -733,7 +734,7 @@ Use natural learner-friendly translation and preserve core meaning.`;
           translationMn,
         });
       } catch (error) {
-        console.error('[Translate YSK][Units] Failed item:', item.id, error);
+        log.error('Units translation failed item: ' + item.id, error);
       }
     }
 
@@ -913,7 +914,7 @@ Return strict JSON:
           examples,
         });
       } catch (error) {
-        console.error('[Translate YSK][Grammar] Failed item:', item.id, error);
+        log.error('Grammar translation failed item: ' + item.id, error);
       }
     }
 
@@ -971,9 +972,7 @@ export const runFix = action({
     const offset = args.offset || 0;
     const chunk = items.slice(offset, offset + 30);
 
-    console.log(
-      `[Translate YSK] Fixing chunk offset ${offset} (${chunk.length} items) out of ${items.length}`
-    );
+    log.info(`Fixing chunk offset ${offset} (${chunk.length} items) out of ${items.length}`);
 
     if (chunk.length === 0) {
       return { success: true, totalUpdated: 0, hasMore: false };
@@ -1051,7 +1050,7 @@ Return a strictly valid JSON object matching this schema:
         totalUpdated += updatedCount;
       }
     } catch (err) {
-      console.error('[Translate YSK] OpenAI error during fix:', err);
+      log.error('OpenAI error during fix', err);
     }
 
     return {
@@ -1109,9 +1108,7 @@ export const fixSemantics = action({
     const offset = args.offset || 0;
     const chunk = items.slice(offset, offset + 30);
 
-    console.log(
-      `[Translate YSK] Fixing semantics chunk offset ${offset} (${chunk.length} items) out of ${items.length}`
-    );
+    log.info(`Fixing semantics chunk offset ${offset} (${chunk.length} items) out of ${items.length}`);
 
     if (chunk.length === 0) {
       return { success: true, totalUpdated: 0, hasMore: false };
@@ -1192,7 +1189,7 @@ Return a JSON object exactly matching this schema:
         totalUpdated += updatedCount;
       }
     } catch (err) {
-      console.error('[Translate YSK] OpenAI error during semantics fix:', err);
+      log.error('OpenAI error during semantics fix', err);
     }
 
     return {

@@ -11,6 +11,7 @@ import {
   toSpacesCdnHost,
 } from './spacesConfig';
 import { getSignatureKey } from './awsSigV4';
+import { ttsLogger } from './logger';
 
 // Azure Cognitive Services TTS with S3 caching
 // Caches generated audio in DigitalOcean Spaces to reduce API costs
@@ -179,7 +180,7 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('S3 upload error:', response.status, errorText);
+    ttsLogger.error('S3 upload error: ' + response.status, errorText);
     throw new Error(`S3 upload failed: ${response.status}`);
   }
 
@@ -238,10 +239,8 @@ export const deferredUploadAndCache = internalAction({
       const cdnUrl = await uploadToSpaces(audioBuffer, args.key);
       await ctx.runMutation(upsertCacheMutation, { key: args.key, url: cdnUrl });
       const uploadMs = Date.now() - uploadStartedAt;
-      console.log(
-        'TTS deferred cache write completed:',
-        args.key,
-        `trace=${args.traceId || 'n/a'}`
+      ttsLogger.info(
+        'TTS deferred cache write completed: ' + args.key + ` trace=${args.traceId || 'n/a'}`
       );
       return {
         success: true,
@@ -249,11 +248,9 @@ export const deferredUploadAndCache = internalAction({
         uploadMs,
       };
     } catch (error) {
-      console.warn(
-        'Deferred TTS upload/cache failed:',
-        error,
-        `trace=${args.traceId || 'n/a'}`,
-        `key=${args.key}`
+      ttsLogger.warn(
+        'Deferred TTS upload/cache failed: ' + `trace=${args.traceId || 'n/a'} key=${args.key}`,
+        { error: error instanceof Error ? error.message : String(error) }
       );
       return {
         success: false,
@@ -299,7 +296,7 @@ export const speak = action({
     });
 
     if (!apiKey || !region) {
-      console.error('Azure Speech credentials not configured');
+      ttsLogger.error('Azure Speech credentials not configured');
       return {
         success: false,
         audio: null,
@@ -327,7 +324,7 @@ export const speak = action({
             void ctx
               .runMutation(upsertCacheMutation, { key: cacheKey, url: normalizedUrl })
               .catch(error => {
-                console.warn('Failed to normalize cached TTS URL:', error);
+                ttsLogger.warn('Failed to normalize cached TTS URL', error);
               });
           }
           return {
@@ -350,9 +347,9 @@ export const speak = action({
             void ctx
               .runMutation(upsertCacheMutation, { key: cacheKey, url: cachedUrl })
               .catch(error => {
-                console.warn('Failed to upsert TTS cache after S3 hit:', error);
+                ttsLogger.warn('Failed to upsert TTS cache after S3 hit', error);
               });
-            console.log('TTS cache hit:', args.text.substring(0, 20));
+            ttsLogger.info('TTS cache hit: ' + args.text.substring(0, 20));
             return {
               success: true,
               audio: null, // Don't return base64 if URL is available
@@ -367,7 +364,7 @@ export const speak = action({
       }
 
       // Generate audio via Azure
-      console.log('TTS generating:', args.text.substring(0, 20));
+      ttsLogger.info('TTS generating: ' + args.text.substring(0, 20));
       const ssml = createSSML(args.text, voice, rate, pitch);
       const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
@@ -386,7 +383,7 @@ export const speak = action({
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Azure TTS error:', response.status, errorText);
+        ttsLogger.error('Azure TTS error: ' + response.status, errorText);
         return {
           success: false,
           audio: null,
@@ -409,10 +406,9 @@ export const speak = action({
             traceId,
           });
         } catch (scheduleError) {
-          console.warn(
-            'Failed to schedule deferred TTS upload:',
-            scheduleError,
-            `trace=${traceId}`
+          ttsLogger.warn(
+            'Failed to schedule deferred TTS upload: ' + `trace=${traceId}`,
+            { error: scheduleError instanceof Error ? scheduleError.message : String(scheduleError) }
           );
         }
         schedulerMs = Date.now() - scheduleStartedAt;
@@ -434,15 +430,15 @@ export const speak = action({
         const uploadStartedAt = Date.now();
         cdnUrl = await uploadToSpaces(audioBuffer, cacheKey);
         uploadMs = Date.now() - uploadStartedAt;
-        console.log('TTS cached to S3:', cacheKey);
+        ttsLogger.info('TTS cached to S3: ' + cacheKey);
       } catch (uploadError) {
-        console.warn('S3 upload failed, returning base64:', uploadError);
+        ttsLogger.warn('S3 upload failed, returning base64', { error: uploadError instanceof Error ? uploadError.message : String(uploadError) });
       }
 
       // Return URL if available, otherwise base64
       if (cdnUrl) {
         void ctx.runMutation(upsertCacheMutation, { key: cacheKey, url: cdnUrl }).catch(error => {
-          console.warn('Failed to upsert generated TTS cache URL:', error);
+          ttsLogger.warn('Failed to upsert generated TTS cache URL', error);
         });
         return {
           success: true,
@@ -454,7 +450,7 @@ export const speak = action({
           timing: buildTiming('generated_url'),
         };
       } else {
-        console.warn('TTS upload unavailable, returning inline audio');
+        ttsLogger.warn('TTS upload unavailable, returning inline audio');
       }
 
       return {
@@ -467,7 +463,7 @@ export const speak = action({
         timing: buildTiming('generated_inline_upload_failed'),
       };
     } catch (error) {
-      console.error('TTS generation failed:', error);
+      ttsLogger.error('TTS generation failed', error);
       return {
         success: false,
         audio: null,

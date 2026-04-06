@@ -13,6 +13,7 @@ import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
+import { logInfo, logError, logWarn } from '../utils/logger';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
 import EmptyState from '../components/common/EmptyState';
@@ -630,7 +631,7 @@ export default function VocabModulePage() {
           currentCard: getFSRSState(word),
         });
       } catch (err) {
-        console.error('FSRS queue error:', err);
+        logError('FSRS queue error:', err);
       }
     },
     [enqueueReview, user]
@@ -969,7 +970,7 @@ export default function VocabModulePage() {
         await persistLearningSnapshot('TEST', latestTestSnapshotRef.current);
       }
     } catch (error) {
-      console.warn('Failed to persist session before switching unit:', error);
+      logWarn('Failed to persist session before switching unit:', error);
     }
 
     setLearnOpen(false);
@@ -1370,7 +1371,7 @@ export default function VocabModulePage() {
               words={gameWords}
               courseId={instituteId}
               onComplete={stats => {
-                console.log('Learn completed:', stats);
+                logInfo('Learn completed:', stats);
                 void flushQueue();
                 void completeSessionForMode('LEARN');
               }}
@@ -1621,7 +1622,7 @@ export default function VocabModulePage() {
         <VocabMatch
           key={`match-${selectedUnitId}-${gameWords.length}`}
           words={gameWords}
-          onComplete={(time, moves) => console.log('Match completed:', time, moves)}
+          onComplete={(time, moves) => logInfo('Match completed:', { time, moves })}
         />
       </Suspense>
     </div>
