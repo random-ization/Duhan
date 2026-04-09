@@ -156,7 +156,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://apis.google.com https://*.convex.cloud; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.convex.cloud https://lh3.googleusercontent.com; connect-src 'self' https://*.convex.cloud https://api.convex.dev https://fonts.googleapis.com https://fonts.gstatic.com https://ipapi.co https://ipwho.is; frame-src 'self' https://*.convex.cloud https://accounts.google.com;"
+          "value": "default-src 'self'; script-src 'self' https://apis.google.com https://*.convex.cloud https://*.convex.site; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.convex.cloud https://*.convex.site wss://*.convex.cloud wss://*.convex.site https://api.convex.dev https://fonts.googleapis.com https://fonts.gstatic.com https://ipapi.co https://ipwho.is; frame-src 'self' https://*.convex.cloud https://*.convex.site https://accounts.google.com; worker-src 'self' blob:;"
         },
         {
           "key": "X-Frame-Options",
@@ -175,6 +175,15 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

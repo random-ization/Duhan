@@ -108,6 +108,9 @@ export default defineConfig(({ command }) => ({
         // Do not precache HTML documents. Cached route HTML can outlive hashed chunks and
         // strand users on a stale shell after deploys.
         globPatterns: ['**/*.{js,css,ico,png,svg,webp,jpg,jpeg,webmanifest}'],
+        // We let Vercel handle document routing, so Workbox must not try to serve
+        // /index.html as a navigation fallback when HTML is excluded from precache.
+        navigateFallback: null,
         // Keep install/update fast by excluding very heavy route/vendor chunks from precache.
         // They are fetched on-demand and still cacheable at runtime.
         globIgnores: [
