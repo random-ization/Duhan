@@ -93,30 +93,41 @@ export const exportVocabBookPdf = action({
     assertPremiumFeature(snapshot.plan, 'pdf_locked');
 
     const {
-      PDF_FONT_LATIN_URL: fontLatinUrl,
-      PDF_FONT_SC_URL: fontScUrl,
-      PDF_FONT_KR_URL: fontKrUrl,
+      PDF_FONT_LATIN_URL: configuredFontLatinUrl,
+      PDF_FONT_SC_URL: configuredFontScUrl,
+      PDF_FONT_KR_URL: configuredFontKrUrl,
       SITE_URL,
-      PDF_LOGO_URL,
+      PDF_LOGO_URL: configuredLogoUrl,
     } = process.env;
 
-    const missingFonts: string[] = [];
-    if (!fontLatinUrl) missingFonts.push('PDF_FONT_LATIN_URL');
-    if (!fontScUrl) missingFonts.push('PDF_FONT_SC_URL');
-    if (!fontKrUrl) missingFonts.push('PDF_FONT_KR_URL');
-    if (missingFonts.length > 0) {
-      throw new ConvexError({
-        code: 'PDF_FONT_MISSING',
-        message: `Missing env: ${missingFonts.join(', ')}`,
-      });
-    }
-
-    Font.register({ family: 'NotoSans', src: fontLatinUrl! });
-    Font.register({ family: 'NotoSansSC', src: fontScUrl! });
-    Font.register({ family: 'NotoSansKR', src: fontKrUrl! });
-
     const platformUrl = SITE_URL || args.origin;
-    const logoUrl = PDF_LOGO_URL || args.logoUrl || `${platformUrl}/logo.png`;
+    const isLegacyDoAsset = (url: string | undefined) =>
+      typeof url === 'string' && url.includes('joyhan.sgp1.cdn.digitaloceanspaces.com');
+    const resolvePdfAssetUrl = (configuredUrl: string | undefined, fallbackPath: string) =>
+      configuredUrl && !isLegacyDoAsset(configuredUrl)
+        ? configuredUrl
+        : `${platformUrl}${fallbackPath}`;
+
+    const fontLatinUrl = resolvePdfAssetUrl(
+      configuredFontLatinUrl,
+      '/pdf-assets/noto-sans-latin-regular.ttf'
+    );
+    const fontScUrl = resolvePdfAssetUrl(
+      configuredFontScUrl,
+      '/pdf-assets/noto-sans-sc-regular.otf'
+    );
+    const fontKrUrl = resolvePdfAssetUrl(
+      configuredFontKrUrl,
+      '/pdf-assets/noto-sans-kr-regular.otf'
+    );
+    const logoUrl =
+      configuredLogoUrl && !isLegacyDoAsset(configuredLogoUrl)
+        ? configuredLogoUrl
+        : args.logoUrl || `${platformUrl}/logo.png`;
+
+    Font.register({ family: 'NotoSans', src: fontLatinUrl });
+    Font.register({ family: 'NotoSansSC', src: fontScUrl });
+    Font.register({ family: 'NotoSansKR', src: fontKrUrl });
 
     const raw = await ctx.runQuery(getVocabBookForUserQuery, {
       userId,
