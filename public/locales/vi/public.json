@@ -460,6 +460,54 @@
         "feature1": "Thanh toán một lần",
         "feature2": "Bao gồm mọi cập nhật tương lai",
         "cta": "Mua trọn đời"
+      },
+      "comparison": {
+        "free": {
+          "feature1": "Mở 2 bài đầu của mỗi khóa để học thử",
+          "feature2": "Luyện từ vựng cơ bản, lưu mới tối đa 20 từ/ngày",
+          "feature3": "Có đề mẫu TOPIK và viết",
+          "feature4": "Nghe media đầy đủ 2 lượt/ngày, AI Credit 5 điểm/ngày"
+        },
+        "pro": {
+          "feature1": "Mở toàn bộ giáo trình, khóa học và bài học",
+          "feature2": "Kho đề TOPIK/viết đầy đủ, tổng hợp lỗi và báo cáo dài hạn",
+          "feature3": "Nghe media không giới hạn, hỗ trợ tốc độ, AI Credit 100 điểm/ngày",
+          "feature4": "Mở toàn bộ công cụ PDF, phân tích lịch sử và học chuyên sâu"
+        },
+        "lifetime": {
+          "feature1": "Bao gồm toàn bộ quyền lợi Pro hiện tại",
+          "feature2": "Tự động bao gồm mọi tính năng Pro trong tương lai",
+          "feature3": "Trả một lần, không gia hạn"
+        },
+        "rightsTitle": "So sánh nhanh",
+        "rightsSubtitle": "Bản Free giúp bạn bắt đầu. Pro/Lifetime mở toàn bộ chiều sâu để học lâu dài.",
+        "rows": {
+          "courses": {
+            "label": "Khóa học",
+            "free": "2 bài đầu",
+            "pro": "Toàn bộ khóa/bài"
+          },
+          "vocabulary": {
+            "label": "Từ vựng",
+            "free": "20 từ mới/ngày + 1 bài test/ngày",
+            "pro": "Lưu không giới hạn + test không giới hạn + phân tích"
+          },
+          "topik": {
+            "label": "TOPIK / Viết",
+            "free": "Đề mẫu công khai",
+            "pro": "Kho đề đầy đủ + báo cáo dài hạn"
+          },
+          "mediaAi": {
+            "label": "Media / AI",
+            "free": "2 lượt phát/ngày + 5 AI Credit",
+            "pro": "Phát không giới hạn + chỉnh tốc độ + 100 AI Credit"
+          }
+        },
+        "headers": {
+          "feature": "Tính năng",
+          "free": "Free",
+          "proLifetime": "Pro / Lifetime"
+        }
       }
     },
     "faq": {
@@ -2853,6 +2901,7 @@
       "loadError": "Không thể tải tin tức lúc này.",
       "aiExtracted": "AI trích xuất {{count}} từ",
       "readingMinutes": "Khoảng {{minutes}} phút đọc",
+      "recentlyUpdated": "Mới cập nhật",
       "autoRefreshed": "Đã tự động cập nhật đề xuất theo lịch sử đọc",
       "manualLimitReached": "Đã đạt giới hạn làm mới thủ công hôm nay (3 lần)",
       "manualRefreshed": "Làm mới thành công. Còn lại hôm nay: {{count}}",

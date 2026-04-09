@@ -1,0 +1,88 @@
+
+> duhan---korean-learning-platform@0.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives
+
+
+/Users/ryan/Documents/GitHub/hangyeol/convex/readingLibrary.ts
+    6:48  warning  'requireAdmin' is defined but never used            @typescript-eslint/no-unused-vars
+   10:6   warning  'ReadingLibraryProgress' is defined but never used  @typescript-eslint/no-unused-vars
+   11:6   warning  'UploadStatus' is defined but never used            @typescript-eslint/no-unused-vars
+   33:44  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   38:79  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+   76:14  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  102:62  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  124:14  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  609:33  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  617:33  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+
+/Users/ryan/Documents/GitHub/hangyeol/convex/readingLibraryActions.ts
+  123:34  error  Unnecessary escape character: \'  no-useless-escape
+  123:51  error  Unnecessary escape character: \'  no-useless-escape
+  123:58  error  Unnecessary escape character: \'  no-useless-escape
+
+/Users/ryan/Documents/GitHub/hangyeol/convex/readingLibraryAdmin.ts
+  90:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ryan/Documents/GitHub/hangyeol/convex/vocab/vocabQueries.ts
+   85:8   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/ryan/Documents/GitHub/hangyeol/src/components/reading/EpubReader.tsx
+  51:7  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/ryan/Documents/GitHub/hangyeol/src/components/reading/EpubReader.tsx:51:7
+  49 |
+  50 |   // Sync currentChapter with bookDetail progress exactly once when it first loads
+> 51 |   if (!initializedChapterRef.current && bookDetail) {
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  52 |     initializedChapterRef.current = true;
+  53 |     const progressIndex = bookDetail.userProgress?.chapterIndex;
+  54 |     if (typeof progressIndex === 'number' && progressIndex >= 0) {                                                                                                                               react-hooks/refs
+  51:7  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/ryan/Documents/GitHub/hangyeol/src/components/reading/EpubReader.tsx:51:7
+  49 |
+  50 |   // Sync currentChapter with bookDetail progress exactly once when it first loads
+> 51 |   if (!initializedChapterRef.current && bookDetail) {
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  52 |     initializedChapterRef.current = true;
+  53 |     const progressIndex = bookDetail.userProgress?.chapterIndex;
+  54 |     if (typeof progressIndex === 'number' && progressIndex >= 0) {                                                                                                                               react-hooks/refs
+  51:7  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/ryan/Documents/GitHub/hangyeol/src/components/reading/EpubReader.tsx:51:7
+  49 |
+  50 |   // Sync currentChapter with bookDetail progress exactly once when it first loads
+> 51 |   if (!initializedChapterRef.current && bookDetail) {
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  52 |     initializedChapterRef.current = true;
+  53 |     const progressIndex = bookDetail.userProgress?.chapterIndex;
+  54 |     if (typeof progressIndex === 'number' && progressIndex >= 0) {                                                                                                                               react-hooks/refs
+  51:8  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/ryan/Documents/GitHub/hangyeol/src/components/reading/EpubReader.tsx:51:8
+  49 |
+  50 |   // Sync currentChapter with bookDetail progress exactly once when it first loads
+> 51 |   if (!initializedChapterRef.current && bookDetail) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  52 |     initializedChapterRef.current = true;
+  53 |     const progressIndex = bookDetail.userProgress?.chapterIndex;
+  54 |     if (typeof progressIndex === 'number' && progressIndex >= 0) {
+
+To initialize a ref only once, check that the ref is null with the pattern `if (ref.current == null) { ref.current = ... }`  react-hooks/refs
+
+/Users/ryan/Documents/GitHub/hangyeol/src/pages/ReadingDiscoveryPage.tsx
+  361:6  warning  'CardTone' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 23 problems (19 errors, 4 warnings)
+

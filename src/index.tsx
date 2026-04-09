@@ -9,6 +9,7 @@ import './utils/i18next-config'; // Initialize i18n
 import './index.css';
 import { ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { getConvexUrl } from './utils/convexConfig';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { initSentry } from './utils/sentry';
@@ -51,6 +52,7 @@ root.render(
         <ConvexAuthProvider client={convex}>
           <AppProvider>
             <App />
+            <SpeedInsights />
           </AppProvider>
         </ConvexAuthProvider>
       </BrowserRouter>

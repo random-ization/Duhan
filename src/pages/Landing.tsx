@@ -54,6 +54,7 @@ type LandingPricingCopy = {
   rightsSubtitle: string;
   rightsRows: Array<{ label: string; free: string; pro: string }>;
 };
+type LandingCopyTranslator = (key: string, options?: Record<string, unknown>) => string;
 
 const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
 
@@ -77,94 +78,97 @@ function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
   });
 }
 
-function resolveLandingPricingCopy(language: LandingSeoLanguage): LandingPricingCopy {
-  if (language === 'zh') {
-    return {
-      freeFeatures: [
-        '每门课前 2 单元可学，先判断课程是否适合你',
-        '单词基础练习可用，新增入库 20 个/天',
-        'TOPIK / 写作开放公开样本卷',
-        '媒体每日完整播放 2 个，AI Credit 5 点/天',
-      ],
-      proFeatures: [
-        '全部教材、全部课程、全部单元完整开放',
-        '全部 TOPIK / 写作真题、错题聚合与长期报告',
-        '媒体无限播放，支持倍速，AI Credit 100 点/天',
-        'PDF 导出、历史分析、深度学习工具全部开放',
-      ],
-      lifetimeFeatures: [
-        '当前全部 Pro 权益完全包含',
-        '未来新增 Pro 功能继续包含',
-        '一次买断，不再续费',
-      ],
-      rightsTitle: '首页快速看差异',
-      rightsSubtitle: 'Free 负责让用户开始学，Pro / Lifetime 负责让用户持续学、深度学。',
-      rightsRows: [
-        {
-          label: '教材',
-          free: '前 2 单元',
-          pro: '全部课程 / 单元',
-        },
-        {
-          label: '单词系统',
-          free: '20 新词/天 + Test 1 次/天',
-          pro: '新增无限 + 测试无限 + 历史分析',
-        },
-        {
-          label: 'TOPIK / 写作',
-          free: '公开样本卷',
-          pro: '完整真题库 + 长期报告',
-        },
-        {
-          label: '媒体 / AI',
-          free: '2 次播放/天 + 5 AI Credit',
-          pro: '无限播放 + 倍速 + 100 AI Credit',
-        },
-      ],
-    };
-  }
-
+function resolveLandingPricingCopy(
+  language: LandingSeoLanguage,
+  t: LandingCopyTranslator
+): LandingPricingCopy {
   return {
     freeFeatures: [
-      'First 2 units of every course are open',
-      'Core vocab drills with 20 new saves per day',
-      'Public sample TOPIK and writing papers',
-      '2 full media plays per day and a small daily AI credit',
+      t('landing.pricing.comparison.free.feature1', {
+        defaultValue: 'First 2 units of every course are open',
+      }),
+      t('landing.pricing.comparison.free.feature2', {
+        defaultValue: 'Core vocab drills with 20 new saves per day',
+      }),
+      t('landing.pricing.comparison.free.feature3', {
+        defaultValue: 'Public sample TOPIK and writing papers',
+      }),
+      t('landing.pricing.comparison.free.feature4', {
+        defaultValue: '2 full media plays per day and a small daily AI credit',
+      }),
     ],
     proFeatures: [
-      'All textbooks, all units, and the full learning path',
-      'Full TOPIK and writing archive with long-term reports',
-      'Unlimited media playback, speed control, and higher AI credits',
-      'PDF export, analytics, and the full study toolkit',
+      t('landing.pricing.comparison.pro.feature1', {
+        defaultValue: 'All textbooks, all units, and the full learning path',
+      }),
+      t('landing.pricing.comparison.pro.feature2', {
+        defaultValue: 'Full TOPIK and writing archive with long-term reports',
+      }),
+      t('landing.pricing.comparison.pro.feature3', {
+        defaultValue: 'Unlimited media playback, speed control, and higher AI credits',
+      }),
+      t('landing.pricing.comparison.pro.feature4', {
+        defaultValue: 'PDF export, analytics, and the full study toolkit',
+      }),
     ],
     lifetimeFeatures: [
-      'Includes every current Pro entitlement',
-      'Future Pro features stay included',
-      'One-time payment with no renewal',
+      t('landing.pricing.comparison.lifetime.feature1', {
+        defaultValue: 'Includes every current Pro entitlement',
+      }),
+      t('landing.pricing.comparison.lifetime.feature2', {
+        defaultValue: 'Future Pro features stay included',
+      }),
+      t('landing.pricing.comparison.lifetime.feature3', {
+        defaultValue: 'One-time payment with no renewal',
+      }),
     ],
-    rightsTitle: 'Quick comparison',
-    rightsSubtitle:
-      'Free helps learners start. Pro and Lifetime unlock the full depth of the platform.',
+    rightsTitle: t('landing.pricing.comparison.rightsTitle', {
+      defaultValue: 'Quick comparison',
+    }),
+    rightsSubtitle: t('landing.pricing.comparison.rightsSubtitle', {
+      defaultValue:
+        'Free helps learners start. Pro and Lifetime unlock the full depth of the platform.',
+    }),
     rightsRows: [
       {
-        label: 'Courses',
-        free: 'First 2 units',
-        pro: 'All courses and units',
+        label: t('landing.pricing.comparison.rows.courses.label', { defaultValue: 'Courses' }),
+        free: t('landing.pricing.comparison.rows.courses.free', { defaultValue: 'First 2 units' }),
+        pro: t('landing.pricing.comparison.rows.courses.pro', {
+          defaultValue: 'All courses and units',
+        }),
       },
       {
-        label: 'Vocabulary',
-        free: '20 new words/day + 1 test/day',
-        pro: 'Unlimited saves, tests, and analytics',
+        label: t('landing.pricing.comparison.rows.vocabulary.label', {
+          defaultValue: 'Vocabulary',
+        }),
+        free: t('landing.pricing.comparison.rows.vocabulary.free', {
+          defaultValue: '20 new words/day + 1 test/day',
+        }),
+        pro: t('landing.pricing.comparison.rows.vocabulary.pro', {
+          defaultValue: 'Unlimited saves, tests, and analytics',
+        }),
       },
       {
-        label: 'TOPIK / Writing',
-        free: 'Public sample papers',
-        pro: 'Full archive and reports',
+        label: t('landing.pricing.comparison.rows.topik.label', {
+          defaultValue: 'TOPIK / Writing',
+        }),
+        free: t('landing.pricing.comparison.rows.topik.free', {
+          defaultValue: 'Public sample papers',
+        }),
+        pro: t('landing.pricing.comparison.rows.topik.pro', {
+          defaultValue: 'Full archive and reports',
+        }),
       },
       {
-        label: 'Media / AI',
-        free: '2 plays/day + limited AI credits',
-        pro: 'Unlimited playback + speed + 100 AI credits',
+        label: t('landing.pricing.comparison.rows.mediaAi.label', {
+          defaultValue: 'Media / AI',
+        }),
+        free: t('landing.pricing.comparison.rows.mediaAi.free', {
+          defaultValue: '2 plays/day + limited AI credits',
+        }),
+        pro: t('landing.pricing.comparison.rows.mediaAi.pro', {
+          defaultValue: 'Unlimited playback + speed + 100 AI credits',
+        }),
       },
     ],
   };
@@ -1675,7 +1679,7 @@ const LandingPricing = ({
 }) => {
   const { t, i18n } = useTranslation();
   const language = normalizeLandingSeoLanguage(i18n.language);
-  const pricingCopy = resolveLandingPricingCopy(language);
+  const pricingCopy = resolveLandingPricingCopy(language, t);
 
   const navigateWithLandingCta = (ctaId: string, target: string, placement: string) => {
     trackEvent('landing_cta_click', {
@@ -1960,19 +1964,21 @@ const LandingPricing = ({
               <div key={row.label} className="contents">
                 <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4">
                   <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    Feature
+                    {t('landing.pricing.comparison.headers.feature', { defaultValue: 'Feature' })}
                   </div>
                   <div className="mt-1 text-base font-black text-slate-900">{row.label}</div>
                 </div>
                 <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4 bg-slate-50">
                   <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    Free
+                    {t('landing.pricing.comparison.headers.free', { defaultValue: 'Free' })}
                   </div>
                   <div className="mt-1 text-sm leading-6 text-slate-600">{row.free}</div>
                 </div>
                 <div className="border-t md:border-t-0 border-black px-5 py-4 bg-[#FFFDF3]">
                   <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    Pro / Lifetime
+                    {t('landing.pricing.comparison.headers.proLifetime', {
+                      defaultValue: 'Pro / Lifetime',
+                    })}
                   </div>
                   <div className="mt-1 text-sm leading-6 font-semibold text-slate-900">
                     {row.pro}

@@ -542,6 +542,54 @@
         "feature1": "一次付费，永久拥有",
         "feature2": "包含未来所有更新",
         "cta": "购买终身版"
+      },
+      "comparison": {
+        "free": {
+          "feature1": "每门课前 2 单元可学，先判断课程是否适合你",
+          "feature2": "单词基础练习可用，新增入库 20 个/天",
+          "feature3": "TOPIK / 写作开放公开样本卷",
+          "feature4": "媒体每日完整播放 2 个，AI Credit 5 点/天"
+        },
+        "pro": {
+          "feature1": "全部教材、全部课程、全部单元完整开放",
+          "feature2": "全部 TOPIK / 写作真题、错题聚合与长期报告",
+          "feature3": "媒体无限播放，支持倍速，AI Credit 100 点/天",
+          "feature4": "PDF 导出、历史分析、深度学习工具全部开放"
+        },
+        "lifetime": {
+          "feature1": "当前全部 Pro 权益完全包含",
+          "feature2": "未来新增 Pro 功能继续包含",
+          "feature3": "一次买断，不再续费"
+        },
+        "rightsTitle": "首页快速看差异",
+        "rightsSubtitle": "Free 负责让用户开始学，Pro / Lifetime 负责让用户持续学、深度学。",
+        "rows": {
+          "courses": {
+            "label": "教材",
+            "free": "前 2 单元",
+            "pro": "全部课程 / 单元"
+          },
+          "vocabulary": {
+            "label": "单词系统",
+            "free": "20 新词/天 + Test 1 次/天",
+            "pro": "新增无限 + 测试无限 + 历史分析"
+          },
+          "topik": {
+            "label": "TOPIK / 写作",
+            "free": "公开样本卷",
+            "pro": "完整真题库 + 长期报告"
+          },
+          "mediaAi": {
+            "label": "媒体 / AI",
+            "free": "2 次播放/天 + 5 AI Credit",
+            "pro": "无限播放 + 倍速 + 100 AI Credit"
+          }
+        },
+        "headers": {
+          "feature": "功能",
+          "free": "免费版",
+          "proLifetime": "Pro / 终身版"
+        }
       }
     },
     "faq": {
@@ -2865,6 +2913,7 @@
       "loadError": "当前无法加载新闻，请稍后重试。",
       "aiExtracted": "AI 提取 {{count}} 词",
       "readingMinutes": "约 {{minutes}} 分钟阅读",
+      "recentlyUpdated": "最近更新",
       "autoRefreshed": "已根据阅读记录自动更新推荐",
       "manualLimitReached": "今日手动刷新已达上限（3次）",
       "manualRefreshed": "刷新成功，今日剩余 {{count}} 次",

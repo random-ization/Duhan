@@ -542,6 +542,54 @@
         "feature1": "One-time payment",
         "feature2": "Includes all future updates",
         "cta": "Buy lifetime"
+      },
+      "comparison": {
+        "free": {
+          "feature1": "First 2 units of every course are open",
+          "feature2": "Core vocab drills with 20 new saves per day",
+          "feature3": "Public sample TOPIK and writing papers",
+          "feature4": "2 full media plays per day and a small daily AI credit"
+        },
+        "pro": {
+          "feature1": "All textbooks, all units, and the full learning path",
+          "feature2": "Full TOPIK and writing archive with long-term reports",
+          "feature3": "Unlimited media playback, speed control, and higher AI credits",
+          "feature4": "PDF export, analytics, and the full study toolkit"
+        },
+        "lifetime": {
+          "feature1": "Includes every current Pro entitlement",
+          "feature2": "Future Pro features stay included",
+          "feature3": "One-time payment with no renewal"
+        },
+        "rightsTitle": "Quick comparison",
+        "rightsSubtitle": "Free helps learners start. Pro and Lifetime unlock the full depth of the platform.",
+        "rows": {
+          "courses": {
+            "label": "Courses",
+            "free": "First 2 units",
+            "pro": "All courses and units"
+          },
+          "vocabulary": {
+            "label": "Vocabulary",
+            "free": "20 new words/day + 1 test/day",
+            "pro": "Unlimited saves, tests, and analytics"
+          },
+          "topik": {
+            "label": "TOPIK / Writing",
+            "free": "Public sample papers",
+            "pro": "Full archive and reports"
+          },
+          "mediaAi": {
+            "label": "Media / AI",
+            "free": "2 plays/day + limited AI credits",
+            "pro": "Unlimited playback + speed + 100 AI credits"
+          }
+        },
+        "headers": {
+          "feature": "Feature",
+          "free": "Free",
+          "proLifetime": "Pro / Lifetime"
+        }
       }
     },
     "faq": {
@@ -2854,6 +2902,7 @@
       "loadError": "Unable to load news right now.",
       "aiExtracted": "AI extracted {{count}} words",
       "readingMinutes": "~{{minutes}} min read",
+      "recentlyUpdated": "Recently updated",
       "autoRefreshed": "Recommendations updated automatically based on your reading activity",
       "manualLimitReached": "Manual refresh limit reached for today (3 times)",
       "manualRefreshed": "Refreshed. Remaining today: {{count}}",

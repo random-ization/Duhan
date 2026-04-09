@@ -112,7 +112,11 @@ function getDifficultyChip(
   };
 }
 
-function formatRelativeTime(publishedAt: number, language: string) {
+function formatRelativeTime(
+  publishedAt: number,
+  language: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
   const locale =
     language === 'zh'
       ? 'zh-CN'
@@ -124,13 +128,9 @@ function formatRelativeTime(publishedAt: number, language: string) {
   return formatReadingRelativeTime(
     publishedAt,
     locale,
-    language === 'zh'
-      ? '最近更新'
-      : language === 'vi'
-        ? 'Mới cập nhật'
-        : language === 'mn'
-          ? 'Саяхан шинэчлэгдсэн'
-          : 'Recently updated'
+    t('readingDiscovery.news.recentlyUpdated', {
+      defaultValue: 'Recently updated',
+    })
   );
 }
 
@@ -217,7 +217,7 @@ const FeaturedNewsCard: React.FC<{
             )}
           </span>
           <span className="text-xs font-semibold text-muted-foreground">
-            {formatRelativeTime(featuredNews.publishedAt, language)}
+            {formatRelativeTime(featuredNews.publishedAt, language, t)}
           </span>
         </div>
         <span
@@ -285,7 +285,7 @@ const SecondaryNewsCard: React.FC<{
           )}
         </span>
         <span className="text-xs font-semibold text-muted-foreground">
-          {formatRelativeTime(item.publishedAt, language)}
+          {formatRelativeTime(item.publishedAt, language, t)}
         </span>
       </div>
       <div>
@@ -672,7 +672,8 @@ export default function ReadingDiscoveryPage() {
           loading={pictureBooks === undefined}
           onOpen={slug => navigate(buildPictureBookPath(slug, currentPath))}
           emptyStateText={t('readingDiscovery.pictureBooks.emptyFiltered', {
-            defaultValue: '这个等级下还没有可阅读的画册。左右滑动切换别的等级试试。',
+            defaultValue:
+              'No picture books are available in this level yet. Swipe to another level.',
           })}
         />
       </section>
