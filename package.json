@@ -75,6 +75,7 @@
     "@tiptap/suggestion": "^3.20.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/ws": "^8.18.1",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@vidstack/react": "^1.12.13",
     "axios": "^1.13.2",
