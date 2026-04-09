@@ -32,6 +32,7 @@ import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { buildVideoPlayerPath } from '../utils/videoRoutes';
+import { normalizePublicAssetUrl } from '../utils/imageSrc';
 
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileVideoPlayerPage } from '../components/mobile/MobileVideoPlayerPage';
@@ -109,7 +110,8 @@ const toVideoData = (convexVideo: ConvexVideoDoc | null | undefined): VideoData 
   return {
     ...convexVideo,
     id: convexVideo._id,
-    thumbnailUrl: convexVideo.thumbnailUrl || undefined,
+    videoUrl: normalizePublicAssetUrl(convexVideo.videoUrl) || convexVideo.videoUrl,
+    thumbnailUrl: normalizePublicAssetUrl(convexVideo.thumbnailUrl) || undefined,
     duration: convexVideo.duration || undefined,
     description: convexVideo.description || undefined,
     transcriptData: convexVideo.transcriptData || undefined,

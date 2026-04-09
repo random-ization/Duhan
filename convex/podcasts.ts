@@ -2,6 +2,7 @@ import { query, mutation, type MutationCtx } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
 import type { Doc, Id } from './_generated/dataModel';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 type PodcastChannelInfo = {
   itunesId?: string;
@@ -16,6 +17,23 @@ type ChannelRankingEntry = {
   views: number;
   latestAt: number;
 };
+
+function normalizePodcastChannel<T extends { artworkUrl?: string | null }>(channel: T): T {
+  return {
+    ...channel,
+    artworkUrl: normalizeStoragePublicUrl(channel.artworkUrl) || channel.artworkUrl,
+  };
+}
+
+function normalizeHistoryItem<
+  T extends { episodeUrl?: string | null; channelImage?: string | null },
+>(item: T): T {
+  return {
+    ...item,
+    episodeUrl: normalizeStoragePublicUrl(item.episodeUrl) || item.episodeUrl,
+    channelImage: normalizeStoragePublicUrl(item.channelImage) || item.channelImage,
+  };
+}
 
 const toValidTimestamp = (value: number | string | undefined, fallback: number): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -121,7 +139,7 @@ export const getTrending = query({
         const channel = channelDocs[idx];
         if (!channel) return null;
         return {
-          ...channel,
+          ...normalizePodcastChannel(channel),
           id: channel._id,
           views: stat.views,
         };
@@ -139,7 +157,7 @@ export const getTrending = query({
       .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
       .slice(0, 12)
       .map(channel => ({
-        ...channel,
+        ...normalizePodcastChannel(channel),
         id: channel._id,
       }));
 
@@ -169,7 +187,7 @@ export const getSubscriptions = query({
 
     const channels = subs.map(sub => {
       const channel = channelsMap.get(sub.channelId.toString());
-      return channel ? { ...channel, id: channel._id } : null;
+      return channel ? { ...normalizePodcastChannel(channel), id: channel._id } : null;
     });
 
     return channels.filter(c => c !== null);
@@ -190,7 +208,7 @@ export const getHistory = query({
       .take(20);
 
     return history.map(h => ({
-      ...h,
+      ...normalizeHistoryItem(h),
       id: h._id,
     }));
   },

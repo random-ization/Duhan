@@ -28,6 +28,7 @@ import { MobileReadingDiscoveryView } from './MobileReadingDiscoveryView';
 import { MobileSectionHeader } from './MobileSectionHeader';
 import { MobileStateCard } from './MobileStateCard';
 import { motion } from 'framer-motion';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 // --- TYPES ---
 type ActiveTab = 'video' | 'podcast' | 'reading';
@@ -108,6 +109,7 @@ const VideoTab: React.FC<{
     return convexVideos.map(v => ({
       ...v,
       id: v._id,
+      thumbnailUrl: normalizePublicAssetUrl(v.thumbnailUrl) || undefined,
     }));
   }, [convexVideos]);
 

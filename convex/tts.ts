@@ -6,9 +6,10 @@ import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 import {
   getSpacesCoreConfig,
+  normalizeStoragePublicUrl,
   getSpacesHost,
   getSpacesRegion,
-  toSpacesCdnHost,
+  getSpacesCdnBaseUrl,
 } from './spacesConfig';
 import { getSignatureKey } from './awsSigV4';
 import { ttsLogger } from './logger';
@@ -139,9 +140,8 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
 
   const payloadHash = crypto.createHash('sha256').update(audioBuffer).digest('hex');
 
-  const acl = 'public-read';
-  const canonicalHeaders = `host:${endpointHost}\nx-amz-acl:${acl}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = 'host;x-amz-acl;x-amz-content-sha256;x-amz-date';
+  const canonicalHeaders = `host:${endpointHost}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
   const canonicalRequest = ['PUT', uri, '', canonicalHeaders, signedHeaders, payloadHash].join(
     '\n'
@@ -168,7 +168,6 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
     method: 'PUT',
     headers: {
       Host: endpointHost,
-      'x-amz-acl': acl,
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
       Authorization: authorization,
@@ -185,8 +184,8 @@ async function uploadToSpaces(audioBuffer: Buffer, key: string): Promise<string>
   }
 
   // Return CDN URL
-  const cdnHost = toSpacesCdnHost(host);
-  return `https://${bucket}.${cdnHost}${uri}`; // Use encoded URI
+  const cdnBase = getSpacesCdnBaseUrl(bucket, host);
+  return `${cdnBase}${uri}`; // Use encoded URI
 }
 
 /**
@@ -197,8 +196,8 @@ async function checkS3Cache(key: string): Promise<string | null> {
   if (!spaces) return null;
   const { bucket, endpoint } = spaces;
   const host = getSpacesHost(endpoint);
-  const cdnHost = toSpacesCdnHost(host);
-  const url = `https://${bucket}.${cdnHost}/${key}`;
+  const cdnBase = getSpacesCdnBaseUrl(bucket, host);
+  const url = `${cdnBase}/${key}`;
 
   try {
     const response = await fetch(url, { method: 'HEAD' });
@@ -212,18 +211,7 @@ async function checkS3Cache(key: string): Promise<string | null> {
 }
 
 function normalizePublicAudioUrl(inputUrl: string): string {
-  try {
-    const url = new URL(inputUrl);
-    const host = url.host;
-    if (host.endsWith('.digitaloceanspaces.com') && !host.includes('.cdn.')) {
-      const cdnHost = toSpacesCdnHost(host);
-      url.host = cdnHost;
-      return url.toString();
-    }
-    return inputUrl;
-  } catch {
-    return inputUrl;
-  }
+  return normalizeStoragePublicUrl(inputUrl) ?? inputUrl;
 }
 
 export const deferredUploadAndCache = internalAction({
@@ -406,10 +394,9 @@ export const speak = action({
             traceId,
           });
         } catch (scheduleError) {
-          ttsLogger.warn(
-            'Failed to schedule deferred TTS upload: ' + `trace=${traceId}`,
-            { error: scheduleError instanceof Error ? scheduleError.message : String(scheduleError) }
-          );
+          ttsLogger.warn('Failed to schedule deferred TTS upload: ' + `trace=${traceId}`, {
+            error: scheduleError instanceof Error ? scheduleError.message : String(scheduleError),
+          });
         }
         schedulerMs = Date.now() - scheduleStartedAt;
 
@@ -432,7 +419,9 @@ export const speak = action({
         uploadMs = Date.now() - uploadStartedAt;
         ttsLogger.info('TTS cached to S3: ' + cacheKey);
       } catch (uploadError) {
-        ttsLogger.warn('S3 upload failed, returning base64', { error: uploadError instanceof Error ? uploadError.message : String(uploadError) });
+        ttsLogger.warn('S3 upload failed, returning base64', {
+          error: uploadError instanceof Error ? uploadError.message : String(uploadError),
+        });
       }
 
       // Return URL if available, otherwise base64

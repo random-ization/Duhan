@@ -15,6 +15,7 @@ import { UserManagement } from '../../components/admin/UserManagement';
 import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import LegalDocumentEditor from '../../components/admin/LegalDocumentEditor';
 import VideoManager from '../../components/admin/VideoManager';
+import { EpubReviewPanel } from '../../components/admin/EpubReviewPanel';
 // PodcastManager was removed during revert; use inline placeholder until re-implemented
 const PodcastManager: React.FC = () => (
   <div className="p-8">
@@ -76,7 +77,7 @@ const SubTabLayout: React.FC<SubTabProps> = ({ activeSubTab, onSubTabChange, ite
 );
 
 const ReadingTab: React.FC = () => {
-  const [subTab, setSubTab] = useState<'manage' | 'import' | 'news'>('manage');
+  const [subTab, setSubTab] = useState<'manage' | 'import' | 'news' | 'epub'>('manage');
   return (
     <SubTabLayout
       activeSubTab={subTab}
@@ -85,11 +86,13 @@ const ReadingTab: React.FC = () => {
         { id: 'manage', label: '阅读管理', icon: <Book className="w-5 h-5" /> },
         { id: 'import', label: '批量导入', icon: <FileSpreadsheet className="w-5 h-5" /> },
         { id: 'news', label: '新闻数据源', icon: <Activity className="w-5 h-5" /> },
+        { id: 'epub', label: 'EPUB 审核', icon: <BookOpen className="w-5 h-5" /> },
       ]}
     >
       {subTab === 'manage' && <ReadingContentManager />}
       {subTab === 'import' && <ReadingImporter />}
       {subTab === 'news' && <NewsPipelinePanel />}
+      {subTab === 'epub' && <EpubReviewPanel />}
     </SubTabLayout>
   );
 };

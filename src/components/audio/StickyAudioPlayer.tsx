@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { Slider } from '../ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface StickyAudioPlayerProps {
   audioUrl: string;
@@ -17,6 +18,7 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
   initialTime = 0,
 }) => {
   const { t } = useTranslation();
+  const normalizedAudioUrl = normalizePublicAssetUrl(audioUrl) || audioUrl;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -156,7 +158,7 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground shadow-[0px_-4px_10px_rgba(0,0,0,0.1)] z-50">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <audio ref={audioRef} src={normalizedAudioUrl} preload="metadata" />
 
       {/* Progress Bar */}
       <div className="h-1 bg-muted relative cursor-pointer group">

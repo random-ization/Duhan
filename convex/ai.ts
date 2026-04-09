@@ -266,6 +266,17 @@ function normalizeTargetLanguage(lang?: string): SupportedTranslationLanguage | 
     : '';
 }
 
+function hasCompleteTranscriptTranslations(
+  translations: string[] | undefined,
+  expectedLength: number
+) {
+  return (
+    Array.isArray(translations) &&
+    translations.length === expectedLength &&
+    translations.every(item => item.trim().length > 0)
+  );
+}
+
 type ReadingVocabularyItem = {
   term: string;
   meaning: string;
@@ -1012,6 +1023,30 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
         }
       }
 
+      for (let index = 0; index < segmentTexts.length; index += 1) {
+        const sourceText = segmentTexts[index] ?? '';
+        const currentTranslation = translations[index] ?? '';
+        if (
+          currentTranslation.trim().length > 0 &&
+          !isSuspiciousUntranslatedLine(sourceText, currentTranslation, normalizedTargetLang)
+        ) {
+          continue;
+        }
+
+        const directFallback = await translateSingleTextDirect(sourceText, normalizedTargetLang);
+        if (
+          directFallback.translation.trim().length > 0 &&
+          !isSuspiciousUntranslatedLine(
+            sourceText,
+            directFallback.translation,
+            normalizedTargetLang
+          )
+        ) {
+          translations[index] = directFallback.translation;
+          chosenProvider = chosenProvider ?? directFallback.provider;
+        }
+      }
+
       return { index: chunk.index, translations, provider: chosenProvider };
     };
 
@@ -1468,7 +1503,11 @@ export const handleDeepgramCallback = action({
 });
 
 export const getTranscript = action({
-  args: { episodeId: v.string(), language: v.optional(v.string()) },
+  args: {
+    episodeId: v.string(),
+    language: v.optional(v.string()),
+    skipTranslationGeneration: v.optional(v.boolean()),
+  },
   handler: async (ctx, args): Promise<{ segments: TranscriptSegment[] | null }> => {
     const record = (await ctx.runQuery(internal.podcastTranscripts.getRecordByEpisode, {
       episodeId: args.episodeId,
@@ -1484,23 +1523,24 @@ export const getTranscript = action({
     }
 
     const existingTranslations = record.translations?.[normalizedTargetLang];
+    const completeExistingTranslations = hasCompleteTranscriptTranslations(
+      existingTranslations,
+      record.segments.length
+    )
+      ? existingTranslations
+      : null;
     const hasSuspiciousCachedTranslations =
-      Array.isArray(existingTranslations) &&
-      existingTranslations.length === record.segments.length &&
+      completeExistingTranslations &&
       looksLikeUntranslatedBatch(
         record.segments.map(segment => segment.text),
-        existingTranslations,
+        completeExistingTranslations,
         normalizedTargetLang
       );
 
-    if (
-      existingTranslations &&
-      existingTranslations.length === record.segments.length &&
-      !hasSuspiciousCachedTranslations
-    ) {
+    if (completeExistingTranslations && !hasSuspiciousCachedTranslations) {
       const merged = applyTranslationsToSegments(
         record.segments,
-        existingTranslations,
+        completeExistingTranslations,
         normalizedTargetLang === 'zh'
       );
       return { segments: merged };
@@ -1514,6 +1554,10 @@ export const getTranscript = action({
         episodeId: args.episodeId,
         language: normalizedTargetLang,
       });
+    }
+
+    if (args.skipTranslationGeneration) {
+      return { segments: record.segments };
     }
 
     const userId = (await getAuthUserId(ctx).catch(() => null)) as Id<'users'> | null;

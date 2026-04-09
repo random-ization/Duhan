@@ -17,6 +17,7 @@ import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { BottomSheet } from '../../common/BottomSheet';
 import { Button } from '../../ui';
 import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
+import { normalizePublicAssetUrl } from '../../../utils/imageSrc';
 
 // --- Constants (Copied from ExamSession.tsx to ensure consistency) ---
 const TOPIK_READING_STRUCTURE: {
@@ -398,6 +399,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const normalizedExamAudioUrl = normalizePublicAssetUrl(exam.audioUrl) || exam.audioUrl;
   const sanitize = (html?: string) => sanitizeStrictHtml(String(html ?? ''));
 
   const structure = resolveExamStructure(exam.type);
@@ -413,8 +415,8 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
 
   // Audio Logic
   useEffect(() => {
-    if (exam.type === 'LISTENING' && exam.audioUrl && !audioRef.current) {
-      audioRef.current = new Audio(exam.audioUrl);
+    if (exam.type === 'LISTENING' && normalizedExamAudioUrl && !audioRef.current) {
+      audioRef.current = new Audio(normalizedExamAudioUrl);
       audioRef.current.addEventListener('ended', () => setIsPlaying(false));
       audioRef.current.addEventListener('error', () => {
         setAudioError(true);
@@ -430,7 +432,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         audioRef.current = null;
       }
     };
-  }, [exam.type, exam.audioUrl]);
+  }, [exam.type, normalizedExamAudioUrl]);
 
   const toggleAudio = () => {
     if (!audioRef.current) return;

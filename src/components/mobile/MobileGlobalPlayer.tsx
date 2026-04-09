@@ -5,6 +5,7 @@ import { Play, Pause, ChevronDown, ListMusic, SkipBack, SkipForward, X } from 'l
 import { Button } from '../ui';
 import { Slider } from '../ui';
 import { Sheet, SheetContent, SheetPortal } from '../ui';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 function formatClock(seconds: number) {
   if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
@@ -31,6 +32,8 @@ export const MobileGlobalPlayer: React.FC = () => {
   const [duration, setDuration] = useState(0);
 
   const artworkSrc = useMemo(() => activeEpisode?.channelArtwork || '/logo.png', [activeEpisode]);
+  const normalizedEpisodeUrl =
+    normalizePublicAssetUrl(activeEpisode?.audioUrl) || activeEpisode?.audioUrl || '';
 
   const handleTimeUpdate = useCallback(
     (e: React.SyntheticEvent<HTMLAudioElement>) => {
@@ -267,7 +270,7 @@ export const MobileGlobalPlayer: React.FC = () => {
       {/* Persist the audio element across minimized/full UI */}
       <audio
         ref={audioRef}
-        src={activeEpisode.audioUrl}
+        src={normalizedEpisodeUrl}
         onLoadStart={handleLoadStart}
         onLoadedMetadata={handleLoadedMetadata}
         onDurationChange={handleDurationChange}

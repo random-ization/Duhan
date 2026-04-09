@@ -1,6 +1,7 @@
 import { query, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc } from './_generated/dataModel';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 const isVisibleInstitute = (institute: { isArchived?: boolean }) => institute.isArchived !== true;
 type InstituteDoc = Doc<'institutes'>;
@@ -78,7 +79,7 @@ const normalizeInstitute = (institute: InstituteDoc): InstituteClientDto => ({
   nameVi: institute.nameVi,
   nameMn: institute.nameMn,
   levels: normalizeInstituteLevels(institute.levels),
-  coverUrl: institute.coverUrl,
+  coverUrl: normalizeStoragePublicUrl(institute.coverUrl) || institute.coverUrl,
   themeColor: institute.themeColor,
   publisher: institute.publisher,
   displayLevel: institute.displayLevel,

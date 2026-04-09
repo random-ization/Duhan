@@ -20,9 +20,9 @@ export type PresignResult = {
   uploadUrl: string;
   publicUrl: string;
   key: string;
+  method?: 'PUT';
   headers: {
     'Content-Type': string;
-    'x-amz-acl': string;
   };
 };
 
@@ -36,7 +36,6 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
 
   const folder = args.folder || 'uploads';
   const key = args.key ?? `${folder}/${Date.now()}-${args.filename}`;
-  const acl = 'public-read';
 
   const service = 's3';
   const now = new Date();
@@ -56,7 +55,7 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
   queryParams.set('X-Amz-Credential', `${accessKeyId}/${credentialScope}`);
   queryParams.set('X-Amz-Date', amzDate);
   queryParams.set('X-Amz-Expires', expires.toString());
-  queryParams.set('X-Amz-SignedHeaders', 'host;x-amz-acl');
+  queryParams.set('X-Amz-SignedHeaders', 'host');
 
   const sortedQuery = Array.from(queryParams.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -67,8 +66,8 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
     'PUT',
     uri,
     sortedQuery,
-    `host:${endpointHost}\nx-amz-acl:${acl}\n`,
-    'host;x-amz-acl',
+    `host:${endpointHost}\n`,
+    'host',
     'UNSIGNED-PAYLOAD',
   ].join('\n');
 
@@ -90,9 +89,9 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
     uploadUrl,
     publicUrl,
     key,
+    method: 'PUT',
     headers: {
       'Content-Type': args.contentType,
-      'x-amz-acl': acl,
     },
   };
 }

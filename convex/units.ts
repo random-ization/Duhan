@@ -8,6 +8,7 @@ import {
   loadTextbookUnitTranscript,
   replaceTextbookUnitTranscriptChunks,
 } from './transcriptStorage';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 // Get unit list for course (includes all content for admin editing)
 export const getByCourse = query({
@@ -41,7 +42,7 @@ export const getByCourse = query({
         translationEn: u.translationEn,
         translationVi: u.translationVi,
         translationMn: u.translationMn,
-        audioUrl: u.audioUrl,
+        audioUrl: normalizeStoragePublicUrl(u.audioUrl) || u.audioUrl,
         transcriptData: await loadTextbookUnitTranscript(ctx, u),
         analysisData: u.analysisData,
         createdAt: u.createdAt,
@@ -128,6 +129,7 @@ export const getDetails = query({
     const articlesWithTranscript = await Promise.all(
       visibleArticles.map(async article => ({
         ...article,
+        audioUrl: normalizeStoragePublicUrl(article.audioUrl) || article.audioUrl,
         transcriptData: await loadTextbookUnitTranscript(ctx, article),
       }))
     );
@@ -153,7 +155,7 @@ export const getDetails = query({
           pos: word.partOfSpeech,
           pronunciation: word.pronunciation,
           hanja: word.hanja,
-          audioUrl: word.audioUrl,
+          audioUrl: normalizeStoragePublicUrl(word.audioUrl) || word.audioUrl,
           // Context
           exampleSentence: app.exampleSentence,
           exampleMeaning: app.exampleMeaning,

@@ -10,6 +10,14 @@ const TranslationLanguage = v.union(
 
 const TRANSLATION_LEASE_TTL_MS = 2 * 60 * 1000;
 
+const hasCompleteTranslations = (translations: string[] | undefined, expectedLength: number) => {
+  return (
+    Array.isArray(translations) &&
+    translations.length === expectedLength &&
+    translations.every(item => item.trim().length > 0)
+  );
+};
+
 const withoutLanguageKey = <T extends Record<string, unknown>>(
   source: T | undefined,
   language: 'zh' | 'en' | 'vi' | 'mn'
@@ -181,11 +189,7 @@ export const tryStartTranslation = internalMutation({
     }
 
     const translations = existing.translations?.[args.language];
-    if (
-      Array.isArray(translations) &&
-      translations.length === existing.segments.length &&
-      translations.some(item => item.trim().length > 0)
-    ) {
+    if (hasCompleteTranslations(translations, existing.segments.length)) {
       return { started: false, reason: 'ready' as const };
     }
 

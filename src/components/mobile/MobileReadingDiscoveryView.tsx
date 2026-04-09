@@ -2,17 +2,34 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import { BookMarked, Newspaper, Sparkles, ChevronRight, X } from 'lucide-react';
+import {
+  BookMarked,
+  Newspaper,
+  Sparkles,
+  ChevronRight,
+  X,
+  Library,
+  Upload,
+  Share2,
+} from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { READING_BOOKS, NEWS } from '../../utils/convexRefs';
+import { READING_BOOKS, NEWS, READING_LIBRARY } from '../../utils/convexRefs';
 import { MobilePictureBookCard } from './MobilePictureBookCard';
 import { MobileNewsCard } from './MobileNewsCard';
+import { EpubUpload } from '../reading/EpubUpload';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { buildPictureBookPath, buildReadingArticlePath } from '../../utils/readingRoutes';
+import {
+  buildEpubLibraryPath,
+  buildEpubSharedPath,
+  buildPictureBookPath,
+  buildReadingArticlePath,
+} from '../../utils/readingRoutes';
 import { formatReadingRelativeTime } from '../../utils/readingMetadata';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
+import { notify } from '../../utils/notify';
+import { getLocalizedPath } from '../../hooks/useLocalizedNavigate';
 
 interface MobileReadingDiscoveryViewProps {
   readonly active: boolean;
@@ -42,6 +59,8 @@ type FeedData = {
   news: FeedNewsItem[];
 };
 
+const MOBILE_NEWS_LIMIT = 3;
+
 function getLocaleForReading(language: string) {
   if (language === 'zh') return 'zh-CN';
   if (language === 'vi') return 'vi-VN';
@@ -61,6 +80,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const [feedInitError, setFeedInitError] = useState(false);
   const [feedInitVersion, setFeedInitVersion] = useState(0);
   const [showAllBooks, setShowAllBooks] = useState(false);
+  const [showEpubUploader, setShowEpubUploader] = useState(false);
   const [bookLevelFilter, setBookLevelFilter] = useState<string>('ALL');
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
 
@@ -68,15 +88,20 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {}) as
     | MobilePictureBook[]
     | undefined;
+  const myUploads = useQuery(READING_LIBRARY.getMyUploads, user?.id ? {} : 'skip') as
+    | Array<any>
+    | undefined;
   const newsFeed = useQuery(
     NEWS.getUserFeed,
-    !user?.id || feedReadyUserId === user.id ? { newsLimit: 20, articleLimit: 8 } : 'skip'
+    !user?.id || feedReadyUserId === user.id
+      ? { newsLimit: MOBILE_NEWS_LIMIT, articleLimit: 8 }
+      : 'skip'
   ) as FeedData | undefined;
 
   useEffect(() => {
     let cancelled = false;
     if (!user?.id) return;
-    void ensureUserFeed({ newsLimit: 20, articleLimit: 8 })
+    void ensureUserFeed({ newsLimit: MOBILE_NEWS_LIMIT, articleLimit: 8 })
       .then(() => {
         if (!cancelled) setFeedInitError(false);
       })
@@ -94,10 +119,12 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const books = useMemo(() => pictureBooks || [], [pictureBooks]);
   const news = useMemo(() => newsFeed?.news || [], [newsFeed]);
   const booksLoading = pictureBooks === undefined;
+  const epubLoading = Boolean(user?.id) && myUploads === undefined;
   const newsLoading =
     !feedInitError && (!user?.id || feedReadyUserId === user.id) && newsFeed === undefined;
   const showNewsError = Boolean(user?.id) && feedInitError;
   const currentPath = `${location.pathname}${location.search}`;
+  const privateEpubBooks = useMemo(() => (myUploads || []).slice(0, 6), [myUploads]);
 
   // Available levels for filter chips
   const availableLevels = useMemo(() => {
@@ -120,6 +147,63 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const retryNewsFeed = () => {
     setFeedReadyUserId(null);
     setFeedInitVersion(prev => prev + 1);
+  };
+
+  const ensureShareLink = useMutation(READING_LIBRARY.ensureShareLink);
+  const disableShareLink = useMutation(READING_LIBRARY.disableShareLink);
+
+  const buildShareUrl = (slug: string, shareToken: string) => {
+    const path = getLocalizedPath(buildEpubSharedPath(slug, shareToken), language);
+    return new URL(path, window.location.origin).toString();
+  };
+
+  const handleShareBook = async (book: any) => {
+    try {
+      const result = await ensureShareLink({ bookId: book._id });
+      const shareUrl = buildShareUrl(book.slug, result.shareToken);
+      if (globalThis.navigator.share) {
+        await globalThis.navigator.share({
+          title: book.title,
+          url: shareUrl,
+        });
+        return;
+      }
+      if (globalThis.navigator.clipboard?.writeText) {
+        await globalThis.navigator.clipboard.writeText(shareUrl);
+        notify.success(
+          t('readingDiscovery.library.shareCopied', { defaultValue: 'Share link copied' })
+        );
+        return;
+      }
+      notify.info(shareUrl);
+    } catch (error) {
+      notify.error(
+        error instanceof Error
+          ? error.message
+          : t('readingDiscovery.library.shareFailed', {
+              defaultValue: 'Unable to share this book right now.',
+            })
+      );
+    }
+  };
+
+  const handleDisableShare = async (bookId: string) => {
+    try {
+      await disableShareLink({ bookId });
+      notify.success(
+        t('readingDiscovery.library.shareDisabled', {
+          defaultValue: 'Share link disabled',
+        })
+      );
+    } catch (error) {
+      notify.error(
+        error instanceof Error
+          ? error.message
+          : t('readingDiscovery.library.shareDisableFailed', {
+              defaultValue: 'Unable to disable sharing right now.',
+            })
+      );
+    }
   };
 
   if (!active) return null;
@@ -218,7 +302,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                   size="auto"
                   onClick={() => setShowAllBooks(false)}
                   className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-all"
-                  aria-label="Close"
+                  aria-label={t('common.close', { defaultValue: 'Close' })}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -377,6 +461,184 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           </div>
         </div>
       </section>
+
+      <section className="mb-10">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border border-white/10 bg-sky-500/10 text-sky-200 shadow-xl rim-light">
+              <Library className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-black text-xl text-foreground tracking-tighter italic leading-none mb-1">
+                {t('readingDiscovery.library.privateLabel', {
+                  defaultValue: 'Private EPUB Library',
+                })}
+              </h3>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">
+                {t('readingDiscovery.mobile.privateUploads', {
+                  defaultValue: 'Only visible to you',
+                })}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={() => {
+              if (!user?.id) {
+                navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
+                return;
+              }
+              setShowEpubUploader(true);
+            }}
+            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {t('readingDiscovery.library.uploadCta', { defaultValue: 'Upload EPUB' })}
+          </Button>
+        </div>
+
+        {epubLoading ? (
+          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
+            {[1, 2, 3].map(i => (
+              <div
+                key={i}
+                className="min-w-[180px] h-[220px] bg-muted animate-pulse rounded-[2rem] border border-border"
+              />
+            ))}
+          </div>
+        ) : !user?.id ? (
+          <div className="py-12 text-center bg-card rounded-[2.5rem] border border-dashed border-border">
+            <p className="text-muted-foreground font-semibold text-sm">
+              {t('readingDiscovery.library.privateLogin', {
+                defaultValue: 'Sign in to see your private EPUB library and create share links.',
+              })}
+            </p>
+          </div>
+        ) : privateEpubBooks.length === 0 ? (
+          <div className="py-12 text-center bg-card rounded-[2.5rem] border border-dashed border-border">
+            <p className="text-muted-foreground font-semibold text-sm">
+              {t('readingDiscovery.library.privateEmpty', {
+                defaultValue: 'No private EPUBs yet. Upload your first book from the button above.',
+              })}
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
+            {privateEpubBooks.map(book => (
+              <div
+                key={book._id}
+                className="shrink-0 w-[180px] overflow-hidden rounded-[2rem] border border-border bg-card text-left shadow-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate(buildEpubLibraryPath(book.slug, currentPath))}
+                  className="block w-full text-left"
+                >
+                  {book.coverSignedUrlCache ? (
+                    <img
+                      src={book.coverSignedUrlCache}
+                      alt={book.title}
+                      className="h-[180px] w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-[180px] items-end bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_55%),linear-gradient(180deg,_rgba(14,165,233,0.08),_rgba(15,23,42,0.02))] p-4">
+                      <h4 className="line-clamp-3 text-lg font-black text-foreground">
+                        {book.title}
+                      </h4>
+                    </div>
+                  )}
+                  <div className="space-y-1 p-4">
+                    <p className="line-clamp-2 text-sm font-black text-foreground">{book.title}</p>
+                    <p className="line-clamp-1 text-xs font-semibold text-muted-foreground">
+                      {book.author}
+                    </p>
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {t('readingDiscovery.library.chapterCount', {
+                        defaultValue: '{{count}} chapters',
+                        count: book.chapterCount,
+                      })}
+                    </p>
+                  </div>
+                </button>
+                <div className="flex gap-2 border-t border-border/70 px-3 py-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleShareBook(book)}
+                    disabled={!book.canShare}
+                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-border px-2 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground disabled:opacity-50"
+                  >
+                    <Share2 className="mr-1.5 h-3.5 w-3.5" />
+                    {book.shareEnabled
+                      ? t('readingDiscovery.library.copyShareLink', {
+                          defaultValue: 'Copy Link',
+                        })
+                      : t('readingDiscovery.library.shareShort', {
+                          defaultValue: 'Share',
+                        })}
+                  </button>
+                  {book.shareEnabled ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDisableShare(book._id)}
+                      className="inline-flex items-center justify-center rounded-xl border border-amber-200 px-2 py-2 text-[11px] font-black uppercase tracking-wide text-amber-700"
+                    >
+                      {t('readingDiscovery.library.stopShareShort', {
+                        defaultValue: 'Stop',
+                      })}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {showEpubUploader &&
+        ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom-8 duration-300">
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+            <div className="shrink-0 px-5 pt-3 pb-3 border-b border-border bg-background">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black text-foreground tracking-tighter italic leading-none">
+                    {t('readingDiscovery.upload.title', { defaultValue: 'Upload EPUB' })}
+                  </h2>
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                    {t('readingDiscovery.upload.supportedFormat', {
+                      defaultValue:
+                        'Supported format: EPUB. The file will be parsed after upload and saved as a draft.',
+                    })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  onClick={() => setShowEpubUploader(false)}
+                  className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-all"
+                  aria-label={t('common.close', { defaultValue: 'Close' })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <EpubUpload
+                onSuccess={(_bookId, slug) => {
+                  setShowEpubUploader(false);
+                  navigate(buildEpubLibraryPath(slug, currentPath));
+                }}
+                onError={() => {
+                  // The uploader already renders inline errors.
+                }}
+              />
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* 3. News Feed Section */}
       <section className="space-y-6">

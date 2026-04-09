@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 import { Slider } from '../ui';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface MobileAudioPlayerProps {
   readonly audioUrl: string;
@@ -18,6 +19,7 @@ export function MobileAudioPlayer({
   onPlaybackComplete,
 }: MobileAudioPlayerProps) {
   const { t } = useTranslation();
+  const normalizedAudioUrl = normalizePublicAssetUrl(audioUrl) || audioUrl;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(initialTime);
@@ -113,7 +115,7 @@ export function MobileAudioPlayer({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-mobile-safe pt-4 px-6 shadow-lg shadow-black/5 rounded-t-[2rem]">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <audio ref={audioRef} src={normalizedAudioUrl} preload="metadata" />
 
       {/* Progress Info */}
       <div className="flex justify-between text-xs font-bold text-muted-foreground mb-2 px-1">

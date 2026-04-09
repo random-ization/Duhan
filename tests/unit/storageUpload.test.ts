@@ -45,7 +45,7 @@ describe('storage uploads', () => {
       uploadUrl: 'https://upload.example.com',
       publicUrl: 'https://cdn.example.com/lesson.mp4',
       key: 'uploads/lesson.mp4',
-      headers: { 'Content-Type': 'video/mp4', 'x-amz-acl': 'public-read' },
+      headers: { 'Content-Type': 'video/mp4' },
     });
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
@@ -64,7 +64,7 @@ describe('storage uploads', () => {
     });
     expect(fetchMock).toHaveBeenCalledWith('https://upload.example.com', {
       method: 'PUT',
-      headers: { 'Content-Type': 'video/mp4', 'x-amz-acl': 'public-read' },
+      headers: { 'Content-Type': 'video/mp4' },
       body: file,
     });
     expect(result).toEqual({
@@ -79,7 +79,7 @@ describe('storage uploads', () => {
       uploadUrl: 'https://upload.example.com',
       publicUrl: 'https://cdn.example.com/avatar.png',
       key: 'avatars/avatar.png',
-      headers: { 'Content-Type': 'image/png', 'x-amz-acl': 'public-read' },
+      headers: { 'Content-Type': 'image/png' },
     });
     const saveAvatar = vi.fn();
 

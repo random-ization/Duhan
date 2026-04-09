@@ -20,6 +20,7 @@ import { Button, Select } from '../ui';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { MobileImmersiveHeader } from './MobileImmersiveHeader';
+import { VOCAB } from '../../utils/convexRefs';
 
 // --- TYPES ---
 type TypingMode = 'sentence' | 'word' | 'paragraph';
@@ -299,7 +300,7 @@ const MobileSession = ({
 
   // Init Setup
   const courseWords = useQuery(
-    api.vocab.getOfCourse,
+    VOCAB.getOfCourse,
     mode === 'word' && data.courseId ? { courseId: data.courseId, unitId: 1 } : 'skip'
   );
 

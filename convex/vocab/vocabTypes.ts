@@ -5,6 +5,25 @@
 
 import type { Id } from '../_generated/dataModel';
 
+export type VocabProgressDto = {
+  id: Id<'user_vocab_progress'>;
+  status?: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED' | string;
+  interval?: number;
+  streak?: number;
+  nextReviewAt?: number | null;
+  lastReviewedAt?: number | null;
+  state?: number;
+  due?: number | null;
+  stability?: number;
+  difficulty?: number;
+  elapsed_days?: number;
+  scheduled_days?: number;
+  learning_steps?: number;
+  reps?: number;
+  lapses?: number;
+  last_review?: number | null;
+};
+
 export type VocabStatsDto = {
   total: number;
   mastered: number;
@@ -29,22 +48,37 @@ export type VocabTips = {
 
 export type VocabWordDto = {
   id: Id<'words'>;
+  _id: Id<'words'>; // Legacy support
+  creationTime: number;
   word: string;
   meaning: string;
+  meaningEn?: string; // Legacy support
   meaningZh: string;
   meaningVi: string;
   meaningMn: string;
-  example?: string;
-  exampleZh?: string;
-  exampleVi?: string;
-  exampleMn?: string;
+  pronunciation?: string;
+  hanja?: string;
+  partOfSpeech: string;
+  audioUrl?: string; // Legacy support
   audio?: string;
   image?: string;
   tags?: string[];
   level?: string;
   frequency?: number;
+  // Example fields
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+  // New names
+  example?: string;
+  exampleZh?: string;
+  exampleVi?: string;
+  exampleMn?: string;
+
   // Progress fields
-  status: 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+  status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
   proficiency: number;
   last_review?: number;
   next_review?: number;
@@ -55,6 +89,7 @@ export type VocabWordDto = {
   reps: number;
   mastered: boolean;
   // Course context
+  progress?: VocabProgressDto | null;
   courseData?: {
     courseId: string;
     unitId: number;
@@ -65,27 +100,44 @@ export type VocabWordDto = {
     customNoteMn?: string;
     isImportant?: boolean;
   };
+  appearanceId?: Id<'vocabulary_appearances'>;
+  courseId?: string;
+  unitId?: number;
 };
 
 export type VocabReviewDeckDto = {
   id: Id<'vocabulary_appearances'>;
+  _id: Id<'words'>; // Legacy support
   wordId: Id<'words'>;
   word: string;
   meaning: string;
+  meaningEn?: string;
   meaningZh: string;
   meaningVi: string;
   meaningMn: string;
-  example?: string;
-  exampleZh?: string;
-  exampleVi?: string;
-  exampleMn?: string;
+  pronunciation?: string;
+  hanja?: string;
+  partOfSpeech: string;
+  audioUrl?: string;
   audio?: string;
   image?: string;
   tags?: string[];
   level?: string;
   frequency?: number;
+  // Example fields
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+  // New names
+  example?: string;
+  exampleZh?: string;
+  exampleVi?: string;
+  exampleMn?: string;
+
   // Progress fields
-  status: 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+  status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
   proficiency: number;
   last_review?: number;
   next_review?: number;
@@ -95,6 +147,7 @@ export type VocabReviewDeckDto = {
   learning_steps: number;
   reps: number;
   mastered: boolean;
+  progress?: VocabProgressDto | null;
   // Course context
   courseId: string;
   unitId: number;
@@ -121,20 +174,28 @@ export type VocabReviewItemDto = {
   wordId: Id<'words'>;
   word: string;
   meaning: string;
+  meaningEn?: string;
   meaningZh: string;
   meaningVi: string;
   meaningMn: string;
-  example?: string;
-  exampleZh?: string;
-  exampleVi?: string;
-  exampleMn?: string;
+  pronunciation?: string;
+  hanja?: string;
+  partOfSpeech: string;
+  audioUrl?: string;
   audio?: string;
   image?: string;
   tags?: string[];
   level?: string;
   frequency?: number;
+  // Example fields
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+
   // Progress fields
-  status: 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+  status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
   proficiency: number;
   last_review?: number;
   next_review?: number;
@@ -144,6 +205,7 @@ export type VocabReviewItemDto = {
   learning_steps: number;
   reps: number;
   mastered: boolean;
+  progress: VocabProgressDto;
   // Course context
   courseId: string;
   unitId: number;
@@ -175,20 +237,28 @@ export type VocabBookItemDto = {
   id: Id<'words'>;
   word: string;
   meaning: string;
+  meaningEn?: string;
   meaningZh: string;
   meaningVi: string;
   meaningMn: string;
-  example?: string;
-  exampleZh?: string;
-  exampleVi?: string;
-  exampleMn?: string;
+  pronunciation?: string;
+  hanja?: string;
+  partOfSpeech: string;
+  audioUrl?: string;
   audio?: string;
   image?: string;
   tags?: string[];
   level?: string;
   frequency?: number;
+  // Example fields
+  exampleSentence?: string;
+  exampleMeaning?: string;
+  exampleMeaningEn?: string;
+  exampleMeaningVi?: string;
+  exampleMeaningMn?: string;
+
   // Progress fields
-  status: 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
+  status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
   proficiency: number;
   last_review?: number;
   next_review?: number;
@@ -198,6 +268,7 @@ export type VocabBookItemDto = {
   learning_steps: number;
   reps: number;
   mastered: boolean;
+  progress: VocabProgressDto;
   // Course context
   courseData?: {
     courseId: string;

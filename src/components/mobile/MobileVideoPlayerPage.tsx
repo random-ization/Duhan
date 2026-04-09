@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Video, Loader2, Eye, Languages } from 'lucide-react';
+import { Video, Loader2, Eye, Languages, Clock } from 'lucide-react';
 import { useQuery, useAction, useMutation } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
@@ -17,9 +17,10 @@ import { Button } from '../ui';
 import { useUpgradeFlow } from '../../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../../utils/entitlements';
 import { notify } from '../../utils/notify';
-import { resolveSafeReturnTo } from '../../utils/navigation';
+import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { buildVideoPlayerPath } from '../../utils/videoRoutes';
 import { MobileImmersiveHeader } from './MobileImmersiveHeader';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -120,6 +121,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
     () => resolveSafeReturnTo(searchParams.get('returnTo'), '/videos'),
     [searchParams]
   );
+  const canReturnTo = useMemo(() => hasSafeReturnTo(searchParams.get('returnTo')), [searchParams]);
   const upgradeReturnTarget = useMemo(() => {
     if (!id) return '/videos';
     return buildVideoPlayerPath(id, backPath);
@@ -131,7 +133,8 @@ export const MobileVideoPlayerPage: React.FC = () => {
     return {
       ...convexVideo,
       id: convexVideo._id,
-      thumbnailUrl: convexVideo.thumbnailUrl || undefined,
+      videoUrl: normalizePublicAssetUrl(convexVideo.videoUrl) || convexVideo.videoUrl,
+      thumbnailUrl: normalizePublicAssetUrl(convexVideo.thumbnailUrl) || undefined,
       duration: convexVideo.duration || undefined,
       description: convexVideo.description || undefined,
       transcriptData: convexVideo.transcriptData || undefined,
@@ -150,6 +153,19 @@ export const MobileVideoPlayerPage: React.FC = () => {
       return language;
     return undefined;
   }, [language]);
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds || seconds <= 0) return null;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatSegmentTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Auto-scroll
   useEffect(() => {
@@ -259,7 +275,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
     );
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-card">
+    <div className="flex h-[100dvh] flex-col bg-[#f3f7ff] dark:bg-slate-950">
       {/* 1. Stick Video Player at Top */}
       <div className="w-full aspect-video bg-black shrink-0 relative z-10">
         <Suspense
@@ -287,27 +303,23 @@ export const MobileVideoPlayerPage: React.FC = () => {
       {/* 2. Controls & Info Bar */}
       <MobileImmersiveHeader
         title={video.title}
-        subtitle={
-          video.description ||
-          t('dashboard.video.subtitleHint', {
-            defaultValue: 'Tap any transcript line to jump and any word to look it up.',
-          })
-        }
+        subtitle={video.description}
         eyebrow={t('nav.videos', { defaultValue: 'Videos' })}
-        onBack={() => navigate(backPath)}
+        onBack={() => {
+          if (canReturnTo) {
+            navigate(backPath);
+            return;
+          }
+          navigate(-1);
+        }}
         backLabel={t('common.back', { defaultValue: 'Back' })}
+        className="relative z-20 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-950/92"
         status={
-          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
-            <div className="flex items-center justify-end gap-1 text-[11px] font-black text-muted-foreground">
-              <Eye className="h-3.5 w-3.5" />
-              <span>{video.views}</span>
+          video.level ? (
+            <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700 shadow-sm dark:border-indigo-400/20 dark:bg-indigo-500/10 dark:text-indigo-200">
+              {video.level}
             </div>
-            {video.level ? (
-              <div className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-300">
-                {video.level}
-              </div>
-            ) : null}
-          </div>
+          ) : null
         }
         actions={
           <Button
@@ -315,23 +327,38 @@ export const MobileVideoPlayerPage: React.FC = () => {
             size="auto"
             onClick={() => setShowTranslation(!showTranslation)}
             className={cn(
-              'rounded-2xl border px-3 py-2 font-bold text-xs transition-colors flex items-center gap-1 shrink-0 shadow-sm',
+              'flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[11px] font-black tracking-[0.08em] shadow-sm transition-colors',
               showTranslation
                 ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-300/20 dark:bg-indigo-400/14 dark:text-indigo-200'
-                : 'border-border bg-card text-muted-foreground'
+                : 'border-slate-200 bg-white text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
             )}
           >
-            <Languages className="w-4 h-4" />
+            <Languages className="h-4 w-4" />
             {showTranslation
               ? t('common.on', { defaultValue: 'On' })
               : t('common.off', { defaultValue: 'Off' })}
           </Button>
         }
-      />
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-black tracking-[0.12em] text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+              <Eye className="h-3.5 w-3.5" />
+              <span>{video.views}</span>
+            </div>
+            {video.duration ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-black tracking-[0.12em] text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{formatDuration(video.duration)}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </MobileImmersiveHeader>
 
       {/* 3. Scrollable Transcript List */}
       <div
-        className="flex-1 overflow-y-auto p-4 pb-mobile-safe space-y-3 bg-muted"
+        className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#eef4ff_0%,#f8fbff_100%)] px-4 pb-mobile-safe pt-4 dark:bg-[linear-gradient(180deg,#020617_0%,#0f172a_100%)]"
         ref={scrollAreaRef}
       >
         {!video.transcriptData || video.transcriptData.length === 0 ? (
@@ -340,53 +367,83 @@ export const MobileVideoPlayerPage: React.FC = () => {
             <p>{t('dashboard.video.noSubtitles', { defaultValue: 'No subtitles available' })}</p>
           </div>
         ) : (
-          video.transcriptData.map((segment, index) => {
-            const isActive = index === activeSegmentIndex;
-            return (
-              <Button
-                variant="ghost"
-                size="auto"
-                key={index}
-                ref={el => {
-                  segmentRefs.current[index] = el;
-                }}
-                onClick={() => seekTo(segment.start)}
-                className={cn(
-                  'w-full text-left p-4 rounded-2xl transition-all duration-300 border-2',
-                  isActive
-                    ? 'bg-card border-indigo-500 shadow-lg scale-[1.02] z-10'
-                    : 'bg-card border-transparent shadow-sm opacity-80'
-                )}
-              >
-                <div className="text-lg font-medium text-foreground leading-relaxed mb-1">
-                  {segment.text.split(/(\s+)/).map((part, i) => {
-                    if (!part.trim()) return part;
-                    return (
-                      <span
-                        key={i}
-                        className="active:bg-yellow-200 rounded px-0.5 cursor-pointer"
-                        role="button"
-                        tabIndex={0}
-                        onClick={e => handleWordClick(e, part)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            handleWordClick(e, part);
-                          }
-                        }}
-                      >
-                        {part}
-                      </span>
-                    );
-                  })}
-                </div>
-                {showTranslation && segment.translation && (
-                  <div className="text-sm text-muted-foreground font-medium">
-                    {segment.translation}
+          <div className="space-y-3">
+            {video.transcriptData.map((segment, index) => {
+              const isActive = index === activeSegmentIndex;
+              return (
+                <Button
+                  variant="ghost"
+                  size="auto"
+                  key={index}
+                  ref={el => {
+                    segmentRefs.current[index] = el;
+                  }}
+                  onClick={() => seekTo(segment.start)}
+                  className={cn(
+                    'flex w-full flex-col items-stretch justify-start whitespace-normal overflow-hidden rounded-[26px] border px-4 py-3 text-left transition-all duration-200',
+                    isActive
+                      ? 'border-indigo-300 bg-white shadow-[0_18px_40px_-28px_rgba(99,102,241,0.7)] dark:border-indigo-400/35 dark:bg-slate-900'
+                      : 'border-slate-200/80 bg-white/88 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.35)] dark:border-slate-800 dark:bg-slate-900/92'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black tracking-[0.16em]',
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200'
+                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      )}
+                    >
+                      <Clock className="h-3 w-3" />
+                      <span>{formatSegmentTime(segment.start)}</span>
+                    </div>
+                    <div
+                      className={cn(
+                        'text-[10px] font-black uppercase tracking-[0.16em]',
+                        isActive ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-400'
+                      )}
+                    >
+                      {isActive
+                        ? t('common.now', { defaultValue: 'Now' })
+                        : t('dashboard.video.jumpToLine', { defaultValue: 'Jump' })}
+                    </div>
                   </div>
-                )}
-              </Button>
-            );
-          })
+
+                  <div className="mt-3 w-full break-words text-[0.98rem] font-semibold leading-7 text-slate-800 dark:text-slate-100">
+                    {segment.text.split(/(\s+)/).map((part, i) => {
+                      if (!part.trim()) return part;
+                      return (
+                        <span
+                          key={i}
+                          className={cn(
+                            'cursor-pointer rounded-md px-0.5 py-0.5 transition-colors active:bg-yellow-100 dark:active:bg-yellow-500/20',
+                            isActive && 'text-slate-950 dark:text-white'
+                          )}
+                          role="button"
+                          tabIndex={0}
+                          onClick={e => handleWordClick(e, part)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              handleWordClick(e, part);
+                            }
+                          }}
+                        >
+                          {part}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {showTranslation && segment.translation ? (
+                    <div className="mt-3 w-full rounded-2xl bg-slate-50/90 px-3 py-2 text-left text-[13px] font-medium leading-5 text-slate-500 dark:bg-slate-800/80 dark:text-slate-300">
+                      {segment.translation}
+                    </div>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </div>
         )}
         {/* Bottom padding for safety */}
         <div className="h-20" />

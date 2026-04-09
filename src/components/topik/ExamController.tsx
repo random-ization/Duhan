@@ -22,6 +22,7 @@ import { Button } from '../ui';
 import { DialogPortal } from '../ui';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui';
 import { useTranslation } from 'react-i18next';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface ExamControllerProps {
   exam: TopikExam;
@@ -47,6 +48,7 @@ export const ExamController: React.FC<ExamControllerProps> = ({
   audioUrl,
 }) => {
   const { t } = useTranslation();
+  const normalizedAudioUrl = normalizePublicAssetUrl(audioUrl) || audioUrl;
   const [showOverview, setShowOverview] = useState(false);
 
   // Auto-scroll the question list to keep current question in view
@@ -160,10 +162,10 @@ export const ExamController: React.FC<ExamControllerProps> = ({
       </div>
 
       {/* Divider */}
-      {audioUrl && <div className="w-12 h-[1px] bg-muted my-3 shrink-0" />}
+      {normalizedAudioUrl && <div className="w-12 h-[1px] bg-muted my-3 shrink-0" />}
 
       {/* 2. Audio Controls */}
-      {audioUrl && renderAudioControls()}
+      {normalizedAudioUrl && renderAudioControls()}
     </div>
   );
 
@@ -190,8 +192,8 @@ export const ExamController: React.FC<ExamControllerProps> = ({
           <div className="relative">
             <PopoverAnchor>
               <div className="relative border border-border shadow-xl rounded-[40px] w-[90px] transition-all duration-300 ease-out flex flex-col overflow-hidden bg-card">
-                {audioUrl ? (
-                  <MediaPlayer src={audioUrl} className="w-full h-full flex flex-col">
+                {normalizedAudioUrl ? (
+                  <MediaPlayer src={normalizedAudioUrl} className="w-full h-full flex flex-col">
                     <MediaProvider />
                     {renderContent()}
                   </MediaPlayer>

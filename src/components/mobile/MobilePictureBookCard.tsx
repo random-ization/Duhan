@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface MobilePictureBookCardProps {
   readonly title: string;
@@ -19,7 +20,7 @@ export const MobilePictureBookCard: React.FC<MobilePictureBookCardProps> = ({
   onClick,
   ariaLabel,
 }) => {
-  const normalizedCoverUrl = coverUrl?.trim() || '';
+  const normalizedCoverUrl = normalizePublicAssetUrl(coverUrl) || '';
   const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
 
   const showCoverImage = Boolean(normalizedCoverUrl) && failedCoverUrl !== normalizedCoverUrl;

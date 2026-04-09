@@ -9,6 +9,7 @@ export interface StorageUploadUrlResult {
   uploadUrl: string;
   publicUrl: string;
   key: string;
+  method?: 'PUT';
   headers: Record<string, string>;
 }
 
@@ -44,16 +45,16 @@ export async function uploadFileToStorage(args: {
     throw new Error('File is empty');
   }
 
-  const { uploadUrl, publicUrl, key, headers } = await getUploadUrl({
+  const uploadConfig = await getUploadUrl({
     filename: file.name,
     contentType: file.type,
     fileSize: file.size,
     folder,
   });
 
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers,
+  const response = await fetch(uploadConfig.uploadUrl, {
+    method: uploadConfig.method || 'PUT',
+    headers: uploadConfig.headers,
     body: file,
   });
 
@@ -62,7 +63,7 @@ export async function uploadFileToStorage(args: {
     throw new Error(`Upload failed: ${response.status} ${detail || response.statusText}`.trim());
   }
 
-  return { url: publicUrl, key };
+  return { url: uploadConfig.publicUrl, key: uploadConfig.key };
 }
 
 export async function uploadAvatarImage(args: {

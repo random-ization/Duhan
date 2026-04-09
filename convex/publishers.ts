@@ -2,6 +2,7 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { Id } from './_generated/dataModel';
 import { requireAdmin } from './utils';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 export const getAll = query({
   args: {},
@@ -14,7 +15,7 @@ export const getAll = query({
           // Assume it's a storage ID
           url = (await ctx.storage.getUrl(url as Id<'_storage'>)) || undefined;
         }
-        return { ...p, imageUrl: url };
+        return { ...p, imageUrl: normalizeStoragePublicUrl(url) || url };
       })
     );
   },

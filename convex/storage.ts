@@ -11,6 +11,7 @@ const UPLOAD_POLICIES = {
   audio: { maxSize: 50 * MiB, contentTypePrefixes: ['audio/'] },
   podcasts: { maxSize: 250 * MiB, contentTypePrefixes: ['audio/'] },
   'reading-audio': { maxSize: 50 * MiB, contentTypePrefixes: ['audio/'] },
+  ebooks: { maxSize: 100 * MiB, contentTypePrefixes: ['application/epub+zip'] },
   'topik-writing': { maxSize: 15 * MiB, contentTypePrefixes: ['image/'] },
   uploads: {
     maxSize: 500 * MiB,
@@ -64,7 +65,7 @@ function validateUploadRequest(args: { folder: string; contentType: string; file
 }
 
 /**
- * Generate AWS Signature V4 presigned URL for DigitalOcean Spaces
+ * Generate AWS Signature V4 presigned URL for S3-compatible object storage
  * This allows frontend to upload directly to S3-compatible storage
  */
 export const getUploadUrl = action({

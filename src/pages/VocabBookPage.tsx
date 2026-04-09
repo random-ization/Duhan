@@ -37,6 +37,7 @@ import { Input } from '../components/ui';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { buildVocabBookModePath } from '../utils/vocabBookRoutes';
+import { normalizePublicAssetUrl } from '../utils/imageSrc';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Id } from '../../convex/_generated/dataModel';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
@@ -865,13 +866,14 @@ const VocabBookPage: React.FC = () => {
   const pronounceWord = useCallback((word: VocabBookItemDto) => {
     if (typeof window === 'undefined') return;
 
-    if (word.audioUrl) {
+    const normalizedAudioUrl = normalizePublicAssetUrl(word.audioUrl) || word.audioUrl;
+    if (normalizedAudioUrl) {
       try {
         if (!audioRef.current) {
           audioRef.current = new Audio();
         }
         audioRef.current.pause();
-        audioRef.current.src = word.audioUrl;
+        audioRef.current.src = normalizedAudioUrl;
         void audioRef.current.play();
         return;
       } catch {

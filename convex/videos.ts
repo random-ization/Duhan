@@ -12,6 +12,7 @@ import {
   loadVideoTranscript,
   replaceVideoTranscriptChunks,
 } from './transcriptStorage';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 const PREMIUM_LEVELS = new Set(['ADVANCED', 'C1', 'C2', 'TOPIK5', 'TOPIK6']);
 
@@ -52,7 +53,7 @@ function mapVideoListItem(video: {
     _id: video._id,
     title: video.title,
     description: video.description,
-    thumbnailUrl: video.thumbnailUrl,
+    thumbnailUrl: normalizeStoragePublicUrl(video.thumbnailUrl),
     level: video.level,
     duration: video.duration,
     views: video.views,
@@ -77,7 +78,7 @@ function mapAdminVideoListItem(video: {
 }) {
   return {
     ...mapVideoListItem(video),
-    videoUrl: video.videoUrl,
+    videoUrl: normalizeStoragePublicUrl(video.videoUrl) || video.videoUrl,
   };
 }
 
@@ -152,6 +153,8 @@ export const get = query({
 
     return {
       ...video,
+      videoUrl: normalizeStoragePublicUrl(video.videoUrl) || video.videoUrl,
+      thumbnailUrl: normalizeStoragePublicUrl(video.thumbnailUrl),
       transcriptData,
       id: video._id,
     };

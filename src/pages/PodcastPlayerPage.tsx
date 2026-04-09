@@ -59,6 +59,7 @@ import { getEntitlementErrorData } from '../utils/entitlements';
 import { ENTITLEMENTS } from '../utils/convexRefs';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
+import { normalizePublicAssetUrl } from '../utils/imageSrc';
 
 // Types
 interface TranscriptLine {
@@ -91,6 +92,9 @@ type UiCopy = {
   noTranslation: string;
   translationSubtitle: string;
   showTranslationTemplate: string;
+  translationPending: string;
+  translationReady: string;
+  translationFailed: string;
   generating: string;
   regenerateSubtitle: string;
   regenerateTitle: string;
@@ -147,6 +151,9 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noTranslation: 'No translation yet',
     translationSubtitle: 'Translated subtitles',
     showTranslationTemplate: 'Show {{language}} translation',
+    translationPending: 'Translation is generating in the background',
+    translationReady: 'Translation is ready',
+    translationFailed: 'Translation did not complete yet. Reload or regenerate.',
     generating: 'Generating...',
     regenerateSubtitle: 'Regenerate subtitles',
     regenerateTitle: 'Regenerate subtitles?',
@@ -203,6 +210,10 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noTranslation: '\u6682\u65e0\u7ffb\u8bd1',
     translationSubtitle: '\u7ffb\u8bd1\u5b57\u5e55',
     showTranslationTemplate: '\u663e\u793a{{language}}\u7ffb\u8bd1',
+    translationPending: '\u7ffb\u8bd1\u6b63\u5728\u540e\u53f0\u751f\u6210',
+    translationReady: '\u7ffb\u8bd1\u5df2\u5c31\u7eea',
+    translationFailed:
+      '\u7ffb\u8bd1\u6682\u672a\u5b8c\u6210\uff0c\u8bf7\u5237\u65b0\u6216\u91cd\u8bd5\u751f\u6210',
     generating: '\u751f\u6210\u4e2d...',
     regenerateSubtitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55',
     regenerateTitle: '\u91cd\u65b0\u751f\u6210\u5b57\u5e55\uff1f',
@@ -258,6 +269,9 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noTranslation: 'Chua co ban dich',
     translationSubtitle: 'Phu de dich',
     showTranslationTemplate: 'Hien ban dich {{language}}',
+    translationPending: 'Ban dich dang duoc tao trong nen',
+    translationReady: 'Ban dich da san sang',
+    translationFailed: 'Ban dich chua hoan tat. Hay tai lai hoac tao lai.',
     generating: 'Dang tao...',
     regenerateSubtitle: 'Tao lai phu de',
     regenerateTitle: 'Tao lai phu de?',
@@ -313,6 +327,9 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     noTranslation: 'Орчуулга алга',
     translationSubtitle: 'Орчуулгын хадмал',
     showTranslationTemplate: '{{language}} орчуулгыг харуулах',
+    translationPending: 'Орчуулга дэвсгэрт үүсэж байна',
+    translationReady: 'Орчуулга бэлэн боллоо',
+    translationFailed: 'Орчуулга хараахан дуусаагүй байна. Дахин ачаална уу.',
     generating: 'Үүсгэж байна...',
     regenerateSubtitle: 'Хадмалыг дахин үүсгэх',
     regenerateTitle: 'Хадмалыг дахин үүсгэх үү?',
@@ -671,6 +688,7 @@ const EpisodeUtilityControls: React.FC<{
   showTranslation: boolean;
   setShowTranslation: React.Dispatch<React.SetStateAction<boolean>>;
   translationLabel: string;
+  translationStatusLabel?: string | null;
   copy: UiCopy;
   transcriptLoading: boolean;
   isGeneratingTranscript: boolean;
@@ -684,6 +702,7 @@ const EpisodeUtilityControls: React.FC<{
   showTranslation,
   setShowTranslation,
   translationLabel,
+  translationStatusLabel,
   copy,
   transcriptLoading,
   isGeneratingTranscript,
@@ -710,6 +729,11 @@ const EpisodeUtilityControls: React.FC<{
           <p className="text-xs text-muted-foreground">
             {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
           </p>
+          {translationStatusLabel ? (
+            <p className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
+              {translationStatusLabel}
+            </p>
+          ) : null}
         </div>
       </div>
       <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
@@ -979,16 +1003,34 @@ function buildEpisodeFromSearchParams(searchParams: URLSearchParams): PodcastEpi
 
 function resolveEpisodeFromState(state: unknown, searchParams: URLSearchParams): PodcastEpisode {
   const stateEpisode = (state as { episode?: PodcastEpisode } | null)?.episode;
-  if (stateEpisode?.audioUrl) return stateEpisode;
-  return buildEpisodeFromSearchParams(searchParams);
+  const resolved = stateEpisode?.audioUrl
+    ? stateEpisode
+    : buildEpisodeFromSearchParams(searchParams);
+  return {
+    ...resolved,
+    audioUrl: normalizePublicAssetUrl(resolved.audioUrl) || resolved.audioUrl,
+    channelArtwork: normalizePublicAssetUrl(resolved.channelArtwork) || resolved.channelArtwork,
+    image: normalizePublicAssetUrl(resolved.image) || resolved.image,
+    itunes: resolved.itunes
+      ? {
+          ...resolved.itunes,
+          image: normalizePublicAssetUrl(resolved.itunes.image) || resolved.itunes.image,
+        }
+      : resolved.itunes,
+  };
 }
 
 function resolvePodcastChannel(state: unknown): PodcastChannel {
-  return (
+  const channel =
     (state as { channel?: PodcastChannel } | null)?.channel ??
     (state as { episode?: { channel?: PodcastChannel } } | null)?.episode?.channel ??
-    {}
-  );
+    {};
+  return {
+    ...channel,
+    artworkUrl: normalizePublicAssetUrl(channel.artworkUrl) || channel.artworkUrl,
+    artwork: normalizePublicAssetUrl(channel.artwork) || channel.artwork,
+    image: normalizePublicAssetUrl(channel.image) || channel.image,
+  };
 }
 
 function getHistoryBaseRecord(
@@ -1015,6 +1057,7 @@ function getHistoryBaseRecord(
 // CDN Domain for transcript cache
 const CDN_DOMAIN = import.meta.env.VITE_CDN_URL ?? '';
 const MAX_SAFE_URL_LENGTH = 8000;
+const BASE_TRANSCRIPT_CACHE_LANGUAGE = '__base__';
 
 function shouldUseTranscriptCdn() {
   if (!CDN_DOMAIN) return false;
@@ -1219,6 +1262,7 @@ async function tryRecoverTranscriptConnectionError(args: {
   getTranscript: (args: {
     episodeId: string;
     language?: string;
+    skipTranslationGeneration?: boolean;
   }) => Promise<{ segments?: TranscriptLine[] | null } | null | undefined>;
   retryLoadTranscriptFromS3: (episodeId: string) => Promise<TranscriptLine[] | null>;
   setTranscript: React.Dispatch<React.SetStateAction<TranscriptLine[]>>;
@@ -1484,7 +1528,7 @@ async function resolveTranscriptAudioUrlWithUpload(args: {
   const urlTooLong = rawUrl.length > MAX_SAFE_URL_LENGTH;
   const shouldUpload = isBlob || isData || looksLikeBase64 || urlTooLong;
   if (!shouldUpload) {
-    return rawUrl;
+    return normalizePublicAssetUrl(rawUrl) || rawUrl;
   }
 
   let blob: Blob;
@@ -1569,6 +1613,9 @@ const PodcastPlayerPage: React.FC = () => {
   const [transcriptLoading, setTranscriptLoading] = useState(true);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
   const [isGeneratingTranscript, setIsGeneratingTranscript] = useState(false);
+  const [translationStatus, setTranslationStatus] = useState<
+    'idle' | 'loading' | 'ready' | 'failed'
+  >('idle');
   const [showTranscriptResetConfirm, setShowTranscriptResetConfirm] = useState(false);
 
   // AI Analysis State
@@ -1586,6 +1633,7 @@ const PodcastPlayerPage: React.FC = () => {
   const resumeCheckedRef = useRef<string | null>(null); // Track resume check to prevent override
   const transcriptLoadKeyRef = useRef<string | null>(null);
   const transcriptLoadedKeyRef = useRef<string | null>(null);
+  const transcriptTranslationPollKeyRef = useRef<string | null>(null);
 
   // Convex Hooks
   const requestTranscript = useAction(
@@ -1593,7 +1641,7 @@ const PodcastPlayerPage: React.FC = () => {
       {
         audioUrl: string;
         episodeId: string;
-        language: string;
+        language?: string;
         storageId?: string;
         storageIds?: string[];
       },
@@ -1601,9 +1649,10 @@ const PodcastPlayerPage: React.FC = () => {
     >('ai:requestTranscript')
   );
   const getTranscript = useAction(
-    aRef<{ episodeId: string; language?: string }, { segments?: TranscriptLine[] | null }>(
-      'ai:getTranscript'
-    )
+    aRef<
+      { episodeId: string; language?: string; skipTranslationGeneration?: boolean },
+      { segments?: TranscriptLine[] | null }
+    >('ai:getTranscript')
   );
 
   type PlaylistEpisode = Omit<PodcastEpisode, 'audioUrl'> & { audioUrl?: string };
@@ -1719,6 +1768,11 @@ const PodcastPlayerPage: React.FC = () => {
   }, [episodeKey]);
 
   useEffect(() => {
+    setTranslationStatus('idle');
+    transcriptTranslationPollKeyRef.current = null;
+  }, [episodeKey, language]);
+
+  useEffect(() => {
     if (viewerAccess?.flags.mediaSpeedControl) return;
     setSpeed(1);
     if (audioRef.current) {
@@ -1728,6 +1782,18 @@ const PodcastPlayerPage: React.FC = () => {
 
   const retryLoadTranscriptFromS3 = useCallback(
     async (episodeId: string) => waitForTranscriptFromS3WithDelays(episodeId, [4000, 6000, 8000]),
+    []
+  );
+
+  const shouldHydrateTranscriptTranslation = useCallback(
+    (targetLanguage: string, segments: TranscriptLine[]) => {
+      return Boolean(
+        targetLanguage &&
+        targetLanguage !== 'ko' &&
+        segments.length > 0 &&
+        !shouldMarkTranscriptLoaded(segments, targetLanguage)
+      );
+    },
     []
   );
 
@@ -1752,58 +1818,71 @@ const PodcastPlayerPage: React.FC = () => {
     [getTranscript]
   );
 
-  const waitForTranscriptWithTranslationReady = useCallback(
-    async (episodeId: string, targetLanguage: string) => {
-      const pollDelays = [0, 2000, 3000, 5000, 8000, 10000, 12000, 15000];
-      let fallbackSegments: TranscriptLine[] | null = null;
-
-      for (const delay of pollDelays) {
-        if (delay > 0) {
-          await waitMilliseconds(delay);
-        }
-        const result = await getTranscript({ episodeId, language: targetLanguage });
-        const segments = result?.segments;
-        if (!segments || segments.length === 0) continue;
-
-        fallbackSegments = segments;
-        const hasTranslation = segments.some(
-          segment =>
-            typeof segment.translation === 'string' && segment.translation.trim().length > 0
-        );
-        if (hasTranslation) {
-          return segments;
-        }
-      }
-
-      return fallbackSegments;
-    },
-    [getTranscript]
-  );
-
   const hydrateTranscriptTranslationsInBackground = useCallback(
     (episodeId: string, targetLanguage: string, loadKey: string) => {
-      if (!targetLanguage) return;
+      if (!targetLanguage || targetLanguage === 'ko') {
+        setTranslationStatus('ready');
+        return;
+      }
+      const pollKey = `${episodeId}:${targetLanguage}`;
+      if (transcriptTranslationPollKeyRef.current === pollKey) return;
+      transcriptTranslationPollKeyRef.current = pollKey;
+      setTranslationStatus('loading');
       void (async () => {
         try {
-          const translated = await getTranscript({ episodeId, language: targetLanguage });
-          const translatedSegments = translated?.segments;
-          if (!translatedSegments || translatedSegments.length === 0) return;
-          if (getEpisodeId() !== episodeId) return;
-          applyLoadedTranscript({
-            segments: translatedSegments,
-            targetLanguage,
-            loadKey,
-            setTranscript,
-            transcriptLoadedKeyRef,
-          });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, translatedSegments);
+          const pollDelays = [0, 4000, 8000, 12000, 18000, 25000];
+          for (const delay of pollDelays) {
+            if (delay > 0) {
+              await waitMilliseconds(delay);
+            }
+            if (getEpisodeId() !== episodeId) return;
+            const translated = await getTranscript({ episodeId, language: targetLanguage });
+            const translatedSegments = translated?.segments;
+            if (!translatedSegments || translatedSegments.length === 0) continue;
+            const hasTranslations = translatedSegments.some(
+              segment =>
+                typeof segment.translation === 'string' && segment.translation.trim().length > 0
+            );
+            if (!hasTranslations) continue;
+            applyLoadedTranscript({
+              segments: translatedSegments,
+              targetLanguage,
+              loadKey,
+              setTranscript,
+              transcriptLoadedKeyRef,
+            });
+            saveTranscriptToLocalCache(episodeId, targetLanguage, translatedSegments);
+            setTranslationStatus('ready');
+            return;
+          }
+          setTranslationStatus('failed');
         } catch (translationError) {
+          setTranslationStatus('failed');
           logger.warn('[Transcript] Background translation failed', translationError);
+        } finally {
+          if (transcriptTranslationPollKeyRef.current === pollKey) {
+            transcriptTranslationPollKeyRef.current = null;
+          }
         }
       })();
     },
     [getEpisodeId, getTranscript]
   );
+
+  const translationStatusLabel = useMemo(() => {
+    if (!showTranslation) return null;
+    if (transcriptLoading || isGeneratingTranscript) return null;
+    switch (translationStatus) {
+      case 'loading':
+        return copy.translationPending;
+      case 'ready':
+        return copy.translationReady;
+      case 'failed':
+        return copy.translationFailed;
+      default:
+        return null;
+    }
+  }, [copy, isGeneratingTranscript, showTranslation, transcriptLoading, translationStatus]);
 
   const resolveTranscriptAudioUrl = useCallback(
     async (rawUrl: string, episodeId: string) => {
@@ -1843,7 +1922,7 @@ const PodcastPlayerPage: React.FC = () => {
       setTranscriptLoading(true);
       setTranscriptError(null);
 
-      // Step 0: Check localStorage
+      // Step 0: Check local translated cache first.
       const localData = loadTranscriptFromLocalCache(episodeId, targetLanguage);
       if (localData) {
         applyLoadedTranscript({
@@ -1854,6 +1933,7 @@ const PodcastPlayerPage: React.FC = () => {
           setTranscriptLoading,
           transcriptLoadedKeyRef,
         });
+        setTranslationStatus(targetLanguage ? 'ready' : 'idle');
         if (!shouldMarkTranscriptLoaded(localData, targetLanguage)) {
           hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
         }
@@ -1861,12 +1941,63 @@ const PodcastPlayerPage: React.FC = () => {
         return;
       }
 
-      try {
-        // Step 1: Convex DB
-        const dbResult = await getTranscript({
-          episodeId,
-          ...(targetLanguage ? { language: targetLanguage } : {}),
+      // Step 0.5: Check local base transcript cache and hydrate translation later.
+      const cachedBaseTranscript = loadTranscriptFromLocalCache(
+        episodeId,
+        BASE_TRANSCRIPT_CACHE_LANGUAGE
+      );
+      if (cachedBaseTranscript) {
+        applyLoadedTranscript({
+          segments: cachedBaseTranscript,
+          targetLanguage,
+          loadKey,
+          setTranscript,
+          setTranscriptLoading,
+          transcriptLoadedKeyRef,
         });
+        setTranslationStatus(
+          shouldHydrateTranscriptTranslation(targetLanguage, cachedBaseTranscript)
+            ? 'loading'
+            : 'ready'
+        );
+        if (shouldHydrateTranscriptTranslation(targetLanguage, cachedBaseTranscript)) {
+          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+        }
+        transcriptLoadKeyRef.current = null;
+        return;
+      }
+
+      try {
+        // Step 1: Fast-path an already translated transcript without starting a new translation job.
+        if (targetLanguage) {
+          const translatedSnapshot = await getTranscript({
+            episodeId,
+            language: targetLanguage,
+            skipTranslationGeneration: true,
+          });
+          if (translatedSnapshot?.segments && translatedSnapshot.segments.length > 0) {
+            const hasTranslations = translatedSnapshot.segments.some(
+              segment =>
+                typeof segment.translation === 'string' && segment.translation.trim().length > 0
+            );
+            if (hasTranslations) {
+              applyLoadedTranscript({
+                segments: translatedSnapshot.segments,
+                targetLanguage,
+                loadKey,
+                setTranscript,
+                setTranscriptLoading,
+                transcriptLoadedKeyRef,
+              });
+              saveTranscriptToLocalCache(episodeId, targetLanguage, translatedSnapshot.segments);
+              setTranslationStatus('ready');
+              return;
+            }
+          }
+        }
+
+        // Step 2: Convex DB base transcript first.
+        const dbResult = await getTranscript({ episodeId });
         if (dbResult?.segments && dbResult.segments.length > 0) {
           applyLoadedTranscript({
             segments: dbResult.segments,
@@ -1876,14 +2007,19 @@ const PodcastPlayerPage: React.FC = () => {
             setTranscriptLoading,
             transcriptLoadedKeyRef,
           });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, dbResult.segments);
-          if (!shouldMarkTranscriptLoaded(dbResult.segments, targetLanguage)) {
+          saveTranscriptToLocalCache(episodeId, BASE_TRANSCRIPT_CACHE_LANGUAGE, dbResult.segments);
+          setTranslationStatus(
+            shouldHydrateTranscriptTranslation(targetLanguage, dbResult.segments)
+              ? 'loading'
+              : 'ready'
+          );
+          if (shouldHydrateTranscriptTranslation(targetLanguage, dbResult.segments)) {
             hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           }
           return;
         }
 
-        // Step 1.5: CDN Cache fallback
+        // Step 2.5: CDN cache fallback for base transcript.
         const s3Segments = await loadTranscriptFromS3Cache(episodeId);
         if (s3Segments && Array.isArray(s3Segments) && s3Segments.length > 0) {
           applyLoadedTranscript({
@@ -1894,14 +2030,17 @@ const PodcastPlayerPage: React.FC = () => {
             setTranscriptLoading,
             transcriptLoadedKeyRef,
           });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, s3Segments);
-          if (!shouldMarkTranscriptLoaded(s3Segments, targetLanguage)) {
+          saveTranscriptToLocalCache(episodeId, BASE_TRANSCRIPT_CACHE_LANGUAGE, s3Segments);
+          setTranslationStatus(
+            shouldHydrateTranscriptTranslation(targetLanguage, s3Segments) ? 'loading' : 'ready'
+          );
+          if (shouldHydrateTranscriptTranslation(targetLanguage, s3Segments)) {
             hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
           }
           return;
         }
 
-        // Step 2: Generate (Direct Deepgram URL)
+        // Step 3: Generate base transcript only. Translation hydrates separately.
         setIsGeneratingTranscript(true);
 
         const transcriptAudioUrl = await resolveTranscriptAudioUrl(episode.audioUrl, episodeId);
@@ -1910,14 +2049,11 @@ const PodcastPlayerPage: React.FC = () => {
         const kickoff = await requestTranscript({
           audioUrl: transcriptAudioUrl,
           episodeId,
-          language: targetLanguage,
         });
         const kickoffError = getTranscriptKickoffError(kickoff);
         if (kickoffError) throw new Error(kickoffError);
 
-        const readySegments = targetLanguage
-          ? await waitForTranscriptWithTranslationReady(episodeId, targetLanguage)
-          : await waitForTranscriptReady(episodeId);
+        const readySegments = await waitForTranscriptReady(episodeId);
         if (readySegments && readySegments.length > 0) {
           applyLoadedTranscript({
             segments: readySegments,
@@ -1927,8 +2063,13 @@ const PodcastPlayerPage: React.FC = () => {
             setTranscriptLoading,
             transcriptLoadedKeyRef,
           });
-          saveTranscriptToLocalCache(episodeId, targetLanguage, readySegments);
-          hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+          saveTranscriptToLocalCache(episodeId, BASE_TRANSCRIPT_CACHE_LANGUAGE, readySegments);
+          setTranslationStatus(
+            shouldHydrateTranscriptTranslation(targetLanguage, readySegments) ? 'loading' : 'ready'
+          );
+          if (shouldHydrateTranscriptTranslation(targetLanguage, readySegments)) {
+            hydrateTranscriptTranslationsInBackground(episodeId, targetLanguage, loadKey);
+          }
         } else {
           throw new Error(copy.transcriptTimeout);
         }
@@ -1969,7 +2110,7 @@ const PodcastPlayerPage: React.FC = () => {
       resolveTranscriptAudioUrl,
       retryLoadTranscriptFromS3,
       waitForTranscriptReady,
-      waitForTranscriptWithTranslationReady,
+      shouldHydrateTranscriptTranslation,
       hydrateTranscriptTranslationsInBackground,
       language,
     ]
@@ -2463,6 +2604,7 @@ const PodcastPlayerPage: React.FC = () => {
               showTranslation={showTranslation}
               setShowTranslation={setShowTranslation}
               translationLabel={translationLabel}
+              translationStatusLabel={translationStatusLabel}
               copy={copy}
               transcriptLoading={transcriptLoading}
               isGeneratingTranscript={isGeneratingTranscript}
@@ -2567,6 +2709,7 @@ const PodcastPlayerPage: React.FC = () => {
                     showTranslation={showTranslation}
                     setShowTranslation={setShowTranslation}
                     translationLabel={translationLabel}
+                    translationStatusLabel={translationStatusLabel}
                     copy={copy}
                     transcriptLoading={transcriptLoading}
                     isGeneratingTranscript={isGeneratingTranscript}
@@ -2737,7 +2880,7 @@ const PodcastPlayerPage: React.FC = () => {
       {/* Hidden Audio Element */}
       <audio
         ref={audioRef}
-        src={episode.audioUrl}
+        src={normalizePublicAssetUrl(episode.audioUrl) || episode.audioUrl}
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={e => {
           const mediaDuration = e.currentTarget.duration;

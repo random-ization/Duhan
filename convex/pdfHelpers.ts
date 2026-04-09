@@ -4,7 +4,12 @@ import { ConvexError } from 'convex/values';
 import crypto from 'node:crypto';
 import { pdf } from '@react-pdf/renderer';
 import type { DocumentProps } from '@react-pdf/renderer';
-import { getSpacesCdnBaseUrl, getSpacesCoreConfig, getSpacesHost } from './spacesConfig';
+import {
+  getSpacesCdnBaseUrl,
+  getSpacesCoreConfig,
+  getSpacesHost,
+  getSpacesRegion,
+} from './spacesConfig';
 import { getSignatureKey } from './awsSigV4';
 
 export type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
@@ -90,8 +95,10 @@ export const uploadPdfToSpaces = async (pdfBuffer: Buffer, key: string, filename
     throw new ConvexError({ code: 'STORAGE_CONFIG_MISSING' });
   }
   const { endpoint, bucket, accessKeyId, secretAccessKey } = spaces;
-
-  const region = 'us-east-1';
+  const region = getSpacesRegion();
+  if (!region) {
+    throw new ConvexError({ code: 'STORAGE_CONFIG_MISSING' });
+  }
   const service = 's3';
   const contentType = 'application/pdf';
 
@@ -105,8 +112,8 @@ export const uploadPdfToSpaces = async (pdfBuffer: Buffer, key: string, filename
 
   const payloadHash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
 
-  const canonicalHeaders = `host:${endpointHost}\nx-amz-acl:public-read\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = 'host;x-amz-acl;x-amz-content-sha256;x-amz-date';
+  const canonicalHeaders = `host:${endpointHost}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
   const canonicalRequest = ['PUT', uri, '', canonicalHeaders, signedHeaders, payloadHash].join(
     '\n'
@@ -134,7 +141,6 @@ export const uploadPdfToSpaces = async (pdfBuffer: Buffer, key: string, filename
     method: 'PUT',
     headers: {
       Host: endpointHost,
-      'x-amz-acl': 'public-read',
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
       Authorization: authorization,

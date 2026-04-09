@@ -3,6 +3,11 @@ import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
 import { transcriptArrayValidator } from './transcriptSchema';
 import {
+  reading_library_books,
+  reading_library_chapters,
+  reading_library_progress,
+} from './readingLibrarySchema';
+import {
   WRITING_ANSWER_MAP_VALIDATOR,
   WRITING_GRADING_CRITERIA_VALIDATOR,
   WRITING_QUESTION_TYPE_VALIDATOR,
@@ -1383,4 +1388,9 @@ export default defineSchema({
     category: v.optional(v.string()),
     createdAt: v.optional(v.number()),
   }),
+
+  // Reading Library Tables
+  reading_library_books,
+  reading_library_chapters,
+  reading_library_progress,
 });

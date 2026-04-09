@@ -5,6 +5,7 @@ import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface MobileSpeakingModuleProps {
   readonly unitTitle: string;
@@ -36,6 +37,9 @@ export function MobileSpeakingModule({
 
   const [isPlayingReference, setIsPlayingReference] = useState(false);
   const [isPlayingUser, setIsPlayingUser] = useState(false);
+  const normalizedReferenceAudioUrl =
+    normalizePublicAssetUrl(referenceAudioUrl) || referenceAudioUrl;
+  const normalizedUserAudioUrl = normalizePublicAssetUrl(audioUrl) || audioUrl;
 
   const referenceAudioRef = useRef<HTMLAudioElement>(null);
   const userAudioRef = useRef<HTMLAudioElement>(null);
@@ -108,7 +112,7 @@ export function MobileSpeakingModule({
           )}
 
           {/* Reference Audio Control */}
-          {referenceAudioUrl && (
+          {normalizedReferenceAudioUrl && (
             <Button
               variant="ghost"
               size="auto"
@@ -125,7 +129,7 @@ export function MobileSpeakingModule({
                   defaultValue: 'Listen to Reference',
                 })}
               </span>
-              <audio ref={referenceAudioRef} src={referenceAudioUrl} />
+              <audio ref={referenceAudioRef} src={normalizedReferenceAudioUrl} />
             </Button>
           )}
         </div>
@@ -151,7 +155,7 @@ export function MobileSpeakingModule({
                 {formatTime(recordingTime)}
               </span>
             </div>
-          ) : audioUrl ? (
+          ) : normalizedUserAudioUrl ? (
             <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2">
               <Button
                 variant="ghost"
@@ -164,7 +168,7 @@ export function MobileSpeakingModule({
                 ) : (
                   <Play size={24} fill="currentColor" className="ml-1" />
                 )}
-                <audio ref={userAudioRef} src={audioUrl} />
+                <audio ref={userAudioRef} src={normalizedUserAudioUrl} />
               </Button>
               <Button
                 variant="ghost"

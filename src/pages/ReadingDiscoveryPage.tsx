@@ -10,9 +10,14 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui';
 import { PictureBookShelf } from '../components/reading/PictureBookShelf';
+import { ReadingDiscoverySection } from '../components/reading/ReadingDiscoverySection';
 import { cn } from '../lib/utils';
 import type { PictureBook } from '../types';
-import { buildPictureBookPath, buildReadingArticlePath } from '../utils/readingRoutes';
+import {
+  buildEpubLibraryPath,
+  buildPictureBookPath,
+  buildReadingArticlePath,
+} from '../utils/readingRoutes';
 import { formatReadingRelativeTime, getReadingSourceLabel } from '../utils/readingMetadata';
 import {
   buildReadingDiscoveryPath,
@@ -33,19 +38,6 @@ type NewsItem = {
   publishedAt: number;
   difficultyLevel: 'L1' | 'L2' | 'L3';
   difficultyScore: number;
-};
-
-type CuratedArticle = {
-  id: string;
-  source: string;
-  sourceType: string;
-  icon: string;
-  title: string;
-  subtitle?: string;
-  excerpt: string;
-  badge: string;
-  bookmarkText: string;
-  tone: 'default' | 'warm' | 'dark';
 };
 
 type UserFeedData = {
@@ -366,223 +358,6 @@ const LiveNewsContent: React.FC<{
   );
 };
 
-type CardTone = 'default' | 'warm' | 'dark';
-
-function getCardToneStyles(tone: CardTone) {
-  if (tone === 'dark') {
-    return {
-      baseClass: 'border-border bg-gradient-to-br from-foreground to-foreground/90 text-background',
-      titleClass: 'text-background',
-      textClass: 'text-background/80',
-      badgeClass: 'border-background/25 bg-background/10 text-background',
-      sourceTypeClass: 'text-background/85',
-      sourceClass: 'text-background/75',
-      iconClass: 'border border-background/30 bg-background/10',
-      borderClass: 'border-background/20',
-      bookmarkClass: 'text-background/80',
-    };
-  }
-  if (tone === 'warm') {
-    return {
-      baseClass:
-        'border-orange-100 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-orange-900/60 dark:from-orange-950/35 dark:to-amber-950/25',
-      titleClass: 'text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-300',
-      textClass: 'text-muted-foreground',
-      badgeClass:
-        'border-orange-200 bg-orange-100/70 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/45 dark:text-orange-300',
-      sourceTypeClass: 'text-muted-foreground',
-      sourceClass: 'text-muted-foreground',
-      iconClass: 'bg-card',
-      borderClass: 'border-border/70',
-      bookmarkClass: 'text-muted-foreground',
-    };
-  }
-  return {
-    baseClass: 'bg-card border-border',
-    titleClass: 'text-foreground group-hover:text-primary',
-    textClass: 'text-muted-foreground',
-    badgeClass:
-      'border-blue-200 bg-blue-100/60 text-blue-700 dark:border-blue-900 dark:bg-blue-950/45 dark:text-blue-300',
-    sourceTypeClass: 'text-muted-foreground',
-    sourceClass: 'text-muted-foreground',
-    iconClass: 'bg-card',
-    borderClass: 'border-border/70',
-    bookmarkClass: 'text-muted-foreground',
-  };
-}
-
-function getToneFromIndex(index: number): CardTone {
-  const tone = index % 3;
-  if (tone === 2) return 'dark';
-  if (tone === 1) return 'warm';
-  return 'default';
-}
-
-const ArticleNewsCard: React.FC<{
-  item: NewsItem;
-  tone: CardTone;
-  t: DifficultyTranslator;
-  onOpen: (id: string) => void;
-}> = ({ item, tone, t, onOpen }) => {
-  const styles = getCardToneStyles(tone);
-  const sourceTypeText = item.section || '위키백과 알찬 글';
-  return (
-    <Button
-      key={item._id}
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => onOpen(item._id)}
-      className={`group !flex !items-stretch !justify-start h-full flex-col rounded-3xl border-2 p-6 text-left transition hover:-translate-y-1 hover:shadow-pop-sm ${styles.baseClass}`}
-    >
-      <div className="mb-4 flex items-center gap-3">
-        <div
-          className={`grid h-10 w-10 place-items-center rounded-full text-xl ${styles.iconClass}`}
-        >
-          🏛️
-        </div>
-        <div>
-          <div className={`text-[11px] font-bold uppercase tracking-wider ${styles.sourceClass}`}>
-            {t('readingDiscovery.articles.sourceWikipedia', {
-              defaultValue: 'Wikipedia',
-            })}
-          </div>
-          <div className={`text-sm font-bold ${styles.sourceTypeClass}`}>{sourceTypeText}</div>
-        </div>
-      </div>
-      <h3 className={`mb-3 text-2xl font-black tracking-tight transition ${styles.titleClass}`}>
-        {item.title}
-      </h3>
-      <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${styles.textClass}`}>
-        {(item.summary || item.bodyText || '').slice(0, 160)}
-      </p>
-      <div
-        className={`mt-auto flex items-center justify-between border-t pt-4 ${styles.borderClass}`}
-      >
-        <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${styles.badgeClass}`}>
-          {getDifficultyChip(item.difficultyLevel, t).text} •{' '}
-          {t('readingDiscovery.articles.typeEncyclopedia', {
-            defaultValue: 'Encyclopedia',
-          })}
-        </span>
-        <span className={`text-xs font-semibold ${styles.bookmarkClass}`}>
-          🔖 {t('readingDiscovery.articles.recommended', { defaultValue: 'Recommended' })}
-        </span>
-      </div>
-    </Button>
-  );
-};
-
-const CuratedArticleCard: React.FC<{ item: CuratedArticle; onOpen?: (id: string) => void }> = ({
-  item,
-  onOpen,
-}) => {
-  const styles = getCardToneStyles(item.tone);
-  const content = (
-    <>
-      <div className="mb-4 flex items-center gap-3">
-        <div
-          className={`grid h-10 w-10 place-items-center rounded-full text-xl ${styles.iconClass}`}
-        >
-          {item.icon}
-        </div>
-        <div>
-          <div className={`text-[11px] font-bold uppercase tracking-wider ${styles.sourceClass}`}>
-            {item.source}
-          </div>
-          <div className={`text-sm font-bold ${styles.sourceTypeClass}`}>{item.sourceType}</div>
-        </div>
-      </div>
-      <h3 className={`mb-3 text-2xl font-black tracking-tight transition ${styles.titleClass}`}>
-        {item.title}
-        {item.subtitle ? (
-          <span className={`mt-1 block text-lg font-bold ${styles.sourceTypeClass}`}>
-            ({item.subtitle})
-          </span>
-        ) : null}
-      </h3>
-      <p className={`mb-6 line-clamp-3 text-sm leading-relaxed ${styles.textClass}`}>
-        {item.excerpt}
-      </p>
-      <div
-        className={`mt-auto flex items-center justify-between border-t pt-4 ${styles.borderClass}`}
-      >
-        <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${styles.badgeClass}`}>
-          {item.badge}
-        </span>
-        <span className={`text-xs font-semibold ${styles.bookmarkClass}`}>
-          🔖 {item.bookmarkText}
-        </span>
-      </div>
-    </>
-  );
-
-  if (!onOpen) {
-    return (
-      <div className={`flex h-full flex-col rounded-3xl border p-6 ${styles.baseClass}`}>
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <Button
-      key={item.id}
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => onOpen(item.id)}
-      className={`group !flex h-full !items-stretch !justify-start flex-col rounded-3xl border p-6 text-left transition hover:-translate-y-1 hover:shadow-xl ${styles.baseClass}`}
-    >
-      {content}
-    </Button>
-  );
-};
-
-const ArchiveContent: React.FC<{
-  feedReady: boolean;
-  featuredArticles: NewsItem[] | undefined;
-  curatedArticles: CuratedArticle[];
-  t: DifficultyTranslator;
-  onOpen: (id: string) => void;
-  showAll: boolean;
-}> = ({ feedReady, featuredArticles, curatedArticles, t, onOpen, showAll }) => {
-  if (!feedReady || featuredArticles === undefined) {
-    return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[260px] animate-pulse rounded-3xl bg-muted" />
-      </div>
-    );
-  }
-
-  if (featuredArticles.length > 0) {
-    const visibleArticles = showAll ? featuredArticles : featuredArticles.slice(0, 6);
-    return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {visibleArticles.map((item, index) => (
-          <ArticleNewsCard
-            key={item._id}
-            item={item}
-            tone={getToneFromIndex(index)}
-            t={t}
-            onOpen={onOpen}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-      {curatedArticles.map(item => (
-        <CuratedArticleCard key={item.id} item={item} />
-      ))}
-    </div>
-  );
-};
-
 export default function ReadingDiscoveryPage() {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
@@ -595,7 +370,6 @@ export default function ReadingDiscoveryPage() {
   const [feedReady, setFeedReady] = useState<boolean>(() => !userId);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string>('');
-  const [showAllArchiveArticles, setShowAllArchiveArticles] = useState(false);
   const autoRefreshLockRef = useRef(false);
   const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {}) as PictureBook[] | undefined;
   const sortedPictureBooks = useMemo(() => {
@@ -761,7 +535,6 @@ export default function ReadingDiscoveryPage() {
 
   const news = useMemo(() => feed?.news ?? [], [feed?.news]);
   const featuredArticles = feed?.articles;
-  const hasExpandableArchive = (featuredArticles?.length ?? 0) > 6;
   const filteredNews = useMemo(
     () =>
       difficultyFilter === 'ALL'
@@ -784,69 +557,21 @@ export default function ReadingDiscoveryPage() {
       }, 0),
     [topNews]
   );
-  const curatedArticles = useMemo<CuratedArticle[]>(
-    () => [
-      {
-        id: 'wiki-hanok',
-        source: 'Wikipedia',
-        sourceType: t('readingDiscovery.fallback.wikipediaSource', {
-          defaultValue: 'Korean Culture Encyclopedia',
-        }),
-        icon: '🏛️',
-        title: '한옥',
-        excerpt:
-          '한옥은 한국의 전통 건축 양식으로 지어진 집을 말한다. 자연과의 조화를 중요하게 생각하며, 온돌과 마루가 있는 것이 특징이다...',
-        badge: t('readingDiscovery.fallback.wikipediaBadge', {
-          defaultValue: 'B2 Intermediate • Expository',
-        }),
-        bookmarkText: t('readingDiscovery.fallback.wikipediaBookmark', {
-          defaultValue: 'Close Reading',
-        }),
-        tone: 'default',
-      },
-      {
-        id: 'folktale-sun-moon',
-        source: 'Folktale',
-        sourceType: t('readingDiscovery.fallback.folktaleSource', {
-          defaultValue: 'Korean Traditional Folktale',
-        }),
-        icon: '🦊',
-        title: '해와 달이 된 오누이',
-        subtitle: t('readingDiscovery.fallback.folktaleSubtitle', {
-          defaultValue: 'Siblings Who Became the Sun and Moon',
-        }),
-        excerpt:
-          '옛날 옛적에, 홀어머니와 오누이가 살고 있었어요. 어느 날 고개를 넘던 어머니는 무서운 호랑이를 만나고 말았답니다...',
-        badge: t('readingDiscovery.fallback.folktaleBadge', {
-          defaultValue: 'A1 Beginner • Narrative',
-        }),
-        bookmarkText: t('readingDiscovery.fallback.folktaleBookmark', {
-          defaultValue: 'Bedtime Reading',
-        }),
-        tone: 'warm',
-      },
-      {
-        id: 'poem-seosi',
-        source: 'Literature',
-        sourceType: t('readingDiscovery.fallback.literatureSource', {
-          defaultValue: 'Public Domain Classics',
-        }),
-        icon: '✍️',
-        title: '서시',
-        subtitle: '윤동주',
-        excerpt:
-          '죽는 날까지 하늘을 우러러 한 점 부끄럼이 없기를, 잎새에 이는 바람에도 나는 괴로워했다...',
-        badge: t('readingDiscovery.fallback.literatureBadge', {
-          defaultValue: 'C2 Near-Native • Poetry',
-        }),
-        bookmarkText: t('readingDiscovery.fallback.literatureBookmark', {
-          defaultValue: 'Literary Notes',
-        }),
-        tone: 'dark',
-      },
-    ],
-    [t]
-  );
+  const wikiArticles = useMemo(() => {
+    const articles = featuredArticles ?? [];
+    const wikiOnly = articles.filter(article => article.sourceKey === 'wiki_ko_featured');
+    const source = wikiOnly.length > 0 ? wikiOnly : articles;
+    return source.slice(0, 5).map(article => ({
+      id: article._id,
+      title: article.title,
+      excerpt: (article.summary || article.bodyText || '').trim().slice(0, 220),
+      publishedAt: article.publishedAt,
+      sourceLabel:
+        article.sourceKey === 'wiki_ko_featured'
+          ? t('readingDiscovery.wikipedia.source', { defaultValue: 'Korean Wikipedia Featured' })
+          : getReadingSourceLabel(article.sourceKey, language),
+    }));
+  }, [featuredArticles, language, t]);
 
   if (isMobile) {
     return <MobileMediaPage />;
@@ -1026,44 +751,11 @@ export default function ReadingDiscoveryPage() {
       <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
 
       <section>
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-2xl font-black text-foreground">
-              📚 {t('readingDiscovery.articles.title', { defaultValue: 'Culture & Archive' })}
-            </h2>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {t('readingDiscovery.articles.subtitle', {
-                defaultValue:
-                  'Korean folktales, Wikipedia featured entries, and literature for close reading',
-              })}
-            </p>
-          </div>
-          {hasExpandableArchive ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setShowAllArchiveArticles(current => !current)}
-              className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
-            >
-              {showAllArchiveArticles
-                ? t('readingDiscovery.articles.showLess', { defaultValue: 'Show less' })
-                : t('readingDiscovery.articles.viewAll', { defaultValue: 'View all articles' })}
-              <ChevronRight
-                size={16}
-                className={cn('transition-transform', showAllArchiveArticles && 'rotate-90')}
-              />
-            </Button>
-          ) : null}
-        </div>
-
-        <ArchiveContent
-          feedReady={feedReady}
-          featuredArticles={featuredArticles}
-          curatedArticles={curatedArticles}
-          t={t}
-          onOpen={id => navigate(buildReadingArticlePath(id, currentPath))}
-          showAll={showAllArchiveArticles}
+        <ReadingDiscoverySection
+          wikiArticles={wikiArticles}
+          wikiLoading={feedReady && featuredArticles === undefined}
+          onViewWiki={id => navigate(buildReadingArticlePath(id, currentPath))}
+          onViewBook={slug => navigate(buildEpubLibraryPath(slug, currentPath))}
         />
       </section>
 

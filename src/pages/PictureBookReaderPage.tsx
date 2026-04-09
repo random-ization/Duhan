@@ -19,7 +19,7 @@ import { READING_BOOKS, AI } from '../utils/convexRefs';
 import type { PictureBook, PictureBookPage } from '../types';
 import { cn } from '../lib/utils';
 import { resolveSafeReturnTo } from '../utils/navigation';
-import { getSafeImageSrc } from '../utils/imageSrc';
+import { getSafeImageSrc, normalizePublicAssetUrl } from '../utils/imageSrc';
 import {
   buildPictureBookReaderSessionStorageKey,
   loadPictureBookReaderSessionState,
@@ -304,7 +304,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const currentVisiblePageId = visiblePageData?.page?._id ?? null;
 
   const currentPage = renderedPageData?.page ?? null;
-  const currentSentences = useMemo(() => currentPage?.sentences ?? [], [currentPage]);
+  const currentSentences = useMemo(
+    () =>
+      (currentPage?.sentences ?? []).map(sentence => ({
+        ...sentence,
+        audioUrl: normalizePublicAssetUrl(sentence.audioUrl) || sentence.audioUrl,
+      })),
+    [currentPage]
+  );
   const safeActiveSentenceIndex = currentSentences.length
     ? Math.min(activeSentenceIndex, currentSentences.length - 1)
     : 0;
@@ -483,14 +490,15 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       setActiveSentenceIndex(nextSentenceIndex);
       setAudioError(null);
 
-      if (!sentence?.audioUrl) {
+      const sentenceAudioUrl = normalizePublicAssetUrl(sentence?.audioUrl) || sentence?.audioUrl;
+      if (!sentenceAudioUrl) {
         setIsPlaying(false);
         return;
       }
 
-      const shouldReplaceSource = audio.src !== sentence.audioUrl;
+      const shouldReplaceSource = audio.src !== sentenceAudioUrl;
       if (shouldReplaceSource) {
-        audio.src = sentence.audioUrl;
+        audio.src = sentenceAudioUrl;
       }
       if (restart || shouldReplaceSource) {
         audio.currentTime = 0;
@@ -591,7 +599,9 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       return;
     }
 
-    const activeAudioUrl = currentSentences[safeActiveSentenceIndex]?.audioUrl;
+    const activeAudioUrl =
+      normalizePublicAssetUrl(currentSentences[safeActiveSentenceIndex]?.audioUrl) ||
+      currentSentences[safeActiveSentenceIndex]?.audioUrl;
     if (audio.src && activeAudioUrl && audio.src === activeAudioUrl && audio.currentTime > 0) {
       try {
         audio.playbackRate = playbackRate;

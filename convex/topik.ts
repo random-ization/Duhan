@@ -11,6 +11,7 @@ import {
   resolveEntitlementPlan,
   resolveExamAccessLevel,
 } from './entitlements';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 type AutoSubmitArgs = { sessionId: Id<'exam_sessions'> };
 const DEFAULT_TOPIK_EXAMS_LIMIT = 200;
@@ -37,7 +38,7 @@ async function resolveUrl(ctx: StorageResolverContext, urlOrId?: string) {
       // Refresh the signed URL using the ID
       return (await ctx.storage.getUrl(match[1])) || urlOrId;
     }
-    return urlOrId;
+    return normalizeStoragePublicUrl(urlOrId) || urlOrId;
   }
 
   // Assume it's a Storage ID
@@ -474,7 +475,9 @@ export const submitExam = mutation({
         await ctx.scheduler.cancel(session.scheduledJobId);
       } catch (e) {
         // Job may have already run or been cancelled
-        topikLogger.warn('Could not cancel scheduled job', { error: e instanceof Error ? e.message : String(e) });
+        topikLogger.warn('Could not cancel scheduled job', {
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 

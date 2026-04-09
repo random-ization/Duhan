@@ -1,1 +1,174 @@
-{}
+{
+  "readingDiscovery": {
+    "library": {
+      "title": "Classic Reading",
+      "subtitle": "One rotating Wikipedia spotlight, plus your private EPUB uploads, drafts, and share entry points.",
+      "privateLabel": "Private EPUB Library",
+      "privateTitle": "Visible only to you, with share links for invited readers",
+      "privateLogin": "Sign in to see your private EPUB library and create share links.",
+      "privateEmpty": "No private EPUBs yet. Upload your first book from the button above.",
+      "myUploads": "My Uploads",
+      "uploadCta": "Upload EPUB",
+      "myUploadsSubtitle": "Drafts, processing jobs, rejected submissions, and published EPUBs.",
+      "emptyMyUploads": "You have not uploaded any EPUBs yet.",
+      "chapterCount": "{{count}} chapters",
+      "wordCount": "{{count}} words",
+      "openReader": "Open Reader",
+      "submitForReview": "Submit for Review",
+      "shareLink": "Share Link",
+      "copyShareLink": "Copy Share Link",
+      "stopSharing": "Stop Sharing",
+      "shareShort": "Share",
+      "stopShareShort": "Stop",
+      "shareCopied": "Share link copied",
+      "shareFailed": "Unable to share this book right now.",
+      "shareDisabled": "Share link disabled",
+      "shareDisableFailed": "Unable to disable sharing right now.",
+      "wikipediaSpotlight": "Wikipedia Spotlight",
+      "wikipediaTitle": "Featured archive pick",
+      "wikipediaSourceFallback": "Wikipedia",
+      "featuredToday": "Featured today",
+      "read": "Read",
+      "wikipediaEmpty": "No Wikipedia spotlight is available yet.",
+      "communityLabel": "Community EPUB Library",
+      "communityTitle": "Reader-ready uploads",
+      "communityEmpty": "No community EPUBs are published yet. Upload the first one from the button above.",
+      "communityEmptyMobile": "No EPUBs published yet.",
+      "descriptionFallback": "Open the reader to browse the chapter list and start reading.",
+      "status": {
+        "draftUploaded": "Draft uploaded",
+        "processing": "Processing",
+        "readyForReview": "Ready for review",
+        "inReview": "In review",
+        "published": "Published",
+        "rejected": "Rejected",
+        "processingFailed": "Processing failed"
+      }
+    },
+    "upload": {
+      "title": "Upload EPUB",
+      "subtitle": "Upload an EPUB and we'll parse chapters, build the reader, and queue it for review.",
+      "action": "Upload",
+      "supportedFormat": "Supported format: EPUB. The file will be parsed after upload and saved as a draft.",
+      "fileLabel": "EPUB File",
+      "uploading": "Uploading {{progress}}%",
+      "chooseFile": "Choose an EPUB file",
+      "maxSize": "Up to 100MB",
+      "titleLabel": "Title",
+      "authorLabel": "Author",
+      "descriptionLabel": "Description",
+      "languageLabel": "Language",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Add tags",
+      "submit": "Upload Book",
+      "languages": {
+        "en": "English",
+        "ko": "Korean",
+        "zh": "Chinese",
+        "vi": "Vietnamese",
+        "mn": "Mongolian",
+        "ja": "Japanese"
+      },
+      "errors": {
+        "invalidExtension": "Please select an EPUB file (.epub).",
+        "unsupportedType": "Only EPUB files are supported.",
+        "emptyFile": "The selected file is empty.",
+        "fileTooLarge": "EPUB files must be smaller than 100MB.",
+        "fileRequired": "Please select an EPUB file.",
+        "titleAuthorRequired": "Title and author are required.",
+        "uploadFailed": "Failed to upload EPUB."
+      }
+    },
+    "reader": {
+      "notFoundTitle": "Book not found",
+      "notFoundBody": "This EPUB is unavailable or you do not have access to it.",
+      "backToReading": "Back to Reading",
+      "chapterProgress": "Chapter {{current}} / {{total}}",
+      "completion": "{{percent}}% complete",
+      "contents": "Contents",
+      "previewMode": "Preview mode. You can read {{count}} chapters on the free plan.",
+      "chapterLocked": "Chapter Locked",
+      "chapterLockedBody": "This chapter is outside the free preview. Upgrade to unlock the full book.",
+      "chapterLabel": "Chapter {{number}}",
+      "minRead": "~{{count}} min read",
+      "chapterUnavailable": "This chapter is unavailable.",
+      "settings": {
+        "title": "Reader Settings",
+        "fontSize": "Font size",
+        "theme": "Theme",
+        "lineHeight": "Line height",
+        "fontSizes": {
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large",
+          "extra-large": "Extra Large"
+        },
+        "themes": {
+          "light": "Light",
+          "sepia": "Sepia",
+          "dark": "Dark"
+        },
+        "lineHeights": {
+          "compact": "Compact",
+          "normal": "Normal",
+          "relaxed": "Relaxed"
+        }
+      }
+    },
+    "mobile": {
+      "publishedUploads": "Published uploads",
+      "privateUploads": "Only visible to you"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "add": "Add",
+    "all": "All",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "admin": {
+    "epubReview": {
+      "title": "EPUB Library Review",
+      "subtitle": "Moderate community EPUB uploads and publish them into the reading library.",
+      "filterTitle": "Status Filter",
+      "empty": "No books found for this status.",
+      "unknownOwner": "Unknown",
+      "selectTitle": "Select a book to review",
+      "selectBody": "Pick a submission from the list to inspect metadata, chapter previews, and moderation actions.",
+      "chapterCount": "{{count}} chapters",
+      "noDescription": "No description provided.",
+      "owner": "Owner",
+      "language": "Language",
+      "words": "Words",
+      "reviewNote": "Review Note",
+      "reviewNotePlaceholder": "Optional approval note, or required rejection reason.",
+      "chapterPreview": "Chapter Preview",
+      "noParsedChapters": "No parsed chapters are available yet.",
+      "wordCount": "{{count}} words",
+      "noPreview": "No preview available.",
+      "summary": {
+        "ready": "Ready",
+        "processing": "Processing",
+        "published": "Published",
+        "failed": "Failed"
+      },
+      "status": {
+        "allBooks": "All Books",
+        "processing": "Processing",
+        "readyForReview": "Ready for Review",
+        "inReview": "In Review",
+        "published": "Published",
+        "rejected": "Rejected",
+        "processingFailed": "Processing Failed"
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "retry": "Retry Processing"
+      }
+    }
+  }
+}

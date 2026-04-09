@@ -1,5 +1,4 @@
-import { makeFunctionReference } from 'convex/server';
-import type { DefaultFunctionArgs, PaginationOptions, PaginationResult } from 'convex/server';
+import type { PaginationOptions, PaginationResult } from 'convex/server';
 import type { Id } from '../../convex/_generated/dataModel';
 
 // Import types only to avoid runtime cycles
@@ -10,14 +9,8 @@ import type { ViewerAccessSnapshot } from './entitlements';
 
 export type NoArgs = Record<string, never>;
 
-export const qRef = <Args extends DefaultFunctionArgs, Ret>(name: string) =>
-  makeFunctionReference<'query', Args, Ret>(name);
-
-export const mRef = <Args extends DefaultFunctionArgs, Ret>(name: string) =>
-  makeFunctionReference<'mutation', Args, Ret>(name);
-
-export const aRef = <Args extends DefaultFunctionArgs, Ret>(name: string) =>
-  makeFunctionReference<'action', Args, Ret>(name);
+import { qRef, mRef, aRef } from './convexRefs/base';
+export { qRef, mRef, aRef };
 
 /**
  * COMMON REFS
@@ -30,7 +23,13 @@ export const INSTITUTES = {
 export const STORAGE = {
   getUploadUrl: aRef<
     { filename: string; contentType: string; fileSize: number; folder?: string },
-    { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
+    {
+      uploadUrl: string;
+      publicUrl: string;
+      key: string;
+      method?: 'PUT';
+      headers: Record<string, string>;
+    }
   >('storage:getUploadUrl'),
 };
 
@@ -1217,3 +1216,13 @@ export const NOTE_PAGES = {
     }
   >('notePages:migrateNotesIntoSourceNotebooks'),
 };
+
+/**
+ * READING LIBRARY REFS - Moved to separate file
+ */
+
+/**
+ * READING LIBRARY REFS (Simplified) - Moved to separate file
+ */
+// Import from readingLibrary.ts instead
+export { READING_LIBRARY } from './convexRefs/readingLibrary';

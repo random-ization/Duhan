@@ -66,13 +66,72 @@ export default function PracticeHubPage() {
     >('typing:getUserStats'),
     {}
   );
-  const notebooks = useQuery(NOTE_PAGES.listNotebooks, user ? ({} as NoArgs) : 'skip');
+  const notebooksResult = useQuery(NOTE_PAGES.listNotebooks, user ? ({} as NoArgs) : 'skip');
+  const notebooks = useMemo(() => {
+    const fallback = {
+      notebooks: [] as Array<{
+        id: string;
+        title: string;
+        icon?: string;
+        sortOrder: number;
+        noteCount: number;
+        reviewCount: number;
+        sourceModule: string | null;
+        updatedAt: number;
+        createdAt: number;
+      }>,
+      totals: {
+        notebooks: 0,
+        notes: 0,
+        unassigned: 0,
+      },
+    };
 
-  const notebookCount = notebooks?.totals.notebooks ?? 0;
-  const pendingReviewCount =
-    notebooks?.notebooks.reduce((sum, notebook) => sum + (notebook.reviewCount || 0), 0) ?? 0;
+    if (!notebooksResult || typeof notebooksResult !== 'object') {
+      return fallback;
+    }
+
+    const candidate = notebooksResult as Partial<typeof fallback> & {
+      data?: Array<Record<string, unknown>>;
+    };
+
+    const normalizedNotebooks = Array.isArray(candidate.notebooks)
+      ? candidate.notebooks
+      : Array.isArray(candidate.data)
+        ? candidate.data.map((item, index) => ({
+            id: String(item.id ?? item._id ?? `legacy-${index}`),
+            title: String(item.title ?? ''),
+            icon: typeof item.icon === 'string' ? item.icon : undefined,
+            sortOrder: typeof item.sortOrder === 'number' ? item.sortOrder : index,
+            noteCount: typeof item.noteCount === 'number' ? item.noteCount : 0,
+            reviewCount: typeof item.reviewCount === 'number' ? item.reviewCount : 0,
+            sourceModule: typeof item.sourceModule === 'string' ? item.sourceModule : null,
+            updatedAt: typeof item.updatedAt === 'number' ? item.updatedAt : 0,
+            createdAt: typeof item.createdAt === 'number' ? item.createdAt : 0,
+          }))
+        : [];
+
+    const totals =
+      candidate.totals && typeof candidate.totals === 'object' ? candidate.totals : null;
+
+    return {
+      notebooks: normalizedNotebooks,
+      totals: {
+        notebooks:
+          typeof totals?.notebooks === 'number' ? totals.notebooks : normalizedNotebooks.length,
+        notes: typeof totals?.notes === 'number' ? totals.notes : 0,
+        unassigned: typeof totals?.unassigned === 'number' ? totals.unassigned : 0,
+      },
+    };
+  }, [notebooksResult]);
+
+  const notebookCount = notebooks.totals.notebooks;
+  const pendingReviewCount = notebooks.notebooks.reduce(
+    (sum, notebook) => sum + (notebook.reviewCount || 0),
+    0
+  );
   const latestNotebookUpdatedAt = useMemo(() => {
-    if (!notebooks?.notebooks.length) return undefined;
+    if (!notebooks.notebooks.length) return undefined;
     return Math.max(...notebooks.notebooks.map(item => item.updatedAt || item.createdAt || 0));
   }, [notebooks]);
 

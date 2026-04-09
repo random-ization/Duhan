@@ -40,6 +40,121 @@
     "recommended": "为您推荐"
   },
   "readingDiscovery": {
+    "library": {
+      "title": "经典阅读",
+      "subtitle": "保留一篇轮播维基精选，其余位置展示您的私有 EPUB 上传、草稿与分享入口。",
+      "privateLabel": "私有 EPUB 书库",
+      "privateTitle": "仅自己可见，可通过分享链接邀请他人阅读",
+      "privateLogin": "登录后即可查看您的私有 EPUB 书库并创建分享链接。",
+      "privateEmpty": "您还没有私有 EPUB。点击上方按钮上传第一本。",
+      "myUploads": "我的上传",
+      "uploadCta": "上传 EPUB",
+      "myUploadsSubtitle": "查看草稿、处理中任务、被拒稿件与已发布电子书。",
+      "emptyMyUploads": "您还没有上传任何 EPUB。",
+      "chapterCount": "{{count}} 章",
+      "wordCount": "{{count}} 词",
+      "openReader": "打开阅读器",
+      "submitForReview": "提交审核",
+      "shareLink": "分享链接",
+      "copyShareLink": "复制分享链接",
+      "stopSharing": "关闭分享",
+      "shareShort": "分享",
+      "stopShareShort": "关闭",
+      "shareCopied": "分享链接已复制",
+      "shareFailed": "暂时无法分享这本书。",
+      "shareDisabled": "分享链接已关闭",
+      "shareDisableFailed": "暂时无法关闭分享。",
+      "wikipediaSpotlight": "维基精选",
+      "wikipediaTitle": "档案精选文章",
+      "wikipediaSourceFallback": "维基百科",
+      "featuredToday": "今日精选",
+      "read": "开始阅读",
+      "wikipediaEmpty": "暂时还没有可用的维基精选文章。",
+      "communityLabel": "社区 EPUB 书库",
+      "communityTitle": "可立即阅读的上传内容",
+      "communityEmpty": "社区 EPUB 书籍暂未发布。点击上方按钮上传第一本。",
+      "communityEmptyMobile": "暂时还没有已发布的 EPUB。",
+      "descriptionFallback": "打开阅读器即可浏览目录并开始阅读。",
+      "status": {
+        "draftUploaded": "已上传草稿",
+        "processing": "处理中",
+        "readyForReview": "待审核",
+        "inReview": "审核中",
+        "published": "已发布",
+        "rejected": "已拒绝",
+        "processingFailed": "处理失败"
+      }
+    },
+    "upload": {
+      "title": "上传 EPUB",
+      "subtitle": "上传 EPUB 后，我们会自动解析章节、生成阅读器并进入审核流程。",
+      "action": "上传",
+      "supportedFormat": "支持格式：EPUB。上传后会自动解析并保存为草稿。",
+      "fileLabel": "EPUB 文件",
+      "uploading": "上传中 {{progress}}%",
+      "chooseFile": "选择 EPUB 文件",
+      "maxSize": "最大 100MB",
+      "titleLabel": "书名",
+      "authorLabel": "作者",
+      "descriptionLabel": "简介",
+      "languageLabel": "语言",
+      "tagsLabel": "标签",
+      "tagsPlaceholder": "添加标签",
+      "submit": "上传书籍",
+      "languages": {
+        "en": "英语",
+        "ko": "韩语",
+        "zh": "中文",
+        "vi": "越南语",
+        "mn": "蒙古语",
+        "ja": "日语"
+      },
+      "errors": {
+        "invalidExtension": "请选择 EPUB 文件（.epub）。",
+        "unsupportedType": "目前仅支持 EPUB 文件。",
+        "emptyFile": "所选文件为空。",
+        "fileTooLarge": "EPUB 文件大小必须小于 100MB。",
+        "fileRequired": "请先选择 EPUB 文件。",
+        "titleAuthorRequired": "书名和作者为必填项。",
+        "uploadFailed": "上传 EPUB 失败。"
+      }
+    },
+    "reader": {
+      "notFoundTitle": "未找到书籍",
+      "notFoundBody": "该 EPUB 暂不可用，或您没有访问权限。",
+      "backToReading": "返回阅读",
+      "chapterProgress": "第 {{current}} 章 / 共 {{total}} 章",
+      "completion": "已完成 {{percent}}%",
+      "contents": "目录",
+      "previewMode": "试读模式：免费用户可阅读前 {{count}} 章。",
+      "chapterLocked": "章节已锁定",
+      "chapterLockedBody": "该章节不在免费试读范围内，升级后可解锁全书。",
+      "chapterLabel": "第 {{number}} 章",
+      "minRead": "约 {{count}} 分钟",
+      "chapterUnavailable": "当前章节暂不可用。",
+      "settings": {
+        "title": "阅读设置",
+        "fontSize": "字号",
+        "theme": "主题",
+        "lineHeight": "行高",
+        "fontSizes": {
+          "small": "小",
+          "medium": "中",
+          "large": "大",
+          "extra-large": "特大"
+        },
+        "themes": {
+          "light": "浅色",
+          "sepia": "护眼",
+          "dark": "深色"
+        },
+        "lineHeights": {
+          "compact": "紧凑",
+          "normal": "标准",
+          "relaxed": "宽松"
+        }
+      }
+    },
     "pictureBooks": {
       "title": "绘本故事",
       "viewAll": "查看全部绘本",
@@ -48,7 +163,9 @@
     "mobile": {
       "swipeHint": "左右滑动浏览",
       "globalInsights": "全球动态",
-      "articlesToday": "今日更新 {{count}} 篇"
+      "articlesToday": "今日更新 {{count}} 篇",
+      "publishedUploads": "已发布上传内容",
+      "privateUploads": "仅自己可见"
     },
     "featured": {
       "newsTitle": "每日韩语新闻推送",
@@ -113,12 +230,61 @@
     "search": "搜索",
     "loading": "加载中...",
     "retry": "重试",
+    "cancel": "取消",
+    "delete": "删除",
+    "close": "关闭",
+    "add": "添加",
+    "all": "全部",
+    "previous": "上一章",
+    "next": "下一章",
     "viewAll": "全部",
     "recently": "最近播放",
     "minutes": "分钟",
     "streak": "活跃天数",
     "appName": "Duhan 韩语",
     "exams": "试卷"
+  },
+  "admin": {
+    "epubReview": {
+      "title": "EPUB 书库审核",
+      "subtitle": "审核社区上传的 EPUB，并将符合要求的内容发布到阅读书库。",
+      "filterTitle": "状态筛选",
+      "empty": "当前状态下没有书籍。",
+      "unknownOwner": "未知",
+      "selectTitle": "选择一本书开始审核",
+      "selectBody": "从左侧列表中选择投稿，查看元数据、章节预览与审核操作。",
+      "chapterCount": "{{count}} 章",
+      "noDescription": "暂无简介。",
+      "owner": "上传者",
+      "language": "语言",
+      "words": "词数",
+      "reviewNote": "审核备注",
+      "reviewNotePlaceholder": "可填写通过备注，或填写拒绝原因。",
+      "chapterPreview": "章节预览",
+      "noParsedChapters": "暂时还没有解析出的章节。",
+      "wordCount": "{{count}} 词",
+      "noPreview": "暂无预览内容。",
+      "summary": {
+        "ready": "待审核",
+        "processing": "处理中",
+        "published": "已发布",
+        "failed": "失败"
+      },
+      "status": {
+        "allBooks": "全部书籍",
+        "processing": "处理中",
+        "readyForReview": "待审核",
+        "inReview": "审核中",
+        "published": "已发布",
+        "rejected": "已拒绝",
+        "processingFailed": "处理失败"
+      },
+      "actions": {
+        "approve": "通过",
+        "reject": "拒绝",
+        "retry": "重新处理"
+      }
+    }
   },
   "dashboard": {
     "summary": {

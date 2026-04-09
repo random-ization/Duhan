@@ -11,6 +11,7 @@ import { formatSafeDateLabel } from '../utils/dateLabel';
 import { VideoLibrarySkeleton } from '../components/common';
 import { qRef } from '../utils/convexRefs';
 import { Button } from '../components/ui';
+import { normalizePublicAssetUrl } from '../utils/imageSrc';
 
 type ConvexVideoItem = {
   _id: string;
@@ -54,7 +55,7 @@ const VideoLibraryPage: React.FC = () => {
     return convexVideos.map((v: ConvexVideoItem) => ({
       ...v,
       id: v._id,
-      thumbnailUrl: v.thumbnailUrl || undefined,
+      thumbnailUrl: normalizePublicAssetUrl(v.thumbnailUrl) || undefined,
       duration: v.duration || undefined,
       description: v.description || undefined,
       createdAt: new Date(v.createdAt).toISOString(),

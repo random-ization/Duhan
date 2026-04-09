@@ -1,5 +1,6 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 export const listPublishedBooks = query({
   args: {},
@@ -16,7 +17,7 @@ export const listPublishedBooks = query({
       title: book.title,
       pageTitle: book.pageTitle,
       levelLabel: book.levelLabel,
-      coverImageUrl: book.coverImageUrl,
+      coverImageUrl: normalizeStoragePublicUrl(book.coverImageUrl) || book.coverImageUrl,
       pageCount: book.pageCount,
       readingMinutes: book.readingMinutes,
       sourceBookId: book.sourceBookId,
@@ -42,7 +43,7 @@ export const getBookBySlug = query({
       title: book.title,
       pageTitle: book.pageTitle,
       levelLabel: book.levelLabel,
-      coverImageUrl: book.coverImageUrl,
+      coverImageUrl: normalizeStoragePublicUrl(book.coverImageUrl) || book.coverImageUrl,
       pageCount: book.pageCount,
       readingMinutes: book.readingMinutes,
       sourcePage: book.sourcePage,
@@ -78,7 +79,7 @@ export const getBookPageData = query({
           title: book.title,
           pageTitle: book.pageTitle,
           levelLabel: book.levelLabel,
-          coverImageUrl: book.coverImageUrl,
+          coverImageUrl: normalizeStoragePublicUrl(book.coverImageUrl) || book.coverImageUrl,
           pageCount: 0,
           readingMinutes: book.readingMinutes,
         },
@@ -108,14 +109,14 @@ export const getBookPageData = query({
         title: book.title,
         pageTitle: book.pageTitle,
         levelLabel: book.levelLabel,
-        coverImageUrl: book.coverImageUrl,
+        coverImageUrl: normalizeStoragePublicUrl(book.coverImageUrl) || book.coverImageUrl,
         pageCount: pages.length,
         readingMinutes: book.readingMinutes,
       },
       page: {
         _id: targetPage._id,
         pageIndex: targetPage.pageIndex,
-        imageUrl: targetPage.imageUrl,
+        imageUrl: normalizeStoragePublicUrl(targetPage.imageUrl) || targetPage.imageUrl,
         layoutClass: targetPage.layoutClass,
         sentenceCount: targetPage.sentenceCount,
         sentences: sentences.map(sentence => ({
@@ -123,7 +124,7 @@ export const getBookPageData = query({
           sentenceIndex: sentence.sentenceIndex,
           spanId: sentence.spanId,
           text: sentence.text,
-          audioUrl: sentence.audioUrl,
+          audioUrl: normalizeStoragePublicUrl(sentence.audioUrl) || sentence.audioUrl,
           clipBeginMs: sentence.clipBeginMs,
           clipEndMs: sentence.clipEndMs,
           durationMs: sentence.durationMs,

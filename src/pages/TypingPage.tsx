@@ -23,6 +23,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileTypingPage } from '../components/mobile/MobileTypingPage';
 import { Button } from '../components/ui';
 import { Select } from '../components/ui';
+import { VOCAB } from '../utils/convexRefs';
 
 // Enhanced Keyboard & Page Theme Styles
 // Enhanced Keyboard & Page Theme Styles (Soft Pop V3)
@@ -1536,7 +1537,7 @@ const DesktopTypingPage: React.FC = () => {
   }, [selectedCourseId, courses, coursesByName, selectedCourseName]);
 
   const courseWords = useQuery(
-    api.vocab.getOfCourse,
+    VOCAB.getOfCourse,
     selectedCourseId ? { courseId: selectedCourseId, unitId: selectedUnitId } : 'skip'
   );
   const sentenceTextsResult = useQuery(api.typing.listTexts, {
