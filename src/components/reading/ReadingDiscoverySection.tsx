@@ -311,6 +311,9 @@ export const ReadingDiscoverySection: React.FC<ReadingDiscoverySectionProps> = (
                 <button
                   type="button"
                   onClick={prevWiki}
+                  aria-label={t('readingDiscovery.library.previousSpotlight', {
+                    defaultValue: 'Previous spotlight',
+                  })}
                   className="rounded-full border border-border p-2 transition hover:bg-muted"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -318,6 +321,9 @@ export const ReadingDiscoverySection: React.FC<ReadingDiscoverySectionProps> = (
                 <button
                   type="button"
                   onClick={nextWiki}
+                  aria-label={t('readingDiscovery.library.nextSpotlight', {
+                    defaultValue: 'Next spotlight',
+                  })}
                   className="rounded-full border border-border p-2 transition hover:bg-muted"
                 >
                   <ChevronRight className="h-4 w-4" />

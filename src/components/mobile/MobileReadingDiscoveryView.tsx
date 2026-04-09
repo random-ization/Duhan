@@ -124,7 +124,10 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
     !feedInitError && (!user?.id || feedReadyUserId === user.id) && newsFeed === undefined;
   const showNewsError = Boolean(user?.id) && feedInitError;
   const currentPath = `${location.pathname}${location.search}`;
-  const privateEpubBooks = useMemo(() => (myUploads || []).slice(0, 6), [myUploads]);
+  const privateEpubBooks = useMemo(
+    () => (Array.isArray(myUploads) ? myUploads.slice(0, 6) : []),
+    [myUploads]
+  );
 
   // Available levels for filter chips
   const availableLevels = useMemo(() => {

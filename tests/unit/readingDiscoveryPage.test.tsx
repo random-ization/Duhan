@@ -115,12 +115,12 @@ describe('ReadingDiscoveryPage', () => {
     });
   });
 
-  it('expands archive articles when view all is clicked', async () => {
+  it('rotates wikipedia spotlight articles when next is clicked', async () => {
     useQueryMock.mockImplementation((_ref: unknown, args: unknown) => {
       if (typeof args === 'object' && args && 'newsLimit' in args) {
         return {
           news: [],
-          articles: Array.from({ length: 7 }, (_, index) => ({
+          articles: Array.from({ length: 3 }, (_, index) => ({
             _id: `article-${index + 1}`,
             sourceKey: 'wiki_ko_featured',
             sourceUrl: `https://example.com/article-${index + 1}`,
@@ -158,18 +158,20 @@ describe('ReadingDiscoveryPage', () => {
 
     renderPage('/reading');
 
-    expect(screen.queryByText('Archive Article 7')).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('button', { name: 'View all articles' }));
-    expect(await screen.findByText('Archive Article 7')).toBeInTheDocument();
+    expect(await screen.findByText('Archive Article 1')).toBeInTheDocument();
+    expect(screen.queryByText('Archive Article 2')).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Next spotlight' }));
+
+    expect(await screen.findByText('Archive Article 2')).toBeInTheDocument();
+    expect(screen.queryByText('Archive Article 1')).not.toBeInTheDocument();
   });
 
-  it('renders curated fallback cards without broken navigation', async () => {
+  it('renders the wikipedia empty state when no spotlight article exists', async () => {
     renderPage('/reading');
 
-    const fallbackTitle = await screen.findByText('한옥');
-    expect(fallbackTitle.closest('button')).toBeNull();
-
-    fireEvent.click(fallbackTitle);
+    const emptyState = await screen.findByText('No Wikipedia spotlight is available yet.');
+    expect(emptyState.closest('button')).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 });

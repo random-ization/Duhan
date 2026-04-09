@@ -239,6 +239,7 @@ describe('Media returnTo flow', () => {
           levelLabel: 'Level 1',
         },
       ])
+      .mockImplementationOnce(() => [])
       .mockImplementationOnce(() => ({ news: [] }));
 
     renderWithRouter(<MobileMediaPage />, '/media?tab=reading');
