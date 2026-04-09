@@ -1,3 +1,5 @@
+/* global document, window */
+
 (function () {
   var storageKey = 'duhan-theme';
   var root = document.documentElement;
@@ -19,7 +21,7 @@
     if (themeMeta) {
       themeMeta.setAttribute('content', isDark ? '#0f172a' : '#f0f4f8');
     }
-  } catch (_error) {
+  } catch {
     root.classList.remove('dark');
     root.style.colorScheme = 'light';
   }
