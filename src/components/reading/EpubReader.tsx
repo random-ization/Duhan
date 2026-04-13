@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ChevronLeft, Settings, X, BookOpen } from 'lucide-react';
 import { logError, logInfo } from '../../utils/logger';
-import ePub from 'epubjs';
 
 type ReaderTheme = 'light' | 'dark' | 'sepia';
 type ReaderFontSize = 'small' | 'medium' | 'large' | 'extra-large';
@@ -73,97 +72,108 @@ export const EpubReader: React.FC = () => {
   useEffect(() => {
     if (!epubUrl || !viewerRef.current || bookRef.current) return;
 
+    let isMounted = true;
     logInfo('Initializing epub.js reader', { url: epubUrl });
 
-    let isMounted = true;
+    void import('epubjs')
+      .then(module => {
+        if (!isMounted || !viewerRef.current || bookRef.current) return;
 
-    const book = ePub(epubUrl);
-    bookRef.current = book;
+        const createEpub = module.default;
+        const book = createEpub(epubUrl);
+        bookRef.current = book;
 
-    const rendition = book.renderTo(viewerRef.current!, {
-      width: '100%',
-      height: '100%',
-      spread: 'none',
-      manager: 'default',
-      flow: 'paginated',
-      allowScriptedContent: false,
-    });
-    renditionRef.current = rendition;
+        const rendition = book.renderTo(viewerRef.current, {
+          width: '100%',
+          height: '100%',
+          spread: 'none',
+          manager: 'default',
+          flow: 'paginated',
+          allowScriptedContent: false,
+        });
+        renditionRef.current = rendition;
 
-    rendition.hooks.content.register((contents: any) => {
-      const doc = contents?.document as Document | undefined;
-      if (!doc) return;
+        rendition.hooks.content.register((contents: any) => {
+          const doc = contents?.document as Document | undefined;
+          if (!doc) return;
 
-      const styleTag = doc.createElement('style');
-      styleTag.textContent = `
-        html, body {
-          background: ${readerSettings.theme === 'dark' ? '#09090b' : readerSettings.theme === 'sepia' ? '#f8f1df' : '#f8fafc'} !important;
-          overflow: hidden !important;
-        }
-        body {
-          margin: 0 !important;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-        }
-        img, svg, canvas {
-          max-width: 100% !important;
-          height: auto !important;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          background: transparent !important;
-        }
-        * {
-          animation: none !important;
-          transition: none !important;
-        }
-      `;
-      doc.head.appendChild(styleTag);
-    });
+          const styleTag = doc.createElement('style');
+          styleTag.textContent = `
+            html, body {
+              background: ${readerSettings.theme === 'dark' ? '#09090b' : readerSettings.theme === 'sepia' ? '#f8f1df' : '#f8fafc'} !important;
+              overflow: hidden !important;
+            }
+            body {
+              margin: 0 !important;
+              -webkit-font-smoothing: antialiased;
+              text-rendering: optimizeLegibility;
+            }
+            img, svg, canvas {
+              max-width: 100% !important;
+              height: auto !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              background: transparent !important;
+            }
+            * {
+              animation: none !important;
+              transition: none !important;
+            }
+          `;
+          doc.head.appendChild(styleTag);
+        });
 
-    const lastCfi = bookDetail?.userProgress?.blockId;
-    const displayPromise = lastCfi ? rendition.display(lastCfi) : rendition.display();
-    displayPromise.catch(err => {
-      logError('Failed to display EPUB location', err);
-      rendition.display().catch(innerErr => logError('Failed to display EPUB start', innerErr));
-    });
+        const lastCfi = bookDetail?.userProgress?.blockId;
+        const displayPromise = lastCfi ? rendition.display(lastCfi) : rendition.display();
+        displayPromise.catch(err => {
+          logError('Failed to display EPUB location', err);
+          rendition.display().catch(innerErr => logError('Failed to display EPUB start', innerErr));
+        });
 
-    book.ready
-      .then(() => {
-        if (!isMounted) return;
-        setIsBooting(false);
+        book.ready
+          .then(() => {
+            if (!isMounted) return;
+            setIsBooting(false);
 
-        setTimeout(() => {
-          book.locations
-            .generate(1600)
-            .then(() => {
-              if (!isMounted) return;
-              logInfo('EPUB locations generated', { length: book.locations.length() });
-            })
-            .catch((err: any) => {
-              logError('EPUB locations generation error', err);
-            });
-        }, 0);
+            setTimeout(() => {
+              book.locations
+                .generate(1600)
+                .then(() => {
+                  if (!isMounted) return;
+                  logInfo('EPUB locations generated', { length: book.locations.length() });
+                })
+                .catch((err: any) => {
+                  logError('EPUB locations generation error', err);
+                });
+            }, 0);
+          })
+          .catch((err: any) => {
+            logError('Failed to initialize EPUB reader', err);
+            if (isMounted) {
+              setIsBooting(false);
+            }
+          });
+
+        rendition.on('relocated', (location: any) => {
+          if (!isMounted) return;
+          if (book.locations.length() > 0) {
+            const percent = book.locations.percentageFromCfi(location.start.cfi);
+            setCompletionPercent(percent);
+            handleProgressSave(location.start.cfi, percent);
+          }
+        });
+
+        rendition.on('rendered', () => {
+          if (!isMounted) return;
+          setIsBooting(false);
+        });
       })
-      .catch((err: any) => {
-        logError('Failed to initialize EPUB reader', err);
+      .catch(err => {
+        logError('Failed to load epub.js dynamically', err);
         if (isMounted) {
           setIsBooting(false);
         }
       });
-
-    rendition.on('relocated', (location: any) => {
-      if (!isMounted) return;
-      if (book.locations.length() > 0) {
-        const percent = book.locations.percentageFromCfi(location.start.cfi);
-        setCompletionPercent(percent);
-        handleProgressSave(location.start.cfi, percent);
-      }
-    });
-
-    rendition.on('rendered', () => {
-      if (!isMounted) return;
-      setIsBooting(false);
-    });
 
     return () => {
       isMounted = false;

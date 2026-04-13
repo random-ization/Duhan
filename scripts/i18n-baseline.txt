@@ -64,3 +64,5 @@ src/types/index.ts
 src/utils/grammarDisplaySanitizer.ts
 src/utils/grammarMaskingRemark.ts
 src/utils/languageUtils.ts
+src/components/mobile/MobileDashboard.tsx
+src/components/mobile/MobileVocabDashboard.tsx

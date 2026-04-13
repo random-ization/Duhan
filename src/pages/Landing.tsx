@@ -55,6 +55,16 @@ type LandingPricingCopy = {
   rightsRows: Array<{ label: string; free: string; pro: string }>;
 };
 type LandingCopyTranslator = (key: string, options?: Record<string, unknown>) => string;
+type LandingNetworkNavigator = Navigator & {
+  connection?: {
+    saveData?: boolean;
+    effectiveType?: string;
+  };
+};
+type LandingIdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
 
 const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
 
@@ -511,34 +521,20 @@ const LandingHero = () => {
 
   return (
     <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[radial-gradient(110%_110%_at_50%_0%,hsl(var(--primary)/0.12)_0%,hsl(var(--background))_58%)] dark:bg-[radial-gradient(120%_120%_at_50%_0%,hsl(var(--primary)/0.30)_0%,hsl(var(--primary)/0.10)_38%,hsl(var(--background))_78%)]">
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={staggerContainer}
-        className="max-w-5xl mx-auto text-center relative z-10"
-      >
-        <motion.h1
-          variants={fadeInUp}
-          className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight"
-        >
+      <div className="max-w-5xl mx-auto text-center relative z-10">
+        <h1 className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight">
           {t('landing.hero.titleLine1')} <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-pink-500 dark:from-violet-300 dark:to-pink-300">
             {t('landing.hero.titleGradient')}
           </span>
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          variants={fadeInUp}
-          className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed"
-        >
+        <p className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed">
           {t('landing.hero.desc')}
-        </motion.p>
+        </p>
 
-        <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row justify-center gap-5">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+        <div className="flex flex-col sm:flex-row justify-center gap-5">
+          <button
             onClick={() => {
               trackEvent('landing_cta_click', {
                 language,
@@ -552,31 +548,18 @@ const LandingHero = () => {
           >
             {t('landing.hero.ctaPrimary')}
             <ArrowRight className="w-5 h-5" />
-          </motion.button>
-          <motion.a
+          </button>
+          <a
             href="#topik"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
             className="px-6 py-4 md:px-10 md:py-5 bg-white text-slate-900 text-base md:text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-black hover:text-black transition-all flex items-center justify-center gap-3"
           >
             <PlayCircle className="w-5 h-5" />
             {t('landing.hero.ctaSecondary')}
-          </motion.a>
-        </motion.div>
-      </motion.div>
+          </a>
+        </div>
+      </div>
 
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/5 dark:bg-violet-400/10 rounded-full blur-3xl -z-10"
-      />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/5 dark:bg-violet-400/10 rounded-full blur-3xl -z-10" />
     </header>
   );
 };
@@ -2178,6 +2161,7 @@ export default function Landing() {
   const location = useLocation();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [shouldLoadPrices, setShouldLoadPrices] = useState(false);
   const isScrolled = useLandingScroll();
   const { expandedFeatureCards, toggleFeatureCard } = useFeatureCards();
 
@@ -2186,10 +2170,78 @@ export default function Landing() {
   const getPrices = useAction(api.lemonsqueezy.getVariantPrices);
 
   useEffect(() => {
+    if (shouldLoadPrices) {
+      return;
+    }
+    if (typeof globalThis.window === 'undefined') {
+      return;
+    }
+
+    const navWithConnection = globalThis.navigator as LandingNetworkNavigator;
+    const connection = navWithConnection.connection;
+    if (connection?.saveData) {
+      return;
+    }
+
+    const effectiveType = connection?.effectiveType ?? '4g';
+    if (effectiveType.includes('2g') || effectiveType === 'slow-2g') {
+      return;
+    }
+
+    let cancelled = false;
+    const triggerPriceLoad = () => {
+      if (cancelled) return;
+      setShouldLoadPrices(true);
+    };
+
+    const idleWindow = globalThis.window as LandingIdleWindow;
+    const handleScroll = () => {
+      if (globalThis.window.scrollY >= globalThis.window.innerHeight * 0.4) {
+        triggerPriceLoad();
+      }
+    };
+
+    const handlePointerDown = () => {
+      triggerPriceLoad();
+    };
+
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(triggerPriceLoad, { timeout: 2200 });
+    } else {
+      timeoutId = globalThis.window.setTimeout(triggerPriceLoad, 1600);
+    }
+
+    globalThis.window.addEventListener('scroll', handleScroll, { passive: true });
+    globalThis.window.addEventListener('pointerdown', handlePointerDown, {
+      once: true,
+      passive: true,
+    });
+
+    return () => {
+      cancelled = true;
+      globalThis.window.removeEventListener('scroll', handleScroll);
+      globalThis.window.removeEventListener('pointerdown', handlePointerDown);
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.window.clearTimeout(timeoutId);
+      }
+    };
+  }, [shouldLoadPrices]);
+
+  useEffect(() => {
+    if (!shouldLoadPrices) {
+      return;
+    }
+
     runConvexActionWithRetry(getPrices, {}, { retries: 2, initialDelayMs: 300 })
       .then(setPrices)
       .catch(console.error);
-  }, [getPrices]);
+  }, [getPrices, shouldLoadPrices]);
 
   // Condition return AFTER hooks
   const meta = getRouteMeta(location.pathname);

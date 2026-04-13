@@ -227,6 +227,20 @@ export type VocabReviewSummaryDto = {
   recommendedToday: number;
 };
 
+export type VocabActivityHeatmapCellDto = {
+  date: string;
+  count: number;
+  intensity: 0 | 1 | 2 | 3 | 4;
+  isToday: boolean;
+};
+
+export type VocabDashboardInsightsDto = {
+  retentionRate30d: number | null;
+  activeDays30d: number;
+  totalReviews30d: number;
+  heatmap: VocabActivityHeatmapCellDto[];
+};
+
 export type VocabBookPageDto = {
   items: VocabBookItemDto[];
   nextCursor: string | null;

@@ -1,202 +1,577 @@
-import React from 'react';
+import { useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Bookmark,
+  Brain,
+  Ghost,
+  Search,
+  TrendingUp,
+  Target,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Play, ChevronRight } from 'lucide-react';
-import { Button } from '../ui';
+import type { LearnerStatsDto } from '../../../convex/learningStats';
+import type { VocabActivityHeatmapCellDto } from '../../../convex/vocab';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLearningSelection } from '../../contexts/LearningContext';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { INSTITUTES, NoArgs, qRef, VOCAB } from '../../utils/convexRefs';
+import { getLocalizedContent } from '../../utils/languageUtils';
 
 interface MobileVocabDashboardProps {
-  readonly unitId: string;
-  readonly instituteName: string;
-  readonly words: readonly unknown[];
-  readonly totalWords?: number;
-  readonly masteredCount: number;
-  readonly language: string;
-  readonly onStartLearn: () => void;
-  readonly onStartTest: () => void;
-  readonly onManageList: () => void;
+  readonly savedWordsCount: number;
+  readonly onOpenSavedWords: () => void;
+  readonly onOpenMistakes: () => void;
 }
 
-export const MobileVocabDashboard: React.FC<MobileVocabDashboardProps> = ({
-  unitId,
-  instituteName,
-  words,
-  totalWords,
-  masteredCount,
-  language: _language,
-  onStartLearn,
-  onStartTest,
-  onManageList,
-}) => {
-  const { t } = useTranslation();
-  const total = typeof totalWords === 'number' ? totalWords : words.length;
-  const progress = total > 0 ? (masteredCount / total) * 100 : 0;
+type DashboardCopy = {
+  pageTitle: string;
+  trackingLabel: string;
+  fsrsLabel: string;
+  masteredWords: string;
+  retentionLabel: string;
+  retentionWindow: string;
+  retentionEmpty: string;
+  currentLearning: string;
+  currentCourseFallback: string;
+  currentCourseMetaFallback: string;
+  currentCourseEmptyTitle: string;
+  currentCourseEmptyDescription: string;
+  currentCourseButton: string;
+  pickCourseButton: string;
+  todayTask: string;
+  dueNow: string;
+  newWords: string;
+  learningWords: string;
+  reviewWords: string;
+  savedWords: string;
+  mistakes: string;
+  mistakesEmpty: string;
+  monthlyHeatmap: string;
+  legendLess: string;
+  legendMore: string;
+  wordsUnit: string;
+};
 
+type LocalizedInstitute = {
+  id?: string;
+  name?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameVi?: string;
+  nameMn?: string;
+  displayLevel?: string;
+  publisher?: string;
+};
+
+const NOISE_BACKGROUND =
+  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")";
+
+const EMPTY_LEARNER_STATS: LearnerStatsDto = {
+  streak: 0,
+  todayMinutes: 0,
+  dailyGoal: 30,
+  dailyProgress: 0,
+  weeklyActivity: [],
+  todayActivities: {
+    wordsLearned: 0,
+    readingsCompleted: 0,
+    listeningsCompleted: 0,
+    examsCompleted: 0,
+  },
+  courseProgress: [],
+  currentProgress: null,
+  totalWordsLearned: 0,
+  totalGrammarLearned: 0,
+  wordsToReview: 0,
+  vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+  grammarStats: { total: 0, mastered: 0 },
+  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0 },
+  moduleBreakdown: [],
+  recentSessions: [],
+  totalMinutes: 0,
+  todayWordsStudied: 0,
+  todayGrammarStudied: 0,
+};
+
+const getCopy = (language: string): DashboardCopy => {
+  if (language.startsWith('zh')) {
+    return {
+      pageTitle: '词汇中枢',
+      trackingLabel: '数据追踪',
+      fsrsLabel: 'FSRS 引擎运行中',
+      masteredWords: '已掌握词汇',
+      retentionLabel: '近30天回忆准确率',
+      retentionWindow: '30天',
+      retentionEmpty: '暂无足够复习数据',
+      currentLearning: '当前学习',
+      currentCourseFallback: '当前课程词汇',
+      currentCourseMetaFallback: '课程词汇进度',
+      currentCourseEmptyTitle: '开始你的课程词汇',
+      currentCourseEmptyDescription: '先进入一门课程词汇页，系统会在这里接续你的进度。',
+      currentCourseButton: '继续学习',
+      pickCourseButton: '去选择课程',
+      todayTask: '今日任务',
+      dueNow: '词待复习',
+      newWords: '新词',
+      learningWords: '学习中',
+      reviewWords: '复习',
+      savedWords: '生词本',
+      mistakes: '易错池',
+      mistakesEmpty: '需强化突破',
+      monthlyHeatmap: '本月活跃热力',
+      legendLess: '少',
+      legendMore: '多',
+      wordsUnit: '词汇',
+    };
+  }
+
+  return {
+    pageTitle: 'Vocab Hub',
+    trackingLabel: 'Tracking',
+    fsrsLabel: 'FSRS active',
+    masteredWords: 'Mastered words',
+    retentionLabel: '30-day recall accuracy',
+    retentionWindow: '30d',
+    retentionEmpty: 'No review data yet',
+    currentLearning: 'Current learning',
+    currentCourseFallback: 'Current vocab course',
+    currentCourseMetaFallback: 'Course vocabulary progress',
+    currentCourseEmptyTitle: 'Start a vocab course',
+    currentCourseEmptyDescription:
+      'Open any course vocabulary module once and this hub will keep the thread here.',
+    currentCourseButton: 'Continue learning',
+    pickCourseButton: 'Choose a course',
+    todayTask: 'Today',
+    dueNow: 'due',
+    newWords: 'New',
+    learningWords: 'Learning',
+    reviewWords: 'Review',
+    savedWords: 'Saved words',
+    mistakes: 'Mistakes',
+    mistakesEmpty: 'Needs reinforcement',
+    monthlyHeatmap: 'Monthly activity',
+    legendLess: 'Less',
+    legendMore: 'More',
+    wordsUnit: 'words',
+  };
+};
+
+const isVocabularyLastModule = (value: string | undefined) => {
+  const normalized = value?.trim().toUpperCase();
   return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
-      {/* Header */}
-      <header className="relative overflow-hidden border-b border-border/50 bg-background p-6 pt-10 pb-12 shadow-sm">
-        {/* Glow Effects */}
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-500/10 blur-[80px] rounded-full" />
-        <div className="absolute top-10 -left-10 w-32 h-32 bg-primary/5 blur-[50px] rounded-full" />
-
-        <div className="relative z-10">
-          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-70">
-            {instituteName}
-          </div>
-          <h1 className="text-3xl font-black text-foreground mb-1 italic tracking-tighter">
-            {unitId === 'ALL'
-              ? t('vocab.allUnits', { defaultValue: 'All Units' })
-              : `Unit ${unitId}`}
-          </h1>
-          <p className="text-muted-foreground font-bold text-sm tracking-tight opacity-80">
-            {total} {t('vocab.wordsUnit', { defaultValue: 'words' })}
-          </p>
-
-          {/* Progress Card (Hero style) */}
-          <div className="mt-8 bg-black dark:bg-zinc-900 rounded-[2.5rem] p-6 text-white shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-transparent opacity-50 transition-opacity group-hover:opacity-100" />
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <div className="text-4xl font-black text-green-400 italic tracking-tighter">
-                    {Math.round(progress)}%
-                  </div>
-                  <div className="text-[10px] font-black text-white/50 uppercase tracking-[0.15em] mt-1">
-                    {t('vocab.mastered', { defaultValue: 'Mastered' })}
-                  </div>
-                </div>
-                <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10">
-                  <Trophy className="w-6 h-6 text-yellow-400" />
-                </div>
-              </div>
-              <div className="h-3 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/5">
-                <div
-                  className="h-full bg-gradient-to-r from-green-400 to-emerald-400 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(74,222,128,0.5)]"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Actions */}
-      <div className="p-6 pt-8 grid gap-5">
-        {/* Learn Button */}
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={onStartLearn}
-          className="group w-full bg-card border border-border/40 rounded-[2rem] p-1 shadow-sm active:scale-[0.98] transition-all hover:border-green-500/30"
-        >
-          <div className="bg-card rounded-[1.8rem] p-6 flex items-center justify-between group-hover:bg-green-50/50 dark:group-hover:bg-green-500/5 transition-colors">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-[1.2rem] bg-green-100 dark:bg-green-500/20 flex items-center justify-center text-green-600 dark:text-green-400 shadow-inner group-hover:scale-110 transition-transform">
-                <BrainIcon />
-              </div>
-              <div className="text-left">
-                <div className="font-black text-xl text-foreground italic tracking-tight">
-                  {t('vocab.learn', { defaultValue: 'Start Learning' })}
-                </div>
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider opacity-70">
-                  {t('vocab.flashcards', { defaultValue: 'Flashcards' })}
-                </div>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-green-500/50 group-hover:bg-white dark:group-hover:bg-zinc-800 transition-all shadow-sm">
-              <Play className="w-4 h-4 text-green-500 ml-0.5" />
-            </div>
-          </div>
-        </Button>
-
-        {/* Quiz Button */}
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={onStartTest}
-          className="group w-full bg-card border border-border/40 rounded-[2rem] p-1 shadow-sm active:scale-[0.98] transition-all hover:border-indigo-500/30"
-        >
-          <div className="bg-card rounded-[1.8rem] p-6 flex items-center justify-between group-hover:bg-indigo-50/50 dark:group-hover:bg-indigo-500/5 transition-colors">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-[1.2rem] bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner group-hover:scale-110 transition-transform">
-                <Trophy className="w-7 h-7" />
-              </div>
-              <div className="text-left">
-                <div className="font-black text-xl text-foreground italic tracking-tight">
-                  {t('vocab.quiz', { defaultValue: 'Take Quiz' })}
-                </div>
-                <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider opacity-70">
-                  {t('vocab.testMode', { defaultValue: 'Challenge' })}
-                </div>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-indigo-500/50 group-hover:bg-white dark:group-hover:bg-zinc-800 transition-all shadow-sm">
-              <ChevronRight className="w-5 h-5 text-indigo-500" />
-            </div>
-          </div>
-        </Button>
-
-        {/* Word List Preview or Manage */}
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={onManageList}
-          className="mt-2 w-full bg-muted/50 p-5 rounded-[1.5rem] border border-border/40 flex items-center justify-between hover:bg-card transition-all active:scale-[0.99]"
-        >
-          <div className="flex items-center gap-3">
-            <ListIcon className="w-5 h-5 text-muted-foreground opacity-70" />
-            <span className="font-black text-muted-foreground text-sm tracking-tight">
-              {t('vocab.wordList', { defaultValue: 'Word List' })}
-            </span>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </Button>
-      </div>
-    </div>
+    normalized === 'VOCAB' ||
+    normalized === 'VOCABULARY' ||
+    normalized === 'FLASHCARD' ||
+    normalized === 'LEARN' ||
+    normalized === 'TEST'
   );
 };
 
-// Simple Icon
-const BrainIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
-    <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
-    <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
-    <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
-    <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" />
-    <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
-    <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
-    <path d="M6 18a4 4 0 0 1-1.97-3.284" />
-    <path d="M17.97 14.716A4 4 0 0 1 18 18" />
-  </svg>
-);
+const getCurrentCourseId = ({
+  recentCourseId,
+  userLastModule,
+  userLastInstitute,
+}: {
+  recentCourseId: string | undefined;
+  userLastModule: string | undefined;
+  userLastInstitute: string | undefined;
+}) => {
+  if (recentCourseId && recentCourseId.trim()) {
+    return recentCourseId.trim();
+  }
 
-// List Icon
-const ListIcon = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <line x1="8" x2="21" y1="6" y2="6" />
-    <line x1="8" x2="21" y1="12" y2="12" />
-    <line x1="8" x2="21" y1="18" y2="18" />
-    <line x1="3" x2="3.01" y1="6" y2="6" />
-    <line x1="3" x2="3.01" y1="12" y2="12" />
-    <line x1="3" x2="3.01" y1="18" y2="18" />
-  </svg>
-);
+  if (isVocabularyLastModule(userLastModule) && userLastInstitute && userLastInstitute.trim()) {
+    return userLastInstitute.trim();
+  }
+
+  return '';
+};
+
+const getHeatmapCellClassName = (cell: VocabActivityHeatmapCellDto) => {
+  const base =
+    'aspect-square w-full rounded-[4px] transition-all duration-300 border border-transparent';
+
+  if (cell.intensity === 0) {
+    return `${base} bg-transparent border-dashed border-slate-300`;
+  }
+  if (cell.intensity === 1) {
+    return `${base} bg-emerald-100`;
+  }
+  if (cell.intensity === 2) {
+    return `${base} bg-emerald-200`;
+  }
+  if (cell.intensity === 3) {
+    return `${base} bg-emerald-400`;
+  }
+  return `${base} bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.35)]`;
+};
+
+const getLocalizedCourseName = (course: LocalizedInstitute, language: string, fallback: string) =>
+  getLocalizedContent(course, 'name', language) || course.name || fallback;
+
+const buildProgressRing = (progressPercent: number) => {
+  const bounded = Math.max(0, Math.min(100, progressPercent));
+  return `${bounded}, 100`;
+};
+
+export const MobileVocabDashboard = ({
+  savedWordsCount,
+  onOpenSavedWords,
+  onOpenMistakes,
+}: MobileVocabDashboardProps) => {
+  const navigate = useLocalizedNavigate();
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+  const { recentMaterials } = useLearningSelection();
+  const language = i18n.resolvedLanguage || i18n.language || 'en';
+  const copy = getCopy(language);
+
+  const learnerStats =
+    useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats')) ?? EMPTY_LEARNER_STATS;
+  const dashboardInsights = useQuery(VOCAB.getDashboardInsights, {});
+  const institutes = useQuery(INSTITUTES.getAll, {});
+  const mistakes = useQuery(
+    qRef<{ limit?: number }, Array<{ id: string }>>('user:getMistakes'),
+    user ? { limit: 500 } : 'skip'
+  );
+
+  const currentCourseId = useMemo(
+    () =>
+      getCurrentCourseId({
+        recentCourseId: recentMaterials.vocabulary?.instituteId,
+        userLastModule: user?.lastModule,
+        userLastInstitute: user?.lastInstitute,
+      }),
+    [recentMaterials.vocabulary?.instituteId, user?.lastInstitute, user?.lastModule]
+  );
+
+  const currentCourseStats = useQuery(
+    VOCAB.getStats,
+    currentCourseId ? { courseId: currentCourseId } : 'skip'
+  );
+  const currentCourseSummary = useQuery(
+    VOCAB.getReviewSummary,
+    currentCourseId ? { courseId: currentCourseId } : 'skip'
+  );
+
+  const currentCourse = useMemo(
+    () => institutes?.find(course => course.id === currentCourseId),
+    [currentCourseId, institutes]
+  );
+
+  const currentCourseTitle = currentCourse
+    ? getLocalizedCourseName(currentCourse, language, copy.currentCourseFallback)
+    : copy.currentCourseFallback;
+  const currentCourseBadge =
+    currentCourse?.displayLevel || currentCourse?.publisher || copy.currentCourseFallback;
+  const currentCourseMeta =
+    currentCourse?.publisher || currentCourse?.displayLevel || copy.currentCourseMetaFallback;
+  const currentCourseProgress = currentCourseStats?.total
+    ? Math.round((currentCourseStats.mastered / currentCourseStats.total) * 100)
+    : 0;
+  const hasCurrentCourse = Boolean(currentCourseId) && (currentCourseStats?.total ?? 0) > 0;
+  const currentCoursePath = hasCurrentCourse ? `/course/${currentCourseId}/vocab` : '/courses';
+  const retentionRate = dashboardInsights?.retentionRate30d ?? null;
+  const heatmap = dashboardInsights?.heatmap ?? [];
+  const mistakeCount = mistakes?.length ?? 0;
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/dashboard');
+  };
+
+  return (
+    <div
+      className="min-h-[100dvh] bg-[#E6E7E9] pb-mobile-nav text-slate-900"
+      style={{
+        backgroundImage: NOISE_BACKGROUND,
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "SF Pro Display", sans-serif',
+        WebkitFontSmoothing: 'antialiased',
+      }}
+    >
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-[rgba(230,231,233,0.85)] px-5 pb-4 pt-[calc(env(safe-area-inset-top)+16px)] backdrop-blur-[24px]">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white bg-white/50 shadow-sm transition-transform active:scale-90"
+          aria-label={t('common.back', { defaultValue: 'Back' })}
+        >
+          <ArrowLeft className="h-4 w-4 text-slate-600" />
+        </button>
+        <h1 className="text-[15px] font-black tracking-widest text-slate-800">{copy.pageTitle}</h1>
+        <button
+          type="button"
+          onClick={onOpenSavedWords}
+          className="flex h-10 w-10 items-center justify-center text-slate-500 transition-transform active:scale-90"
+          aria-label={t('common.search', { defaultValue: 'Search' })}
+        >
+          <Search className="h-4 w-4" />
+        </button>
+      </header>
+
+      <main className="space-y-8 px-5 pt-6">
+        <section>
+          <div className="mb-4 flex items-center justify-between px-1">
+            <h2 className="text-[11px] font-black tracking-[0.2em] text-slate-500">
+              {copy.trackingLabel}
+            </h2>
+            <div className="flex items-center space-x-1.5 opacity-70">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                {copy.fsrsLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div
+              className="rounded-2xl p-4 text-white transition-transform active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(145deg, #7A8D9A 0%, #61717A 100%)',
+                boxShadow:
+                  '0 12px 24px -8px rgba(97, 113, 122, 0.3), inset 0 1px 1px rgba(255,255,255,0.15)',
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <Brain className="h-4 w-4 text-white/50" />
+                <TrendingUp className="h-3 w-3 text-emerald-300" />
+              </div>
+              <p className="mb-0.5 text-3xl font-black tracking-tight">
+                {learnerStats.totalWordsLearned.toLocaleString()}
+              </p>
+              <p className="text-[10px] font-medium tracking-widest text-white/70">
+                {copy.masteredWords}
+              </p>
+            </div>
+
+            <div
+              className="rounded-2xl p-4 text-white transition-transform active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(145deg, #8B8589 0%, #706B6F 100%)',
+                boxShadow:
+                  '0 12px 24px -8px rgba(112, 107, 111, 0.28), inset 0 1px 1px rgba(255,255,255,0.15)',
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <Target className="h-4 w-4 text-white/50" />
+                <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-black text-white/80 border border-white/10">
+                  {copy.retentionWindow}
+                </span>
+              </div>
+              <p className="mb-0.5 text-3xl font-black tracking-tight">
+                {retentionRate == null ? copy.retentionEmpty : `${retentionRate}%`}
+              </p>
+              <p className="text-[10px] font-medium tracking-widest text-white/70">
+                {copy.retentionLabel}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-4 px-1 text-[11px] font-black tracking-[0.2em] text-slate-500">
+            {copy.currentLearning}
+          </h2>
+
+          <div
+            className="relative overflow-hidden p-5 transition-transform duration-300 active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #F8F9FA 0%, #EAEBEF 100%)',
+              boxShadow:
+                '-8px 0 16px -8px rgba(0,0,0,0.1), 0 12px 24px -8px rgba(0,0,0,0.12), inset 2px 0 0 0 rgba(255,255,255,0.8), inset 4px 0 0 0 rgba(0,0,0,0.05)',
+              borderRadius: '6px 16px 16px 6px',
+              border: '1px solid rgba(0,0,0,0.04)',
+            }}
+          >
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-32 bg-gradient-to-l from-white/40 to-transparent" />
+            <div className="pointer-events-none absolute bottom-0 left-[12px] top-0 w-px bg-black/5" />
+
+            {hasCurrentCourse ? (
+              <>
+                <div className="relative z-10 mb-6 flex items-start justify-between">
+                  <div className="pr-4">
+                    <span className="mb-2 inline-block rounded-[4px] bg-slate-800 px-2 py-1 text-[9px] font-black tracking-widest text-white shadow-sm">
+                      {currentCourseBadge}
+                    </span>
+                    <h3 className="text-lg font-black tracking-tight text-slate-900">
+                      {currentCourseTitle}
+                    </h3>
+                    <p className="mt-1 text-[10px] font-bold tracking-wider text-slate-500">
+                      {currentCourseMeta}
+                    </p>
+                  </div>
+
+                  <div className="relative flex h-12 w-12 items-center justify-center">
+                    <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 36 36">
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="text-slate-200"
+                        strokeDasharray="100, 100"
+                      />
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        className="text-slate-800"
+                        strokeDasharray={buildProgressRing(currentCourseProgress)}
+                      />
+                    </svg>
+                    <span className="absolute text-[10px] font-black text-slate-800">
+                      {currentCourseProgress}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative z-10 mb-4 rounded-xl border border-white bg-white/60 p-4 shadow-sm">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-[11px] font-black tracking-widest text-slate-800">
+                      {copy.todayTask}
+                    </span>
+                    <span className="text-[11px] font-black text-rose-600">
+                      {currentCourseSummary?.dueNow ?? 0} {copy.dueNow}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[9px] font-bold text-slate-400">
+                    <div className="flex items-center space-x-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                      <span>
+                        {copy.newWords} {currentCourseSummary?.unlearned ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      <span>
+                        {copy.learningWords} {currentCourseSummary?.learning ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span>
+                        {copy.reviewWords} {currentCourseSummary?.dueNow ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(currentCoursePath)}
+                  className="relative z-10 w-full rounded-xl bg-slate-900 py-3.5 text-[12px] font-black tracking-widest text-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] transition-colors hover:bg-slate-800"
+                >
+                  {copy.currentCourseButton}
+                </button>
+              </>
+            ) : (
+              <div className="relative z-10">
+                <div className="mb-6 flex items-start justify-between">
+                  <div className="pr-4">
+                    <span className="mb-2 inline-block rounded-[4px] bg-slate-800 px-2 py-1 text-[9px] font-black tracking-widest text-white shadow-sm">
+                      {copy.currentLearning}
+                    </span>
+                    <h3 className="text-lg font-black tracking-tight text-slate-900">
+                      {copy.currentCourseEmptyTitle}
+                    </h3>
+                    <p className="mt-2 text-[11px] font-bold leading-relaxed text-slate-500">
+                      {copy.currentCourseEmptyDescription}
+                    </p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/70 text-slate-700 shadow-sm">
+                    <ArrowUpRight className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/courses')}
+                  className="w-full rounded-xl bg-slate-900 py-3.5 text-[12px] font-black tracking-widest text-white shadow-[0_8px_16px_rgba(0,0,0,0.2)] transition-colors hover:bg-slate-800"
+                >
+                  {copy.pickCourseButton}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={onOpenSavedWords}
+              className="flex items-center space-x-3 rounded-2xl border border-slate-200/50 bg-white p-4 text-left shadow-[0_4px_12px_rgba(0,0,0,0.03)] transition-transform active:scale-[0.98]"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-500">
+                <Bookmark className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-[12px] font-black text-slate-800">{copy.savedWords}</h3>
+                <p className="mt-0.5 text-[10px] font-bold text-slate-400">
+                  {savedWordsCount} {copy.wordsUnit}
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenMistakes}
+              className="flex items-center space-x-3 rounded-2xl border border-slate-200/50 bg-white p-4 text-left shadow-[0_4px_12px_rgba(0,0,0,0.03)] transition-transform active:scale-[0.98]"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-500">
+                <Ghost className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-[12px] font-black text-slate-800">{copy.mistakes}</h3>
+                <p className="mt-0.5 text-[10px] font-bold text-slate-400">
+                  {mistakeCount > 0 ? `${mistakeCount} ${copy.wordsUnit}` : copy.mistakesEmpty}
+                </p>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <section className="pb-10">
+          <h2 className="mb-4 px-1 text-[11px] font-black tracking-[0.2em] text-slate-500">
+            {copy.monthlyHeatmap}
+          </h2>
+          <div className="rounded-[1.5rem] border border-slate-200/50 bg-white p-5 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+            <div className="grid grid-cols-7 gap-1.5">
+              {heatmap.map(cell => (
+                <div
+                  key={cell.date}
+                  className={`${getHeatmapCellClassName(cell)} ${cell.isToday ? 'ring-1 ring-slate-800/70 ring-offset-1 ring-offset-white' : ''}`}
+                  aria-label={`${cell.date}: ${cell.count}`}
+                  title={`${cell.date}: ${cell.count}`}
+                />
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between px-1">
+              <span className="text-[9px] font-bold tracking-widest text-slate-400">
+                {copy.legendLess}
+              </span>
+              <div className="flex space-x-1">
+                <div className="h-2 w-2 rounded-sm bg-slate-100" />
+                <div className="h-2 w-2 rounded-sm bg-emerald-100" />
+                <div className="h-2 w-2 rounded-sm bg-emerald-200" />
+                <div className="h-2 w-2 rounded-sm bg-emerald-400" />
+                <div className="h-2 w-2 rounded-sm bg-emerald-500" />
+              </div>
+              <span className="text-[9px] font-bold tracking-widest text-slate-400">
+                {copy.legendMore}
+              </span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};

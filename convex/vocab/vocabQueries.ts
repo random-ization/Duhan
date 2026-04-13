@@ -10,6 +10,8 @@ import { DEFAULT_VOCAB_LIMIT } from '../queryLimits';
 import { vocabLogger } from '../logger';
 import type { Doc, Id } from '../_generated/dataModel';
 import type {
+  VocabActivityHeatmapCellDto,
+  VocabDashboardInsightsDto,
   VocabStatsDto,
   VocabWordDto,
   VocabReviewDeckDto,
@@ -20,6 +22,7 @@ import type {
 } from './vocabTypes';
 import { normalizeUnitIdParam, resolveTargetUnitId } from '../vocabHelpers';
 import { normalizeStoragePublicUrl } from '../spacesConfig';
+import { ONE_DAY_MS, startOfDay } from '../userStatsHelpers';
 
 const SCAN_PAGE_SIZE = 500;
 
@@ -168,6 +171,86 @@ async function resolveCourseContext(ctx: QueryCtx, courseId: string) {
   }
 
   return { institute, effectiveCourseId };
+}
+
+function buildEmptyVocabHeatmap(now: number): VocabActivityHeatmapCellDto[] {
+  const todayStart = startOfDay(now);
+  return Array.from({ length: 28 }, (_, index) => {
+    const dayStart = todayStart - (27 - index) * ONE_DAY_MS;
+    return {
+      date: formatLocalDateKey(dayStart),
+      count: 0,
+      intensity: 0,
+      isToday: index === 27,
+    };
+  });
+}
+
+function formatLocalDateKey(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function summarizeReviewProgress(
+  progressArray: Array<Doc<'user_vocab_progress'> | null | undefined>,
+  now: number,
+  todayMs: number
+): VocabReviewSummaryDto {
+  let dueTotal = 0;
+  let dueNow = 0;
+  let unlearned = 0;
+  let mastered = 0;
+  let learning = 0;
+  let recommendedToday = 0;
+
+  for (const progress of progressArray) {
+    if (!progress) {
+      unlearned += 1;
+      continue;
+    }
+
+    switch (progress.status) {
+      case 'MASTERED':
+        mastered += 1;
+        break;
+      case 'NOT_STARTED':
+      case 'NEW':
+        unlearned += 1;
+        if (progress.due && progress.due <= now) {
+          dueTotal += 1;
+          dueNow += 1;
+          recommendedToday += 1;
+        }
+        break;
+      case 'LEARNING':
+      case 'REVIEW':
+        learning += 1;
+        if (progress.due && progress.due <= now) {
+          dueTotal += 1;
+          dueNow += 1;
+          recommendedToday += 1;
+        } else if (progress.due && progress.due <= todayMs + ONE_DAY_MS) {
+          recommendedToday += 1;
+        }
+        break;
+      default:
+        learning += 1;
+        break;
+    }
+  }
+
+  return {
+    total: progressArray.length,
+    dueTotal,
+    dueNow,
+    unlearned,
+    mastered,
+    learning,
+    recommendedToday,
+  };
 }
 
 // Get vocabulary statistics for a course
@@ -809,91 +892,39 @@ export const getReviewSummary = query({
         };
       }
 
+      const now = Date.now();
+      const todayMs = startOfDay(now);
       const courseId = args.courseId?.trim() || '';
-      if (!courseId) {
-        return {
-          total: 0,
-          dueTotal: 0,
-          dueNow: 0,
-          unlearned: 0,
-          mastered: 0,
-          learning: 0,
-          recommendedToday: 0,
-        };
+
+      if (courseId) {
+        const appearances = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_course_unit', q => q.eq('courseId', courseId))
+          .collect();
+
+        const wordIds = [...new Set(appearances.map(appearance => appearance.wordId))];
+        const progressArray = await Promise.all(
+          wordIds.map(wordId =>
+            ctx.db
+              .query('user_vocab_progress')
+              .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
+              .first()
+          )
+        );
+
+        return summarizeReviewProgress(progressArray, now, todayMs);
       }
 
-      const now = Date.now();
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-      const todayMs = todayStart.getTime();
-
-      // Get all appearances for this course
-      const appearances = await ctx.db
-        .query('vocabulary_appearances')
-        .withIndex('by_course_unit', q => q.eq('courseId', courseId))
+      const progressDocs = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex(args.savedByUserOnly ? 'by_user_saved' : 'by_user', q =>
+          args.savedByUserOnly
+            ? q.eq('userId', userId).eq('savedByUser', true)
+            : q.eq('userId', userId)
+        )
         .collect();
 
-      const wordIds = [...new Set(appearances.map(a => a.wordId))];
-      const total = wordIds.length;
-
-      // Batch fetch progress
-      const progressArray = await Promise.all(
-        wordIds.map(id =>
-          ctx.db
-            .query('user_vocab_progress')
-            .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', id))
-            .first()
-        )
-      );
-
-      let dueTotal = 0;
-      let dueNow = 0;
-      let unlearned = 0;
-      let mastered = 0;
-      let learning = 0;
-      let recommendedToday = 0;
-
-      for (const progress of progressArray) {
-        if (!progress) {
-          unlearned++;
-          continue;
-        }
-
-        switch (progress.status) {
-          case 'MASTERED':
-            mastered++;
-            break;
-          case 'NOT_STARTED':
-            unlearned++;
-            if (progress.due && progress.due <= now) {
-              dueTotal++;
-              dueNow++;
-              recommendedToday++;
-            }
-            break;
-          case 'LEARNING':
-          case 'REVIEW':
-            learning++;
-            if (progress.due && progress.due <= now) {
-              dueTotal++;
-              dueNow++;
-              recommendedToday++;
-            } else if (progress.due && progress.due <= todayMs + 24 * 60 * 60 * 1000) {
-              recommendedToday++;
-            }
-            break;
-        }
-      }
-
-      return {
-        total,
-        dueTotal,
-        dueNow,
-        unlearned,
-        mastered,
-        learning,
-        recommendedToday,
-      };
+      return summarizeReviewProgress(progressDocs, now, todayMs);
     } catch (err) {
       vocabLogger.error('getReviewSummary failed', err);
       return {
@@ -906,6 +937,87 @@ export const getReviewSummary = query({
         recommendedToday: 0,
       };
     }
+  },
+});
+
+export const getDashboardInsights = query({
+  args: {},
+  handler: async (ctx): Promise<VocabDashboardInsightsDto> => {
+    const now = Date.now();
+    const heatmap = buildEmptyVocabHeatmap(now);
+    const userId = await getOptionalAuthUserId(ctx);
+
+    if (!userId) {
+      return {
+        retentionRate30d: null,
+        activeDays30d: 0,
+        totalReviews30d: 0,
+        heatmap,
+      };
+    }
+
+    const todayStart = startOfDay(now);
+    const cutoff = todayStart - 27 * ONE_DAY_MS;
+    const activityCountByDay = new Map<string, number>();
+    let weightedAccuracySum = 0;
+    let accuracyWeight = 0;
+    let cursor: string | null = null;
+    let reachedCutoff = false;
+
+    do {
+      const page = await ctx.db
+        .query('learning_events')
+        .withIndex('by_user_module_eventAt', q => q.eq('userId', userId).eq('module', 'VOCAB'))
+        .order('desc')
+        .paginate({ cursor, numItems: SCAN_PAGE_SIZE });
+
+      for (const event of page.page) {
+        if (event.eventAt < cutoff) {
+          reachedCutoff = true;
+          break;
+        }
+
+        const dayKey = formatLocalDateKey(startOfDay(event.eventAt));
+        const eventWeight = Math.max(1, event.itemCount ?? 1);
+        activityCountByDay.set(dayKey, (activityCountByDay.get(dayKey) ?? 0) + eventWeight);
+
+        if (typeof event.accuracy === 'number' && Number.isFinite(event.accuracy)) {
+          const boundedAccuracy = Math.max(0, Math.min(100, event.accuracy));
+          weightedAccuracySum += boundedAccuracy * eventWeight;
+          accuracyWeight += eventWeight;
+        }
+      }
+
+      cursor = page.isDone || reachedCutoff ? null : page.continueCursor;
+    } while (cursor);
+
+    const maxCount = Math.max(...heatmap.map(cell => activityCountByDay.get(cell.date) ?? 0), 0);
+    const normalizedHeatmap = heatmap.map(cell => {
+      const count = activityCountByDay.get(cell.date) ?? 0;
+      let intensity: 0 | 1 | 2 | 3 | 4 = 0;
+
+      if (count > 0) {
+        if (maxCount <= 1) {
+          intensity = 4;
+        } else {
+          intensity = Math.min(4, Math.max(1, Math.ceil((count / maxCount) * 4))) as 1 | 2 | 3 | 4;
+        }
+      }
+
+      return {
+        ...cell,
+        count,
+        intensity,
+      };
+    });
+
+    return {
+      retentionRate30d:
+        accuracyWeight > 0 ? Math.round(weightedAccuracySum / accuracyWeight) : null,
+      activeDays30d: normalizedHeatmap.filter(cell => cell.count > 0).length,
+      totalReviews30d: normalizedHeatmap.reduce((sum, cell) => sum + cell.count, 0),
+      heatmap: normalizedHeatmap,
+    };
   },
 });
 

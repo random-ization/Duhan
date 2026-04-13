@@ -1293,15 +1293,9 @@ const VocabBookPage: React.FC = () => {
   if (isMobile && !isMobileListMode) {
     return (
       <MobileVocabDashboard
-        unitId="ALL"
-        instituteName={labels.dashboard?.vocab?.title || 'Vocab Book'}
-        words={items}
-        totalWords={stats.total}
-        masteredCount={stats.mastered}
-        language={language}
-        onStartLearn={() => startLearning('immerse')}
-        onStartTest={() => startLearning('dictation')}
-        onManageList={() => navigate('/vocab-book?mobileView=list')}
+        savedWordsCount={stats.total}
+        onOpenSavedWords={() => navigate('/vocab-book?mobileView=list')}
+        onOpenMistakes={() => navigate('/dashboard/vocabulary?list=mistakes')}
       />
     );
   }

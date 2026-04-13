@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { signOut } = useAuthActions();
   const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
   const viewer = useQuery(qRef<NoArgs, User | null>('users:viewer'), isAuthenticated ? {} : 'skip');
-  const viewerAccessQuery = useQuery(ENTITLEMENTS.viewerAccess, {});
+  const viewerAccessQuery = useQuery(ENTITLEMENTS.viewerAccess, isAuthenticated ? {} : 'skip');
   const attemptedSessionRepairRef = useRef(false);
   const attemptedBillingRepairRef = useRef<Set<string>>(new Set());
 
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [authLoading, isAuthenticated, viewer, signOut]);
 
   const loading =
-    authLoading || viewerAccessQuery === undefined || (isAuthenticated && viewer === undefined);
+    authLoading || (isAuthenticated && (viewerAccessQuery === undefined || viewer === undefined));
 
   const user = useMemo<User | null>(() => {
     if (!isAuthenticated) return null;
@@ -120,10 +120,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return resolvedId ? { ...baseWithId, id: resolvedId } : baseWithId;
   }, [isAuthenticated, viewer]);
 
-  const viewerAccess = useMemo<ViewerAccessSnapshot | null>(
-    () => (viewerAccessQuery === undefined ? null : viewerAccessQuery),
-    [viewerAccessQuery]
-  );
+  const viewerAccess = useMemo<ViewerAccessSnapshot | null>(() => {
+    if (!isAuthenticated || viewerAccessQuery === undefined) {
+      return null;
+    }
+    return viewerAccessQuery;
+  }, [isAuthenticated, viewerAccessQuery]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.email || !user.id) {

@@ -272,6 +272,7 @@ import {
   VocabBookItemDto,
   VocabBookPageDto,
   VocabReviewSummaryDto,
+  VocabDashboardInsightsDto,
 } from '../../convex/vocab';
 
 export const VOCAB = {
@@ -300,9 +301,10 @@ export const VOCAB = {
     },
     VocabBookPageDto
   >('vocab:getVocabBookPage'),
-  getReviewSummary: qRef<{ savedByUserOnly?: boolean }, VocabReviewSummaryDto>(
+  getReviewSummary: qRef<{ courseId?: string; savedByUserOnly?: boolean }, VocabReviewSummaryDto>(
     'vocab:getReviewSummary'
   ),
+  getDashboardInsights: qRef<NoArgs, VocabDashboardInsightsDto>('vocab:getDashboardInsights'),
   getActiveLearningSession: qRef<
     { instituteId: string; unitId: number; mode: 'FLASHCARD' | 'LEARN' | 'TEST' },
     {

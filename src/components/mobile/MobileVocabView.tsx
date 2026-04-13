@@ -205,7 +205,13 @@ export default function MobileVocabView({
     setFocusOpen(true);
   };
 
-  const focusHeader = (
+  const flashcardProgressPercent = Math.round(
+    ((cardIndex + 1) / Math.max(filteredWords.length, 1)) * 100
+  );
+  const flashcardCurrentPosition =
+    filteredWords.length > 0 ? Math.min(cardIndex + 1, filteredWords.length) : 0;
+
+  const defaultFocusHeader = (
     <div className="flex items-center justify-between px-4 py-4 border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-30">
       <div className="relative">
         <DropdownMenu open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
@@ -298,13 +304,58 @@ export default function MobileVocabView({
     </div>
   );
 
+  const flashcardFocusHeader = (
+    <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-white/50 bg-[rgba(230,231,233,0.75)] px-5 pb-4 pt-[calc(env(safe-area-inset-top)+10px)] backdrop-blur-[24px]">
+      <Button
+        variant="ghost"
+        size="auto"
+        type="button"
+        onClick={closeFocusOverlay}
+        className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-slate-900 text-white shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-transform active:scale-95"
+        aria-label={t('common.close', { defaultValue: 'Close' })}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+
+      <div className="mx-6 flex-1">
+        <div className="mb-1.5 flex items-end justify-between px-1">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            {t('dashboard.progress.title', { defaultValue: 'Progress' })}
+          </span>
+          <span className="text-[12px] font-black text-slate-800">
+            {flashcardCurrentPosition}
+            <span className="text-[10px] font-bold text-slate-400">/{filteredWords.length}</span>
+          </span>
+        </div>
+        <div className="flex h-1.5 w-full overflow-hidden rounded-full border border-white/60 bg-slate-300/40 shadow-inner">
+          <div
+            className="rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+            style={{ width: `${flashcardProgressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="auto"
+        type="button"
+        onClick={() => setShowFlashcardSettings(true)}
+        className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-slate-600 shadow-sm transition-transform hover:bg-slate-50 active:scale-95"
+        aria-label={t('vocab.settings', { defaultValue: 'Settings' })}
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   const renderFocusContent = () => {
     if (activeTab === 'flashcard') {
       return (
-        <div className="h-full overflow-hidden flex flex-col p-4 md:p-6">
+        <div className="h-full overflow-hidden">
           <MobileFlashcardPlayer
             words={filteredWords}
             currentIndex={cardIndex}
+            scopeTitle={scopeTitle}
             settings={flashcardSettings}
             onReview={(w, q) => {
               onReview(w, q);
@@ -386,11 +437,9 @@ export default function MobileVocabView({
         language={language}
         title={tabs.find(x => x.id === activeTab)?.label}
         variant="fullscreen"
-        headerContent={focusHeader}
+        headerContent={activeTab === 'flashcard' ? flashcardFocusHeader : defaultFocusHeader}
       >
-        <div className="h-full bg-background mesh-gradient grain-overlay">
-          {renderFocusContent()}
-        </div>
+        <div className="h-full bg-background">{renderFocusContent()}</div>
       </VocabLearnOverlay>
 
       <MobileWorkspaceHeader

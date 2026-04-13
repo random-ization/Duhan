@@ -1,13 +1,13 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { House, BookOpen, Dumbbell, Clapperboard, UserRound } from 'lucide-react';
+import { House, BookOpen, Dumbbell, Clapperboard, Bookmark } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { cn } from '../../lib/utils';
 
 type Tab = {
-  key: 'dashboard' | 'learn' | 'practice' | 'media' | 'profile';
+  key: 'dashboard' | 'learn' | 'practice' | 'media' | 'vocab';
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   path: string;
   label: string;
@@ -45,10 +45,10 @@ export function MobileBottomNav() {
       label: t('nav.media', { defaultValue: 'Media' }),
     },
     {
-      key: 'profile',
-      icon: UserRound,
-      path: '/profile',
-      label: t('nav.profile', { defaultValue: 'Profile' }),
+      key: 'vocab',
+      icon: Bookmark,
+      path: '/vocab-book',
+      label: t('dashboard.vocab.title', { defaultValue: 'Vocab' }),
     },
   ];
 
@@ -65,9 +65,7 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/review') ||
         pathWithoutLang.startsWith('/notebook') ||
         pathWithoutLang.startsWith('/topik') ||
-        pathWithoutLang.startsWith('/typing') ||
-        pathWithoutLang.startsWith('/vocab-book') ||
-        pathWithoutLang.startsWith('/vocabbook')
+        pathWithoutLang.startsWith('/typing')
       );
     }
     if (tab.key === 'media') {
@@ -79,7 +77,7 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/podcasts')
       );
     }
-    return pathWithoutLang.startsWith('/profile');
+    return pathWithoutLang.startsWith('/vocab-book') || pathWithoutLang.startsWith('/vocabbook');
   };
 
   const handleTabPress = (path: string) => {
@@ -90,8 +88,8 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed left-4 right-4 z-[40] pointer-events-none bottom-[calc(env(safe-area-inset-bottom)+16px)]">
-      <div className="pointer-events-auto flex h-16 items-center justify-around px-2 rounded-[2rem] border border-white/20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+    <nav className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+16px)] left-1/2 z-[40] w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 md:hidden">
+      <div className="pointer-events-auto flex h-16 items-center justify-between rounded-[2rem] border border-white/60 bg-[rgba(230,231,233,0.66)] px-2 py-2 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.15)] backdrop-blur-[40px]">
         {tabs.map(tab => {
           const isActive = isTabActive(tab);
           const Icon = tab.icon;
@@ -101,25 +99,25 @@ export function MobileBottomNav() {
               type="button"
               onClick={() => handleTabPress(tab.path)}
               className={cn(
-                'relative flex flex-1 flex-col items-center justify-center gap-1.5 h-full select-none transition-all duration-300',
+                'relative flex h-full items-center justify-center select-none transition-all duration-300',
                 isActive
-                  ? 'text-indigo-600 dark:text-indigo-400 scale-110'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50'
+                  ? 'rounded-[1.5rem] bg-slate-900 px-4 text-white shadow-[0_8px_16px_-6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(186,218,255,0.1)]'
+                  : 'min-w-0 flex-1 text-slate-400 hover:text-slate-900'
               )}
               data-active={isActive ? 'true' : 'false'}
               aria-label={tab.label}
               aria-current={isActive ? 'page' : undefined}
             >
-              {isActive && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 animate-in fade-in zoom-in duration-300" />
-                </div>
-              )}
-              <div className="relative z-10 flex flex-col items-center">
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-[10px] font-bold mt-0.5 tracking-tight uppercase">
-                  {tab.label}
-                </span>
+              <div
+                className={cn(
+                  'relative z-10 flex items-center justify-center',
+                  isActive ? 'gap-2' : 'w-full'
+                )}
+              >
+                <Icon size={isActive ? 16 : 18} strokeWidth={isActive ? 2.4 : 2.2} />
+                {isActive ? (
+                  <span className="text-[12px] font-black tracking-widest">{tab.label}</span>
+                ) : null}
               </div>
             </button>
           );
