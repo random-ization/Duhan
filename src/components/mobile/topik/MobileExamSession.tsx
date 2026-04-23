@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   X,
   Clock,
+  Grid3x3,
   ChevronLeft,
   ChevronRight,
   Play,
   Pause,
   CheckCircle2,
-  LogOut,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { TopikExam, Language } from '../../../types';
@@ -16,6 +16,7 @@ import { MobileQuestionRenderer } from './MobileQuestionRenderer';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { BottomSheet } from '../../common/BottomSheet';
 import { Button } from '../../ui';
+import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 import { normalizePublicAssetUrl } from '../../../utils/imageSrc';
 import { formatTopikLabel } from '../../../utils/topik';
 
@@ -256,55 +257,51 @@ const ListeningAudioPanel: React.FC<ListeningAudioPanelProps> = ({
 }) => (
   <div
     className={clsx(
-      'w-[calc(100%-2rem)] max-w-md p-4 rounded-[20px] shadow-[0_16px_32px_-12px_rgba(0,0,0,0.3),_inset_0_1px_1px_rgba(255,255,255,0.1)] mb-4 flex items-center gap-4 transition-transform duration-300 pointer-events-auto',
+      'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-lg mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
       audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]',
-      audioError 
-        ? 'bg-rose-950 border border-rose-900/50' 
-        : 'bg-gradient-to-br from-[#1E293B] to-[#0F172A] border border-slate-700/50'
+      audioError ? 'shadow-red-500/20' : 'shadow-primary/25'
     )}
   >
-    <button
+    <Button
+      variant="ghost"
+      size="auto"
       onClick={onToggleAudio}
       disabled={audioError}
       className={clsx(
-        'w-12 h-12 rounded-[14px] flex items-center justify-center text-white shrink-0 active:scale-[0.96] transition-transform touch-manipulation',
+        'w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform',
         audioError
-          ? 'bg-rose-900 opacity-50 cursor-not-allowed shadow-inner'
-          : 'bg-[#334155] shadow-[inset_0_2px_4px_rgba(0,0,0,0.2),_0_1px_0_rgba(255,255,255,0.05)] border border-slate-600/50'
+          ? 'bg-red-500 dark:bg-red-400/75 opacity-50 cursor-not-allowed'
+          : 'bg-indigo-500 dark:bg-indigo-400/75'
       )}
     >
       {audioError ? (
-        <X className="w-5 h-5 text-white" />
+        <X className="w-4 h-4 text-white" />
       ) : isPlaying ? (
-        <Pause className="w-5 h-5 fill-white" />
+        <Pause className="w-4 h-4 fill-white ml-0.5" />
       ) : (
-        <Play className="w-5 h-5 fill-white ml-1" />
+        <Play className="w-4 h-4 fill-white ml-0.5" />
       )}
-    </button>
-    <div className="flex-1 min-w-0 flex flex-col justify-center">
-      <div className={clsx(
-        "text-[10px] font-black uppercase tracking-widest mb-1.5",
-        audioError ? "text-rose-300" : "text-slate-400"
-      )}>
+    </Button>
+    <div className="flex-1 min-w-0">
+      <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
         {audioError
-          ? t('dashboard.topik.mobile.session.audioError', { defaultValue: 'AUDIO ERROR' })
+          ? t('dashboard.topik.mobile.session.audioError', { defaultValue: 'Audio Error' })
           : t('dashboard.topik.mobile.session.listeningAudio', {
-              defaultValue: 'LISTENING AUDIO',
+              defaultValue: 'Listening Audio',
             })}
       </div>
       {audioError ? (
-        <div className="text-[13px] font-bold text-rose-200 truncate">
+        <div className="text-xs text-red-300 dark:text-red-200 truncate">
           {t('dashboard.topik.mobile.session.audioLoadFailed', {
             defaultValue: 'Failed to load audio file',
           })}
         </div>
       ) : (
-        <div className="h-1.5 bg-[#0F172A] rounded-full overflow-hidden flex shadow-inner">
-          {isPlaying ? (
-             <div className="h-full bg-[#34D399] w-full animate-[pulse_1.5s_ease-in-out_infinite] shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-          ) : (
-             <div className="h-full bg-slate-700/50 w-full" />
+        <div className="h-1 bg-muted rounded-full overflow-hidden flex gap-0.5">
+          {isPlaying && (
+            <div className="h-full bg-indigo-400 dark:bg-indigo-300/85 w-full animate-[pulse_1s_ease-in-out_infinite]" />
           )}
+          {!isPlaying && <div className="h-full bg-muted w-full" />}
         </div>
       )}
     </div>
@@ -330,21 +327,21 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
 }) => {
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
   return (
-    <div className="w-full p-3 pt-4 flex gap-3 pointer-events-auto" style={{ background: 'rgba(252,252,250,0.95)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderTop: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 -4px 16px rgba(0,0,0,0.04)', paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+    <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-mobile-safe flex gap-3 shadow-lg pointer-events-auto">
       <Button
         variant="ghost"
         size="auto"
         onClick={onPrev}
         disabled={currentQuestionIndex === 0}
-        className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm active:bg-slate-50 transition-colors disabled:opacity-30"
+        className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground active:bg-muted transition-colors disabled:opacity-30 disabled:active:bg-muted"
       >
         <ChevronLeft className="w-6 h-6" />
       </Button>
 
       <div className="flex-1 flex flex-col justify-center px-2">
-        <div className="bg-slate-200 h-1.5 rounded-full overflow-hidden">
+        <div className="bg-muted h-1.5 rounded-full overflow-hidden">
           <div
-            className="bg-slate-800 h-full transition-all duration-300"
+            className="bg-indigo-500 dark:bg-indigo-300/75 h-full transition-all duration-300"
             style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
           />
         </div>
@@ -355,7 +352,7 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
           variant="ghost"
           size="auto"
           onClick={onSubmit}
-          className="w-auto px-6 h-14 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span>{t('dashboard.topik.mobile.session.finish', { defaultValue: 'Finish' })}</span>
           <CheckCircle2 className="w-5 h-5" />
@@ -365,7 +362,7 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
           variant="ghost"
           size="auto"
           onClick={onNext}
-          className="w-auto px-6 h-14 rounded-2xl bg-slate-800 text-white font-bold shadow-lg shadow-slate-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <span>{t('dashboard.topik.mobile.session.next', { defaultValue: 'Next' })}</span>
           <ChevronRight className="w-5 h-5" />
@@ -463,7 +460,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
   const answeredCount = Object.keys(userAnswers).length;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#E6E7E9] overflow-hidden relative">
+    <div className="flex flex-col h-[100dvh] bg-muted overflow-hidden relative">
       <BottomSheet
         isOpen={gridOpen}
         onClose={() => setGridOpen(false)}
@@ -500,10 +497,10 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
                   className={clsx(
                     'h-11 rounded-xl text-sm font-black border transition-colors',
                     active
-                      ? 'bg-slate-800 text-white border-slate-800'
+                      ? 'bg-indigo-600 dark:bg-indigo-400/75 text-white border-indigo-600'
                       : answered
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-white text-slate-500 border-slate-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/12 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/25'
+                        : 'bg-card text-muted-foreground border-border'
                   )}
                 >
                   {question.number || idx + 1}
@@ -548,29 +545,18 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
             <span className="text-sm">
               {currentQuestionIndex + 1}/{exam.questions.length}
             </span>
-          </div>
-        </div>
-        <button
-          onClick={() => setGridOpen(true)}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg shadow-sm flex items-center space-x-1.5',
-            timeLeft < 300
-              ? 'bg-red-50 border border-red-200/60 text-red-700'
-              : 'bg-amber-50 border border-amber-200/60 text-amber-700'
-          )}
-        >
-          <Clock className="w-3 h-3" />
-          <span className="text-[12px] font-bold font-mono tracking-widest">{formatDuration(timeLeft)}</span>
-        </button>
-      </header>
+            <Grid3x3 className="ml-2 h-4 w-4" />
+          </Button>
+        }
+      />
 
       {/* Main Content */}
       <div className="flex-1 relative flex flex-col overflow-hidden">
         {/* Split View: Top Passage Pane */}
         {isPassageView && (
-          <div className="h-[40%] bg-[#FCFCFA] flex flex-col relative z-20 rounded-b-[24px]" style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
-            <div className="px-5 pt-4 pb-2 flex justify-between items-center bg-[#FCFCFA]/90 backdrop-blur-sm sticky top-0 z-20 shrink-0">
-              <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-slate-200 tracking-widest uppercase">
+          <div className="h-[40%] bg-amber-50 dark:bg-amber-400/10 border-b-2 border-amber-100 dark:border-amber-300/20 flex flex-col shadow-sm relative z-20">
+            <div className="px-4 py-2 border-b border-amber-100/50 dark:border-amber-300/20 flex justify-between items-center bg-amber-50/90 dark:bg-amber-400/10 backdrop-blur-sm sticky top-0 z-20">
+              <span className="bg-amber-100 dark:bg-amber-400/16 text-amber-800 dark:text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-300/25">
                 {t('dashboard.topik.mobile.session.passageFor', {
                   start: section?.range[0] ?? 1,
                   end: section?.range[1] ?? 1,
@@ -578,29 +564,21 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
                 })}
               </span>
             </div>
-            
-            {/* Scrollable Passage Body */}
             <div
-              className="p-5 overflow-y-auto overscroll-contain pb-8 whitespace-pre-line break-keep text-left flex-1 hide-scrollbar"
-              style={{ fontFamily: '"KoPub Batang", "Apple Myungjo", "Batang", serif', lineHeight: '2', color: '#334155' }}
+              className="p-5 font-serif text-muted-foreground leading-8 overflow-y-auto overscroll-contain pb-8 text-base whitespace-pre-line break-keep text-justify"
               dangerouslySetInnerHTML={{ __html: sanitize(sharedPassage || '') }}
             />
-            
-            {/* Decorative Grabber Pill */}
-            <div className="h-4 w-full flex justify-center items-end pb-1.5 shrink-0">
-              <div className="w-10 h-1 bg-slate-200 rounded-full"></div>
-            </div>
           </div>
         )}
 
         {/* Question Pane */}
         <div
           className={clsx(
-            'flex-1 bg-[#E6E7E9] overflow-y-auto w-full',
+            'flex-1 bg-muted overflow-y-auto w-full',
             isPassageView ? 'h-[60%]' : 'h-full'
           )}
         >
-          <div className="p-4 pb-32 max-w-[440px] mx-auto w-full min-h-full">
+          <div className="p-4 md:p-6 pb-32 max-w-2xl mx-auto w-full min-h-full">
             {currentQuestion && (
               <MobileQuestionRenderer
                 question={currentQuestion}

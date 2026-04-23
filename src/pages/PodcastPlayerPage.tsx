@@ -44,7 +44,6 @@ import { getLocalizedPath, useLocalizedNavigate } from '../hooks/useLocalizedNav
 import { logger } from '../utils/logger';
 import { notify } from '../utils/notify';
 import { useFileUpload } from '../hooks/useFileUpload';
-import VirtualizedTranscript from '../components/podcast/VirtualizedTranscript';
 import {
   safeGetLocalStorageItem,
   safeRemoveLocalStorageItem,
@@ -451,6 +450,149 @@ const AnalysisContent: React.FC<{
   return <div className="text-center py-12 text-muted-foreground">{copy.analysisFailed}</div>;
 };
 
+const TranscriptLineRow: React.FC<{
+  line: TranscriptLine;
+  index: number;
+  activeLineIndex: number;
+  currentTime: number;
+  showTranslation: boolean;
+  noTranslationText: string;
+  analyzeLabel: string;
+  onSeek: (time: number) => void;
+  onAnalyze: (line: TranscriptLine) => void;
+  formatTime: (seconds: number) => string;
+}> = ({
+  line,
+  index,
+  activeLineIndex,
+  currentTime,
+  showTranslation,
+  noTranslationText,
+  analyzeLabel,
+  onSeek,
+  onAnalyze,
+  formatTime,
+}) => {
+  const isActive = index === activeLineIndex;
+  return (
+    <div
+      id={`line-${index}`}
+      className={`
+                                        group relative p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 border-l-4
+                                        ${
+                                          isActive
+                                            ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
+                                            : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
+                                        }
+                                    `}
+    >
+      <div className="flex gap-3 md:gap-4 items-start">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onSeek(line.start)}
+          className={`
+                                                flex-none text-[10px] md:text-[11px] font-bold px-2 py-1 rounded-md transition-colors
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
+                                                    : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
+                                                }
+                                            `}
+        >
+          {formatTime(line.start)}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex w-full flex-1 min-w-0 items-start text-left font-normal h-auto px-0 py-0 whitespace-normal"
+          onClick={() => onSeek(line.start)}
+        >
+          <div className="flex w-full flex-col items-start space-y-2">
+            <div
+              className={`
+                                                    text-base md:text-xl font-bold leading-relaxed transition-colors flex flex-wrap gap-x-1 whitespace-normal break-words [overflow-wrap:anywhere]
+                                                    ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}
+                                                `}
+            >
+              {line.words && line.words.length > 0 ? (
+                line.words.map((word, wordIndex) => {
+                  const isWordActive = currentTime >= word.start && currentTime < word.end;
+                  return (
+                    <span
+                      key={`${word.start}-${word.word}-${wordIndex}`}
+                      className={`
+                                                                        rounded px-0.5 transition-all duration-75
+                                                                        ${
+                                                                          isWordActive
+                                                                            ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
+                                                                            : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
+                                                                        }
+                                                                    `}
+                    >
+                      {word.word}
+                    </span>
+                  );
+                })
+              ) : (
+                <span>{line.text}</span>
+              )}
+            </div>
+
+            {showTranslation && (
+              <p
+                className={`
+                                                        text-sm md:text-base leading-relaxed transition-colors border-l-2 pl-2.5 md:pl-3 whitespace-normal break-words [overflow-wrap:anywhere]
+                                                        ${
+                                                          isActive
+                                                            ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
+                                                            : 'text-muted-foreground border-border'
+                                                        }
+                                                    `}
+              >
+                {line.translation || (
+                  <span className="text-muted-foreground italic text-sm">{noTranslationText}</span>
+                )}
+              </p>
+            )}
+          </div>
+        </Button>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={event => {
+                event.stopPropagation();
+                onAnalyze(line);
+              }}
+              aria-label={analyzeLabel}
+              className={`
+                                                p-1.5 md:p-2 rounded-full transition-all flex-none
+                                                ${
+                                                  isActive
+                                                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
+                                                    : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
+                                                }
+                                                hover:scale-110 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-primary-foreground
+                                            `}
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent side="top">{analyzeLabel}</TooltipContent>
+          </TooltipPortal>
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
+
 const TranscriptStreamBody: React.FC<{
   showTranscriptLoader: boolean;
   isGeneratingTranscript: boolean;
@@ -464,6 +606,7 @@ const TranscriptStreamBody: React.FC<{
   onRetry: () => void;
   onSeek: (time: number) => void;
   onAnalyze: (line: TranscriptLine) => void;
+  formatTime: (seconds: number) => string;
 }> = ({
   showTranscriptLoader,
   isGeneratingTranscript,
@@ -477,6 +620,7 @@ const TranscriptStreamBody: React.FC<{
   onRetry,
   onSeek,
   onAnalyze,
+  formatTime,
 }) => (
   <>
     {showTranscriptLoader && (
@@ -512,18 +656,22 @@ const TranscriptStreamBody: React.FC<{
       </Card>
     )}
 
-    {transcript.length > 0 && (
-      <VirtualizedTranscript
-        transcript={transcript}
-        activeLineIndex={activeLineIndex}
-        currentTime={currentTime}
-        showTranslation={showTranslation}
-        noTranslationText={copy.noTranslation}
-        analyzeLabel={copy.analyzeSentence}
-        onSeek={onSeek}
-        onAnalyze={onAnalyze}
-      />
-    )}
+    {transcript.length > 0 &&
+      transcript.map((line, idx) => (
+        <TranscriptLineRow
+          key={`${line.start}-${line.text}-${idx}`}
+          line={line}
+          index={idx}
+          activeLineIndex={activeLineIndex}
+          currentTime={currentTime}
+          showTranslation={showTranslation}
+          noTranslationText={copy.noTranslation}
+          analyzeLabel={copy.analyzeSentence}
+          onSeek={onSeek}
+          onAnalyze={onAnalyze}
+          formatTime={formatTime}
+        />
+      ))}
   </>
 );
 
@@ -2097,46 +2245,18 @@ const PodcastPlayerPage: React.FC = () => {
 
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
-    // Binary search for better performance with large transcripts
-    let left = 0;
-    let right = transcript.length - 1;
-    let result = -1;
-    
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const line = transcript[mid];
-      
-      if (currentTime >= line.start && currentTime < line.end) {
-        result = mid;
-        break;
-      } else if (currentTime < line.start) {
-        right = mid - 1;
-      } else {
-        left = mid + 1;
-      }
-    }
-    
-    // If no exact match found, find the closest previous line
-    if (result === -1 && transcript.length > 0) {
-      for (let i = transcript.length - 1; i >= 0; i--) {
-        if (currentTime >= transcript[i].start) {
-          result = i;
-          break;
-        }
-      }
-    }
+    const currentIndex = transcript.findIndex(
+      line => currentTime >= line.start && currentTime < line.end
+    );
 
     // If we're hovering in a silence gap, optionally remain on the previous line to prevent flickering
-    if (
-      result >= 0 &&
-      result < transcript.length - 1 &&
-      currentTime >= transcript[result].end &&
-      currentTime < transcript[result + 1].start
-    ) {
-      return result; // Stay on current line during silence gap
+    if (currentIndex === -1) {
+      for (let i = transcript.length - 1; i >= 0; i--) {
+        if (currentTime >= transcript[i].end) return i;
+      }
     }
 
-    return result;
+    return currentIndex;
   }, [currentTime, transcript]);
 
   useEffect(() => {
@@ -2988,4 +3108,4 @@ const PodcastPlayerPage: React.FC = () => {
   );
 };
 
-export default React.memo(PodcastPlayerPage);
+export default PodcastPlayerPage;

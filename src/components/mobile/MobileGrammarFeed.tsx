@@ -1,6 +1,6 @@
-import { Check, Sparkles } from 'lucide-react';
+import { Trophy, ChevronRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { m as motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GrammarPointData } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import { Card, Chip, HanjaSeal, KT, type ChipTone } from './ksoft/ksoft';

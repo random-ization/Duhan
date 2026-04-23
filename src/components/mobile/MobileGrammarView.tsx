@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Search, ChevronLeft } from 'lucide-react';
+import { Search, BookMarked } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GrammarPointData } from '../../types';
@@ -9,6 +8,7 @@ import {
   sanitizeGrammarMarkdown,
 } from '../../utils/grammarDisplaySanitizer';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { buildLearningPickerPath } from '../../utils/learningFlow';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 import MobileUnitChips from './MobileUnitChips';
@@ -53,14 +53,7 @@ export default function MobileGrammarView({
   const language = i18n.language || 'zh';
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (isSearchOpen) {
-      searchInputRef.current?.focus();
-    }
-  }, [isSearchOpen]);
+  const switchMaterialPath = buildLearningPickerPath('grammar');
 
   const handleBack = () => {
     const returnTo = searchParams.get('returnTo');
@@ -85,7 +78,6 @@ export default function MobileGrammarView({
     ).toLowerCase();
     return title.includes(query) || summary.includes(query) || explanation.includes(query);
   });
-  const isSearchVisible = isSearchOpen || searchQuery.length > 0;
 
   return (
     <PageShell>
@@ -141,13 +133,11 @@ export default function MobileGrammarView({
         </div>
 
         <MobileUnitChips
-            totalUnits={totalUnits}
-            selectedUnit={selectedUnit}
-            onSelect={onSelectUnit}
+          totalUnits={totalUnits}
+          selectedUnit={selectedUnit}
+          onSelect={onSelectUnit}
         />
-      </header>
-      
-      <div className="h-40 shrink-0"></div>
+      </MobileWorkspaceHeader>
 
       <main className="flex-1 pb-mobile-nav">
         <MobileGrammarFeed

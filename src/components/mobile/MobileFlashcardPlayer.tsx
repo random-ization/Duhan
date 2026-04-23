@@ -99,30 +99,64 @@ const SWIPE_HINT_STYLES: Record<
 };
 
 const formatScheduledLabel = (days: number | undefined) => {
-  if (typeof days !== 'number' || !Number.isFinite(days)) return '...';
-  if (days <= 0) return '< 1m';
-  if (days < 7) return `${Math.round(days)}d`;
-  if (days < 30) return `${Math.round(days / 7)}w`;
-  if (days < 365) return `${Math.round(days / 30)}mo`;
+  if (typeof days !== 'number' || !Number.isFinite(days)) {
+    return '...';
+  }
+  if (days <= 0) {
+    return '< 1m';
+  }
+  if (days < 7) {
+    return `${Math.round(days)}d`;
+  }
+  if (days < 30) {
+    return `${Math.round(days / 7)}w`;
+  }
+  if (days < 365) {
+    return `${Math.round(days / 30)}mo`;
+  }
   return `${Math.round(days / 365)}y`;
 };
 
-const buildPreviewCardState = (word: ExtendedVocabItem | undefined): PreviewCardState | undefined => {
-  if (!word) return undefined;
+const buildPreviewCardState = (
+  word: ExtendedVocabItem | undefined
+): PreviewCardState | undefined => {
+  if (!word) {
+    return undefined;
+  }
+
   const progress = word.progress;
-  const state = word.state ?? (progress?.status === 'MASTERED' ? 2 : progress?.status === 'REVIEW' ? 2 : progress?.status === 'LEARNING' ? 1 : 0);
+  const state =
+    word.state ??
+    (progress?.status === 'MASTERED'
+      ? 2
+      : progress?.status === 'REVIEW'
+        ? 2
+        : progress?.status === 'LEARNING'
+          ? 1
+          : 0);
+
   const due = progress?.nextReviewAt ?? Date.now();
+
+  const stability = word.stability ?? 0;
+  const difficulty = word.difficulty ?? 5;
+  const elapsedDays = word.elapsed_days ?? 0;
+  const scheduledDays = word.scheduled_days ?? progress?.interval ?? 0;
+  const learningSteps = word.learning_steps ?? 0;
+  const reps = word.reps ?? progress?.streak ?? 0;
+  const lapses = word.lapses ?? 0;
+  const lastReview = word.last_review ?? undefined;
+
   return {
     state,
     due,
-    stability: word.stability ?? 0,
-    difficulty: word.difficulty ?? 5,
-    elapsed_days: word.elapsed_days ?? 0,
-    scheduled_days: word.scheduled_days ?? progress?.interval ?? 0,
-    learning_steps: word.learning_steps ?? 0,
-    reps: word.reps ?? progress?.streak ?? 0,
-    lapses: word.lapses ?? 0,
-    last_review: word.last_review ?? undefined,
+    stability,
+    difficulty,
+    elapsed_days: elapsedDays,
+    scheduled_days: scheduledDays,
+    learning_steps: learningSteps,
+    reps,
+    lapses,
+    last_review: lastReview,
   };
 };
 
@@ -164,18 +198,8 @@ export default function MobileFlashcardPlayer({
   });
   const [swipeHint, setSwipeHint] = useState<SwipeDirection | null>(null);
   const [preview, setPreview] = useState<SchedulingPreview | null>(null);
-
-  const controls = useAnimation();
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  
-  const rotate = useTransform(x, [-300, 300], [-15, 15]);
-
-  const stampAgainOpacity = useTransform(x, [0, -80], [0, 1]);
-  const stampAgainScale = useTransform(stampAgainOpacity, [0, 1], [0.8, 1.0]);
-  
-  const stampGotItOpacity = useTransform(x, [0, 80], [0, 1]);
-  const stampGotItScale = useTransform(stampGotItOpacity, [0, 1], [0.8, 1.0]);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipeTriggeredRef = useRef(false);
 
   const currentWord = words[currentIndex];
   const korean = currentWord?.korean || currentWord?.word || '';
@@ -206,16 +230,27 @@ export default function MobileFlashcardPlayer({
 
   useEffect(() => {
     let cancelled = false;
+
     const loadPreview = async () => {
       try {
-        const nextPreview = await getSchedulingPreview(currentCardState ? { currentCard: currentCardState } : {});
-        if (!cancelled) setPreview(nextPreview);
+        const nextPreview = await getSchedulingPreview(
+          currentCardState ? { currentCard: currentCardState } : {}
+        );
+        if (!cancelled) {
+          setPreview(nextPreview);
+        }
       } catch {
-        if (!cancelled) setPreview(null);
+        if (!cancelled) {
+          setPreview(null);
+        }
       }
     };
+
     void loadPreview();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentCardState, getSchedulingPreview]);
 
   if (!currentWord) {
@@ -251,23 +286,94 @@ export default function MobileFlashcardPlayer({
     );
   };
 
-  const handleDragEnd = async (event: any, info: any) => {
-    const swipeThreshold = (typeof window !== 'undefined' ? window.innerWidth : 400) * 0.25;
-    
-    if (info.offset.x < -swipeThreshold) {
-      await handleGrade(1);
-    } else if (info.offset.x > swipeThreshold) {
-      await handleGrade(3);
-    } else {
-      // Bounce back
-      controls.start({ x: 0, y: 0, transition: { type: 'spring', stiffness: 300, damping: 20 } });
-    }
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    swipeTriggeredRef.current = false;
+    setSwipeHint(null);
   };
 
-  const ratingButtons = [
-    { quality: 1, label: t('vocab.forgot', '重来'), previewLabel: formatScheduledLabel(preview?.again.scheduled_days), color: 'again' as const, badgeClass: 'text-rose-500 bg-rose-50' },
-    { quality: 3, label: t('vocab.remembered', '已掌握'), previewLabel: formatScheduledLabel(preview?.good.scheduled_days), color: 'good' as const, badgeClass: 'text-emerald-600 bg-emerald-50' },
-  ];
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    if (!start || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 20 || Math.abs(dx) <= Math.abs(dy)) {
+      setSwipeHint(null);
+      return;
+    }
+    setSwipeHint(dx > 0 ? 'right' : 'left');
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || event.changedTouches.length !== 1) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const horizontalSwipe = Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.2;
+    if (!horizontalSwipe) {
+      setSwipeHint(null);
+      return;
+    }
+
+    swipeTriggeredRef.current = true;
+    if (dx > 0) {
+      handleGrade(3);
+    } else {
+      handleGrade(1);
+    }
+    globalThis.setTimeout(() => {
+      setSwipeHint(null);
+      swipeTriggeredRef.current = false;
+    }, 160);
+  };
+
+  const ratingButtons =
+    settings.ratingMode === 'PASS_FAIL'
+      ? [
+          {
+            quality: 1,
+            label: t('vocab.forgot', { defaultValue: 'Forgot' }),
+            previewLabel: formatScheduledLabel(preview?.again.scheduled_days),
+            color: 'again' as const,
+          },
+          {
+            quality: 3,
+            label: t('vocab.remembered', { defaultValue: 'Remembered' }),
+            previewLabel: formatScheduledLabel(preview?.good.scheduled_days),
+            color: 'good' as const,
+          },
+        ]
+      : [
+          {
+            quality: 1,
+            label: t('vocab.rating.again', { defaultValue: 'Again' }),
+            previewLabel: formatScheduledLabel(preview?.again.scheduled_days),
+            color: 'again' as const,
+          },
+          {
+            quality: 2,
+            label: t('vocab.rating.hard', { defaultValue: 'Hard' }),
+            previewLabel: formatScheduledLabel(preview?.hard.scheduled_days),
+            color: 'hard' as const,
+          },
+          {
+            quality: 3,
+            label: t('vocab.rating.good', { defaultValue: 'Good' }),
+            previewLabel: formatScheduledLabel(preview?.good.scheduled_days),
+            color: 'good' as const,
+          },
+          {
+            quality: 4,
+            label: t('vocab.rating.easy', { defaultValue: 'Easy' }),
+            previewLabel: formatScheduledLabel(preview?.easy.scheduled_days),
+            color: 'easy' as const,
+          },
+        ];
 
   const rightHint = SWIPE_HINT_STYLES.right;
   const leftHint = SWIPE_HINT_STYLES.left;
@@ -712,18 +818,7 @@ export default function MobileFlashcardPlayer({
                   </button>
                 </div>
               </div>
-              
-              <div className="pb-6 flex justify-center pointer-events-auto">
-                  <button 
-                      className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center text-slate-500 shadow-sm border border-slate-200 active:scale-95 transition-transform" 
-                      onClick={(e) => { e.stopPropagation(); onSpeak(exampleSentence || korean || heroText); }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                  >
-                      <Volume2 className="w-4 h-4" />
-                  </button>
-              </div>
-            </motion.div>
-
+            </div>
           </motion.div>
         </div>
       </main>
@@ -848,7 +943,6 @@ export default function MobileFlashcardPlayer({
           )}
         </div>
       </footer>
-
     </div>
   );
 }

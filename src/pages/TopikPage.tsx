@@ -22,7 +22,7 @@ import { qRef } from '../utils/convexRefs';
 import { api } from '../../convex/_generated/api';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { ContentSkeleton } from '../components/common';
+import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
@@ -39,7 +39,6 @@ import {
 } from '../components/layout/contextualSidebarBlocks';
 
 const TopikModule = lazy(() => import('../components/topik'));
-const LazyMobileTopikPage = lazy(() => import('../components/mobile/MobileTopikPage'));
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
 const ONE_DAY_MS = 86400000;
@@ -391,7 +390,7 @@ const TopikPage: React.FC = () => {
             </h2>
             <p className="text-muted-foreground font-bold">{t('dashboard.topik.realExam')}</p>
           </div>
-          <img src="/emojis/Trophy.webp" className="w-14 h-14 animate-bounce-slow" alt="" />
+          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="" />
         </div>
 
         {/* ─── TOPIK Stats Card ─── */}
@@ -400,7 +399,7 @@ const TopikPage: React.FC = () => {
             {/* ── Panel 1: Core Stats ── */}
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-2">
-                <img src="/emojis/Trophy.webp" className="w-8 h-8" alt="" />
+                <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
                 <span className="font-black text-sm text-foreground uppercase tracking-wider">
                   {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
                 </span>

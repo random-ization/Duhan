@@ -1,17 +1,6 @@
 import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-
-// Authenticated-app Tailwind utilities. Imported here (inside the lazy-loaded
-// AppLayout chunk) so Vite code-splits this stylesheet out of the initial
-// entry bundle — landing / auth / legal / pricing / learn pages no longer
-// pay for full-app Tailwind classes.
-import '../../styles/app.css';
-// LazyMotion + `m as motion` lets framer-motion's feature bundle be split
-// out of the shared vendor chunk. We use `domMax` (not `domAnimation`)
-// because authenticated pages rely on drag (VocabBookImmersivePage,
-// MobileFlashcardPlayer), layoutId animations (VocabBookPage,
-// VocabBookImmersivePage, MobileTopikPage) and the LayoutGroup below.
-import { AnimatePresence, LayoutGroup, LazyMotion, domMax, m as motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import { MobileHeader } from '../mobile/MobileHeader';
@@ -24,7 +13,6 @@ import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
-import { ProtectedUserSettingsSync } from './ProtectedUserSettingsSync';
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
@@ -82,23 +70,49 @@ export default function AppLayout() {
       : undefined;
 
   return (
-    // Single LazyMotion at the authed-app root: every descendant `motion.*`
-    // (aliased to framer-motion's `m`) picks up the domMax feature set from
-    // context. We don't use `strict` because the codebase still has a few
-    // indirect motion usages we can't audit statically.
-    <LazyMotion features={domMax}>
-      <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
-        {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
-        <main
-          className={`flex-1 h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
-          style={mainBackgroundStyle}
+    <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
+      {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
+      <main
+        className={`flex-1 h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
+        style={mainBackgroundStyle}
+      >
+        <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
+        <GlobalModalContainer />
+        <GlobalCommandPalette />
+        {shouldShowMobileHeader && (
+          <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
+        )}
+
+        <div
+          data-mobile-page-mode={routeUiConfig.mobilePageMode}
+          className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
         >
-          <ProtectedUserSettingsSync />
-          <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
-          <GlobalModalContainer />
-          <GlobalCommandPalette />
-          {shouldShowMobileHeader && (
-            <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
+          {allowRouteMotion ? (
+            <LayoutGroup id="app-route-layout">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={location.pathname}
+                  className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  <Suspense fallback={<ContentSkeleton />}>
+                    <Outlet />
+                  </Suspense>
+                </motion.div>
+              </AnimatePresence>
+            </LayoutGroup>
+          ) : (
+            <div
+              key={location.pathname}
+              className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
+            >
+              <Suspense fallback={<ContentSkeleton />}>
+                <Outlet />
+              </Suspense>
+            </div>
           )}
           {shouldShowFooter && <Footer />}
         </div>

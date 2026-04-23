@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Trophy, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
-import { m as motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { GrammarPointData } from '../../types';
@@ -201,7 +201,7 @@ function extractTextContent(node: React.ReactNode): string {
 }
 
 function getRedEyeMaskClass(enabled: boolean): string {
-  return enabled ? 'red-eye-mask red-eye-active' : '';
+  return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
 }
 
 function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
@@ -409,6 +409,9 @@ const MarkdownRenderer: React.FC<{
           </h3>
         ),
         p: ({ children, node: _node }) => {
+          const rawText = extractTextContent(children);
+          const maskKind = getGrammarMaskKind(rawText);
+
           return (
             <p
               className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
@@ -430,6 +433,8 @@ const MarkdownRenderer: React.FC<{
           <ol style={{ margin: '12px 0', paddingLeft: 22, display: 'grid', gap: 6 }}>{children}</ol>
         ),
         li: ({ children, node: _node }) => {
+          const rawText = extractTextContent(children);
+          const maskKind = getGrammarMaskKind(rawText);
           return (
             <li
               className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
@@ -498,6 +503,8 @@ const MarkdownRenderer: React.FC<{
           </th>
         ),
         td: ({ children }) => {
+          const rawText = extractTextContent(children);
+          const maskKind = getGrammarMaskKind(rawText);
           return (
             <td
               className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
@@ -1107,17 +1114,6 @@ export default function MobileGrammarDetailSheet({
                 ))}
               </Card>
             ) : null}
-
-            {localizedExplanation && (
-                <section>
-                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
-                        Detailed Explanation
-                    </p>
-                    <div className="grammar-prose prose max-w-none text-slate-700 prose-p:my-2 prose-strong:text-indigo-600">
-                        <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
-                    </div>
-                </section>
-            )}
 
             {localizedCustomNote ? (
               <Card pad={18} tone="bg2" style={{ marginTop: 12, boxShadow: KT.shSm }}>
