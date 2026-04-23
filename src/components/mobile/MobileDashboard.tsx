@@ -1,41 +1,38 @@
 import React, { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import {
-  BookOpen,
-  ChevronRight,
-  GraduationCap,
-  Headphones,
-  Play,
-  SlidersHorizontal,
-  Sparkles,
-} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { Id } from '../../../convex/_generated/dataModel';
+import type { CommunityActivityDto } from '../../../convex/community';
+import type { DailyChallengeDto } from '../../../convex/dailyChallenges';
+import type { PartnershipDto } from '../../../convex/partnerships';
 import type { GrammarItemDto } from '../../../convex/grammars';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { GRAMMARS, NEWS, NoArgs, qRef, READING_BOOKS } from '../../utils/convexRefs';
-import { buildPodcastChannelPath } from '../../utils/podcastRoutes';
-import { buildPictureBookPath, buildReadingArticlePath } from '../../utils/readingRoutes';
+import {
+  COMMUNITY,
+  DAILY_CHALLENGES,
+  GRAMMARS,
+  LEADERBOARD,
+  NEWS,
+  NoArgs,
+  PARTNERSHIPS,
+  qRef,
+  RECOMMENDATIONS,
+  VOCAB,
+  type NextBestAction,
+} from '../../utils/convexRefs';
+import { buildMediaPath } from '../../utils/mediaRoutes';
+import { appendReturnToPath } from '../../utils/navigation';
+import { notify } from '../../utils/notify';
+import { buildPodcastPlayerPath } from '../../utils/podcastRoutes';
 import type { ExamAttempt, Institute } from '../../types';
-import { formatSafeDateLabel } from '../../utils/dateLabel';
+import { ChipTone, Chip, HanjaSeal, KT, SectionHead, StreakRow } from './ksoft/ksoft';
 
 type LearningEntryTarget = {
   instituteId: string;
   level: number;
-};
-
-type PodcastChannel = {
-  _id?: string;
-  id?: string;
-  title: string;
-  author?: string;
-  artwork?: string;
-  artworkUrl?: string;
-  feedUrl?: string;
-  itunesId?: string;
-  views?: number;
 };
 
 type PodcastHistoryItem = {
@@ -49,43 +46,6 @@ type PodcastHistoryItem = {
   progress?: number;
   duration?: number;
 };
-
-type TrendingResult = {
-  internal: Array<PodcastChannel & { _id: string }>;
-  external: Array<PodcastChannel & { _id: string }>;
-};
-
-type HomeCopy = {
-  studioLabel: string;
-  pageTitle: string;
-  streakLabel: string;
-  heroBadge: string;
-  heroStatus: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  heroAction: string;
-  distributionLabels: [string, string, string];
-  nextLearningLabel: string;
-  nextLearningFallback: string;
-  nextLearningMeta: string;
-  topikLabel: string;
-  topikMeta: string;
-  exploreLabel: string;
-  podcastLive: string;
-  podcastFallback: string;
-  readingFallback: string;
-  openAction: string;
-  readingMetaLabel: string;
-  pagesUnit: string;
-  minutesUnit: string;
-  topikGrammarMeta: string;
-  topikGrammarLead: string;
-  topikGrammarStartTitle: string;
-  topikGrammarStartMeta: string;
-};
-
-const NOISE_BACKGROUND =
-  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")";
 
 const TOPIK_GRAMMAR_COURSE_ID = 'topik-grammar';
 
@@ -116,236 +76,497 @@ const EMPTY_LEARNER_STATS: LearnerStatsDto = {
   todayGrammarStudied: 0,
 };
 
-const getDashboardCopy = (language: string): HomeCopy => {
+type Copy = {
+  greeting: string;
+  greetingSub: string;
+  streakUnit: string;
+  streakLabel: string;
+  pathTitle: string;
+  pathSub: string;
+  pathStart: string;
+  pathSkip: string;
+  pathLater: string;
+  minsShort: (n: number) => string;
+  minsDone: string;
+  achievementsTitle: string;
+  dailyPhraseTitle: string;
+  communityTitle: string;
+  communityAction: string;
+  challengeBadge: string;
+  challengeTitle: string;
+  challengeSub: string;
+  challengeCta: string;
+  reviewKind: string;
+  reviewEn: string;
+  reviewTitle: (n: number) => string;
+  reviewSub: string;
+  grammarKind: string;
+  grammarEn: string;
+  grammarSub: string;
+  grammarStartTitle: string;
+  listenKind: string;
+  listenEn: string;
+  listenFallbackTitle: string;
+  listenFallbackSub: string;
+  topikKind: string;
+  topikEn: string;
+  topikTitle: string;
+  topikSub: string;
+};
+
+const getDashboardCopy = (language: string, userName: string): Copy => {
+  const name = userName || '친구';
   if (language.startsWith('zh')) {
     return {
-      studioLabel: '专属学习空间',
-      pageTitle: 'Architect.',
-      streakLabel: '连续打卡',
-      heroBadge: 'FSRS 激活中',
-      heroStatus: '今日复习',
-      heroTitle: '开始专注复习',
-      heroSubtitle: '把今天该过的卡片一口气清掉，学习节奏不会断。',
-      heroAction: '开始复习',
-      distributionLabels: ['新输入', '学习中', '待复习'],
-      nextLearningLabel: '下一项学习',
-      nextLearningFallback: '继续你的课程进度',
-      nextLearningMeta: '课程路径',
-      topikLabel: 'TOPIK 模考',
-      topikMeta: '近期成绩趋势',
-      exploreLabel: '沉浸探索区',
-      podcastLive: '正在播放',
-      podcastFallback: '开始播客沉浸',
-      readingFallback: '打开阅读世界',
-      openAction: '打开',
-      readingMetaLabel: '推荐阅读',
-      pagesUnit: '页',
-      minutesUnit: '分钟',
-      topikGrammarMeta: '语法学习',
-      topikGrammarLead: '正在学习',
-      topikGrammarStartTitle: '开始学习 TOPIK 语法',
-      topikGrammarStartMeta: '从第一单元开始建立你的语法体系',
+      greeting: `你好，${name}`,
+      greetingSub: '今天的学习已就绪',
+      streakUnit: '天',
+      streakLabel: '连续学习',
+      pathTitle: '今日之路',
+      pathSub: "TODAY'S PATH",
+      pathStart: '开始',
+      pathSkip: '跳过',
+      pathLater: '稍后 →',
+      minsShort: n => `${n}分`,
+      minsDone: '完成',
+      achievementsTitle: '今日成就',
+      dailyPhraseTitle: '今日片语',
+      communityTitle: '学习伙伴',
+      communityAction: '社区',
+      challengeBadge: '今日挑战',
+      challengeTitle: '背完 10 个春天单词',
+      challengeSub: '127 人参与中 · 你排名 24',
+      challengeCta: '参加 →',
+      reviewKind: '复习',
+      reviewEn: 'Review',
+      reviewTitle: n => `到期单词 ${n} 张`,
+      reviewSub: 'FSRS · 今日复习',
+      grammarKind: '语法',
+      grammarEn: 'Grammar',
+      grammarSub: '下一个语法',
+      grammarStartTitle: '开始 TOPIK 语法',
+      listenKind: '听',
+      listenEn: 'Listen',
+      listenFallbackTitle: '继续播客',
+      listenFallbackSub: '沉浸式听力',
+      topikKind: 'TOPIK',
+      topikEn: 'Exam',
+      topikTitle: '今日一题',
+      topikSub: 'II 级阅读',
     };
   }
-
+  if (language.startsWith('vi')) {
+    return {
+      greeting: `Xin chào, ${name}`,
+      greetingSub: 'Bài học hôm nay đã sẵn sàng',
+      streakUnit: 'ngày',
+      streakLabel: 'Học liên tục',
+      pathTitle: 'Hành trình hôm nay',
+      pathSub: "TODAY'S PATH",
+      pathStart: 'Bắt đầu',
+      pathSkip: 'Bỏ qua',
+      pathLater: 'Sau →',
+      minsShort: n => `${n} phút`,
+      minsDone: 'hoàn thành',
+      achievementsTitle: 'Thành tựu hôm nay',
+      dailyPhraseTitle: 'Câu nói hôm nay',
+      communityTitle: 'Bạn học',
+      communityAction: 'Cộng đồng',
+      challengeBadge: 'Thử thách hôm nay',
+      challengeTitle: 'Nhớ 10 từ mùa xuân',
+      challengeSub: '127 người đang tham gia · Bạn xếp 24',
+      challengeCta: 'Tham gia →',
+      reviewKind: 'Ôn',
+      reviewEn: 'Review',
+      reviewTitle: n => `${n} thẻ ôn tập`,
+      reviewSub: 'FSRS · hôm nay',
+      grammarKind: 'Ngữ pháp',
+      grammarEn: 'Grammar',
+      grammarSub: 'Ngữ pháp tiếp theo',
+      grammarStartTitle: 'Bắt đầu ngữ pháp TOPIK',
+      listenKind: 'Nghe',
+      listenEn: 'Listen',
+      listenFallbackTitle: 'Tiếp tục nghe podcast',
+      listenFallbackSub: 'Nhập vai tiếng Hàn',
+      topikKind: 'TOPIK',
+      topikEn: 'Exam',
+      topikTitle: 'Một câu hôm nay',
+      topikSub: 'Đọc cấp II',
+    };
+  }
+  if (language.startsWith('mn')) {
+    return {
+      greeting: `Сайн уу, ${name}`,
+      greetingSub: 'Өнөөдрийн сургалт бэлэн',
+      streakUnit: 'өдөр',
+      streakLabel: 'Дараалан',
+      pathTitle: 'Өнөөдрийн зам',
+      pathSub: "TODAY'S PATH",
+      pathStart: 'Эхлэх',
+      pathSkip: 'Алгасах',
+      pathLater: 'Дараа →',
+      minsShort: n => `${n} мин`,
+      minsDone: 'дууссан',
+      achievementsTitle: 'Өнөөдрийн амжилт',
+      dailyPhraseTitle: 'Өнөөдрийн хэллэг',
+      communityTitle: 'Сургалтын найзууд',
+      communityAction: 'Нийгэмлэг',
+      challengeBadge: 'Өнөөдрийн сорилт',
+      challengeTitle: '10 хаврын үг цээжлэх',
+      challengeSub: '127 хүн оролцож байна · чиний зэрэг 24',
+      challengeCta: 'Нэгдэх →',
+      reviewKind: 'Давтлага',
+      reviewEn: 'Review',
+      reviewTitle: n => `${n} карт хугацаатай`,
+      reviewSub: 'FSRS · өнөөдөр',
+      grammarKind: 'Дүрэм',
+      grammarEn: 'Grammar',
+      grammarSub: 'Дараагийн дүрэм',
+      grammarStartTitle: 'TOPIK дүрэм эхлэх',
+      listenKind: 'Сонсох',
+      listenEn: 'Listen',
+      listenFallbackTitle: 'Подкаст үргэлжлүүлэх',
+      listenFallbackSub: 'Солонгос хэл шингээх',
+      topikKind: 'TOPIK',
+      topikEn: 'Exam',
+      topikTitle: 'Өнөөдрийн нэг асуулт',
+      topikSub: 'II түвшин унших',
+    };
+  }
   return {
-    studioLabel: 'Personal learning space',
-    pageTitle: 'Architect.',
+    greeting: `Hi, ${name}`,
+    greetingSub: "Today's session is ready",
+    streakUnit: 'd',
     streakLabel: 'Streak',
-    heroBadge: 'FSRS enabled',
-    heroStatus: 'Today',
-    heroTitle: 'Review with focus',
-    heroSubtitle: 'Clear the cards due today and keep your learning rhythm intact.',
-    heroAction: 'Start review',
-    distributionLabels: ['Fresh', 'Learning', 'Due'],
-    nextLearningLabel: 'Next up',
-    nextLearningFallback: 'Resume your course path',
-    nextLearningMeta: 'Course path',
-    topikLabel: 'TOPIK mock',
-    topikMeta: 'Recent score trend',
-    exploreLabel: 'Immersion',
-    podcastLive: 'Now playing',
-    podcastFallback: 'Jump back into podcasts',
-    readingFallback: 'Open reading hub',
-    openAction: 'Open',
-    readingMetaLabel: 'Recommended reading',
-    pagesUnit: 'pages',
-    minutesUnit: 'min',
-    topikGrammarMeta: 'Grammar',
-    topikGrammarLead: 'In progress',
-    topikGrammarStartTitle: 'Start TOPIK grammar',
-    topikGrammarStartMeta: 'Begin with unit one and build your grammar foundation',
+    pathTitle: "Today's Path",
+    pathSub: "TODAY'S PATH",
+    pathStart: 'Start',
+    pathSkip: 'Skip',
+    pathLater: 'Later →',
+    minsShort: n => `${n} min`,
+    minsDone: 'done',
+    achievementsTitle: "Today's wins",
+    dailyPhraseTitle: 'Phrase of the day',
+    communityTitle: 'Study friends',
+    communityAction: 'Community',
+    challengeBadge: "Today's challenge",
+    challengeTitle: 'Memorize 10 spring words',
+    challengeSub: '127 joined · You rank #24',
+    challengeCta: 'Join →',
+    reviewKind: 'Review',
+    reviewEn: 'Review',
+    reviewTitle: n => `${n} cards due`,
+    reviewSub: 'FSRS · due today',
+    grammarKind: 'Grammar',
+    grammarEn: 'Grammar',
+    grammarSub: 'Next grammar',
+    grammarStartTitle: 'Start TOPIK grammar',
+    listenKind: 'Listen',
+    listenEn: 'Listen',
+    listenFallbackTitle: 'Resume a podcast',
+    listenFallbackSub: 'Korean immersion',
+    topikKind: 'TOPIK',
+    topikEn: 'Exam',
+    topikTitle: "Today's question",
+    topikSub: 'Level II · reading',
   };
 };
 
-const getLocaleForLanguage = (language: string) => {
-  if (language.startsWith('zh')) return 'zh-CN';
-  if (language.startsWith('vi')) return 'vi-VN';
-  if (language.startsWith('mn')) return 'mn-MN';
-  return 'en-US';
-};
-
-const getStreakIndicators = (streak: number) => {
-  const activeDots = Math.min(4, Math.max(0, streak));
-  return Array.from({ length: 4 }, (_, index) => index < activeDots);
-};
-
-const clampPercentage = (value: number) => Math.min(100, Math.max(0, value));
-
-const buildTrendValues = (attempts: ExamAttempt[]) => {
-  const sorted = [...attempts]
-    .filter(attempt => attempt.maxScore > 0)
-    .sort((left, right) => left.timestamp - right.timestamp)
-    .slice(-6);
-
-  if (sorted.length === 0) {
-    return [];
-  }
-
-  return sorted.map(attempt => Math.round((attempt.score / attempt.maxScore) * 100));
-};
-
-const buildSparkline = (values: number[]) => {
-  if (values.length === 0) {
-    return {
-      areaPath: 'M0,24 L100,24 L100,30 L0,30 Z',
-      linePath: 'M0,24 L100,24',
-      point: { x: 100, y: 24, value: 0 },
-    };
-  }
-
-  const max = Math.max(...values, 100);
-  const min = Math.min(...values, 0);
-  const range = Math.max(1, max - min);
-  const points = values.map((value, index) => {
-    const x = values.length === 1 ? 100 : (index / (values.length - 1)) * 100;
-    const y = 26 - ((value - min) / range) * 20;
-    return { x, y, value };
-  });
-
-  const linePath = points
-    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
-    .join(' ');
-  const areaPath = `${linePath} L100,30 L0,30 Z`;
-  const point = points[points.length - 1];
-
-  return { areaPath, linePath, point };
-};
-
-const resolveDifficultyLabel = (difficultyLevel: string, language: string) => {
-  if (difficultyLevel === 'L1') {
-    return language.startsWith('zh') ? '入门' : 'Beginner';
-  }
-  if (difficultyLevel === 'L2') {
-    return language.startsWith('zh') ? '进阶' : 'Intermediate';
-  }
-  if (difficultyLevel === 'L3') {
-    return language.startsWith('zh') ? '高阶' : 'Advanced';
-  }
-  return difficultyLevel;
-};
-
-const getInstituteLocalizedName = (institute: Institute | undefined, language: string) => {
-  if (!institute) {
-    return language.startsWith('zh') ? 'TOPIK语法合集' : 'TOPIK Grammar Collection';
-  }
-
-  if (language.startsWith('zh')) {
-    return institute.nameZh || institute.name;
-  }
-  if (language.startsWith('vi')) {
-    return institute.nameVi || institute.nameEn || institute.name;
-  }
-  if (language.startsWith('mn')) {
-    return institute.nameMn || institute.nameEn || institute.name;
-  }
-
-  return institute.nameEn || institute.name;
-};
-
-const getInstituteLevelBadge = (institute: Institute | undefined, language: string) => {
-  if (institute?.displayLevel?.trim()) {
-    return institute.displayLevel.trim();
-  }
-
-  const firstLevel = institute?.levels[0];
-  const levelValue =
-    typeof firstLevel === 'number'
-      ? firstLevel
-      : typeof firstLevel?.level === 'number'
-        ? firstLevel.level
-        : null;
-
-  if (levelValue == null) {
-    return 'TOPIK';
-  }
-
-  return language.startsWith('zh') ? `${levelValue} 级` : `LV ${levelValue}`;
-};
-
 const getGrammarLocalizedTitle = (grammar: GrammarItemDto | null, language: string) => {
-  if (!grammar) {
-    return '';
-  }
-
-  if (language.startsWith('zh')) {
-    return grammar.titleZh || grammar.title;
-  }
-  if (language.startsWith('vi')) {
-    return grammar.titleVi || grammar.titleEn || grammar.title;
-  }
-  if (language.startsWith('mn')) {
-    return grammar.titleMn || grammar.titleEn || grammar.title;
-  }
-
+  if (!grammar) return '';
+  if (language.startsWith('zh')) return grammar.titleZh || grammar.title;
+  if (language.startsWith('vi')) return grammar.titleVi || grammar.titleEn || grammar.title;
+  if (language.startsWith('mn')) return grammar.titleMn || grammar.titleEn || grammar.title;
   return grammar.titleEn || grammar.title;
 };
 
-const HomeSparkline = ({ values }: { values: number[] }) => {
-  const sparkline = buildSparkline(values);
-
-  return (
-    <svg viewBox="0 0 100 30" className="h-10 w-full overflow-visible" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="mobile-dashboard-topik-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={sparkline.areaPath} fill="url(#mobile-dashboard-topik-grad)" />
-      <path
-        d={sparkline.linePath}
-        fill="none"
-        stroke="#1e293b"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={sparkline.point.x}
-        cy={sparkline.point.y}
-        r="3"
-        fill="#f43f5e"
-        stroke="#ffffff"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
+const formatChallengeProgressLabel = (challenge: DailyChallengeDto, language: string) => {
+  const current = Math.min(challenge.currentCount, challenge.targetCount);
+  if (challenge.kind === 'vocab_20') {
+    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 个单词`;
+    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} từ`;
+    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} үг`;
+    return `${current} / ${challenge.targetCount} words`;
+  }
+  if (challenge.kind === 'grammar_drill') {
+    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 个语法点`;
+    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} điểm ngữ pháp`;
+    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} дүрмийн цэг`;
+    return `${current} / ${challenge.targetCount} grammar points`;
+  }
+  if (challenge.kind === 'listening_10min') {
+    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 分钟听力`;
+    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} phút nghe`;
+    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} минут сонссон`;
+    return `${current} / ${challenge.targetCount} listening min`;
+  }
+  if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} WPM`;
+  if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} WPM`;
+  if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} WPM`;
+  return `${current} / ${challenge.targetCount} WPM`;
 };
+
+const formatChallengeRewardLabel = (rewardXp: number, language: string) => {
+  if (language.startsWith('zh')) return `奖励 +${rewardXp} XP`;
+  if (language.startsWith('vi')) return `Thưởng +${rewardXp} XP`;
+  if (language.startsWith('mn')) return `Шагнал +${rewardXp} XP`;
+  return `Reward +${rewardXp} XP`;
+};
+
+const formatChallengeActionLabel = (args: {
+  challenge: DailyChallengeDto | undefined;
+  language: string;
+  isClaiming: boolean;
+}) => {
+  if (!args.challenge) {
+    if (args.language.startsWith('zh')) return '加载中…';
+    if (args.language.startsWith('vi')) return 'Đang tải...';
+    if (args.language.startsWith('mn')) return 'Ачаалж байна...';
+    return 'Loading...';
+  }
+  if (args.isClaiming) {
+    if (args.language.startsWith('zh')) return '领取中…';
+    if (args.language.startsWith('vi')) return 'Đang nhận...';
+    if (args.language.startsWith('mn')) return 'Ашиг авч байна...';
+    return 'Claiming...';
+  }
+  if (args.challenge.isClaimed) {
+    if (args.language.startsWith('zh')) return '已完成';
+    if (args.language.startsWith('vi')) return 'Đã hoàn thành';
+    if (args.language.startsWith('mn')) return 'Дууссан';
+    return 'Completed';
+  }
+  if (args.challenge.isCompleted) {
+    if (args.language.startsWith('zh')) return `领取 +${args.challenge.rewardXp} XP`;
+    if (args.language.startsWith('vi')) return `Nhận +${args.challenge.rewardXp} XP`;
+    if (args.language.startsWith('mn')) return `+${args.challenge.rewardXp} XP авах`;
+    return `Claim +${args.challenge.rewardXp} XP`;
+  }
+  if (args.language.startsWith('zh')) return '去完成 →';
+  if (args.language.startsWith('vi')) return 'Bắt đầu →';
+  if (args.language.startsWith('mn')) return 'Эхлэх →';
+  return 'Start →';
+};
+
+type PathTone = 'pink' | 'mint' | 'butter' | 'lilac';
+
+type PathStep = {
+  key: string;
+  kind: string;
+  en: string;
+  mins: number;
+  title: string;
+  sub: string;
+  tone: PathTone;
+  kanji: string;
+  onStart: () => void;
+};
+
+type CommunityCardTone = {
+  tag: string;
+  tagTone: ChipTone;
+  emoji: string;
+  bg: string;
+};
+
+type CommunityLikeOverride = {
+  liked: boolean;
+  likeCount: number;
+};
+
+const moduleToneMap: Record<string, CommunityCardTone> = {
+  EXAM: { tag: '考試', tagTone: 'ink', emoji: '🎯', bg: KT.butter },
+  TYPING: { tag: '打字', tagTone: 'butter', emoji: '⌨️', bg: KT.lilac },
+  LISTENING: { tag: '聽力', tagTone: 'mint', emoji: '🎧', bg: KT.mint },
+  PODCAST: { tag: '聽力', tagTone: 'mint', emoji: '🎧', bg: KT.mint },
+  GRAMMAR: { tag: '文法', tagTone: 'crimson', emoji: '📘', bg: KT.pink },
+  VOCAB: { tag: '單詞', tagTone: 'crimson', emoji: '📚', bg: KT.pink },
+  READING: { tag: '閱讀', tagTone: 'ink', emoji: '📖', bg: KT.butter },
+};
+
+function getCommunityTone(module: string, language: string): CommunityCardTone {
+  const base = moduleToneMap[module] ?? {
+    tag: '學習',
+    tagTone: 'ink' as ChipTone,
+    emoji: '✨',
+    bg: KT.card,
+  };
+  if (language.startsWith('zh')) return base;
+  if (language.startsWith('vi')) {
+    return {
+      ...base,
+      tag:
+        module === 'EXAM'
+          ? 'Thi'
+          : module === 'TYPING'
+            ? 'Gõ'
+            : module === 'LISTENING' || module === 'PODCAST'
+              ? 'Nghe'
+              : module === 'GRAMMAR'
+                ? 'Ngữ pháp'
+                : module === 'VOCAB'
+                  ? 'Từ vựng'
+                  : module === 'READING'
+                    ? 'Đọc'
+                    : 'Học',
+    };
+  }
+  if (language.startsWith('mn')) {
+    return {
+      ...base,
+      tag:
+        module === 'EXAM'
+          ? 'Шалгалт'
+          : module === 'TYPING'
+            ? 'Бичих'
+            : module === 'LISTENING' || module === 'PODCAST'
+              ? 'Сонсох'
+              : module === 'GRAMMAR'
+                ? 'Дүрэм'
+                : module === 'VOCAB'
+                  ? 'Үг'
+                  : module === 'READING'
+                    ? 'Унших'
+                    : 'Сургалт',
+    };
+  }
+  return {
+    ...base,
+    tag:
+      module === 'EXAM'
+        ? 'Exam'
+        : module === 'TYPING'
+          ? 'Typing'
+          : module === 'LISTENING' || module === 'PODCAST'
+            ? 'Listening'
+            : module === 'GRAMMAR'
+              ? 'Grammar'
+              : module === 'VOCAB'
+                ? 'Vocab'
+                : module === 'READING'
+                  ? 'Reading'
+                  : 'Study',
+  };
+}
+
+function formatCommunityAction(item: CommunityActivityDto, language: string): string {
+  const minutes = Math.max(1, Math.round(item.durationSec / 60));
+  if (item.module === 'EXAM') {
+    if (typeof item.score === 'number' && item.score > 0) {
+      const roundedScore = Math.round(item.score);
+      if (language.startsWith('zh')) return `TOPIK 模考得分 ${roundedScore}`;
+      if (language.startsWith('vi')) return `TOPIK mock đạt ${roundedScore} điểm`;
+      if (language.startsWith('mn')) return `TOPIK сорилд ${roundedScore} оноо авлаа`;
+      return `Scored ${roundedScore} on a TOPIK mock`;
+    }
+    if (language.startsWith('zh')) return '完成了一套 TOPIK 练习';
+    if (language.startsWith('vi')) return 'Vừa hoàn thành một bộ TOPIK';
+    if (language.startsWith('mn')) return 'TOPIK дасгалын нэг сет дуусгалаа';
+    return 'Completed a TOPIK practice session';
+  }
+  if (item.module === 'VOCAB') {
+    const count = Math.max(1, item.itemCount);
+    if (language.startsWith('zh')) return `完成了 ${count} 个单词复习`;
+    if (language.startsWith('vi')) return `Đã ôn ${count} từ vựng`;
+    if (language.startsWith('mn')) return `${count} үгийн давтлага хийлээ`;
+    return `Reviewed ${count} vocabulary items`;
+  }
+  if (item.module === 'GRAMMAR') {
+    if (language.startsWith('zh')) return '完成了语法训练';
+    if (language.startsWith('vi')) return 'Đã hoàn thành một lượt ngữ pháp';
+    if (language.startsWith('mn')) return 'Дүрмийн дасгалын нэг сет дуусгалаа';
+    return 'Completed a grammar drill';
+  }
+  if (item.module === 'TYPING') {
+    if (typeof item.accuracy === 'number' && item.accuracy > 0) {
+      const accuracy = Math.round(item.accuracy);
+      if (language.startsWith('zh')) return `完成打字训练，准确率 ${accuracy}%`;
+      if (language.startsWith('vi')) return `Hoàn thành bài gõ, độ chính xác ${accuracy}%`;
+      if (language.startsWith('mn')) return `Бичгийн дасгал дуусгаж, нарийвчлал ${accuracy}%`;
+      return `Finished a typing session at ${accuracy}% accuracy`;
+    }
+    if (language.startsWith('zh')) return '完成了一次打字练习';
+    if (language.startsWith('vi')) return 'Đã hoàn thành một lượt gõ chữ';
+    if (language.startsWith('mn')) return 'Бичгийн дасгал дуусгалаа';
+    return 'Completed a typing session';
+  }
+  if (item.module === 'LISTENING' || item.module === 'PODCAST') {
+    if (language.startsWith('zh')) return `完成了 ${minutes} 分钟听力`;
+    if (language.startsWith('vi')) return `Đã nghe ${minutes} phút`;
+    if (language.startsWith('mn')) return `${minutes} минут сонсгол хийлээ`;
+    return `Completed ${minutes} minutes of listening`;
+  }
+  if (item.module === 'READING') {
+    if (language.startsWith('zh')) return '完成了一篇阅读内容';
+    if (language.startsWith('vi')) return 'Đã hoàn thành một bài đọc';
+    if (language.startsWith('mn')) return 'Нэг унших контент дуусгалаа';
+    return 'Completed a reading session';
+  }
+  if (language.startsWith('zh')) return '完成了一次学习活动';
+  if (language.startsWith('vi')) return 'Đã hoàn thành một hoạt động học';
+  if (language.startsWith('mn')) return 'Нэг сургалтын үйлдэл дуусгалаа';
+  return 'Completed a learning activity';
+}
+
+function formatCommunityTime(eventAt: number, language: string): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - eventAt) / 1000));
+  if (diffSec < 60) {
+    if (language.startsWith('zh')) return '刚刚';
+    if (language.startsWith('vi')) return 'Vừa xong';
+    if (language.startsWith('mn')) return 'Дөнгөж сая';
+    return 'Just now';
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    if (language.startsWith('zh')) return `${diffMin} 分钟前`;
+    if (language.startsWith('vi')) return `${diffMin} phút trước`;
+    if (language.startsWith('mn')) return `${diffMin} минутын өмнө`;
+    return `${diffMin}m ago`;
+  }
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) {
+    if (language.startsWith('zh')) return `${diffHour} 小时前`;
+    if (language.startsWith('vi')) return `${diffHour} giờ trước`;
+    if (language.startsWith('mn')) return `${diffHour} цагийн өмнө`;
+    return `${diffHour}h ago`;
+  }
+  const diffDay = Math.floor(diffHour / 24);
+  if (language.startsWith('zh')) return `${diffDay} 天前`;
+  if (language.startsWith('vi')) return `${diffDay} ngày trước`;
+  if (language.startsWith('mn')) return `${diffDay} хоногийн өмнө`;
+  return `${diffDay}d ago`;
+}
+
+function getConvexErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+  const payload = error as { data?: { code?: string }; message?: string };
+  if (typeof payload.data?.code === 'string') return payload.data.code;
+  if (typeof payload.message === 'string' && payload.message.includes('TARGET_ALREADY_PAIRED')) {
+    return 'TARGET_ALREADY_PAIRED';
+  }
+  return null;
+}
+
+function getTargetAlreadyPairedMessage(language: string): string {
+  if (language.startsWith('zh')) return '对方已有学习搭档，无法重复邀请。';
+  if (language.startsWith('vi')) return 'Người học này đã có bạn đồng hành.';
+  if (language.startsWith('mn')) return 'Энэ хэрэглэгч аль хэдийн суралцах хамтрагчтай байна.';
+  return 'That learner already has a study buddy.';
+}
 
 export const MobileDashboard: React.FC<{
   learningEntryTarget: LearningEntryTarget | null;
   institutes: Institute[] | undefined;
   institutesLoading: boolean;
-}> = ({ institutes }) => {
+}> = () => {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
   const language = i18n.resolvedLanguage || i18n.language || 'en';
-  const locale = getLocaleForLanguage(language);
-  const copy = getDashboardCopy(language);
+  const userName = user?.name?.split(' ')[0] || user?.name || '';
+  const copy = useMemo(() => getDashboardCopy(language, userName), [language, userName]);
 
   const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
   const examAttempts = useQuery(
@@ -356,13 +577,39 @@ export const MobileDashboard: React.FC<{
     qRef<NoArgs, PodcastHistoryItem[]>('podcasts:getHistory'),
     user ? {} : 'skip'
   );
-  const podcastTrending = useQuery(qRef<NoArgs, TrendingResult>('podcasts:getTrending'));
-  const newsFeed = useQuery(NEWS.getUserFeed, { newsLimit: 3, articleLimit: 3 });
-  const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {});
   const topikGrammarList = useQuery(
     GRAMMARS.getByCourse,
     user ? { courseId: TOPIK_GRAMMAR_COURSE_ID, language } : 'skip'
   );
+  const communityActivities = useQuery(
+    COMMUNITY.getRecentFriendActivity,
+    user ? { limit: 3 } : 'skip'
+  );
+  const dailyPhrase = useQuery(VOCAB.getDailyPhrase, { language });
+  const dailyChallenge = useQuery(DAILY_CHALLENGES.getTodayChallenge, { language });
+  // Freeze localHour for the lifetime of the component so re-renders
+  // don't re-issue the recommendation query every minute.
+  const [localHour] = React.useState(() => new Date().getHours());
+  const nextBestAction = useQuery(RECOMMENDATIONS.getNextBestAction, user ? { localHour } : 'skip');
+  const myRank = useQuery(LEADERBOARD.getMyRank, user ? {} : 'skip');
+  const activePartnership = useQuery(PARTNERSHIPS.getActivePartnership, user ? {} : 'skip');
+  const pendingPartnerships = useQuery(PARTNERSHIPS.listPending, user ? {} : 'skip');
+  const likeCommunityActivity = useMutation(COMMUNITY.likeActivity);
+  const unlikeCommunityActivity = useMutation(COMMUNITY.unlikeActivity);
+  const claimDailyChallenge = useMutation(DAILY_CHALLENGES.claimReward);
+  const invitePartnerMutation = useMutation(PARTNERSHIPS.invitePartner);
+  const acceptPartnershipMutation = useMutation(PARTNERSHIPS.acceptPartnership);
+  const declinePartnershipMutation = useMutation(PARTNERSHIPS.declinePartnership);
+  const [isClaimingDailyChallenge, setIsClaimingDailyChallenge] = React.useState(false);
+  const [likeOverrides, setLikeOverrides] = React.useState<
+    Record<string, CommunityLikeOverride | undefined>
+  >({});
+  const [likePending, setLikePending] = React.useState<Record<string, boolean>>({});
+  const [invitePending, setInvitePending] = React.useState<Record<string, boolean>>({});
+  const [invitedUsers, setInvitedUsers] = React.useState<Record<string, boolean>>({});
+  const [partnershipActionPending, setPartnershipActionPending] = React.useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     if (!user?.id) return;
@@ -375,84 +622,30 @@ export const MobileDashboard: React.FC<{
     stats.reviewStats.dueNow,
     stats.wordsToReview
   );
-  const activeLearning = Math.max(
-    stats.vocabStats.total - stats.vocabStats.mastered - dueReviews,
-    0
-  );
-  const freshInput = Math.max(stats.todayWordsStudied, 0);
-  const segmentTotal = Math.max(freshInput + activeLearning + dueReviews, 1);
-  const distributionItems = [
-    {
-      label: copy.distributionLabels[0],
-      value: freshInput,
-      width: clampPercentage((freshInput / segmentTotal) * 100),
-      className: 'bg-slate-500 rounded-l-full',
-    },
-    {
-      label: copy.distributionLabels[1],
-      value: activeLearning,
-      width: clampPercentage((activeLearning / segmentTotal) * 100),
-      className: 'bg-slate-300',
-    },
-    {
-      label: copy.distributionLabels[2],
-      value: dueReviews,
-      width: clampPercentage((dueReviews / segmentTotal) * 100),
-      className: 'flex-1 bg-white rounded-r-full shadow-[0_0_10px_0_rgba(255,255,255,0.4)]',
-    },
-  ];
-  const topikGrammarInstitute = useMemo(
-    () => institutes?.find(item => item.id === TOPIK_GRAMMAR_COURSE_ID),
-    [institutes]
-  );
-  const topikGrammarTitle = getInstituteLocalizedName(topikGrammarInstitute, language);
-  const topikGrammarBadge = getInstituteLevelBadge(topikGrammarInstitute, language);
-  const topikGrammarPath = `/course/${TOPIK_GRAMMAR_COURSE_ID}/grammar`;
+  const streak = stats.streak ?? 0;
+
   const featuredTopikGrammar = useMemo(() => {
     const grammars = topikGrammarList ?? [];
     const learningGrammar = grammars.find(item => item.status === 'LEARNING');
-    if (learningGrammar) {
-      return learningGrammar;
-    }
-
-    const learnedGrammars = grammars.filter(
+    if (learningGrammar) return learningGrammar;
+    const learned = grammars.filter(
       item => item.status === 'MASTERED' || item.status === 'LEARNING'
     );
-    if (learnedGrammars.length > 0) {
-      return learnedGrammars[learnedGrammars.length - 1];
-    }
-
-    return null;
+    return learned.length > 0 ? learned[learned.length - 1] : null;
   }, [topikGrammarList]);
-  const hasTopikGrammarHistory = useMemo(
-    () =>
-      (topikGrammarList ?? []).some(
-        item => item.status === 'MASTERED' || item.status === 'LEARNING'
-      ),
-    [topikGrammarList]
-  );
-  const topikGrammarHeadline = hasTopikGrammarHistory
-    ? getGrammarLocalizedTitle(featuredTopikGrammar, language) || topikGrammarTitle
-    : copy.topikGrammarStartTitle;
-  const topikGrammarSubline = hasTopikGrammarHistory
-    ? copy.topikGrammarMeta
-    : copy.topikGrammarStartMeta;
 
-  const recentScores = useMemo(() => buildTrendValues(examAttempts ?? []), [examAttempts]);
-  const latestScore = recentScores[recentScores.length - 1] ?? 0;
-  const dashboardPath = `${location.pathname}${location.search}`;
+  const grammarTitle =
+    getGrammarLocalizedTitle(featuredTopikGrammar, language) || copy.grammarStartTitle;
+
   const latestPodcast = podcastHistory?.[0];
-  const trendingChannel = podcastTrending?.internal[0] ?? podcastTrending?.external[0] ?? null;
-  const featuredNews = newsFeed?.news[0] ?? newsFeed?.articles[0] ?? null;
-  const featuredBook = pictureBooks?.[0] ?? null;
-  const bookLevelValue = Number.parseInt(featuredBook?.levelLabel?.match(/(\d+)/)?.[1] ?? '0', 10);
-  const bookProgress = bookLevelValue > 0 ? clampPercentage((bookLevelValue / 6) * 100) : 35;
-  const streakIndicators = getStreakIndicators(stats.streak);
-  const avatarSource = user?.avatar || '/logo.png';
+  const dashboardPath = `${location.pathname}${location.search}`;
 
-  const handleOpenPodcast = () => {
+  const goReview = () => navigate('/review');
+  const goGrammar = () =>
+    navigate(appendReturnToPath(`/course/${TOPIK_GRAMMAR_COURSE_ID}/grammar`, dashboardPath));
+  const goPodcast = () => {
     if (latestPodcast) {
-      navigate(`/podcasts/player?returnTo=${encodeURIComponent(dashboardPath)}`, {
+      navigate(buildPodcastPlayerPath(dashboardPath), {
         state: {
           episode: {
             guid: latestPodcast.episodeGuid,
@@ -467,358 +660,1693 @@ export const MobileDashboard: React.FC<{
       });
       return;
     }
+    navigate(buildMediaPath('podcast'));
+  };
+  const goTopik = () => navigate(appendReturnToPath('/topik', dashboardPath));
+  const goTyping = () => navigate(appendReturnToPath('/typing', dashboardPath));
 
-    if (trendingChannel) {
-      navigate(buildPodcastChannelPath(trendingChannel, dashboardPath), {
-        state: { channel: trendingChannel },
-      });
+  const path: PathStep[] = [
+    {
+      key: 'review',
+      kind: copy.reviewKind,
+      en: copy.reviewEn,
+      mins: 8,
+      title: copy.reviewTitle(dueReviews || 24),
+      sub: copy.reviewSub,
+      tone: 'pink',
+      kanji: '復',
+      onStart: goReview,
+    },
+    {
+      key: 'grammar',
+      kind: copy.grammarKind,
+      en: copy.grammarEn,
+      mins: 6,
+      title: grammarTitle,
+      sub: copy.grammarSub,
+      tone: 'mint',
+      kanji: '文',
+      onStart: goGrammar,
+    },
+    {
+      key: 'listen',
+      kind: copy.listenKind,
+      en: copy.listenEn,
+      mins: 12,
+      title: latestPodcast?.episodeTitle || copy.listenFallbackTitle,
+      sub: latestPodcast?.channelName || copy.listenFallbackSub,
+      tone: 'butter',
+      kanji: '聽',
+      onStart: goPodcast,
+    },
+    {
+      key: 'topik',
+      kind: copy.topikKind,
+      en: copy.topikEn,
+      mins: 2,
+      title: copy.topikTitle,
+      sub: copy.topikSub,
+      tone: 'lilac',
+      kanji: '試',
+      onStart: goTopik,
+    },
+  ];
+
+  // Derive "done" steps from today's activity counts
+  const { wordsLearned, listeningsCompleted, examsCompleted } = stats.todayActivities;
+  const doneCount =
+    (wordsLearned > 0 ? 1 : 0) +
+    (stats.todayGrammarStudied > 0 ? 1 : 0) +
+    (listeningsCompleted > 0 ? 1 : 0) +
+    (examsCompleted > 0 ? 1 : 0);
+  const step = Math.min(doneCount, path.length);
+  const done = path.slice(0, step);
+  const next = path[step] ?? null;
+  const totalMin = path.reduce((s, x) => s + x.mins, 0);
+  const streakDoneDays = Math.min(7, Math.max(0, streak % 7 || (streak > 0 ? 7 : 0)));
+
+  const dateLabel = useMemo(() => {
+    const d = new Date();
+    const monthCn = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'][
+      d.getMonth()
+    ];
+    const toCnDay = (n: number) => {
+      if (n < 10) return ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'][n];
+      if (n === 10) return '十';
+      if (n < 20) return '十' + ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'][n - 10];
+      if (n === 20) return '二十';
+      if (n < 30)
+        return '二十' + ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'][n - 20];
+      return '三十' + (n === 30 ? '' : ['', '一'][n - 30]);
+    };
+    return `${monthCn}月 ${toCnDay(d.getDate())}日`;
+  }, []);
+
+  const recentScoreCount = examAttempts?.length ?? 0;
+  const achievements = [
+    { e: '⚡', l: copy.reviewKind, s: `${wordsLearned || 0}`, visible: true },
+    { e: '📚', l: copy.grammarKind, s: `+${stats.todayGrammarStudied || 0}`, visible: true },
+    { e: '🎯', l: 'TOPIK', s: `${recentScoreCount}`, visible: recentScoreCount > 0 },
+  ].filter(a => a.visible);
+
+  const friendFeed = useMemo(() => {
+    if (!communityActivities) return [];
+    return communityActivities.map(item => {
+      const key = String(item.activityId);
+      const override = likeOverrides[key];
+      const resolvedLiked = override?.liked ?? item.likedByMe;
+      const resolvedLikeCount = override?.likeCount ?? item.likeCount;
+      const tone = getCommunityTone(item.module, language);
+      return {
+        ...item,
+        key,
+        resolvedLiked,
+        resolvedLikeCount: Math.max(0, resolvedLikeCount),
+        ...tone,
+        action: formatCommunityAction(item, language),
+        time: formatCommunityTime(item.eventAt, language),
+      };
+    });
+  }, [communityActivities, language, likeOverrides]);
+
+  const challengeProgressRatio = dailyChallenge
+    ? Math.min(1, dailyChallenge.currentCount / Math.max(1, dailyChallenge.targetCount))
+    : 0;
+  const challengeActionLabel = formatChallengeActionLabel({
+    challenge: dailyChallenge,
+    language,
+    isClaiming: isClaimingDailyChallenge,
+  });
+
+  const handleChallengeAction = async () => {
+    if (!dailyChallenge || isClaimingDailyChallenge) return;
+    if (dailyChallenge.isClaimed) return;
+    if (dailyChallenge.isCompleted) {
+      try {
+        setIsClaimingDailyChallenge(true);
+        await claimDailyChallenge({});
+      } catch {
+        // Query invalidation will reconcile already-claimed cases; keep this action silent on dashboard.
+      } finally {
+        setIsClaimingDailyChallenge(false);
+      }
       return;
     }
 
-    navigate('/podcasts');
+    if (dailyChallenge.kind === 'vocab_20') {
+      goReview();
+      return;
+    }
+    if (dailyChallenge.kind === 'grammar_drill') {
+      goGrammar();
+      return;
+    }
+    if (dailyChallenge.kind === 'listening_10min') {
+      goPodcast();
+      return;
+    }
+    goTyping();
   };
 
-  const handleOpenReading = () => {
-    if (featuredNews) {
-      navigate(buildReadingArticlePath(featuredNews._id, dashboardPath));
-      return;
+  const handleToggleLike = async (activityId: Id<'learning_events'>) => {
+    const key = String(activityId);
+    if (likePending[key]) return;
+
+    const source = communityActivities?.find(item => String(item.activityId) === key);
+    if (!source) return;
+    const override = likeOverrides[key];
+    const currentLiked = override?.liked ?? source.likedByMe;
+    const currentCount = override?.likeCount ?? source.likeCount;
+    const nextLiked = !currentLiked;
+    const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+    setLikePending(prev => ({ ...prev, [key]: true }));
+    setLikeOverrides(prev => ({
+      ...prev,
+      [key]: { liked: nextLiked, likeCount: nextCount },
+    }));
+
+    try {
+      const result = nextLiked
+        ? await likeCommunityActivity({ activityId })
+        : await unlikeCommunityActivity({ activityId });
+      setLikeOverrides(prev => ({
+        ...prev,
+        [key]: { liked: result.liked, likeCount: result.likeCount },
+      }));
+    } catch {
+      setLikeOverrides(prev => ({
+        ...prev,
+        [key]: { liked: currentLiked, likeCount: currentCount },
+      }));
+    } finally {
+      setLikePending(prev => ({ ...prev, [key]: false }));
     }
-    if (featuredBook) {
-      navigate(buildPictureBookPath(featuredBook.slug, dashboardPath));
-      return;
-    }
-    navigate('/reading');
   };
 
-  const readingTitle = featuredNews?.title || featuredBook?.title || copy.readingFallback;
-  const readingMeta = featuredNews
-    ? `${resolveDifficultyLabel(featuredNews.difficultyLevel, language)} · ${formatSafeDateLabel(
-        featuredNews.publishedAt,
-        locale,
-        '—',
-        { month: 'short', day: 'numeric' }
-      )}`
-    : featuredBook
-      ? `${featuredBook.levelLabel || copy.readingMetaLabel} · ${featuredBook.pageCount} ${copy.pagesUnit}`
-      : copy.readingMetaLabel;
-  const readingProgress = featuredNews
-    ? clampPercentage(
-        Math.max(25, Math.min(100, Math.round((featuredNews.bodyText.length / 1200) * 100)))
-      )
-    : bookProgress;
+  const handleInvitePartner = async (targetUserId: Id<'users'>) => {
+    const key = String(targetUserId);
+    if (invitePending[key] || invitedUsers[key]) return;
+    setInvitePending(prev => ({ ...prev, [key]: true }));
+    try {
+      await invitePartnerMutation({ targetUserId });
+      setInvitedUsers(prev => ({ ...prev, [key]: true }));
+    } catch (error) {
+      if (getConvexErrorCode(error) === 'TARGET_ALREADY_PAIRED') {
+        notify.error(getTargetAlreadyPairedMessage(language));
+      }
+    } finally {
+      setInvitePending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleAcceptPartnership = async (partnershipId: PartnershipDto['id']) => {
+    const key = String(partnershipId);
+    if (partnershipActionPending[key]) return;
+    setPartnershipActionPending(prev => ({ ...prev, [key]: true }));
+    try {
+      await acceptPartnershipMutation({ partnershipId });
+    } catch {
+      // NOT_FOUND / FORBIDDEN — stale UI, the next query tick will clean up.
+    } finally {
+      setPartnershipActionPending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleDeclinePartnership = async (partnershipId: PartnershipDto['id']) => {
+    const key = String(partnershipId);
+    if (partnershipActionPending[key]) return;
+    setPartnershipActionPending(prev => ({ ...prev, [key]: true }));
+    try {
+      await declinePartnershipMutation({ partnershipId });
+    } catch {
+      // Same as above — stale state; rely on reactive invalidation.
+    } finally {
+      setPartnershipActionPending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  // Localized title + subtitle for the recommendation "Resume" card.
+  const resumeCopy = (action: NextBestAction) => {
+    const zh = language.startsWith('zh');
+    const vi = language.startsWith('vi');
+    const mn = language.startsWith('mn');
+    switch (action.kind) {
+      case 'review_due_vocab': {
+        const n = action.count || dueReviews || 0;
+        const title = zh
+          ? `立刻复习 ${n} 张卡片`
+          : vi
+            ? `Ôn ${n} thẻ ngay bây giờ`
+            : mn
+              ? `${n} карт яг одоо давт`
+              : `Review ${n} cards now`;
+        const sub =
+          action.reasonCode === 'cold_start_with_reviews'
+            ? zh
+              ? '回来啦，先把积压清掉'
+              : vi
+                ? 'Trở lại — xử lý phần tồn đọng'
+                : mn
+                  ? 'Буцаж ирлээ — хоцрогдлоо цэвэрлэе'
+                  : 'Welcome back — clear the backlog'
+            : zh
+              ? 'FSRS · 最优复习时机'
+              : vi
+                ? 'FSRS · thời điểm ôn tối ưu'
+                : mn
+                  ? 'FSRS · хамгийн оновчтой давтах үе'
+                  : 'FSRS · optimal review window';
+        return { title, sub };
+      }
+      case 'podcast_resume':
+        return {
+          title: zh
+            ? '通勤时光，来段韩语播客'
+            : vi
+              ? 'Giờ đi làm — nghe podcast tiếng Hàn'
+              : mn
+                ? 'Замын цагт солонгос подкаст'
+                : 'Commute time — a Korean podcast',
+          sub: zh
+            ? '沉浸聆听 · 10-15 分钟'
+            : vi
+              ? 'Nghe đắm chìm · 10-15 phút'
+              : mn
+                ? 'Гүнзгий сонсгол · 10-15 мин'
+                : 'Immersive listening · 10-15 min',
+        };
+      case 'reading_continue':
+        return {
+          title: zh
+            ? '晚间阅读时刻'
+            : vi
+              ? 'Khoảnh khắc đọc buổi tối'
+              : mn
+                ? 'Үдшийн унших цаг'
+                : 'Evening reading time',
+          sub: zh
+            ? '精选文章 · 放松阅读'
+            : vi
+              ? 'Bài chọn lọc · đọc thư thái'
+              : mn
+                ? 'Шилмэл нийтлэлүүд'
+                : 'Hand-picked articles · unwind',
+        };
+      case 'exam_practice':
+        return {
+          title: zh
+            ? '继续 TOPIK 练习'
+            : vi
+              ? 'Tiếp tục luyện TOPIK'
+              : mn
+                ? 'TOPIK дасгалаа үргэлжлүүл'
+                : 'Continue TOPIK practice',
+          sub: zh
+            ? '上次在这里中断'
+            : vi
+              ? 'Bạn đã dừng ở đây'
+              : mn
+                ? 'Та эндээс зогссон'
+                : 'You left off here',
+        };
+      case 'continue_course':
+        return {
+          title: zh
+            ? '回到语法课堂'
+            : vi
+              ? 'Quay lại lớp ngữ pháp'
+              : mn
+                ? 'Дүрмийн хичээл рүүгээ буц'
+                : 'Back to grammar',
+          sub: zh
+            ? '接着上次继续'
+            : vi
+              ? 'Tiếp tục từ lần trước'
+              : mn
+                ? 'Сүүлд зогссон газраасаа'
+                : 'Pick up where you left off',
+        };
+      case 'typing_drill':
+        return {
+          title: zh ? '打字训练' : vi ? 'Luyện gõ chữ' : mn ? 'Бичих дасгал' : 'Typing drill',
+          sub: zh
+            ? '提升速度和准确率'
+            : vi
+              ? 'Tăng tốc độ và độ chính xác'
+              : mn
+                ? 'Хурд ба нарийвчлалыг сайжруул'
+                : 'Boost speed & accuracy',
+        };
+      case 'new_vocab':
+      default:
+        return {
+          title: zh
+            ? '开启今日学习'
+            : vi
+              ? 'Bắt đầu học hôm nay'
+              : mn
+                ? 'Өнөөдрийн сургалтаа эхлүүл'
+                : 'Start today’s lesson',
+          sub: zh
+            ? '从课程开始新的一天'
+            : vi
+              ? 'Khởi đầu ngày mới từ khóa học'
+              : mn
+                ? 'Курсээс өдрөө эхлүүл'
+                : 'Kick off the day from courses',
+        };
+    }
+  };
 
   return (
     <div
-      className="min-h-[100dvh] pb-mobile-nav text-slate-900"
+      className="min-h-[100dvh] pb-mobile-nav"
       style={{
-        backgroundColor: '#E6E7E9',
-        backgroundImage: NOISE_BACKGROUND,
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "SF Pro Display", sans-serif',
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+        color: KT.ink,
+        fontFamily: KT.font,
         WebkitFontSmoothing: 'antialiased',
       }}
     >
-      <header className="sticky top-0 z-30 flex items-end justify-between px-6 pb-6 pt-[calc(env(safe-area-inset-top)+20px)] backdrop-blur-[40px] border-b border-white/40 bg-[rgba(230,231,233,0.68)]">
-        <div>
-          <p className="mb-1.5 text-[10px] font-black tracking-[0.2em] text-slate-500">
-            {copy.studioLabel}
-          </p>
-          <h1 className="text-3xl font-black leading-none tracking-tight text-slate-900">
-            {copy.pageTitle}
-          </h1>
-        </div>
-
-        <div className="flex flex-col items-end space-y-2.5">
-          <div className="flex items-center space-x-2 opacity-80">
-            <span className="text-[10px] font-black tracking-widest text-slate-400">
-              {copy.streakLabel}
-            </span>
-            <div className="flex space-x-1">
-              {streakIndicators.map((active, index) => (
-                <span
-                  key={`${active ? 'active' : 'idle'}-${index}`}
-                  className={`rounded-full ${
-                    active ? 'h-1.5 w-1.5 bg-slate-900' : 'h-1.5 w-1 bg-slate-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate('/profile')}
-            className="h-10 w-10 overflow-hidden rounded-full border border-white bg-white shadow-[0_2px_12px_rgba(0,0,0,0.1)]"
-            aria-label={t('nav.profile', { defaultValue: 'Profile' })}
-          >
-            <img
-              src={avatarSource}
-              alt={user?.name ?? 'User'}
-              className="h-full w-full object-cover"
-            />
-          </button>
-        </div>
-      </header>
-
-      <main className="space-y-4 px-5 pt-3">
-        <button
-          type="button"
-          onClick={() => navigate('/vocab-book')}
-          className="relative w-full overflow-hidden rounded-[2.5rem] p-8 text-left text-white transition-transform duration-300 active:scale-[0.98]"
+      {/* Warm gradient header */}
+      <div
+        style={{
+          padding: '18px 22px 24px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 18px)',
+          background: `linear-gradient(180deg, ${KT.pink}40 0%, ${KT.bg} 100%)`,
+        }}
+      >
+        <div
           style={{
-            background: 'linear-gradient(160deg, #2A2D33 0%, #0F0F10 100%)',
-            boxShadow:
-              '0 32px 64px -16px rgba(0,0,0,0.4), inset 0 1px 1px rgba(186, 218, 255, 0.15), inset 0 0 0 1px rgba(255,255,255,0.06)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: 22,
           }}
         >
-          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-blue-500/15 blur-3xl" />
-
-          <div className="relative z-10 mb-8 flex items-start justify-between">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-inner">
-              <BookOpen className="h-5 w-5 text-white/80" />
+          <div>
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 13,
+                color: KT.crimson,
+                letterSpacing: 4,
+                marginBottom: 4,
+                fontWeight: 500,
+              }}
+            >
+              {dateLabel}
             </div>
-            <div className="flex items-center space-x-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
-              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-              <span className="text-[10px] font-black tracking-widest text-white/80">
-                {copy.heroBadge}
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.8,
+                lineHeight: 1.1,
+              }}
+            >
+              {copy.greeting.split(',')[0]},{' '}
+              <span style={{ color: KT.crimson }}>{copy.greeting.split(',')[1]?.trim() || ''}</span>
+            </div>
+            <div style={{ fontSize: 14, color: KT.sub, marginTop: 6, fontWeight: 500 }}>
+              {copy.greetingSub}
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 4,
+              fontFamily: KT.font,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: KT.card,
+                padding: '6px 10px',
+                borderRadius: 20,
+                boxShadow: KT.shSm,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>🔥</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: KT.ink }}>{streak}</span>
+              <span style={{ fontSize: 11, color: KT.sub, fontWeight: 600 }}>
+                {copy.streakUnit}
               </span>
             </div>
+            <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600 }}>{copy.streakLabel}</div>
           </div>
+        </div>
+        <StreakRow done={streakDoneDays} />
+      </div>
 
-          <div className="relative z-10">
-            <p className="mb-3 text-[11px] font-black tracking-[0.18em] text-white/45">
-              {copy.heroStatus}
-            </p>
-            <div className="mb-1 text-6xl font-black leading-none tracking-tighter">
-              {dueReviews}
+      {/* Resume card — one prominent "next best action" from recommendations engine. */}
+      {nextBestAction && (
+        <div style={{ padding: '0 18px 14px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(nextBestAction.path)}
+            style={{
+              width: '100%',
+              background: `linear-gradient(135deg, ${KT.pink}60 0%, ${KT.card} 60%)`,
+              border: `1px solid ${KT.line}`,
+              borderRadius: 22,
+              padding: '14px 16px',
+              boxShadow: KT.sh,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontFamily: KT.font,
+            }}
+            aria-label={resumeCopy(nextBestAction).title}
+          >
+            <HanjaSeal c={nextBestAction.seal} size={48} bg={`${KT.crimson}15`} round={14} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 11,
+                  color: KT.crimson,
+                  letterSpacing: 3,
+                  marginBottom: 2,
+                  fontWeight: 500,
+                }}
+              >
+                繼續 · RESUME
+              </div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  letterSpacing: -0.3,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {resumeCopy(nextBestAction).title}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: KT.sub,
+                  marginTop: 3,
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {resumeCopy(nextBestAction).sub}
+              </div>
             </div>
-            <p className="mb-3 text-sm font-bold text-white/90">{copy.heroTitle}</p>
-            <p className="mb-10 max-w-[18rem] text-xs font-medium tracking-wide text-white/45">
-              {copy.heroSubtitle}
-            </p>
-          </div>
+            <div
+              style={{
+                fontSize: 20,
+                fontFamily: KT.serif,
+                color: KT.crimson,
+                opacity: 0.7,
+                flexShrink: 0,
+              }}
+            >
+              →
+            </div>
+          </button>
+        </div>
+      )}
 
-          <div className="relative z-10 mb-7 px-1">
-            <div className="mb-2.5 flex justify-between text-[10px] font-bold tracking-wider text-white/40">
-              {distributionItems.map(item => (
-                <span key={item.label}>
-                  {item.label} <span className="text-white/75">{item.value}</span>
-                </span>
-              ))}
-            </div>
-            <div className="flex h-1.5 w-full overflow-hidden rounded-full border border-white/5 bg-white/5">
-              {distributionItems.map(item => (
+      {/* TODAY'S PATH hero */}
+      <div style={{ padding: '0 18px', marginTop: -4 }}>
+        <div
+          style={{
+            background: KT.card,
+            borderRadius: 28,
+            boxShadow: KT.sh,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px 20px 14px',
+              borderBottom: `1px solid ${KT.line}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <HanjaSeal c="道" size={28} bg={KT.crimson} round={6} />
+              <div>
                 <div
-                  key={`${item.label}-${item.value}`}
-                  className={item.className}
-                  style={{ width: `${item.width}%` }}
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: KT.ink,
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {copy.pathTitle}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: KT.sub,
+                    fontWeight: 600,
+                    letterSpacing: 0.5,
+                    marginTop: 1,
+                  }}
+                >
+                  {copy.pathSub} · {copy.minsShort(totalMin)}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {path.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: i === step ? 18 : 6,
+                    height: 6,
+                    borderRadius: 3,
+                    background: i < step ? KT.mintDeep : i === step ? KT.ink : KT.line2,
+                    transition: 'all .3s',
+                  }}
                 />
               ))}
             </div>
           </div>
 
-          <div className="relative z-10 flex items-center justify-between rounded-2xl bg-white px-5 py-4 text-slate-900 shadow-[0_12px_24px_-8px_rgba(255,255,255,0.4)]">
-            <span className="text-sm font-bold">{copy.heroAction}</span>
-            <ChevronRight className="h-4 w-4" />
-          </div>
-        </button>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(topikGrammarPath)}
-            className="relative flex h-48 flex-col justify-between overflow-hidden rounded-[2rem] p-6 text-left text-white transition-transform duration-300 active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(150deg, #576359 0%, #404942 100%)',
-              boxShadow:
-                '0 24px 48px -12px rgba(64, 73, 66, 0.3), inset 0 1px 1px rgba(230, 255, 235, 0.15), inset 0 0 0 1px rgba(255,255,255,0.06)',
-            }}
-          >
-            <div className="pointer-events-none absolute -bottom-4 -right-3 text-8xl opacity-[0.04]">
-              <Sparkles />
-            </div>
-
-            <div className="relative z-10 flex items-start justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/5">
-                <Sparkles className="h-4 w-4 text-white/80" />
-              </div>
-              <span className="text-[10px] font-black tracking-widest text-white/50">
-                {topikGrammarBadge}
-              </span>
-            </div>
-
-            <div className="relative z-10">
-              <p className="mb-1.5 text-[10px] font-bold tracking-widest text-white/50">
-                {hasTopikGrammarHistory ? copy.topikGrammarLead : copy.nextLearningLabel}
-              </p>
-              <p className="line-clamp-2 text-xl font-black leading-tight tracking-tight">
-                {topikGrammarHeadline}
-              </p>
-              <p className="mt-2 text-[11px] font-semibold tracking-wide text-white/70">
-                {topikGrammarSubline}
-              </p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/topik')}
-            className="relative flex h-48 flex-col justify-between rounded-[2rem] p-6 text-left text-white transition-transform duration-300 active:scale-[0.98]"
-            style={{
-              background: 'linear-gradient(135deg, #A8A096 0%, #8A8177 100%)',
-              boxShadow:
-                '0 16px 32px -8px rgba(138, 129, 119, 0.25), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)',
-              border: '1px solid rgba(0,0,0,0.05)',
-            }}
-          >
-            <div className="pointer-events-none absolute inset-0 m-auto h-32 w-32 rounded-full bg-white/5 blur-3xl" />
-
-            <div className="relative z-10 flex items-start justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[0.8rem] bg-slate-900 shadow-md">
-                <GraduationCap className="h-4 w-4 text-white" />
-              </div>
-              <div className="rounded-full border border-rose-100 bg-rose-50 px-2.5 py-1 text-[10px] font-black tracking-widest text-rose-600 shadow-sm">
-                {language.startsWith('zh')
-                  ? `已做 ${examAttempts?.length ?? 0}`
-                  : `${examAttempts?.length ?? 0} done`}
-              </div>
-            </div>
-
-            <div className="relative z-10">
-              <h3 className="mb-0.5 text-[12px] font-black tracking-widest text-slate-100">
-                {copy.topikLabel}
-              </h3>
-              <p className="mb-3.5 text-[10px] font-medium tracking-wide text-slate-200">
-                {recentScores.length > 0 ? `${copy.topikMeta} · ${latestScore}%` : copy.topikMeta}
-              </p>
-              <div className="h-10 w-full">
-                <HomeSparkline values={recentScores} />
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <section className="pt-3">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h3 className="text-[11px] font-black tracking-[0.2em] text-slate-400">
-              {copy.exploreLabel}
-            </h3>
-            <button
-              type="button"
-              onClick={() => navigate('/media')}
-              className="text-slate-300 transition-colors active:scale-90"
-              aria-label={t('common.filter', { defaultValue: 'Filter' })}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleOpenPodcast}
-              className="flex w-full items-center space-x-4 rounded-[1.5rem] p-3 text-left text-white transition-transform duration-300 active:scale-[0.98]"
+          {done.map(p => (
+            <div
+              key={p.key}
               style={{
-                background: 'linear-gradient(135deg, #7A8D9A 0%, #61717A 100%)',
-                boxShadow:
-                  '0 16px 32px -8px rgba(97, 113, 122, 0.25), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)',
-                border: '1px solid rgba(0,0,0,0.05)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                borderBottom: `1px solid ${KT.line}`,
+                opacity: 0.55,
               }}
             >
-              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[1.2rem] border border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
-                {latestPodcast?.channelImage ||
-                trendingChannel?.artworkUrl ||
-                trendingChannel?.artwork ? (
-                  <img
-                    src={
-                      latestPodcast?.channelImage ||
-                      trendingChannel?.artworkUrl ||
-                      trendingChannel?.artwork
-                    }
-                    alt={latestPodcast?.channelName || trendingChannel?.title || 'Podcast'}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-white/10">
-                    <Headphones className="h-6 w-6 text-white/80" />
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  background: KT.mint,
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: KT.mintDeep,
+                  fontSize: 14,
+                  fontWeight: 800,
+                }}
+              >
+                ✓
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: KT.ink,
+                    textDecoration: 'line-through',
+                    textDecorationColor: KT.subLight,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {p.title}
+                </div>
+                <div style={{ fontSize: 11, color: KT.sub, marginTop: 1 }}>
+                  {p.kind} · {copy.minsShort(p.mins)} {copy.minsDone}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {next && (
+            <div
+              style={{
+                padding: '20px 20px 22px',
+                background: `linear-gradient(180deg, ${KT[next.tone as keyof typeof KT]}30 0%, ${KT.card} 70%)`,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'flex-start',
+                  marginBottom: 16,
+                }}
+              >
+                <HanjaSeal
+                  c={next.kanji}
+                  size={52}
+                  bg={KT[`${next.tone}Deep` as keyof typeof KT] as string}
+                  round={12}
+                />
+                <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                    <Chip tone={next.tone}>
+                      {next.kind.toUpperCase()} · {next.en}
+                    </Chip>
+                    <span style={{ fontSize: 10, color: KT.sub, fontWeight: 700 }}>
+                      ≈ {copy.minsShort(next.mins)}
+                    </span>
                   </div>
-                )}
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/15 backdrop-blur-[1px]">
-                  <Play
-                    className="ml-0.5 h-4 w-4 text-white opacity-90 drop-shadow-md"
-                    fill="currentColor"
-                  />
+                  <div
+                    style={{
+                      fontSize: 19,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      lineHeight: 1.25,
+                      letterSpacing: -0.4,
+                    }}
+                  >
+                    {next.title}
+                  </div>
+                  <div style={{ fontSize: 12, color: KT.sub, marginTop: 4 }}>{next.sub}</div>
                 </div>
               </div>
-
-              <div className="min-w-0 flex-1 pr-2">
-                <div className="mb-1 flex items-center space-x-1.5">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.8)]" />
-                  <p className="text-[10px] font-black tracking-[0.1em] text-rose-50">
-                    {latestPodcast ? copy.podcastLive : copy.podcastFallback}
-                  </p>
-                </div>
-                <h4 className="truncate text-sm font-bold tracking-wide text-white">
-                  {latestPodcast?.episodeTitle || trendingChannel?.title || copy.podcastFallback}
-                </h4>
-                <p className="mt-1 text-[10px] font-medium tracking-wider text-slate-200 opacity-80">
-                  {latestPodcast
-                    ? `${latestPodcast.channelName} • ${formatSafeDateLabel(
-                        latestPodcast.playedAt,
-                        locale,
-                        '—',
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                        }
-                      )}`
-                    : trendingChannel?.author ||
-                      t('dashboard.podcast.label', { defaultValue: 'Podcast' })}
-                </p>
+              <button
+                type="button"
+                onClick={next.onStart}
+                style={{
+                  width: '100%',
+                  padding: 16,
+                  borderRadius: 18,
+                  border: 'none',
+                  background: KT.ink,
+                  color: KT.bg,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: 0.3,
+                  cursor: 'pointer',
+                  fontFamily: KT.font,
+                  boxShadow: '0 4px 14px rgba(31,27,23,0.22)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>{copy.pathStart}</span>
+                <span style={{ fontFamily: KT.serif, opacity: 0.7, fontSize: 13 }}>始</span>
+                <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
+              </button>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: 10,
+                  padding: '0 4px',
+                }}
+              >
+                <button type="button" style={btnSub()}>
+                  {copy.pathSkip}
+                </button>
+                <button type="button" style={btnSub()}>
+                  {copy.pathLater}
+                </button>
               </div>
-            </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-            <button
-              type="button"
-              onClick={handleOpenReading}
-              className="flex w-full items-center space-x-4 rounded-[1.5rem] p-3 text-left text-white transition-transform duration-300 active:scale-[0.98]"
+      {achievements.length > 0 && (
+        <div style={{ padding: '20px 18px 0' }}>
+          <SectionHead kanji="成" title={copy.achievementsTitle} />
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {achievements.map((a, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: '0 0 auto',
+                  background: KT.card,
+                  padding: '10px 14px',
+                  borderRadius: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  boxShadow: KT.shSm,
+                  minWidth: 120,
+                }}
+              >
+                <div style={{ fontSize: 20 }}>{a.e}</div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: KT.ink }}>{a.s}</div>
+                  <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600 }}>{a.l}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {myRank && myRank.myEntry && myRank.neighbours.length > 0 && (
+        <div style={{ padding: '20px 18px 0' }}>
+          <SectionHead
+            kanji="榜"
+            title={
+              language === 'zh'
+                ? '本週排名'
+                : language === 'vi'
+                  ? 'Xếp hạng tuần'
+                  : language === 'mn'
+                    ? 'Долоо хоногийн байр'
+                    : 'Weekly rank'
+            }
+          />
+          <div
+            style={{
+              background: KT.card,
+              borderRadius: 20,
+              border: `1px solid ${KT.line}`,
+              boxShadow: KT.shSm,
+              overflow: 'hidden',
+            }}
+          >
+            <div
               style={{
-                background: 'linear-gradient(135deg, #7A8D9A 0%, #61717A 100%)',
-                boxShadow:
-                  '0 16px 32px -8px rgba(97, 113, 122, 0.25), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)',
-                border: '1px solid rgba(0,0,0,0.05)',
+                padding: '14px 16px 10px',
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
               }}
             >
-              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.2rem] border border-white/10 bg-white/5 shadow-inner">
-                {featuredBook?.coverImageUrl ? (
-                  <img
-                    src={featuredBook.coverImageUrl}
-                    alt={featuredBook.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <BookOpen className="h-6 w-6 text-white/60" />
-                )}
-              </div>
-
-              <div className="min-w-0 flex-1 pr-3">
-                <h4 className="mb-1 truncate text-sm font-bold tracking-wide text-white">
-                  {readingTitle}
-                </h4>
-                <p className="text-[10px] font-medium tracking-wider text-slate-200 opacity-80">
-                  {readingMeta}
-                </p>
-                <div className="mt-3 h-1 w-full overflow-hidden rounded-full border border-white/5 bg-white/5">
-                  <div
-                    className="h-full rounded-full bg-white shadow-[0_0_10px_0_rgba(255,255,255,0.4)]"
-                    style={{ width: `${readingProgress}%` }}
-                  />
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    letterSpacing: 1.5,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {language === 'zh'
+                    ? '你目前第'
+                    : language === 'vi'
+                      ? 'Hiện tại bạn đứng thứ'
+                      : language === 'mn'
+                        ? 'Одоо та'
+                        : 'You are ranked'}
+                </div>
+                <div
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 32,
+                    fontWeight: 800,
+                    color: KT.crimson,
+                    letterSpacing: -1,
+                  }}
+                >
+                  #{myRank.myEntry.rank}
                 </div>
               </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: KT.sub,
+                  textAlign: 'right',
+                }}
+              >
+                {myRank.myEntry.currentWeekXp}
+                {language === 'zh'
+                  ? ' XP · 本週'
+                  : language === 'vi'
+                    ? ' XP · tuần này'
+                    : language === 'mn'
+                      ? ' XP · энэ 7 хоног'
+                      : ' XP this week'}
+                <div style={{ color: KT.sub, marginTop: 2 }}>
+                  {language === 'zh'
+                    ? `共 ${myRank.totalRanked} 位學員`
+                    : language === 'vi'
+                      ? `Trong số ${myRank.totalRanked}`
+                      : language === 'mn'
+                        ? `${myRank.totalRanked} хэрэглэгчээс`
+                        : `of ${myRank.totalRanked} learners`}
+                </div>
+              </div>
+            </div>
+            <div style={{ borderTop: `1px solid ${KT.line}` }}>
+              {myRank.neighbours.map((entry, idx) => (
+                <div
+                  key={String(entry.userId)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 16px',
+                    background: entry.isMe ? `${KT.pink}40` : 'transparent',
+                    borderTop: idx === 0 ? 'none' : `1px solid ${KT.line}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: KT.serif,
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: entry.isMe ? KT.crimson : KT.sub,
+                      minWidth: 28,
+                    }}
+                  >
+                    #{entry.rank}
+                  </div>
+                  {entry.avatarUrl ? (
+                    <img
+                      src={entry.avatarUrl}
+                      alt={entry.name || ''}
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 10,
+                        objectFit: 'cover',
+                        border: `1px solid ${KT.line}`,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 10,
+                        background: `${KT.crimson}22`,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: KT.crimson,
+                      }}
+                    >
+                      {(entry.name || '?').slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      flex: 1,
+                      fontSize: 13,
+                      fontWeight: entry.isMe ? 800 : 600,
+                      color: KT.ink,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {entry.name || (entry.isMe ? 'You' : '—')}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: KT.sub }}>
+                    {entry.currentWeekXp} XP
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {user && (activePartnership || (pendingPartnerships && pendingPartnerships.length > 0)) && (
+        <div style={{ padding: '20px 18px 0' }}>
+          <SectionHead
+            kanji="伴"
+            title={
+              language.startsWith('zh')
+                ? '學習搭檔'
+                : language.startsWith('vi')
+                  ? 'Bạn đồng hành'
+                  : language.startsWith('mn')
+                    ? 'Сурах хань'
+                    : 'Study buddy'
+            }
+          />
+          {activePartnership && (
+            <div
+              style={{
+                background: `linear-gradient(135deg, ${KT.butter}55 0%, ${KT.card} 75%)`,
+                borderRadius: 20,
+                padding: '16px 18px',
+                border: `1px solid ${KT.line}`,
+                boxShadow: KT.shSm,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+              }}
+            >
+              {activePartnership.partner.avatarUrl ? (
+                <img
+                  src={activePartnership.partner.avatarUrl}
+                  alt={activePartnership.partner.name || ''}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    objectFit: 'cover',
+                    border: `1px solid ${KT.line}`,
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    background: `${KT.crimson}22`,
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontFamily: KT.serif,
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: KT.crimson,
+                    flexShrink: 0,
+                  }}
+                >
+                  {(activePartnership.partner.name || '?').slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    letterSpacing: 1.4,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {language.startsWith('zh')
+                    ? '並肩學習中'
+                    : language.startsWith('vi')
+                      ? 'Đang học cùng'
+                      : language.startsWith('mn')
+                        ? 'Хамт сурч байна'
+                        : 'Studying with'}
+                </div>
+                <div
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: KT.ink,
+                    letterSpacing: -0.3,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {activePartnership.partner.name ||
+                    (language.startsWith('zh')
+                      ? '匿名同伴'
+                      : language.startsWith('vi')
+                        ? 'Bạn ẩn danh'
+                        : language.startsWith('mn')
+                          ? 'Нэргүй хань'
+                          : 'Anonymous partner')}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: KT.sub, marginTop: 2 }}>
+                  {language.startsWith('zh')
+                    ? `自 ${new Date(activePartnership.acceptedAt ?? activePartnership.startedAt).toLocaleDateString('zh-CN')} 起`
+                    : language.startsWith('vi')
+                      ? `Từ ${new Date(activePartnership.acceptedAt ?? activePartnership.startedAt).toLocaleDateString('vi-VN')}`
+                      : language.startsWith('mn')
+                        ? `${new Date(activePartnership.acceptedAt ?? activePartnership.startedAt).toLocaleDateString('mn-MN')}-нд`
+                        : `Since ${new Date(activePartnership.acceptedAt ?? activePartnership.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  gap: 6,
+                  flexShrink: 0,
+                }}
+              >
+                <Chip tone="butter">
+                  {language.startsWith('zh')
+                    ? '啟航'
+                    : language.startsWith('vi')
+                      ? 'Đang hoạt động'
+                      : language.startsWith('mn')
+                        ? 'Идэвхтэй'
+                        : 'Active'}
+                </Chip>
+                <div
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: KT.crimson,
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 4,
+                    lineHeight: 1,
+                  }}
+                  aria-label="combined streak"
+                  title={
+                    language.startsWith('zh')
+                      ? '共同連續天數（取兩人中的較低值）'
+                      : language.startsWith('vi')
+                        ? 'Chuỗi chung (lấy giá trị nhỏ hơn của hai bên)'
+                        : language.startsWith('mn')
+                          ? 'Хамтарсан цуврал'
+                          : 'Combined streak (min of both)'
+                  }
+                >
+                  <span style={{ fontSize: 16 }}>🔥</span>
+                  <span>{activePartnership.combinedStreak}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: KT.sub }}>
+                    {language.startsWith('zh')
+                      ? '天'
+                      : language.startsWith('vi')
+                        ? 'ngày'
+                        : language.startsWith('mn')
+                          ? 'өдөр'
+                          : 'd'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: KT.sub,
+                    letterSpacing: 0.5,
+                    textAlign: 'right',
+                  }}
+                  aria-label="shared minutes today"
+                >
+                  {language.startsWith('zh')
+                    ? `今日合計 ${activePartnership.sharedMinutesToday}分`
+                    : language.startsWith('vi')
+                      ? `Hôm nay ${activePartnership.sharedMinutesToday}ph`
+                      : language.startsWith('mn')
+                        ? `Өнөөдөр ${activePartnership.sharedMinutesToday}мин`
+                        : `${activePartnership.sharedMinutesToday} min today`}
+                </div>
+              </div>
+            </div>
+          )}
+          {pendingPartnerships &&
+            pendingPartnerships
+              .filter(p => p.role === 'invitee' && p.status === 'pending')
+              .map(invite => {
+                const key = String(invite.id);
+                const busy = !!partnershipActionPending[key];
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      background: KT.card,
+                      borderRadius: 20,
+                      padding: '14px 16px',
+                      border: `1px solid ${KT.line}`,
+                      boxShadow: KT.shSm,
+                      marginTop: activePartnership ? 10 : 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    {invite.partner.avatarUrl ? (
+                      <img
+                        src={invite.partner.avatarUrl}
+                        alt={invite.partner.name || ''}
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          objectFit: 'cover',
+                          border: `1px solid ${KT.line}`,
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          background: `${KT.crimson}1A`,
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontFamily: KT.serif,
+                          fontSize: 15,
+                          fontWeight: 800,
+                          color: KT.crimson,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(invite.partner.name || '?').slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: KT.crimson,
+                          letterSpacing: 1.2,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {language.startsWith('zh')
+                          ? '新邀請'
+                          : language.startsWith('vi')
+                            ? 'Lời mời mới'
+                            : language.startsWith('mn')
+                              ? 'Шинэ урилга'
+                              : 'New invite'}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: KT.ink,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {invite.partner.name ||
+                          (language.startsWith('zh')
+                            ? '某位同學'
+                            : language.startsWith('vi')
+                              ? 'Một bạn học'
+                              : language.startsWith('mn')
+                                ? 'Нэг сурагч'
+                                : 'A learner')}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleAcceptPartnership(invite.id);
+                      }}
+                      disabled={busy}
+                      style={{
+                        height: 30,
+                        padding: '0 12px',
+                        borderRadius: 15,
+                        border: 'none',
+                        background: KT.crimson,
+                        color: KT.card,
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: busy ? 'default' : 'pointer',
+                        opacity: busy ? 0.6 : 1,
+                      }}
+                    >
+                      {language.startsWith('zh')
+                        ? '接受'
+                        : language.startsWith('vi')
+                          ? 'Chấp nhận'
+                          : language.startsWith('mn')
+                            ? 'Зөвшөөрөх'
+                            : 'Accept'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDeclinePartnership(invite.id);
+                      }}
+                      disabled={busy}
+                      style={{
+                        height: 30,
+                        padding: '0 10px',
+                        borderRadius: 15,
+                        border: `1px solid ${KT.line}`,
+                        background: 'transparent',
+                        color: KT.sub,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: busy ? 'default' : 'pointer',
+                        opacity: busy ? 0.5 : 1,
+                      }}
+                    >
+                      {language.startsWith('zh')
+                        ? '謝絕'
+                        : language.startsWith('vi')
+                          ? 'Từ chối'
+                          : language.startsWith('mn')
+                            ? 'Татгалзах'
+                            : 'Decline'}
+                    </button>
+                  </div>
+                );
+              })}
+        </div>
+      )}
+
+      {dailyPhrase && (
+        <div style={{ padding: '20px 18px 0' }}>
+          <SectionHead kanji="日" title={copy.dailyPhraseTitle} />
+          <div
+            style={{
+              background: `linear-gradient(135deg, ${KT.butter}60 0%, ${KT.card} 70%)`,
+              borderRadius: 24,
+              padding: '18px 20px',
+              border: `1px solid ${KT.line}`,
+              boxShadow: KT.shSm,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: 8,
+                fontFamily: KT.serif,
+                fontSize: 56,
+                color: 'rgba(162,59,46,0.08)',
+                lineHeight: 1,
+                pointerEvents: 'none',
+              }}
+            >
+              語
+            </div>
+            <div style={{ position: 'relative' }}>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  letterSpacing: -0.5,
+                  lineHeight: 1.2,
+                  marginBottom: 4,
+                }}
+              >
+                {dailyPhrase.korean}
+              </div>
+              {dailyPhrase.romanization && (
+                <div style={{ fontSize: 12, color: KT.sub, fontWeight: 600, marginBottom: 8 }}>
+                  [{dailyPhrase.romanization}]
+                </div>
+              )}
+              <div style={{ fontSize: 14, color: KT.ink2, fontWeight: 600, lineHeight: 1.5 }}>
+                {language.startsWith('zh')
+                  ? dailyPhrase.translationZh || dailyPhrase.translation
+                  : language.startsWith('vi')
+                    ? dailyPhrase.translationVi || dailyPhrase.translation
+                    : language.startsWith('mn')
+                      ? dailyPhrase.translationMn || dailyPhrase.translation
+                      : dailyPhrase.translation}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: '24px 18px 20px' }}>
+        <SectionHead kanji="會" title={copy.communityTitle} />
+        <div
+          style={{
+            background: KT.card,
+            borderRadius: 28,
+            boxShadow: KT.sh,
+            overflow: 'hidden',
+          }}
+        >
+          {communityActivities === undefined && (
+            <>
+              {[0, 1, 2].map(index => (
+                <div
+                  key={index}
+                  style={{
+                    padding: '14px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    borderBottom: index < 2 ? `1px solid ${KT.line}` : 'none',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: KT.bg2,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: '50%',
+                        height: 10,
+                        borderRadius: 6,
+                        background: KT.bg2,
+                        marginBottom: 8,
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '78%',
+                        height: 9,
+                        borderRadius: 6,
+                        background: KT.bg2,
+                        marginBottom: 6,
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '24%',
+                        height: 8,
+                        borderRadius: 6,
+                        background: KT.bg2,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {communityActivities !== undefined && friendFeed.length === 0 && (
+            <div
+              style={{
+                padding: '20px 18px',
+                fontSize: 13,
+                color: KT.sub,
+                lineHeight: 1.6,
+                fontWeight: 600,
+              }}
+            >
+              {language.startsWith('zh')
+                ? '关注同学后，这里会显示他们的学习动态。'
+                : language.startsWith('vi')
+                  ? 'Hãy theo dõi bạn học để thấy tiến độ học tập tại đây.'
+                  : language.startsWith('mn')
+                    ? 'Найзуудаа дагавал тэдний сургалтын явц энд харагдана.'
+                    : 'Follow classmates to see their learning activity here.'}
+            </div>
+          )}
+          {friendFeed.map((item, index) => (
+            <div
+              key={item.key}
+              style={{
+                padding: '14px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                borderBottom: index < friendFeed.length - 1 ? `1px solid ${KT.line}` : 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  background: item.bg,
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                {item.emoji}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 2,
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 800, color: KT.ink }}>
+                    {item.actorName}
+                  </span>
+                  <Chip tone={item.tagTone}>{item.tag}</Chip>
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: KT.ink2,
+                    lineHeight: 1.3,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.action}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: KT.sub,
+                    marginTop: 2,
+                    fontWeight: 600,
+                  }}
+                >
+                  {item.time}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                {(() => {
+                  const actorKey = String(item.actorUserId);
+                  const alreadyInvited =
+                    !!invitedUsers[actorKey] ||
+                    (pendingPartnerships ?? []).some(p => String(p.partner.userId) === actorKey);
+                  const isSelf = user?.id === actorKey;
+                  const canInvite = !!user && !isSelf && !activePartnership && !alreadyInvited;
+                  const inviteBusy = !!invitePending[actorKey];
+                  if (!canInvite && !alreadyInvited) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!canInvite) return;
+                        void handleInvitePartner(item.actorUserId);
+                      }}
+                      disabled={!canInvite || inviteBusy}
+                      style={{
+                        height: 30,
+                        padding: '0 10px',
+                        borderRadius: 15,
+                        border: `1px solid ${alreadyInvited ? KT.line : KT.line2}`,
+                        background: alreadyInvited ? `${KT.butter}80` : 'transparent',
+                        color: alreadyInvited ? '#7A5F1F' : KT.crimson,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: canInvite && !inviteBusy ? 'pointer' : 'default',
+                        opacity: inviteBusy ? 0.65 : 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                      aria-label={alreadyInvited ? 'Invite pending' : 'Invite as study partner'}
+                    >
+                      {alreadyInvited
+                        ? language.startsWith('zh')
+                          ? '邀請中'
+                          : language.startsWith('vi')
+                            ? 'Đã mời'
+                            : language.startsWith('mn')
+                              ? 'Хүлээгдэж буй'
+                              : 'Invited'
+                        : language.startsWith('zh')
+                          ? '＋ 搭檔'
+                          : language.startsWith('vi')
+                            ? '＋ Bạn học'
+                            : language.startsWith('mn')
+                              ? '＋ Хань'
+                              : '＋ Buddy'}
+                    </button>
+                  );
+                })()}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleToggleLike(item.activityId);
+                  }}
+                  disabled={!!likePending[item.key]}
+                  style={{
+                    minWidth: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    border: `1px solid ${KT.line2}`,
+                    background: item.resolvedLiked ? `${KT.pink}66` : 'transparent',
+                    cursor: likePending[item.key] ? 'default' : 'pointer',
+                    color: item.resolvedLiked ? KT.crimson : KT.sub,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    padding: '0 8px',
+                    opacity: likePending[item.key] ? 0.65 : 1,
+                  }}
+                  aria-label="Like"
+                >
+                  <span>{item.resolvedLiked ? '♥' : '♡'}</span>
+                  <span>{item.resolvedLikeCount}</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '0 18px 28px' }}>
+        <div
+          style={{
+            background: KT.indigo,
+            color: KT.card,
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 28,
+            boxShadow: KT.sh,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              right: -10,
+              top: -10,
+              fontFamily: KT.serif,
+              fontSize: 120,
+              color: 'rgba(255,255,255,0.08)',
+              fontWeight: 500,
+              lineHeight: 1,
+            }}
+          >
+            挑戰
+          </div>
+          <div style={{ position: 'relative' }}>
+            <Chip tone="ink">
+              {copy.challengeBadge}
+              {dailyChallenge ? ` · +${dailyChallenge.rewardXp} XP` : ''}
+            </Chip>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                marginTop: 10,
+                lineHeight: 1.3,
+                letterSpacing: -0.3,
+              }}
+            >
+              {dailyChallenge?.title || copy.challengeBadge}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.75,
+                marginTop: 6,
+              }}
+            >
+              {dailyChallenge?.subtitle || ''}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginTop: 14,
+                marginBottom: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 0.2,
+                }}
+              >
+                {dailyChallenge ? formatChallengeProgressLabel(dailyChallenge, language) : ''}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  opacity: 0.86,
+                  fontWeight: 700,
+                }}
+              >
+                {dailyChallenge
+                  ? formatChallengeRewardLabel(dailyChallenge.rewardXp, language)
+                  : ''}
+              </div>
+            </div>
+            <div
+              style={{
+                width: '100%',
+                height: 8,
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.18)',
+                overflow: 'hidden',
+                marginBottom: 16,
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.max(0, challengeProgressRatio) * 100}%`,
+                  height: '100%',
+                  borderRadius: 999,
+                  background: 'rgba(255,255,255,0.92)',
+                  transition: 'width 180ms ease',
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void handleChallengeAction();
+              }}
+              disabled={!dailyChallenge || dailyChallenge.isClaimed || isClaimingDailyChallenge}
+              style={{
+                padding: '12px 20px',
+                borderRadius: 14,
+                border: `1.5px solid ${KT.card}`,
+                background:
+                  !dailyChallenge || dailyChallenge.isClaimed
+                    ? 'rgba(255,255,255,0.1)'
+                    : 'transparent',
+                color: KT.card,
+                fontSize: 13,
+                fontWeight: 800,
+                cursor:
+                  !dailyChallenge || dailyChallenge.isClaimed || isClaimingDailyChallenge
+                    ? 'default'
+                    : 'pointer',
+                fontFamily: KT.font,
+                letterSpacing: 0.3,
+                opacity: !dailyChallenge ? 0.8 : 1,
+              }}
+            >
+              {challengeActionLabel}
             </button>
           </div>
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
   );
 };
+
+function btnSub(): React.CSSProperties {
+  return {
+    background: 'transparent',
+    border: 'none',
+    color: KT.sub,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: KT.font,
+    padding: 4,
+  };
+}

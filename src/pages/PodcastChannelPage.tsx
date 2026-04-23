@@ -12,8 +12,11 @@ import { getLocalizedPath, useLocalizedNavigate } from '../hooks/useLocalizedNav
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
 import { localeFromLanguage } from '../utils/locale';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { buildPodcastChannelPath } from '../utils/podcastRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { KT, PageShell, SectionHead, Chip } from '../components/mobile/ksoft/ksoft';
 import type { Language } from '../types';
 
 interface Episode {
@@ -367,6 +370,332 @@ const EpisodeListSection = ({
   </div>
 );
 
+const MobilePodcastChannelLayout = ({
+  displayChannel,
+  channelImage,
+  feedUrl,
+  data,
+  language,
+  copy,
+  isDescExpanded,
+  setIsDescExpanded,
+  isSubscribed,
+  handleToggleSubscribe,
+  handlePlayEpisode,
+  onBack,
+  handleShareChannel,
+}: {
+  displayChannel: ChannelData | StateChannel;
+  channelImage: string;
+  feedUrl: string | undefined;
+  data: FeedData | null;
+  language: Language;
+  copy: ChannelCopy;
+  isDescExpanded: boolean;
+  setIsDescExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  isSubscribed: boolean;
+  handleToggleSubscribe: () => void;
+  handlePlayEpisode: (episode: Episode) => void;
+  onBack: () => void;
+  handleShareChannel: () => void;
+}) => {
+  const description = displayChannel.description || '';
+  const canExpand = description.length > 120;
+  const visibleDescription =
+    !description || isDescExpanded || !canExpand ? description : `${description.slice(0, 120)}…`;
+  const episodes = data?.episodes ?? [];
+
+  return (
+    <PageShell>
+      <div
+        style={{
+          padding: '14px 22px 18px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              color: KT.ink,
+              boxShadow: KT.shSm,
+              cursor: 'pointer',
+              fontSize: 18,
+              fontWeight: 700,
+            }}
+            aria-label={copy.back}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={handleShareChannel}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              color: KT.ink,
+              boxShadow: KT.shSm,
+              cursor: 'pointer',
+            }}
+            aria-label="Share"
+          >
+            <Share2 size={16} />
+          </button>
+        </div>
+
+        <div
+          style={{
+            fontFamily: KT.serif,
+            fontSize: 13,
+            color: KT.crimson,
+            letterSpacing: 4,
+            marginBottom: 4,
+            fontWeight: 500,
+          }}
+        >
+          聲音 · PODCAST
+        </div>
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            color: KT.ink,
+            letterSpacing: -0.6,
+          }}
+        >
+          {displayChannel.title}
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            color: KT.sub,
+            marginTop: 4,
+            fontWeight: 600,
+          }}
+        >
+          {displayChannel.author || ''}
+        </div>
+      </div>
+
+      <div style={{ padding: '0 18px 16px' }}>
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${KT.indigo} 0%, ${KT.ink2} 100%)`,
+            borderRadius: 24,
+            padding: 18,
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: KT.shLg,
+            color: KT.card,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: 8,
+              fontFamily: KT.serif,
+              fontSize: 68,
+              lineHeight: 1,
+              color: 'rgba(255,255,255,0.1)',
+              fontWeight: 500,
+            }}
+          >
+            聲
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+            <div
+              style={{
+                width: 78,
+                height: 78,
+                borderRadius: 18,
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: `url(${channelImage}) center/cover, rgba(255,255,255,0.08)`,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Chip tone="ink" size="sm">
+                {copy.episodes} {episodes.length}
+              </Chip>
+              <div
+                style={{
+                  fontSize: 13,
+                  marginTop: 8,
+                  color: 'rgba(255,255,255,0.8)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {displayChannel.author || ''}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleSubscribe}
+            style={{
+              marginTop: 14,
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 12,
+              border: 'none',
+              cursor: 'pointer',
+              background: isSubscribed ? 'rgba(255,255,255,0.86)' : KT.crimson,
+              color: isSubscribed ? KT.ink : KT.card,
+              fontSize: 13,
+              fontWeight: 800,
+              fontFamily: KT.font,
+            }}
+          >
+            {isSubscribed ? copy.subscribed : copy.subscribe}
+          </button>
+        </div>
+      </div>
+
+      {description ? (
+        <div style={{ padding: '0 18px 16px' }}>
+          <div
+            style={{
+              background: KT.card,
+              borderRadius: 18,
+              border: `1px solid ${KT.line}`,
+              boxShadow: KT.shSm,
+              padding: 14,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 13,
+                color: KT.ink2,
+                lineHeight: 1.65,
+                margin: 0,
+              }}
+            >
+              {visibleDescription}
+            </p>
+            {canExpand ? (
+              <button
+                type="button"
+                onClick={() => setIsDescExpanded(value => !value)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: KT.indigo,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  marginTop: 10,
+                  padding: 0,
+                  cursor: 'pointer',
+                }}
+              >
+                {isDescExpanded ? copy.collapse : copy.expand}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div style={{ paddingBottom: 24 }}>
+        <SectionHead kanji="錄" title={`${copy.episodes} (${episodes.length})`} />
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {episodes.length === 0 ? (
+            <div
+              style={{
+                borderRadius: 16,
+                background: KT.card,
+                border: `1px solid ${KT.line}`,
+                boxShadow: KT.shSm,
+                textAlign: 'center',
+                padding: '18px 14px',
+              }}
+            >
+              <div style={{ fontSize: 13, color: KT.sub, fontWeight: 600 }}>{copy.noEpisodes}</div>
+              {!feedUrl ? (
+                <div style={{ fontSize: 11, color: KT.subLight, marginTop: 6 }}>
+                  {copy.missingFeed}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            episodes.map((episode, idx) => (
+              <button
+                key={episode.guid || episode.id || episode.link || idx}
+                type="button"
+                onClick={() => handlePlayEpisode(episode)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  border: 'none',
+                  background: KT.card,
+                  borderRadius: 18,
+                  boxShadow: KT.shSm,
+                  padding: '12px 14px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: KT.bg2,
+                    color: KT.indigo,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Play size={18} fill="currentColor" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      lineHeight: 1.4,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {episode.title}
+                  </div>
+                  <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <Chip size="sm">{formatEpisodeDuration(episode.duration, copy.minutes)}</Chip>
+                    <Chip size="sm">{formatEpisodeDate(episode.pubDate, language)}</Chip>
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </PageShell>
+  );
+};
+
 const PodcastChannelLayout = ({
   displayChannel,
   channelImage,
@@ -422,6 +751,7 @@ const PodcastChannelLayout = ({
 );
 
 const PodcastChannelPage: React.FC = () => {
+  const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useLocalizedNavigate();
@@ -437,7 +767,7 @@ const PodcastChannelPage: React.FC = () => {
     )?.channel ?? null;
   const feedUrl = searchParams.get('feedUrl') || stateChannel?.feedUrl;
   const channelId = searchParams.get('id') || stateChannel?.itunesId || stateChannel?.id;
-  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast'));
   const currentPath = `${location.pathname}${location.search}`;
 
   const [data, setData] = useState<FeedData | null>(null);
@@ -619,6 +949,26 @@ const PodcastChannelPage: React.FC = () => {
         message={copy.noChannelInfo}
         backLabel={copy.back}
         onBack={() => navigate(backPath)}
+      />
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <MobilePodcastChannelLayout
+        displayChannel={displayChannel}
+        channelImage={resolveChannelImage(displayChannel)}
+        feedUrl={feedUrl || undefined}
+        data={data}
+        language={language}
+        copy={copy}
+        isDescExpanded={isDescExpanded}
+        setIsDescExpanded={setIsDescExpanded}
+        isSubscribed={isSubscribed}
+        handleToggleSubscribe={handleToggleSubscribe}
+        handlePlayEpisode={handlePlayEpisode}
+        onBack={() => navigate(backPath)}
+        handleShareChannel={handleShareChannel}
       />
     );
   }

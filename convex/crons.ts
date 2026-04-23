@@ -10,6 +10,8 @@ type ProjectBatchArgs = {
   limit: number;
 };
 
+type EmptyArgs = Record<string, never>;
+
 const pollSourceAction = makeFunctionReference<'action', PollSourceArgs, unknown>(
   'newsSources:pollSource'
 ) as unknown as FunctionReference<'action', 'internal', PollSourceArgs, unknown>;
@@ -17,6 +19,14 @@ const pollSourceAction = makeFunctionReference<'action', PollSourceArgs, unknown
 const projectBatchMutation = makeFunctionReference<'mutation', ProjectBatchArgs, unknown>(
   'newsProjection:projectBatch'
 ) as unknown as FunctionReference<'mutation', 'internal', ProjectBatchArgs, unknown>;
+
+const sendStreakReminderMutation = makeFunctionReference<'mutation', EmptyArgs, unknown>(
+  'notifications:sendStreakReminder'
+) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
+
+const sendExamCountdownMutation = makeFunctionReference<'mutation', EmptyArgs, unknown>(
+  'notifications:sendExamCountdown'
+) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
 
 const crons = cronJobs();
 
@@ -53,5 +63,19 @@ crons.interval('news_project_to_course_daily', { minutes: 1440 }, projectBatchMu
   courseId: 'news_ko_mvp',
   limit: 120,
 });
+
+// Notification pipeline (E3)
+crons.interval(
+  'notifications_send_streak_reminder_daily',
+  { minutes: 1440 },
+  sendStreakReminderMutation,
+  {}
+);
+crons.interval(
+  'notifications_send_exam_countdown_daily',
+  { minutes: 1440 },
+  sendExamCountdownMutation,
+  {}
+);
 
 export default crons;

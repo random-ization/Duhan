@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState, useMemo, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { PanelRightOpen, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -34,13 +34,18 @@ function normalizeStatus(value: unknown): GrammarPointData['status'] {
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const navigate = useLocalizedNavigate();
   const { clearContextualSidebar } = useLayoutActions();
   const learningActions = useOptionalLearningActions();
+  const focusUnitParam = Number(searchParams.get('focusUnit'));
+  const initialSelectedUnit =
+    Number.isFinite(focusUnitParam) && focusUnitParam > 0 ? Math.floor(focusUnitParam) : 1;
 
-  const [selectedUnit, setSelectedUnit] = useState<number>(1);
+  const [selectedUnit, setSelectedUnit] = useState<number>(initialSelectedUnit);
+  const [hasManualUnitSelection, setHasManualUnitSelection] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(() => {
@@ -69,7 +74,25 @@ const GrammarModulePage: React.FC = () => {
     return 10;
   }, [allCourseGrammar]);
 
-  const activeSelectedUnit = Math.max(1, Math.min(selectedUnit, totalUnits));
+  const focusGrammarId = searchParams.get('focusGrammarId')?.trim() || null;
+  const focusedUnitFromQuery = useMemo(() => {
+    if (!focusGrammarId || !allCourseGrammar || allCourseGrammar.length === 0) {
+      return null;
+    }
+    const target = allCourseGrammar.find(item => String(item.id) === focusGrammarId);
+    if (!target) {
+      return null;
+    }
+    return Math.max(1, Math.min(target.unitId, totalUnits));
+  }, [focusGrammarId, allCourseGrammar, totalUnits]);
+
+  const activeSelectedUnit = Math.max(
+    1,
+    Math.min(
+      !hasManualUnitSelection && focusedUnitFromQuery != null ? focusedUnitFromQuery : selectedUnit,
+      totalUnits
+    )
+  );
 
   const clampUnit = useCallback(
     (unit: number) => Math.max(1, Math.min(unit, totalUnits)),
@@ -132,12 +155,16 @@ const GrammarModulePage: React.FC = () => {
     });
   }, [grammarList, localUpdates]);
 
-  const selectedGrammar = useMemo<GrammarPointData | null>(() => {
-    if (!selectedGrammarId) return null;
-    return grammarListWithUpdates.find(g => g.id === selectedGrammarId) || null;
-  }, [grammarListWithUpdates, selectedGrammarId]);
+  const resolvedSelectedGrammarId =
+    selectedGrammarId || (!hasManualUnitSelection ? focusGrammarId : null);
 
-  const desktopSelectedGrammarId = selectedGrammarId || grammarListWithUpdates[0]?.id || null;
+  const selectedGrammar = useMemo<GrammarPointData | null>(() => {
+    if (!resolvedSelectedGrammarId) return null;
+    return grammarListWithUpdates.find(g => g.id === resolvedSelectedGrammarId) || null;
+  }, [grammarListWithUpdates, resolvedSelectedGrammarId]);
+
+  const desktopSelectedGrammarId =
+    resolvedSelectedGrammarId || grammarListWithUpdates[0]?.id || null;
 
   const desktopSelectedGrammar = useMemo<GrammarPointData | null>(() => {
     if (!desktopSelectedGrammarId) return null;
@@ -237,6 +264,7 @@ const GrammarModulePage: React.FC = () => {
         selectedUnit={activeSelectedUnit}
         totalUnits={totalUnits}
         onSelectUnit={u => {
+          setHasManualUnitSelection(true);
           setSelectedUnit(clampUnit(u));
           setSelectedGrammarId(null);
         }}
@@ -288,6 +316,7 @@ const GrammarModulePage: React.FC = () => {
           onSearchChange={setSearchQuery}
           selectedGrammarId={desktopSelectedGrammarId || undefined}
           onSelectGrammar={(id, unitId) => {
+            setHasManualUnitSelection(true);
             if (unitId !== activeSelectedUnit) setSelectedUnit(clampUnit(unitId));
             setSelectedGrammarId(id);
           }}

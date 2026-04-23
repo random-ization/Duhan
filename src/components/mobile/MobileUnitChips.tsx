@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { m as motion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { KT } from './ksoft/ksoft';
 
 interface MobileUnitChipsProps {
   readonly totalUnits: number;
@@ -50,7 +51,7 @@ export default function MobileUnitChips({
   return (
     <div
       ref={scrollRef}
-      className="flex overflow-x-auto gap-2 px-4 pb-3 no-scrollbar scroll-smooth"
+      className="flex overflow-x-auto gap-2.5 px-[22px] pb-1 no-scrollbar scroll-smooth"
     >
       {Array.from({ length: totalUnits }, (_, i) => i + 1).map(unit => {
         const isActive = unit === selectedUnit;
@@ -59,13 +60,50 @@ export default function MobileUnitChips({
             key={unit}
             type="button"
             onClick={() => onSelect(unit)}
-            className={`unit-chip rounded-full px-5 py-2 shrink-0 snap-start text-[11px] font-black tracking-widest outline-none ${
-              isActive
-                ? 'active'
-                : 'text-slate-600'
-            }`}
+            className="relative shrink-0 snap-start overflow-hidden rounded-[1.15rem] outline-none transition-transform active:scale-[0.98]"
+            style={{
+              padding: '10px 14px 11px',
+              border: isActive ? 'none' : `1px solid ${KT.line}`,
+              background: isActive ? KT.ink : 'rgba(255,255,255,0.88)',
+              color: isActive ? KT.bg : KT.ink,
+              boxShadow: isActive ? KT.shSm : '0 1px 3px rgba(31,27,23,0.03)',
+            }}
           >
-            <span className="relative z-10">{getUnitName(unit)}</span>
+            {isActive && (
+              <motion.div
+                layoutId="activeUnitTab"
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${KT.ink} 0%, ${KT.indigo} 100%)`,
+                  zIndex: 0,
+                }}
+              />
+            )}
+            <div
+              className="relative z-10 text-left"
+              style={{ minWidth: 88, display: 'flex', flexDirection: 'column', gap: 2 }}
+            >
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  color: isActive ? 'rgba(251,248,243,0.68)' : KT.sub,
+                }}
+              >
+                UNIT {unit}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: -0.2,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {getUnitName(unit)}
+              </span>
+            </div>
           </button>
         );
       })}

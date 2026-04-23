@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from 'convex/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { mRef, qRef } from '../utils/convexRefs';
+import { useOfflineMutation } from './useOfflineMutation';
 
 /**
  * Hook for managing exam sessions with server-side timer.
@@ -37,7 +38,7 @@ export function useExamSession(examId: string) {
 
   // Mutations
   const startExamMutation = useMutation(mRef<{ examId: string }, ExamSession>('topik:startExam'));
-  const updateAnswersMutation = useMutation(
+  const updateAnswersMutation = useOfflineMutation(
     mRef<{ sessionId: string; answers: Record<number, number> }, unknown>('topik:updateAnswers')
   );
   const submitExamMutation = useMutation(

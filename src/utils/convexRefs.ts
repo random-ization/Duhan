@@ -572,6 +572,7 @@ export type TopikSaveExamArgs = {
   id: string;
   title: string;
   round: number;
+  level?: 1 | 2;
   type: string;
   paperType?: string;
   timeLimit: number;
@@ -579,6 +580,7 @@ export type TopikSaveExamArgs = {
   description?: string;
   isPaid?: boolean;
   accessLevel?: 'FREE_SAMPLE' | 'PRO';
+  scheduledAt?: number;
   questions: TopikSaveQuestionInput[];
 };
 
@@ -599,6 +601,7 @@ export const TOPIK = {
     },
     PaginationResult<TopikExamDto>
   >('topik:getExams'),
+  getUpcoming: qRef<NoArgs, TopikExamDto | null>('topik:getUpcoming'),
   getExamById: qRef<{ examId: string }, TopikExamDto | null>('topik:getExamById'),
   getExamQuestions: qRef<{ examId: string }, TopikQuestionDto[]>('topik:getExamQuestions'),
   // Mutations
@@ -886,9 +889,124 @@ export const NEWS = {
   >('newsProjection:getProjectionStats'),
 };
 
+import type { CommunityActivityDto } from '../../convex/community';
+export const COMMUNITY = {
+  getRecentFriendActivity: qRef<{ limit?: number }, CommunityActivityDto[]>(
+    'community:getRecentFriendActivity'
+  ),
+  likeActivity: mRef<{ activityId: Id<'learning_events'> }, { liked: boolean; likeCount: number }>(
+    'community:likeActivity'
+  ),
+  unlikeActivity: mRef<
+    { activityId: Id<'learning_events'> },
+    { liked: boolean; likeCount: number }
+  >('community:unlikeActivity'),
+};
+
+import type { DailyChallengeClaimResult, DailyChallengeDto } from '../../convex/dailyChallenges';
+
+export const DAILY_CHALLENGES = {
+  getTodayChallenge: qRef<{ language?: string }, DailyChallengeDto>(
+    'dailyChallenges:getTodayChallenge'
+  ),
+  claimReward: mRef<NoArgs, DailyChallengeClaimResult>('dailyChallenges:claimReward'),
+};
+
+export type RecentAnnotation = {
+  id: Id<'annotations'>;
+  contextKey: string;
+  text: string;
+  note?: string;
+  color?: string;
+  startOffset?: number;
+  endOffset?: number;
+  createdAt: number;
+  updatedAt?: number;
+  scopeType?: string;
+  scopeId?: string;
+  blockId?: string;
+  quote?: string;
+  contextBefore?: string;
+  contextAfter?: string;
+};
+
+import type { NextBestAction } from '../../convex/recommendations';
+import type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
+import type { NotificationDto } from '../../convex/notifications';
+import type { LeaderboardEntry, MyRankResult } from '../../convex/leaderboard';
+import type { PartnershipDto, ActivePartnershipDto } from '../../convex/partnerships';
+import type { SearchAllResult } from '../../convex/search';
+
+export type { NextBestAction, NextBestActionKind } from '../../convex/recommendations';
+export type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
+export type { NotificationDto, NotificationKind } from '../../convex/notifications';
+export type { LeaderboardEntry, MyRankResult } from '../../convex/leaderboard';
+export type {
+  PartnershipDto,
+  ActivePartnershipDto,
+  PartnershipStatus,
+  PartnerProfileLite,
+} from '../../convex/partnerships';
+export type { SearchAllResult, SearchHit, SearchBucketKind } from '../../convex/search';
+
+export const RECOMMENDATIONS = {
+  getNextBestAction: qRef<{ localHour?: number }, NextBestAction | null>(
+    'recommendations:getNextBestAction'
+  ),
+};
+
+export const WEAK_POINTS = {
+  getWeakGrammarPatterns: qRef<{ limit?: number; language?: string }, WeakGrammarPattern[]>(
+    'weakPoints:getWeakGrammarPatterns'
+  ),
+  getWeakVocabCategories: qRef<{ limit?: number; language?: string }, WeakVocabCategory[]>(
+    'weakPoints:getWeakVocabCategories'
+  ),
+};
+
+export const NOTIFICATIONS = {
+  listUnread: qRef<{ limit?: number }, NotificationDto[]>('notifications:listUnread'),
+  listRecent: qRef<{ limit?: number }, NotificationDto[]>('notifications:listRecent'),
+  getUnreadCount: qRef<NoArgs, number>('notifications:getUnreadCount'),
+  markRead: mRef<{ id: Id<'notifications'> }, { ok: boolean }>('notifications:markRead'),
+  markAllRead: mRef<NoArgs, { updated: number }>('notifications:markAllRead'),
+  dismiss: mRef<{ id: Id<'notifications'> }, { ok: boolean }>('notifications:dismiss'),
+};
+
+export const LEADERBOARD = {
+  getWeeklyTop: qRef<{ limit?: number }, LeaderboardEntry[]>('leaderboard:getWeeklyTop'),
+  getMyRank: qRef<NoArgs, MyRankResult>('leaderboard:getMyRank'),
+};
+
+export const SEARCH = {
+  searchAll: qRef<{ query: string; limitPerBucket?: number }, SearchAllResult>('search:searchAll'),
+};
+
+export const PARTNERSHIPS = {
+  getActivePartnership: qRef<NoArgs, ActivePartnershipDto | null>(
+    'partnerships:getActivePartnership'
+  ),
+  listPending: qRef<NoArgs, PartnershipDto[]>('partnerships:listPending'),
+  invitePartner: mRef<
+    { targetUserId: Id<'users'> },
+    { id: Id<'studyPartnerships'>; alreadyExists: boolean }
+  >('partnerships:invitePartner'),
+  acceptPartnership: mRef<
+    { partnershipId: Id<'studyPartnerships'> },
+    { ok: boolean; reason?: string }
+  >('partnerships:acceptPartnership'),
+  declinePartnership: mRef<{ partnershipId: Id<'studyPartnerships'> }, { ok: boolean }>(
+    'partnerships:declinePartnership'
+  ),
+  endPartnership: mRef<{ partnershipId: Id<'studyPartnerships'> }, { ok: boolean }>(
+    'partnerships:endPartnership'
+  ),
+};
+
 export const ANNOTATIONS = {
   getByContext: qRef<{ contextKey: string }, unknown[]>('annotations:getByContext'),
   getByPrefix: qRef<{ prefix: string; limit?: number }, unknown[]>('annotations:getByPrefix'),
+  getRecent: qRef<{ limit?: number }, RecentAnnotation[]>('annotations:getRecent'),
   listByScope: qRef<
     { scopeType: string; scopeId: string; blockId?: string; limit?: number },
     unknown[]

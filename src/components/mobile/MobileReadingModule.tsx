@@ -1,28 +1,26 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PlayCircle, Settings2, Sparkles, BookOpen } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { PlayCircle, Square, BookOpen } from 'lucide-react';
 import { InteractiveWordChip } from './InteractiveWordChip';
-import { Button } from '../ui';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { KT, HanjaSeal } from './ksoft/ksoft';
 
 interface MobileReadingModuleProps {
   readonly unitTitle: string;
-  readonly unitData: any; // Type as needed, mainly needs chunks/paragraphs
+  readonly unitData: any;
   readonly onBack: () => void;
   readonly onWordClick: (word: string) => void;
 }
 
 export function MobileReadingModule({
   unitTitle,
-  unitData, // Should contain readingText
+  unitData,
   onBack,
   onWordClick,
 }: MobileReadingModuleProps) {
   const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Parse text into "bubbles"
   const textSegments = useMemo(() => {
     if (!unitData?.readingText) return [];
     const rawText = unitData.readingText;
@@ -31,7 +29,6 @@ export function MobileReadingModule({
       .split('\n')
       .filter((line: string) => line.trim().length > 0)
       .map((line: string, index: number) => {
-        // Basic speaker detection for styling (Right/Left alignment)
         const match = /^([A-Za-z가-힣0-9]+)[:：]/.exec(line);
         const speaker = match ? match[1] : null;
         const content = match ? line.substring(match[0].length).trim() : line;
@@ -46,43 +43,95 @@ export function MobileReadingModule({
   }, [unitData]);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background font-sans">
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100dvh',
+        flexDirection: 'column',
+        background: KT.bg,
+        fontFamily: KT.font,
+      }}
+    >
       <MobileWorkspaceHeader
         title={unitTitle}
         subtitle={t('readingModule.mobile.storyHint', {
           defaultValue: 'Tap any underlined word to see its meaning.',
         })}
-        eyebrow={t('readingModule.mobile.title', { defaultValue: 'Reading Practice' })}
+        eyebrow={t('readingModule.mobile.title', { defaultValue: '讀 · READING' })}
         onBack={onBack}
         backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
-          >
-            <Settings2 size={18} className="text-muted-foreground" />
-          </Button>
-        }
       />
 
-      {/* Chat Stream */}
-      <div className="flex-1 p-4 pb-[calc(var(--mobile-safe-bottom)+7rem)] space-y-6">
+      {/* Content Stream */}
+      <div
+        style={{
+          flex: 1,
+          padding: '16px 18px',
+          paddingBottom: 'calc(var(--mobile-safe-bottom, env(safe-area-inset-bottom)) + 7rem)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 18,
+        }}
+      >
         {/* Intro Card */}
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg shadow-primary/20 mb-8">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-card/20 flex items-center justify-center backdrop-blur-sm">
-              <BookOpen size={24} className="text-white" />
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${KT.crimson} 0%, #7B2C22 100%)`,
+            borderRadius: 24,
+            padding: '20px 22px',
+            color: '#fff',
+            boxShadow: '0 12px 32px rgba(162,59,46,0.3)',
+            marginBottom: 4,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                background: 'rgba(255,255,255,0.15)',
+                display: 'grid',
+                placeItems: 'center',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <BookOpen size={22} style={{ color: '#fff' }} />
             </div>
-            <span className="bg-card/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/10">
+            <div
+              style={{
+                padding: '4px 12px',
+                borderRadius: 12,
+                background: 'rgba(255,255,255,0.18)',
+                backdropFilter: 'blur(8px)',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 1.5,
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
               {t('readingModule.mobile.levelBadge', { defaultValue: 'LEVEL 1' })}
-            </span>
+            </div>
           </div>
-          <h2 className="text-2xl font-black mb-2 opacity-90 leading-tight">
+          <h2
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              marginBottom: 6,
+              letterSpacing: -0.5,
+              lineHeight: 1.2,
+            }}
+          >
             {t('readingModule.mobile.storyTitle', { defaultValue: "Let's read today's story." })}
           </h2>
-          <p className="text-sm opacity-80 font-medium">
+          <p style={{ fontSize: 13, opacity: 0.85, fontWeight: 500 }}>
             {t('readingModule.mobile.storyHint', {
               defaultValue: 'Tap any underlined word to see its meaning.',
             })}
@@ -90,78 +139,117 @@ export function MobileReadingModule({
         </div>
 
         {textSegments.length === 0 && (
-          <div className="text-center text-muted-foreground py-10 font-bold">
+          <div
+            style={{
+              textAlign: 'center',
+              color: KT.sub,
+              padding: '40px 0',
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
             {t('dashboard.reading.noContent')}
           </div>
         )}
 
         {textSegments.map((segment: any) => (
-          <div
-            key={segment.id}
-            className="group animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-            style={{ animationDelay: `${segment.id * 100}ms` }}
-          >
+          <div key={segment.id}>
             {segment.speaker && (
-              <div className="ml-4 mb-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <div
+                style={{
+                  marginLeft: 14,
+                  marginBottom: 5,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: KT.sub,
+                  letterSpacing: 1.5,
+                  textTransform: 'uppercase',
+                }}
+              >
                 {segment.speaker}
               </div>
             )}
             <div
-              className={cn(
-                'relative p-5 rounded-[24px] text-lg font-medium leading-relaxed shadow-sm border border-border',
-                'bg-card text-muted-foreground'
-              )}
+              style={{
+                background: KT.card,
+                border: `1px solid ${KT.line}`,
+                borderRadius: 22,
+                padding: '16px 18px',
+                fontSize: 16,
+                fontWeight: 500,
+                lineHeight: 1.9,
+                color: KT.ink2,
+                boxShadow: KT.shSm,
+              }}
             >
-              {/* Content - Word Chip logic */}
-              <div className="leading-[1.8] flex flex-wrap items-center content-start">
+              <div
+                style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', lineHeight: 1.9 }}
+              >
                 {segment.content.split(' ').map((word: string, i: number) => (
                   <InteractiveWordChip key={i} word={word} onClick={onWordClick} />
                 ))}
-              </div>
-
-              {/* Inline Action Button (Translation/Audio) */}
-              <div className="absolute -right-2 -bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100">
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  type="button"
-                  className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md"
-                >
-                  <PlayCircle size={14} className="fill-current" />
-                </Button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Bottom Action Bar (Sticky) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border p-4 pb-mobile-safe z-20 flex gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <Button
-          variant="ghost"
-          size="auto"
+      {/* Bottom Action Bar */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: `${KT.card}f0`,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderTop: `1px solid ${KT.line}`,
+          padding: '12px 18px',
+          paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+          zIndex: 20,
+          display: 'flex',
+          gap: 10,
+          boxShadow: '0 -8px 24px rgba(31,27,23,0.06)',
+        }}
+      >
+        <button
           type="button"
           onClick={() => setIsPlaying(!isPlaying)}
-          className="flex-1 h-14 bg-primary rounded-full flex items-center justify-center gap-3 text-white font-black text-lg active:scale-95 transition-transform shadow-xl shadow-primary/20"
+          style={{
+            flex: 1,
+            height: 52,
+            background: KT.ink,
+            borderRadius: 18,
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            color: KT.bg,
+            fontSize: 14,
+            fontWeight: 800,
+            cursor: 'pointer',
+            fontFamily: KT.font,
+            boxShadow: KT.sh,
+          }}
         >
           {isPlaying ? (
-            <>{t('readingModule.mobile.stopAudio', { defaultValue: 'Stop Audio' })}</>
+            <>
+              <Square size={16} fill="currentColor" />
+              {t('readingModule.mobile.stopAudio', { defaultValue: 'Stop Audio' })}
+            </>
           ) : (
             <>
-              <PlayCircle className="fill-current" />{' '}
+              <PlayCircle size={18} fill="currentColor" />
               {t('readingModule.mobile.playFullAudio', { defaultValue: 'Play Full Audio' })}
             </>
           )}
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="auto"
-          type="button"
-          className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <Sparkles size={24} className="text-indigo-500" />
-        </Button>
+        <div style={{ width: 52, height: 52, flexShrink: 0 }}>
+          <HanjaSeal c="言" size={52} bg={KT.bg2} color={KT.crimson} round={16} />
+        </div>
       </div>
     </div>
   );

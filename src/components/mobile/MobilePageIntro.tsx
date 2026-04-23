@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { KT } from './ksoft/ksoft';
 
 interface MobilePageIntroProps {
   eyebrow: string;
@@ -20,21 +21,43 @@ export function MobilePageIntro({
 }: Readonly<MobilePageIntroProps>) {
   return (
     <section
-      className={cn(
-        'relative overflow-hidden rounded-[2.5rem] border border-border bg-card/50 p-6 shadow-sm backdrop-blur-md',
-        className
-      )}
+      className={cn('relative overflow-hidden rounded-[2.5rem] p-6 backdrop-blur-md', className)}
+      style={{
+        border: `1px solid ${KT.line}`,
+        background: `${KT.card}E8`,
+        boxShadow: KT.shSm,
+      }}
     >
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200/50 bg-indigo-50/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-600 shadow-sm backdrop-blur-md dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-md"
+            style={{
+              border: `1px solid ${KT.line}`,
+              background: `${KT.indigo}16`,
+              color: KT.indigo,
+              boxShadow: KT.shSm,
+            }}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{
+                background: KT.indigo,
+                boxShadow: `0 0 8px ${KT.indigo}`,
+              }}
+            />
             {eyebrow}
           </div>
-          <h1 className="mt-4 text-2xl sm:text-3xl font-black leading-[1.3] text-foreground tracking-tighter italic text-balance">
+          <h1
+            className="mt-4 text-2xl sm:text-3xl font-black leading-[1.3] tracking-tighter italic text-balance"
+            style={{ color: KT.ink }}
+          >
             {title}
           </h1>
-          <p className="mt-3 max-w-[28rem] text-sm font-semibold leading-relaxed text-muted-foreground/80 text-pretty">
+          <p
+            className="mt-3 max-w-[28rem] text-sm font-semibold leading-relaxed text-pretty"
+            style={{ color: KT.sub }}
+          >
             {description}
           </p>
           {action && <div className="mt-4 flex flex-wrap items-center gap-2">{action}</div>}

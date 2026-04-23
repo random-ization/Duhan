@@ -17,6 +17,7 @@ import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { BottomSheet } from '../../common/BottomSheet';
 import { Button } from '../../ui';
 import { normalizePublicAssetUrl } from '../../../utils/imageSrc';
+import { formatTopikLabel } from '../../../utils/topik';
 
 // --- Constants (Copied from ExamSession.tsx to ensure consistency) ---
 const TOPIK_READING_STRUCTURE: {
@@ -513,19 +514,39 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         </div>
       </BottomSheet>
 
-      {/* Premium Tactile V3 Glass Header */}
-      <header className="shrink-0 px-5 pt-12 pb-3 flex items-center justify-between z-50" style={{ background: 'rgba(230,231,233,0.95)', backdropFilter: 'blur(24px) saturate(150%)', WebkitBackdropFilter: 'blur(24px) saturate(150%)', borderBottom: '1px solid rgba(255,255,255,0.8)' }}>
-        <button
-          onClick={onExit}
-          className="w-9 h-9 rounded-[10px] bg-white border border-slate-200 text-slate-500 shadow-sm flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
-        <div className="flex flex-col items-center">
-          <div className="flex items-center space-x-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">
-              {`TOPIK II ${examTypeLabel}`}
+      <MobileImmersiveHeader
+        title={t('dashboard.topik.realExam', { defaultValue: 'TOPIK Exam' })}
+        subtitle={t('dashboard.topik.mobile.session.questionProgress', {
+          current: currentQuestionIndex + 1,
+          total: exam.questions.length,
+          defaultValue: 'Question {{current}} of {{total}}',
+        })}
+        eyebrow={`${formatTopikLabel(exam.level)} ${examTypeLabel}`}
+        onBack={onExit}
+        backLabel={t('common.close', { defaultValue: 'Close' })}
+        backIcon={<X className="h-4 w-4 text-foreground" />}
+        status={
+          <div
+            className={clsx(
+              'flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-black shadow-sm',
+              timeLeft < 300
+                ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-300/20 dark:bg-red-400/10 dark:text-red-200'
+                : 'border-border bg-card text-foreground'
+            )}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>{formatDuration(timeLeft)}</span>
+          </div>
+        }
+        actions={
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={() => setGridOpen(true)}
+            className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm dark:border-indigo-300/20 dark:bg-indigo-400/14 dark:text-indigo-200"
+          >
+            <span className="text-sm">
+              {currentQuestionIndex + 1}/{exam.questions.length}
             </span>
           </div>
         </div>

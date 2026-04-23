@@ -31,6 +31,7 @@ import { ContentSkeleton } from '../components/common';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { buildVideoPlayerPath } from '../utils/videoRoutes';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
@@ -137,7 +138,7 @@ const getVideoLoadError = (
 };
 
 const buildVideoUpgradeReturnTarget = (videoId: string | undefined, returnTo: string): string => {
-  if (!videoId) return '/videos';
+  if (!videoId) return buildMediaPath('video');
   return buildVideoPlayerPath(videoId, returnTo);
 };
 
@@ -445,7 +446,7 @@ const DesktopVideoPlayerPage: React.FC = () => {
   const playbackUnlocked =
     playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
   const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/videos'),
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('video')),
     [searchParams]
   );
   const upgradeReturnTarget = useMemo(

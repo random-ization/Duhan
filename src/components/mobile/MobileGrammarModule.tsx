@@ -1,13 +1,30 @@
 import React, { useState, useMemo } from 'react';
 import { CourseSelection, GrammarPoint, Language } from '../../types';
-import { BookOpen, Search, X, ChevronRight, GraduationCap } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Input } from '../ui';
-import { Button } from '../ui';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import { BottomSheet } from '../common/BottomSheet';
 import { useTranslation } from 'react-i18next';
+import { KT, HanjaSeal, Card, SectionHead } from './ksoft/ksoft';
 
-// Must align with what Desktop uses
+const UNIT_HANJA = [
+  '挨',
+  '時',
+  '若',
+  '過',
+  '傳',
+  '新',
+  '望',
+  '道',
+  '會',
+  '旅',
+  '文',
+  '法',
+  '話',
+  '書',
+  '詞',
+];
+
 const matchesSearchQuery = (point: GrammarPoint, query: string, language: Language): boolean => {
   const q = query.toLowerCase();
   if (point.pattern.toLowerCase().includes(q)) return true;
@@ -41,7 +58,6 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPoint, setSelectedPoint] = useState<GrammarPoint | null>(null);
 
-  // Filter Logic
   const filteredData = useMemo(() => {
     const query = searchQuery.trim();
     if (!query) return groupedPoints;
@@ -58,96 +74,211 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
     .sort((a, b) => a - b);
 
   return (
-    <div className="pb-mobile-nav pt-4 px-4 bg-background min-h-screen">
+    <div
+      className="pb-mobile-nav"
+      style={{
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+        minHeight: '100dvh',
+        fontFamily: KT.font,
+        color: KT.ink,
+      }}
+    >
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-black text-foreground mb-1">
-          {t('grammar', { defaultValue: 'Grammar' })}
-        </h2>
-        <p className="text-muted-foreground text-sm font-medium">
-          {instituteName}{' '}
+      <div
+        style={{
+          padding: '14px 22px 20px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: KT.serif,
+            fontSize: 13,
+            color: KT.crimson,
+            letterSpacing: 4,
+            marginBottom: 4,
+            fontWeight: 500,
+          }}
+        >
+          文 · GRAMMAR
+        </div>
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            color: KT.ink,
+            letterSpacing: -0.8,
+          }}
+        >
+          {t('grammar', { defaultValue: '문법' })}
+        </div>
+        <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
+          {instituteName} ·{' '}
           {t('textbook.level', { level: course.level, defaultValue: 'Level {{level}}' })}
-        </p>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="sticky top-0 z-10 bg-muted pb-4">
-        <div className="relative shadow-sm rounded-xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Search */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          padding: '0 18px 14px',
+          background: `${KT.bg}dd`,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+        }}
+      >
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={15}
+            style={{
+              position: 'absolute',
+              left: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: KT.sub,
+            }}
+          />
           <Input
             type="text"
-            placeholder={t('common.search', { defaultValue: 'Search...' })}
+            placeholder={t('common.search', { defaultValue: '검색...' })}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-9 py-3 text-base rounded-xl border-border focus:border-primary focus:ring-primary"
+            style={{
+              paddingLeft: 38,
+              paddingRight: searchQuery ? 38 : 14,
+              height: 44,
+              borderRadius: 14,
+              background: KT.card,
+              border: `1px solid ${KT.line}`,
+              fontSize: 14,
+              fontFamily: KT.font,
+              color: KT.ink,
+              boxShadow: KT.shSm,
+              width: '100%',
+              outline: 'none',
+            }}
           />
           {searchQuery && (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="auto"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground p-1"
+              style={{
+                position: 'absolute',
+                right: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: KT.sub,
+                display: 'grid',
+                placeItems: 'center',
+              }}
             >
-              <X className="w-4 h-4" />
-            </Button>
+              <X size={15} />
+            </button>
           )}
         </div>
       </div>
 
-      {/* Content List */}
-      {units.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
-          <p>
-            {searchQuery
-              ? t('common.noMatches', { defaultValue: 'No matches' })
-              : t('noGrammar', { defaultValue: 'No grammar yet' })}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {units.map(unit => (
-            <div key={unit} className="space-y-3">
-              <div className="sticky top-[72px] z-10 flex items-center gap-2 pl-1 py-1.5 bg-muted/90 backdrop-blur-md">
-                <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200 text-xs font-bold uppercase tracking-wider shadow-sm border border-indigo-200/50 dark:border-indigo-400/20">
-                  {t('unit', { defaultValue: 'Unit' })} {unit}
-                </span>
-                <div className="h-px bg-border/60 flex-1" />
-              </div>
-
-              <div className="grid gap-2">
-                {filteredData[unit].map(point => (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    key={`${unit}-${point.pattern}`}
-                    onClick={() => setSelectedPoint(point)}
-                    className="w-full bg-card p-4 rounded-xl border border-border shadow-sm active:scale-[0.98] transition-all text-left flex items-center justify-between group hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 shadow-inner">
-                        <BookOpen className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-foreground truncate pr-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
-                          {point.pattern}
-                        </h3>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-[200px]">
-                          {getLocalizedContent(point, 'explanation', language)}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-indigo-400 dark:group-hover:text-indigo-300" />
-                  </Button>
-                ))}
-              </div>
+      {/* Content */}
+      <div style={{ padding: '0 18px 28px' }}>
+        {units.length === 0 ? (
+          <Card pad={24} style={{ textAlign: 'center' }}>
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 36,
+                color: KT.crimson,
+                opacity: 0.3,
+                marginBottom: 12,
+              }}
+            >
+              空
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{ fontSize: 15, fontWeight: 800, color: KT.ink }}>
+              {searchQuery
+                ? t('common.noMatches', { defaultValue: '검색 결과 없음' })
+                : t('noGrammar', { defaultValue: '문법이 없습니다' })}
+            </div>
+          </Card>
+        ) : (
+          <div>
+            {units.map(unit => (
+              <div key={unit} style={{ marginBottom: 24 }}>
+                <SectionHead
+                  kanji={UNIT_HANJA[(unit - 1) % UNIT_HANJA.length]}
+                  title={`${t('unit', { defaultValue: 'Unit' })} ${unit}`}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {filteredData[unit].map(point => (
+                    <button
+                      key={`${unit}-${point.pattern}`}
+                      type="button"
+                      onClick={() => setSelectedPoint(point)}
+                      style={{
+                        background: KT.card,
+                        borderRadius: 20,
+                        boxShadow: KT.shSm,
+                        padding: '14px 16px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 14,
+                        fontFamily: KT.font,
+                        width: '100%',
+                      }}
+                    >
+                      <HanjaSeal
+                        c={point.pattern.charAt(0) || '文'}
+                        size={38}
+                        bg={KT.bg2}
+                        color={KT.crimson}
+                        round={10}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 800,
+                            color: KT.ink,
+                            letterSpacing: -0.2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {point.pattern}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: KT.sub,
+                            marginTop: 3,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {getLocalizedContent(point, 'explanation', language)}
+                        </div>
+                      </div>
+                      <div style={{ color: KT.subLight, fontSize: 16, flexShrink: 0 }}>›</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Detail Bottom Sheet */}
+      {/* Detail sheet */}
       <BottomSheet
         isOpen={!!selectedPoint}
         onClose={() => setSelectedPoint(null)}
@@ -155,44 +286,105 @@ export const MobileGrammarModule: React.FC<MobileGrammarModuleProps> = ({
         title={selectedPoint?.pattern || ''}
       >
         {selectedPoint && (
-          <div className="pb-8 space-y-6">
+          <div style={{ paddingBottom: 32, fontFamily: KT.font }}>
             {/* Explanation */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                <GraduationCap className="w-3 h-3" />
-                {t('grammarTraining.explanation', { defaultValue: 'Explanation' })}
-              </h4>
-              <p className="text-lg text-muted-foreground leading-relaxed font-medium">
+            <div style={{ marginBottom: 20 }}>
+              <div
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 11,
+                  color: KT.crimson,
+                  letterSpacing: 3,
+                  fontWeight: 500,
+                  marginBottom: 8,
+                }}
+              >
+                解 · EXPLANATION
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  color: KT.ink,
+                  lineHeight: 1.6,
+                  fontWeight: 500,
+                }}
+              >
                 {getLocalizedContent(selectedPoint, 'explanation', language)}
-              </p>
-            </div>
-
-            {/* Examples */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                <BookOpen className="w-3 h-3" />
-                {t('grammarTraining.examples', { defaultValue: 'Examples' })}
-              </h4>
-              <div className="space-y-3">
-                {selectedPoint.usages?.map((usage, idx) => (
-                  <div key={idx} className="bg-muted p-4 rounded-xl border border-border">
-                    <p className="text-base font-bold text-foreground mb-1 leading-snug">
-                      {usage.example}
-                    </p>
-                    <p className="text-sm text-muted-foreground leading-snug">
-                      {getLocalizedContent(usage, 'translation', language)}
-                    </p>
-                  </div>
-                ))}
               </div>
             </div>
 
-            <Button
-              className="w-full h-12 rounded-xl text-lg font-bold bg-primary text-primary-foreground shadow-lg mt-2"
+            {/* Examples */}
+            {selectedPoint.usages && selectedPoint.usages.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 11,
+                    color: KT.crimson,
+                    letterSpacing: 3,
+                    fontWeight: 500,
+                    marginBottom: 10,
+                  }}
+                >
+                  例 · EXAMPLES
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {selectedPoint.usages.map((usage, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '12px 14px',
+                        background: KT.bg2,
+                        borderRadius: 14,
+                        border: `1px solid ${KT.line}`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 15,
+                          color: KT.ink,
+                          fontWeight: 600,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {usage.example}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: KT.sub,
+                          marginTop: 4,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {getLocalizedContent(usage, 'translation', language)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
               onClick={() => setSelectedPoint(null)}
+              style={{
+                width: '100%',
+                padding: 16,
+                borderRadius: 18,
+                border: 'none',
+                background: KT.ink,
+                color: KT.bg,
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: KT.font,
+                letterSpacing: 0.3,
+                boxShadow: '0 4px 14px rgba(31,27,23,0.22)',
+              }}
             >
-              {t('common.gotIt', { defaultValue: 'Got it' })}
-            </Button>
+              {t('common.gotIt', { defaultValue: '알겠어요 ✓' })}
+            </button>
           </div>
         )}
       </BottomSheet>

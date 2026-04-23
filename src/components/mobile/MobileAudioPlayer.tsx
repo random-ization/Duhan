@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui';
 import { Slider } from '../ui';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
+import { KT } from './ksoft/ksoft';
 
 interface MobileAudioPlayerProps {
   readonly audioUrl: string;
@@ -71,7 +71,6 @@ export function MobileAudioPlayer({
     };
   }, [onTimeUpdate, initialTime, isDragging, onPlaybackComplete]);
 
-  // Sync external initialTime changes (e.g. clicking a timestamp)
   useEffect(() => {
     if (audioRef.current && Math.abs(audioRef.current.currentTime - initialTime) > 0.5) {
       audioRef.current.currentTime = initialTime;
@@ -81,7 +80,6 @@ export function MobileAudioPlayer({
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (isPlaying) {
       audio.pause();
     } else {
@@ -113,18 +111,77 @@ export function MobileAudioPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 pb-mobile-safe pt-4 px-6 shadow-lg shadow-black/5 rounded-t-[2rem]">
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: KT.card,
+        borderTop: `1px solid ${KT.line}`,
+        zIndex: 50,
+        padding: '14px 22px',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 14px)',
+        boxShadow: '0 -8px 32px rgba(31,27,23,0.08)',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        fontFamily: KT.font,
+      }}
+    >
       <audio ref={audioRef} src={normalizedAudioUrl} preload="metadata" />
 
-      {/* Progress Info */}
-      <div className="flex justify-between text-xs font-bold text-muted-foreground mb-2 px-1">
+      {/* Progress times */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: 11,
+          fontWeight: 700,
+          color: KT.sub,
+          marginBottom: 8,
+          padding: '0 2px',
+        }}
+      >
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>
 
-      {/* Slider */}
-      <div className="mb-6 relative h-6 flex items-center">
+      {/* Progress bar (visual) + Slider */}
+      <div
+        style={{
+          position: 'relative',
+          height: 24,
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}
+      >
+        {/* Background track */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            height: 4,
+            borderRadius: 2,
+            background: KT.line2,
+          }}
+        />
+        {/* Filled track */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            width: `${progress}%`,
+            height: 4,
+            borderRadius: 2,
+            background: KT.crimson,
+            transition: isDragging ? 'none' : 'width 0.1s',
+          }}
+        />
         <Slider
           type="range"
           min={0}
@@ -136,52 +193,93 @@ export function MobileAudioPlayer({
           onMouseUp={() => setIsDragging(false)}
           onTouchStart={() => setIsDragging(true)}
           onTouchEnd={() => setIsDragging(false)}
-          className="w-full h-full cursor-pointer accent-indigo-500"
+          style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            opacity: 0,
+            cursor: 'pointer',
+          }}
         />
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between px-4">
-        <Button
-          variant="ghost"
-          size="auto"
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+        }}
+      >
+        <button
           type="button"
           onClick={() => skip(-10)}
-          className="w-12 h-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center active:bg-muted active:scale-95 transition-all"
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: KT.bg2,
+            border: `1px solid ${KT.line}`,
+            color: KT.sub,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+          }}
         >
-          <RotateCcw size={20} />
-          <span className="sr-only">
+          <RotateCcw size={19} />
+          <span
+            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}
+          >
             {t('mobileAudioPlayer.rewind10', { defaultValue: 'Rewind 10s' })}
           </span>
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
           type="button"
           onClick={togglePlay}
-          className="w-16 h-16 rounded-[24px] bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/25 active:scale-95 transition-transform"
+          style={{
+            width: 62,
+            height: 62,
+            borderRadius: 20,
+            background: KT.ink,
+            border: 'none',
+            color: KT.bg,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            boxShadow: KT.sh,
+          }}
         >
           {isPlaying ? (
-            <Pause size={28} fill="currentColor" />
+            <Pause size={26} fill="currentColor" />
           ) : (
-            <Play size={28} fill="currentColor" className="ml-1" />
+            <Play size={26} fill="currentColor" style={{ marginLeft: 2 }} />
           )}
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
           type="button"
           onClick={() => skip(10)}
-          className="w-12 h-12 rounded-full bg-muted text-muted-foreground flex items-center justify-center active:bg-muted active:scale-95 transition-all"
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: KT.bg2,
+            border: `1px solid ${KT.line}`,
+            color: KT.sub,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+          }}
         >
-          {/* Rotate icon flipped or just Forward icon */}
-          <RotateCcw size={20} className="-scale-x-100" />
-          <span className="sr-only">
+          <RotateCcw size={19} style={{ transform: 'scaleX(-1)' }} />
+          <span
+            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}
+          >
             {t('mobileAudioPlayer.forward10', { defaultValue: 'Forward 10s' })}
           </span>
-        </Button>
+        </button>
       </div>
     </div>
   );

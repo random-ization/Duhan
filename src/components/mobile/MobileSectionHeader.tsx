@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { KT } from './ksoft/ksoft';
 
 interface MobileSectionHeaderProps {
   eyebrow?: string;
@@ -22,19 +23,26 @@ export function MobileSectionHeader({
     <div className={cn('flex items-start justify-between gap-4', className)}>
       <div className="min-w-0">
         {eyebrow && (
-          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-600/70 dark:text-indigo-400/70 mb-1.5">
+          <div
+            className="text-[10px] font-black uppercase tracking-[0.22em] mb-1.5"
+            style={{ color: KT.crimson }}
+          >
             {eyebrow}
           </div>
         )}
         <h3
           className={cn(
-            'text-xl font-black text-foreground tracking-tighter italic leading-tight text-balance uppercase'
+            'text-xl font-black tracking-tighter italic leading-tight text-balance uppercase'
           )}
+          style={{ color: KT.ink }}
         >
           {title}
         </h3>
         {description && (
-          <p className="mt-2 text-[11px] font-semibold leading-relaxed text-muted-foreground/80 text-pretty">
+          <p
+            className="mt-2 text-[11px] font-semibold leading-relaxed text-pretty"
+            style={{ color: KT.sub }}
+          >
             {description}
           </p>
         )}

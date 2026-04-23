@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { useMutation } from 'convex/react';
 import type { LearningEventName, LearningMetadata, LearningModule } from '../../convex/analytics';
 import { mRef } from '../utils/convexRefs';
 import { toErrorMessage } from '../utils/errors';
+import { useOfflineMutation } from './useOfflineMutation';
 
 type TrackLearningEventArgs = {
   sessionId: string;
@@ -56,10 +56,10 @@ export const createLearningSessionId = (prefix: string) => {
 };
 
 export function useLearningAnalytics() {
-  const trackLearningEventMutation = useMutation(
+  const trackLearningEventMutation = useOfflineMutation(
     mRef<TrackLearningEventArgs, { success: boolean }>('analytics:trackLearningEvent')
   );
-  const trackSessionSummaryMutation = useMutation(
+  const trackSessionSummaryMutation = useOfflineMutation(
     mRef<TrackSessionSummaryArgs, { success: boolean }>('analytics:trackSessionSummary')
   );
 

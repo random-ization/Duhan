@@ -109,6 +109,27 @@ export const getByPrefix = query({
   },
 });
 
+// Recent annotations across all contexts for the current user.
+// Used by the mobile notebook page's "Recent highlights" row.
+export const getRecent = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return [];
+
+    const limit = Math.max(1, Math.min(args.limit ?? 20, 100));
+    const rows = await ctx.db
+      .query('annotations')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .order('desc')
+      .take(limit);
+
+    return rows.map(mapAnnotationRow);
+  },
+});
+
 export const listByScope = query({
   args: {
     scopeType: v.string(),
@@ -249,7 +270,8 @@ export const upsertByAnchor = mutation({
       )
       .take(20);
 
-    const existing = rows.find(row => row.quote === args.quote || row.text === args.quote) || rows[0];
+    const existing =
+      rows.find(row => row.quote === args.quote || row.text === args.quote) || rows[0];
 
     const basePatch = {
       contextKey: normalizeScopeContextKey(args.scopeType, args.scopeId, args.contextKey),

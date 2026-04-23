@@ -1,6 +1,10 @@
+import { hasSafeReturnTo, sanitizeReturnToPath } from './navigation';
+
 function applyReturnTo(params: URLSearchParams, returnTo?: string | null) {
-  if (typeof returnTo !== 'string' || !returnTo.trim()) return;
-  params.set('returnTo', returnTo);
+  if (typeof returnTo !== 'string') return;
+  const trimmed = returnTo.trim();
+  if (!hasSafeReturnTo(trimmed)) return;
+  params.set('returnTo', sanitizeReturnToPath(trimmed));
 }
 
 export function buildReadingArticlePath(articleId: string, returnTo?: string | null): string {

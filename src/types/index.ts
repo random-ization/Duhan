@@ -341,10 +341,12 @@ export interface TopikExam {
   title: string; // e.g. "64th TOPIK II Reading"
   description?: string; // Optional description
   round: number; // e.g. 64
+  level: 1 | 2;
   type: TopikType;
   paperType?: 'A' | 'B'; // A or B type paper
   timeLimit: number; // in minutes (60 or 70)
   audioUrl?: string; // New: For Listening exams
+  scheduledAt?: number;
   questions: TopikQuestion[];
   isPaid?: boolean; // Whether this exam requires paid subscription
   accessLevel?: 'FREE_SAMPLE' | 'PRO';

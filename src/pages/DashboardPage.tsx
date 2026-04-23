@@ -18,6 +18,8 @@ import { Button } from '../components/ui';
 import { useTTS } from '../hooks/useTTS';
 import { ContentSkeleton, Skeleton } from '../components/common';
 import { ReviewWordsCard } from '../features/vocab/components/ReviewWordsCard';
+import { DesktopNotificationsBell } from '../components/desktop/DesktopNotificationsBell';
+import { DesktopKsoftDashboardRail } from '../components/desktop/DesktopKsoftDashboardRail';
 import { trackEvent } from '../utils/analytics';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import {
@@ -662,6 +664,7 @@ function DashboardPage() {
   const dashboardView = searchParams.get('view'); // 'practice' or null (default = learn)
 
   const dashboardLanguage = resolveDashboardLanguage(language);
+  const enableDesktopKsoftDashboard = import.meta.env.VITE_ENABLE_DESKTOP_KSOFT_DASHBOARD === '1';
 
   useEffect(() => {
     if (typeof globalThis.window === 'undefined') {
@@ -914,7 +917,12 @@ function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 md:space-y-10 pb-10 md:pb-20">
+    <div
+      className={`space-y-6 md:space-y-10 pb-10 md:pb-20 ${enableDesktopKsoftDashboard ? 'xl:pr-[360px]' : ''}`}
+    >
+      {enableDesktopKsoftDashboard ? (
+        <DesktopKsoftDashboardRail language={dashboardLanguage} />
+      ) : null}
       {/* 1. Header */}
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div className="relative pl-0 md:pl-4">
@@ -943,6 +951,7 @@ function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 md:gap-4 items-center">
+          <DesktopNotificationsBell enabled />
           {/* Dictionary Search with Dropdown */}
           <DictionarySearchDropdown />
 

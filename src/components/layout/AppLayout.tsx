@@ -16,7 +16,6 @@ import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
-import { MobilePwaInstallPrompt } from '../mobile/MobilePwaInstallPrompt';
 import { useLayoutActions, useLayoutChromeState } from '../../contexts/LayoutContext';
 import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config';
 import { getPathWithoutLang } from '../../utils/pathname';
@@ -101,47 +100,13 @@ export default function AppLayout() {
           {shouldShowMobileHeader && (
             <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
           )}
-
-          <div
-            data-mobile-page-mode={routeUiConfig.mobilePageMode}
-            className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
-          >
-            {allowRouteMotion ? (
-              <LayoutGroup id="app-route-layout">
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.div
-                    key={location.pathname}
-                    className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16, ease: 'easeOut' }}
-                  >
-                    <Suspense fallback={<ContentSkeleton />}>
-                      <Outlet />
-                    </Suspense>
-                  </motion.div>
-                </AnimatePresence>
-              </LayoutGroup>
-            ) : (
-              <div
-                key={location.pathname}
-                className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
-              >
-                <Suspense fallback={<ContentSkeleton />}>
-                  <Outlet />
-                </Suspense>
-              </div>
-            )}
-            {shouldShowFooter && <Footer />}
-          </div>
-          {shouldShowMobileNav && (
-            <div className="h-[var(--mobile-bottom-nav-offset)] md:h-0 flex-shrink-0" />
-          )}
-        </main>
-        {shouldShowMobileNav && <MobilePwaInstallPrompt />}
-        {shouldShowMobileNav && <MobileBottomNav />}
-      </div>
-    </LazyMotion>
+          {shouldShowFooter && <Footer />}
+        </div>
+        {shouldShowMobileNav && (
+          <div className="h-[var(--mobile-bottom-nav-offset)] md:h-0 flex-shrink-0" />
+        )}
+      </main>
+      {shouldShowMobileNav && <MobileBottomNav />}
+    </div>
   );
 }

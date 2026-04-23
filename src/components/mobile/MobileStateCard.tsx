@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../lib/utils';
+import { KT } from './ksoft/ksoft';
 
 interface MobileStateCardProps {
   icon?: React.ReactNode;
@@ -14,25 +14,70 @@ export function MobileStateCard({
   title,
   description,
   action,
-  className,
 }: Readonly<MobileStateCardProps>) {
   return (
     <div
-      className={cn(
-        'rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-14 text-center shadow-sm dark:border-slate-700 dark:bg-slate-950/70',
-        className
-      )}
+      style={{
+        borderRadius: 28,
+        border: `1.5px dashed ${KT.line2}`,
+        background: KT.card,
+        padding: '56px 24px',
+        textAlign: 'center',
+        boxShadow: KT.shSm,
+        fontFamily: KT.font,
+      }}
     >
       {icon && (
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+        <div
+          style={{
+            margin: '0 auto 16px',
+            width: 60,
+            height: 60,
+            borderRadius: 18,
+            background: KT.bg2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: KT.subLight,
+          }}
+        >
           {icon}
         </div>
       )}
-      <p className={cn('text-base font-black text-foreground', icon ? 'mt-4' : '')}>{title}</p>
+      <p
+        style={{
+          fontSize: 15,
+          fontWeight: 800,
+          color: KT.ink,
+          marginTop: icon ? 0 : 0,
+        }}
+      >
+        {title}
+      </p>
       {description && (
-        <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">{description}</p>
+        <p
+          style={{
+            marginTop: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            color: KT.sub,
+            lineHeight: 1.6,
+          }}
+        >
+          {description}
+        </p>
       )}
-      {action && <div className="mt-5 flex justify-center">{action}</div>}
+      {action && (
+        <div
+          style={{
+            marginTop: 20,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          {action}
+        </div>
+      )}
     </div>
   );
 }

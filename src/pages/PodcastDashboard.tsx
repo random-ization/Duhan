@@ -14,8 +14,12 @@ import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { ContentSkeleton } from '../components/common';
-import { buildPodcastChannelPath, buildPodcastSearchPath } from '../utils/podcastRoutes';
+import { MobilePodcastDashboard } from '../components/mobile/MobilePodcastDashboard';
+import {
+  buildPodcastChannelPath,
+  buildPodcastPlayerPath,
+  buildPodcastSearchPath,
+} from '../utils/podcastRoutes';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import { formatSafeDateLabel } from '../utils/dateLabel';
 import type { Language } from '../types';
@@ -204,7 +208,7 @@ const FeaturedHeroSection = ({
         type="button"
         size="auto"
         onClick={() =>
-          navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
+          navigate(buildPodcastPlayerPath(currentPath), {
             state: {
               episode: {
                 guid: lastPlayed.episodeGuid,
@@ -701,7 +705,7 @@ const HistorySection = ({
               type="button"
               size="auto"
               onClick={() =>
-                navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
+                navigate(buildPodcastPlayerPath(currentPath), {
                   state: {
                     episode: {
                       guid: record.episodeGuid,

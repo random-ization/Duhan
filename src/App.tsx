@@ -6,11 +6,8 @@ import { useAuth } from './contexts/AuthContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { PostHogTracker } from './components/common/PostHogTracker';
-// `useUpdateLearningProgress` pulls `useMutation` from `convex/react`, which
-// used to drag the full Convex SDK into the entry chunk. The side-effect
-// that consumed it has moved into `<LearningProgressTracker />`, mounted
-// inside the lazy `AuthedAppProviders` subtree so pre-auth pages no longer
-// import any Convex code.
+import { useUpdateLearningProgress } from './hooks/useUpdateLearningProgress';
+import { useDrainMutationQueueOnOnline } from './hooks/useOfflineMutation';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
 
@@ -21,6 +18,11 @@ function App() {
   const { t } = useTranslation();
   const { language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
 
+  // Replay any FSRS / quiz / reading-heartbeat mutations that were queued
+  // offline — drains at mount and on every `online` event.
+  useDrainMutationQueueOnOnline();
+
+  // Track learning progress when user changes institute/level
   useEffect(() => {
     finalizeStaleChunkRecovery();
   }, []);
@@ -41,7 +43,7 @@ function App() {
     const connection = navWithConnection.connection;
     const pathname = globalThis.window.location.pathname;
     const inLearningArea =
-      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|practice|review|media|reading|vocab-book|topik|notebook|typing|dictionary)/.test(
+      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review|media|reading|vocab-book|topik|notebook|typing|dictionary)/.test(
         pathname
       );
 
@@ -60,7 +62,6 @@ function App() {
       void import('./pages/CoursesOverview');
       void import('./pages/CourseDashboard');
       void import('./pages/ModulePage');
-      void import('./pages/PracticeHubPage');
       void import('./pages/MediaHubPage');
     };
 

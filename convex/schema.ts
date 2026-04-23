@@ -174,7 +174,8 @@ export default defineSchema({
     .index('email', ['email']) // Renamed from by_email for @convex-dev/auth compatibility
     .index('by_googleId', ['googleId'])
     .index('by_token', ['token']) // Security index
-    .index('by_postgresId', ['postgresId']),
+    .index('by_postgresId', ['postgresId'])
+    .index('by_lastActivityAt', ['lastActivityAt']),
 
   // Institutes (Courses/Textbooks)
   institutes: defineTable({
@@ -796,6 +797,7 @@ export default defineSchema({
     legacyId: v.string(), // Original ID like "exam-1704067200000"
     title: v.string(),
     round: v.number(), // e.g., 35
+    level: v.optional(v.union(v.literal(1), v.literal(2))), // TOPIK I or II
     type: v.string(), // "READING" | "LISTENING"
     paperType: v.optional(v.string()), // "A" | "B"
     timeLimit: v.number(), // Minutes
@@ -803,11 +805,13 @@ export default defineSchema({
     description: v.optional(v.string()),
     isPaid: v.boolean(),
     accessLevel: v.optional(v.string()), // "FREE_SAMPLE" | "PRO"
+    scheduledAt: v.optional(v.number()), // Planned exam date for countdown / reminders
     createdAt: v.number(),
   })
     .index('by_legacy_id', ['legacyId'])
     .index('by_round', ['round'])
-    .index('by_type', ['type']),
+    .index('by_type', ['type'])
+    .index('by_scheduledAt', ['scheduledAt']),
 
   // TOPIK Questions (Separate table for efficiency)
   topik_questions: defineTable({
@@ -1275,6 +1279,49 @@ export default defineSchema({
     .index('by_user_and_new', ['userId', 'isNew'])
     .index('by_user_category_tier', ['userId', 'category', 'tier']),
 
+  daily_challenges: defineTable({
+    date: v.string(),
+    kind: v.union(
+      v.literal('vocab_20'),
+      v.literal('grammar_drill'),
+      v.literal('listening_10min'),
+      v.literal('typing_wpm')
+    ),
+    titleZh: v.string(),
+    titleEn: v.string(),
+    titleVi: v.string(),
+    titleMn: v.string(),
+    subZh: v.string(),
+    subEn: v.string(),
+    subVi: v.string(),
+    subMn: v.string(),
+    targetCount: v.number(),
+    rewardXp: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_date', ['date']),
+
+  user_daily_progress: defineTable({
+    userId: v.id('users'),
+    date: v.string(),
+    challengeId: v.optional(v.id('daily_challenges')),
+    currentCount: v.number(),
+    completedAt: v.optional(v.number()),
+    claimedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user_date', ['userId', 'date'])
+    .index('by_user_claimedAt', ['userId', 'claimedAt']),
+
+  community_activity_likes: defineTable({
+    activityId: v.id('learning_events'),
+    userId: v.id('users'),
+    createdAt: v.number(),
+  })
+    .index('by_activity', ['activityId'])
+    .index('by_user_activity', ['userId', 'activityId']),
+
   xp_logs: defineTable({
     userId: v.id('users'),
     amount: v.number(),
@@ -1282,7 +1329,8 @@ export default defineSchema({
       v.literal('FSRS_REVIEW'),
       v.literal('TYPING_TEST'),
       v.literal('PODCAST'),
-      v.literal('TOPIK_MOCK')
+      v.literal('TOPIK_MOCK'),
+      v.literal('DAILY_CHALLENGE')
     ),
     timestamp: v.number(),
   }).index('by_user_timestamp', ['userId', 'timestamp']),
@@ -1420,4 +1468,52 @@ export default defineSchema({
   reading_library_books,
   reading_library_chapters,
   reading_library_progress,
+
+  /**
+   * In-app notifications (E3).
+   *
+   * One row per delivered notification. The UI queries `notifications:listUnread`
+   * to show the bell badge and `notifications:listRecent` for the panel.
+   * Creation happens server-side from scheduled actions (streak reminders,
+   * exam countdowns) and from application mutations (partner milestones).
+   */
+  notifications: defineTable({
+    userId: v.id('users'),
+    kind: v.union(
+      v.literal('streak_reminder'),
+      v.literal('exam_countdown'),
+      v.literal('partner_milestone'),
+      v.literal('achievement_unlocked'),
+      v.literal('friend_activity')
+    ),
+    title: v.string(),
+    body: v.string(),
+    /** Optional deep-link the UI should navigate to when tapped. */
+    linkPath: v.optional(v.string()),
+    /** Free-form metadata (examId, streakDays, partnerId, etc.). */
+    metadata: v.optional(v.any()),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_user_read', ['userId', 'readAt']),
+
+  /**
+   * Study partnerships (D4).
+   *
+   * A pending / active / ended link between two learners. `userA` is the
+   * inviter, `userB` is the invitee. The UI renders the active partnership
+   * as a "Study buddy" card showing combined streak + today's shared study
+   * minutes.
+   */
+  studyPartnerships: defineTable({
+    userA: v.id('users'),
+    userB: v.id('users'),
+    status: v.union(v.literal('pending'), v.literal('active'), v.literal('ended')),
+    startedAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+    endedAt: v.optional(v.number()),
+  })
+    .index('by_userA_status', ['userA', 'status'])
+    .index('by_userB_status', ['userB', 'status']),
 });

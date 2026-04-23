@@ -1,0 +1,43 @@
+export const KT = {
+  bg: '#FBF8F3',
+  bg2: '#F5EFE5',
+  card: '#FFFFFF',
+  ink: '#1F1B17',
+  ink2: '#3D3832',
+  sub: '#8C8377',
+  subLight: '#B8AFA2',
+  line: 'rgba(31,27,23,0.08)',
+  line2: 'rgba(31,27,23,0.14)',
+  pink: '#F5C7C0',
+  pinkDeep: '#C97A6E',
+  mint: '#C8DCCF',
+  mintDeep: '#5B8472',
+  butter: '#F7E8B8',
+  butterDeep: '#A8872E',
+  lilac: '#D8CFE6',
+  lilacDeep: '#7E6AA8',
+  sky: '#BDD4E0',
+  skyDeep: '#3F6A85',
+  crimson: '#A23B2E',
+  indigo: '#2F3F68',
+  jade: '#4C6B4E',
+  gold: '#B38941',
+  sh: '0 2px 8px rgba(31,27,23,0.04), 0 12px 32px rgba(31,27,23,0.06)',
+  shSm: '0 1px 3px rgba(31,27,23,0.05), 0 4px 12px rgba(31,27,23,0.04)',
+  shLg: '0 8px 20px rgba(31,27,23,0.08), 0 24px 60px rgba(31,27,23,0.1)',
+  serif: '"Noto Serif KR", Georgia, serif',
+  font: '"Pretendard", -apple-system, system-ui, "PingFang SC", sans-serif',
+} as const;
+
+export type ChipTone = 'muted' | 'pink' | 'mint' | 'butter' | 'lilac' | 'sky' | 'crimson' | 'ink';
+
+export const CHIP_TONES: Record<ChipTone, { bg: string; fg: string }> = {
+  muted: { bg: 'rgba(31,27,23,0.05)', fg: KT.sub },
+  pink: { bg: KT.pink, fg: '#7A2F26' },
+  mint: { bg: KT.mint, fg: '#2F5847' },
+  butter: { bg: KT.butter, fg: '#7A5F1F' },
+  lilac: { bg: KT.lilac, fg: '#5A4985' },
+  sky: { bg: KT.sky, fg: '#274D66' },
+  crimson: { bg: KT.crimson, fg: KT.card },
+  ink: { bg: KT.ink, fg: KT.card },
+};

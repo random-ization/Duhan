@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '../ui';
-import { cn } from '../../lib/utils';
+import { KT } from './ksoft/ksoft';
 
 interface MobileImmersiveHeaderProps {
   title: string;
@@ -27,80 +26,117 @@ export function MobileImmersiveHeader({
   status,
   actions,
   children,
-  className,
   tone = 'default',
 }: Readonly<MobileImmersiveHeaderProps>) {
   const isInverse = tone === 'inverse';
 
   return (
     <header
-      className={cn(
-        isInverse
-          ? 'shrink-0 border-b border-white/10 bg-white/8 px-4 pt-[calc(var(--mobile-safe-top)+10px)] pb-3 backdrop-blur-xl'
-          : 'shrink-0 border-b border-border bg-background/88 px-4 pt-[calc(var(--mobile-safe-top)+10px)] pb-3 backdrop-blur-xl',
-        className
-      )}
+      style={{
+        flexShrink: 0,
+        borderBottom: isInverse ? '1px solid rgba(255,255,255,0.1)' : `1px solid ${KT.line}`,
+        background: isInverse ? 'rgba(31,27,23,0.88)' : `${KT.bg}ee`,
+        padding: '0 18px 12px',
+        paddingTop: 'calc(var(--mobile-safe-top, env(safe-area-inset-top)) + 10px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        fontFamily: KT.font,
+      }}
     >
-      <div className="flex items-start gap-3">
-        <Button
-          variant="ghost"
-          size="auto"
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        {/* Back button */}
+        <button
+          type="button"
           onClick={onBack}
-          className={cn(
-            'grid h-11 w-11 shrink-0 place-items-center rounded-2xl active:scale-95',
-            isInverse
-              ? 'border border-white/15 bg-white/10 shadow-sm'
-              : 'border border-border bg-card shadow-sm'
-          )}
           aria-label={backLabel}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            border: isInverse ? '1px solid rgba(255,255,255,0.15)' : `1px solid ${KT.line}`,
+            background: isInverse ? 'rgba(255,255,255,0.1)' : KT.card,
+            color: isInverse ? '#fff' : KT.ink,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            boxShadow: isInverse ? 'none' : KT.shSm,
+          }}
         >
-          {backIcon ?? (
-            <ArrowLeft className={cn('h-4 w-4', isInverse ? 'text-white' : 'text-foreground')} />
-          )}
-        </Button>
+          {backIcon ?? <ArrowLeft size={16} />}
+        </button>
 
-        <div className="min-w-0 flex-1">
-          {eyebrow ? (
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {eyebrow && (
             <div
-              className={cn(
-                'text-[10px] font-black uppercase tracking-[0.18em]',
-                isInverse ? 'text-white/70' : 'text-muted-foreground'
-              )}
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                color: isInverse ? 'rgba(255,255,255,0.6)' : KT.sub,
+                marginBottom: 2,
+              }}
             >
               {eyebrow}
             </div>
-          ) : null}
+          )}
 
-          <div className="mt-1 flex items-start justify-between gap-3">
-            <div className="min-w-0">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              marginTop: 4,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
               <h1
-                className={cn(
-                  'truncate text-base font-black tracking-tight',
-                  isInverse ? 'text-white' : 'text-foreground'
-                )}
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: -0.3,
+                  color: isInverse ? '#fff' : KT.ink,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {title}
               </h1>
-              {subtitle ? (
+              {subtitle && (
                 <p
-                  className={cn(
-                    'mt-1 line-clamp-2 text-sm font-semibold leading-5',
-                    isInverse ? 'text-white/80' : 'text-muted-foreground'
-                  )}
+                  style={{
+                    marginTop: 4,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                    color: isInverse ? 'rgba(255,255,255,0.7)' : KT.sub,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
                 >
                   {subtitle}
                 </p>
-              ) : null}
+              )}
             </div>
 
-            {status ? <div className="shrink-0">{status}</div> : null}
+            {status && <div style={{ flexShrink: 0 }}>{status}</div>}
           </div>
         </div>
 
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {actions}
+          </div>
+        )}
       </div>
 
-      {children ? <div className="mt-4">{children}</div> : null}
+      {children && <div style={{ marginTop: 14 }}>{children}</div>}
     </header>
   );
 }

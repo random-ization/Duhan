@@ -14,6 +14,7 @@ import { Button } from '../components/ui';
 import { Card, CardContent } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { localeFromLanguage } from '../utils/locale';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { getLabels } from '../utils/i18n';
 import { formatSafeDateLabel } from '../utils/dateLabel';
 
@@ -70,7 +71,7 @@ export default function HistoryPage() {
                   {podcastMsgs.DASHBOARD_NO_RECOMMENDATIONS}
                 </p>
               </div>
-              <Button type="button" onClick={() => navigate('/podcasts')}>
+              <Button type="button" onClick={() => navigate(buildMediaPath('podcast'))}>
                 {podcastMsgs.ACTION_EXPLORE}
               </Button>
             </CardContent>

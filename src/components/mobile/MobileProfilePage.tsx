@@ -1,24 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useMemo, useRef, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
-import {
-  ArrowLeft,
-  User as UserIcon,
-  BarChart3,
-  Lock,
-  Settings,
-  Camera,
-  LogOut,
-  Sparkles,
-  Trophy,
-  History,
-  BookMarked,
-} from 'lucide-react';
-import { m as motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../lib/utils';
+import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';
+import { AchievementGallery } from '../profile/AchievementGallery';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
 import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
@@ -32,7 +20,6 @@ import { toErrorMessage } from '../../utils/errors';
 import { Loading } from '../common/Loading';
 import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
-import { Button } from '../ui';
 import { Input } from '../ui';
 import { isIncorrectPasswordError, validatePasswordChange } from '../../utils/profilePassword';
 import {
@@ -40,40 +27,29 @@ import {
   uploadAvatarImage,
   validateAvatarFile,
 } from '../../utils/storageUpload';
-import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { KT, Chip, Card, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
 
-const MobileAvatarContent = ({
-  isUploadingAvatar,
-  avatar,
-  altLabel,
-}: {
-  isUploadingAvatar: boolean;
-  avatar?: string | null;
-  altLabel: string;
-}) => {
-  if (isUploadingAvatar) return <Loading size="sm" />;
-  if (avatar) return <img src={avatar} alt={altLabel} className="w-full h-full object-cover" />;
-  return (
-    <UserIcon className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-  );
+type LegacyTab = 'info' | 'stats' | 'security' | 'settings';
+
+const tabFromParam = (raw: string | null): LegacyTab | null => {
+  if (raw === 'info' || raw === 'stats' || raw === 'security' || raw === 'settings') return raw;
+  return null;
 };
 
 export const MobileProfilePage: React.FC = () => {
   const { user, updateUser, language, viewerAccess } = useAuth();
   const navigate = useLocalizedNavigate();
-  const [searchParams] = useSearchParams();
-  const { signOut, signIn } = useAuthActions();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { signIn } = useAuthActions();
   const { t } = useTranslation();
-
-  // Legacy support for shared tabs
   const labels = getLabels(language);
 
-  // State
-  const [activeTab, setActiveTab] = useState<'info' | 'stats' | 'security' | 'settings'>('info');
+  const legacyTab = tabFromParam(searchParams.get('tab'));
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // -- DATA FETCHING (Copied from ProfilePage) --
   const vocabBookCount = useQuery(
     qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
     user ? { includeMastered: true } : 'skip'
@@ -94,7 +70,6 @@ export const MobileProfilePage: React.FC = () => {
     user ? {} : 'skip'
   );
 
-  // -- MUTATIONS --
   const changePasswordMutation = useMutation(mRef('auth:changePassword'));
   const unlinkAuthProviderMutation = useMutation(mRef('auth:unlinkAuthProvider'));
   const getUploadUrlAction = useAction(
@@ -104,7 +79,11 @@ export const MobileProfilePage: React.FC = () => {
     >('storage:getUploadUrl')
   );
 
-  // -- HANDLERS --
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
     const file = e.target.files?.[0];
@@ -142,12 +121,6 @@ export const MobileProfilePage: React.FC = () => {
       resetFileInputSelection(input);
     }
   };
-
-  // Password Logic
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,319 +160,727 @@ export const MobileProfilePage: React.FC = () => {
     toast.success(t('profileUpdated', { defaultValue: 'Profile updated' }));
   };
 
+  const legacyMeta = useMemo(
+    () =>
+      legacyTab
+        ? {
+            info: {
+              title: t('profile.tabInfoTitle', { defaultValue: 'Profile details' }),
+              subtitle: t('profile.tabInfoSubtitle', {
+                defaultValue:
+                  'Update your identity, avatar, and the personal details tied to your learning.',
+              }),
+            },
+            stats: {
+              title: t('profile.tabStatsTitle', { defaultValue: 'Learning overview' }),
+              subtitle: t('profile.tabStatsSubtitle', {
+                defaultValue:
+                  'Review streaks, exam momentum, and the progress signals that matter most.',
+              }),
+            },
+            security: {
+              title: t('profile.tabSecurityTitle', {
+                defaultValue: 'Security and linked accounts',
+              }),
+              subtitle: t('profile.tabSecuritySubtitle', {
+                defaultValue:
+                  'Manage password changes and the sign-in providers connected to this account.',
+              }),
+            },
+            settings: {
+              title: t('profile.tabSettingsTitle', { defaultValue: 'Preferences' }),
+              subtitle: t('profile.tabSettingsSubtitle', {
+                defaultValue:
+                  'Tune notifications, language, and product defaults to fit your routine.',
+              }),
+            },
+          }[legacyTab]
+        : null,
+    [legacyTab, t]
+  );
+
   if (!user) return <Loading fullScreen />;
 
   const displayName = user.name || t('profile.unnamed', { defaultValue: 'User' });
-  const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
   const dayStreak = userStats?.streak ?? 0;
   const savedWordsCount = userStats?.totalWordsLearned ?? vocabBookCount?.count ?? 0;
-  const averageScoreLabel = averageScore > 0 ? `${averageScore}` : '—';
+  const grammarMastered = userStats?.grammarStats.mastered ?? 0;
+  const totalMinutes = userStats?.totalMinutes ?? 0;
+  const totalHours = Math.round(totalMinutes / 60);
+  const isPremium = Boolean(viewerAccess?.isPremium);
 
-  const overviewStats = [
+  const copy = getMyCopy(language);
+
+  const closeLegacy = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('tab');
+    setSearchParams(next);
+  };
+
+  const openLegacyTab = (tab: LegacyTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next);
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    if (typeof globalThis.window === 'undefined' || typeof globalThis.document === 'undefined') {
+      return;
+    }
+    globalThis.window.requestAnimationFrame(() => {
+      globalThis.window.requestAnimationFrame(() => {
+        globalThis.document.getElementById(sectionId)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    });
+  };
+
+  const stats = [
     {
-      id: 'streak',
-      label: t('dashboard.mobile.streakShort', { defaultValue: 'Streak' }),
-      value: `${dayStreak}`,
-      icon: <Trophy className="w-3.5 h-3.5" />,
-      tone: 'text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-400/10 border-amber-100 dark:border-amber-400/20',
+      n: `${savedWordsCount}`,
+      l: copy.statsWords,
+      k: '詞',
     },
     {
-      id: 'words',
-      label: t('profile.savedWords', { defaultValue: 'Words' }),
-      value: `${savedWordsCount}`,
-      icon: <BookMarked className="w-3.5 h-3.5" />,
-      tone: 'text-indigo-600 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-400/10 border-indigo-100 dark:border-indigo-400/20',
+      n: `${grammarMastered}`,
+      l: copy.statsGrammar,
+      k: '法',
     },
     {
-      id: 'exams',
-      label: t('profile.examsTaken', { defaultValue: 'Exams' }),
-      value: `${examsTaken}`,
-      icon: <History className="w-3.5 h-3.5" />,
-      tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-400/10 border-emerald-100 dark:border-emerald-400/20',
-    },
-    {
-      id: 'score',
-      label: t('profile.avgScore', { defaultValue: 'Score' }),
-      value: averageScoreLabel,
-      icon: <BarChart3 className="w-3.5 h-3.5" />,
-      tone: 'text-rose-600 bg-rose-50 dark:text-rose-300 dark:bg-rose-400/10 border-rose-100 dark:border-rose-400/20',
+      n: totalHours > 0 ? `${totalHours}h` : `${totalMinutes}m`,
+      l: copy.statsTime,
+      k: '時',
     },
   ];
 
-  // Helper for accounts
-  const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);
-  const getAccountButtonClass = (isLinked: boolean, _loading: boolean, _disable: boolean) =>
-    isLinked
-      ? 'bg-red-50 text-red-600 dark:bg-red-400/12 dark:text-red-200'
-      : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-400/12 dark:text-indigo-200';
-  const tabContentByKey = {
-    info: (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
-      >
-        <ProfileInfoTab
-          labels={labels}
-          user={user}
-          displayName={displayName}
-          userIdDisplay={userIdDisplay}
-          isPremium={Boolean(viewerAccess?.isPremium)}
-          onNameUpdate={handleDisplayNameUpdate}
-        />
-      </motion.div>
-    ),
-    stats: (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
-      >
-        <ProfileStatsTab
-          labels={labels}
-          dayStreak={dayStreak}
-          savedWordsCount={savedWordsCount}
-          examsTaken={examsTaken}
-          averageScore={averageScore}
-          examHistory={examHistory}
-        />
-      </motion.div>
-    ),
-    security: (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
-      >
-        <ProfileSecurityTab
-          labels={labels}
-          handlePasswordChange={handlePasswordChange}
-          currentPassword={currentPassword}
-          setCurrentPassword={setCurrentPassword}
-          newPassword={newPassword}
-          setNewPassword={setNewPassword}
-          confirmPassword={confirmPassword}
-          setConfirmPassword={setConfirmPassword}
-          isChangingPassword={isChangingPassword}
-          accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
-          linkedProviders={linkedProviders}
-          linkedCount={linkedAccounts?.length || 0}
-          accountsLoading={linkedAccounts === undefined}
-          linkedLabel={labels.profile?.link?.linked || 'Linked'}
-          notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
-          unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
-          linkLabel={labels.profile?.link?.connect || 'Connect'}
-          signIn={signIn}
-          unlinkAuthProviderMutation={unlinkAuthProviderMutation}
-          getAccountButtonClass={getAccountButtonClass}
-          success={toast.success}
-          error={toast.error}
-          toErrorMessage={toErrorMessage}
-        />
-      </motion.div>
-    ),
-    settings: (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-card p-8 rounded-[2.5rem] border border-border shadow-xl shadow-slate-200/50 dark:shadow-none"
-      >
-        <ProfileSettingsTab labels={labels} />
-      </motion.div>
-    ),
-  } as const;
+  const libraryItems = [
+    {
+      k: '詞',
+      l: copy.vocabTitle,
+      s: copy.vocabSub(savedWordsCount, userStats?.vocabStats.dueReviews ?? 0),
+      tone: 'pinkDeep',
+      onClick: () =>
+        navigate(appendReturnToPath('/vocab-book', `${location.pathname}${location.search}`)),
+    },
+    {
+      k: '誤',
+      l: copy.wrongTitle,
+      s: copy.wrongSub(userStats?.reviewStats.dueNow ?? 0),
+      tone: 'crimson',
+      onClick: () => navigate('/review'),
+    },
+    {
+      k: '記',
+      l: copy.notesTitle,
+      s: copy.notesSub,
+      tone: 'butterDeep',
+      onClick: () =>
+        navigate(appendReturnToPath('/notebook', `${location.pathname}${location.search}`)),
+    },
+    {
+      k: '旗',
+      l: copy.achievementsTitle,
+      s: copy.achievementsSub(examsTaken),
+      tone: 'mintDeep',
+      onClick: () => scrollToSection('mobile-profile-achievements'),
+    },
+  ];
 
-  const tabMetaByKey = {
-    info: {
-      title: t('profile.tabInfoTitle', { defaultValue: 'Profile details' }),
-      subtitle: t('profile.tabInfoSubtitle', {
-        defaultValue:
-          'Update your identity, avatar, and the personal details tied to your learning.',
-      }),
+  const settingsItems = [
+    {
+      l: copy.subInfoTitle,
+      s: isPremium ? copy.subPremium : copy.subFree,
+      onClick: () => navigate('/pricing'),
     },
-    stats: {
-      title: t('profile.tabStatsTitle', { defaultValue: 'Learning overview' }),
-      subtitle: t('profile.tabStatsSubtitle', {
-        defaultValue: 'Review streaks, exam momentum, and the progress signals that matter most.',
-      }),
+    {
+      l: copy.notificationsTitle,
+      s: copy.notificationsSub,
+      onClick: () => openLegacyTab('settings'),
     },
-    security: {
-      title: t('profile.tabSecurityTitle', { defaultValue: 'Security and linked accounts' }),
-      subtitle: t('profile.tabSecuritySubtitle', {
-        defaultValue:
-          'Manage password changes and the sign-in providers connected to this account.',
-      }),
+    {
+      l: copy.languageTitle,
+      s: copy.languageSub,
+      onClick: () => openLegacyTab('settings'),
     },
-    settings: {
-      title: t('profile.tabSettingsTitle', { defaultValue: 'Preferences' }),
-      subtitle: t('profile.tabSettingsSubtitle', {
-        defaultValue: 'Tune notifications, language, and product defaults to fit your routine.',
-      }),
+    {
+      l: copy.supportTitle,
+      s: copy.supportSub,
+      onClick: () => {
+        if (typeof globalThis.window !== 'undefined') {
+          globalThis.window.location.href = 'mailto:support@koreanstudy.me';
+        }
+      },
     },
-  } as const;
+  ];
 
   const returnTo = searchParams.get('returnTo');
   const shouldShowBack = hasSafeReturnTo(returnTo);
-
   const handleBack = () => {
     navigate(resolveSafeReturnTo(returnTo, '/dashboard'));
   };
 
-  return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
-      {/* Premium Profile Header */}
-      <div className="relative overflow-hidden rounded-b-[3rem] bg-card px-6 pb-12 pt-8 shadow-sm">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.15),transparent_60%)]" />
+  const getAccountButtonClass = (isLinked: boolean) =>
+    isLinked
+      ? 'bg-red-50 text-red-600 dark:bg-red-400/12 dark:text-red-200'
+      : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-400/12 dark:text-indigo-200';
 
-        <div className="relative mb-10 flex items-center justify-between">
-          {shouldShowBack ? (
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={handleBack}
-              className="h-10 w-10 items-center justify-center rounded-full bg-muted shadow-sm transition-all active:scale-90"
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </Button>
-          ) : (
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 backdrop-blur-sm dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200">
-              <Sparkles className="w-3 h-3 h-3" />
-              {t('nav.profile', { defaultValue: 'Profile' })}
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => signOut()}
-            className="h-10 rounded-xl border border-border bg-card px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
+  if (legacyTab && legacyMeta) {
+    const userIdDisplay = (user as unknown as { _id?: string })._id?.slice(0, 8) || '—';
+    const linkedProviders = new Set(linkedAccounts?.map(a => a.provider) ?? []);
+
+    return (
+      <PageShell>
+        <div
+          style={{
+            padding: '14px 18px 10px',
+            paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            onClick={closeLegacy}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              color: KT.ink,
+              flexShrink: 0,
+            }}
+            aria-label="Back"
           >
-            <LogOut className="h-3.5 w-3.5 mr-2" />
-            {t('common.signOut', { defaultValue: 'Sign Out' })}
-          </Button>
+            <ArrowLeft size={18} />
+          </button>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.4,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {legacyMeta.title}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: KT.sub,
+                marginTop: 2,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+              }}
+            >
+              {legacyMeta.subtitle}
+            </div>
+          </div>
         </div>
 
-        <div className="relative z-10">
-          <div className="flex flex-col items-center text-center mb-10">
-            <div className="relative mb-6">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="relative h-28 w-28 overflow-hidden rounded-[2.25rem] border-4 border-card shadow-2xl bg-muted"
-              >
-                <MobileAvatarContent
-                  isUploadingAvatar={isUploadingAvatar}
-                  avatar={user.avatar}
-                  altLabel={displayName}
+        <main className="px-5 pb-12">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={legacyTab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              style={{
+                background: KT.card,
+                padding: 24,
+                borderRadius: 28,
+                boxShadow: KT.sh,
+              }}
+            >
+              {legacyTab === 'info' && (
+                <ProfileInfoTab
+                  labels={labels}
+                  user={user}
+                  displayName={displayName}
+                  userIdDisplay={userIdDisplay}
+                  isPremium={isPremium}
+                  onNameUpdate={handleDisplayNameUpdate}
                 />
-              </motion.div>
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 h-10 w-10 rounded-2xl bg-indigo-600 text-white shadow-xl flex items-center justify-center transition-transform active:scale-90 border-2 border-card"
-              >
-                <Camera className="w-4 h-4" />
-              </Button>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-            </div>
+              )}
+              {legacyTab === 'stats' && (
+                <ProfileStatsTab
+                  labels={labels}
+                  dayStreak={dayStreak}
+                  savedWordsCount={savedWordsCount}
+                  examsTaken={examsTaken}
+                  averageScore={averageScore}
+                  examHistory={examHistory}
+                />
+              )}
+              {legacyTab === 'security' && (
+                <ProfileSecurityTab
+                  labels={labels}
+                  handlePasswordChange={handlePasswordChange}
+                  currentPassword={currentPassword}
+                  setCurrentPassword={setCurrentPassword}
+                  newPassword={newPassword}
+                  setNewPassword={setNewPassword}
+                  confirmPassword={confirmPassword}
+                  setConfirmPassword={setConfirmPassword}
+                  isChangingPassword={isChangingPassword}
+                  accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
+                  linkedProviders={linkedProviders}
+                  linkedCount={linkedAccounts?.length || 0}
+                  accountsLoading={linkedAccounts === undefined}
+                  linkedLabel={labels.profile?.link?.linked || 'Linked'}
+                  notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
+                  unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
+                  linkLabel={labels.profile?.link?.connect || 'Connect'}
+                  signIn={signIn}
+                  unlinkAuthProviderMutation={unlinkAuthProviderMutation}
+                  getAccountButtonClass={getAccountButtonClass}
+                  success={toast.success}
+                  error={toast.error}
+                  toErrorMessage={toErrorMessage}
+                />
+              )}
+              {legacyTab === 'settings' && <ProfileSettingsTab labels={labels} />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </PageShell>
+    );
+  }
 
-            <h1 className="text-3xl font-black text-foreground tracking-tight italic mb-2 leading-none">
+  return (
+    <PageShell>
+      {/* Warm gradient header */}
+      <div
+        style={{
+          padding: '18px 22px 24px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 18px)',
+          background: `linear-gradient(180deg, ${KT.mint}40 0%, ${KT.bg} 100%)`,
+        }}
+      >
+        {shouldShowBack && (
+          <button
+            type="button"
+            onClick={handleBack}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              color: KT.ink,
+              marginBottom: 12,
+              boxShadow: KT.shSm,
+            }}
+            aria-label="Back"
+          >
+            <ArrowLeft size={16} />
+          </button>
+        )}
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 20,
+                background: `linear-gradient(135deg, ${KT.pink} 0%, ${KT.butter} 100%)`,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 30,
+                boxShadow: KT.sh,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              {isUploadingAvatar ? (
+                <Loading size="sm" />
+              ) : user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={displayName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <UserIcon size={28} color={KT.ink} />
+              )}
+            </motion.div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                position: 'absolute',
+                right: -4,
+                bottom: -4,
+                width: 28,
+                height: 28,
+                borderRadius: 10,
+                background: KT.ink,
+                color: KT.bg,
+                border: `2px solid ${KT.bg}`,
+                display: 'grid',
+                placeItems: 'center',
+                cursor: 'pointer',
+              }}
+              aria-label="Change avatar"
+            >
+              <Camera size={13} />
+            </button>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.5,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {displayName}
-            </h1>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-              <span className="font-mono text-foreground opacity-80">ID: {userIdDisplay}</span>
+            </div>
+            <div style={{ fontSize: 12, color: KT.sub, marginTop: 2 }}>
+              {copy.levelLabel} · Lv.{Math.max(1, Math.floor(savedWordsCount / 100))}
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              {isPremium && <Chip tone="crimson">{copy.premium}</Chip>}
+              <Chip tone="muted">{copy.streakChip(dayStreak)}</Chip>
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {overviewStats.map(stat => (
-              <motion.div
-                key={stat.id}
-                whileTap={{ scale: 0.98 }}
-                className={cn('rounded-2xl border p-4 shadow-sm flex flex-col', stat.tone)}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 8,
+            marginTop: 20,
+          }}
+        >
+          {stats.map((s, i) => (
+            <div
+              key={i}
+              style={{
+                background: KT.card,
+                padding: 12,
+                borderRadius: 16,
+                boxShadow: KT.shSm,
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 11,
+                  color: KT.crimson,
+                  marginBottom: 2,
+                  fontWeight: 500,
+                }}
               >
-                <div className="flex items-center gap-2 mb-2 opacity-70">
-                  {stat.icon}
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    {stat.label}
-                  </span>
-                </div>
-                <div className="text-2xl font-black">{stat.value}</div>
-              </motion.div>
-            ))}
-          </div>
+                {s.k}
+              </div>
+              <div
+                style={{
+                  fontSize: 19,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  letterSpacing: -0.4,
+                }}
+              >
+                {s.n}
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: KT.sub,
+                  fontWeight: 600,
+                  marginTop: 2,
+                }}
+              >
+                {s.l}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Floating Modern Tab Nav */}
-      <div className="sticky top-4 z-40 px-6 -mt-8 mb-8">
-        <div className="flex justify-between rounded-[2rem] border border-white/20 bg-white/70 dark:bg-zinc-900/70 p-1.5 shadow-2xl backdrop-blur-xl">
-          {[
-            {
-              id: 'info',
-              icon: UserIcon,
-              label: t('profile.tabInfoShort', { defaultValue: 'Info' }),
-            },
-            {
-              id: 'stats',
-              icon: BarChart3,
-              label: t('profile.tabStatsShort', { defaultValue: 'Stats' }),
-            },
-            {
-              id: 'security',
-              icon: Lock,
-              label: t('profile.tabSecurityShort', { defaultValue: 'Security' }),
-            },
-            {
-              id: 'settings',
-              icon: Settings,
-              label: t('profile.tabSettingsShort', { defaultValue: 'Settings' }),
-            },
-          ].map(item => {
-            const isActive = activeTab === item.id;
+      <div style={{ padding: '18px 18px 28px' }}>
+        <SectionHead kanji="庫" title={copy.libraryTitle} />
+        <Card pad={0}>
+          {libraryItems.map((m, i) => {
+            const bg = (KT[m.tone as keyof typeof KT] as string) || KT.ink;
             return (
-              <Button
-                key={item.id}
-                variant="ghost"
-                size="auto"
-                onClick={() => setActiveTab(item.id as any)}
-                className={cn(
-                  'relative flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-2xl transition-all duration-300',
-                  isActive
-                    ? 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-400/10 shadow-sm'
-                    : 'text-muted-foreground'
-                )}
+              <button
+                key={i}
+                type="button"
+                onClick={m.onClick}
+                style={{
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderBottom: i < libraryItems.length - 1 ? `1px solid ${KT.line}` : 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  width: '100%',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: KT.font,
+                }}
               >
-                <item.icon className={cn('w-4 h-4', isActive ? 'stroke-[2.5px]' : 'stroke-2')} />
-                <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                  {item.label}
-                </span>
-              </Button>
+                <HanjaSeal c={m.k} size={36} bg={bg} round={9} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {m.l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: KT.sub,
+                      marginTop: 2,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {m.s}
+                  </div>
+                </div>
+                <div style={{ color: KT.subLight, fontSize: 18 }}>›</div>
+              </button>
             );
           })}
-        </div>
+        </Card>
       </div>
 
-      {/* Modern Tab Content Header & Body */}
-      <main className="px-6 pb-12">
-        <div className="mb-6 px-1">
-          <h2 className="text-2xl font-black text-foreground italic tracking-tight mb-2">
-            {tabMetaByKey[activeTab].title}
-          </h2>
-          <p className="text-sm font-semibold text-muted-foreground leading-relaxed">
-            {tabMetaByKey[activeTab].subtitle}
-          </p>
-        </div>
+      <div style={{ padding: '0 18px 28px' }}>
+        <SectionHead kanji="設" title={copy.settingsTitle} />
+        <Card pad={0}>
+          {settingsItems.map((m, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={m.onClick}
+              style={{
+                padding: '14px 18px',
+                borderBottom: i < settingsItems.length - 1 ? `1px solid ${KT.line}` : 'none',
+                background: 'transparent',
+                border: 'none',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                width: '100%',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: KT.font,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: KT.ink }}>{m.l}</div>
+                {m.s && (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: KT.sub,
+                      marginTop: 2,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {m.s}
+                  </div>
+                )}
+              </div>
+              <div style={{ color: KT.subLight, fontSize: 18 }}>›</div>
+            </button>
+          ))}
+        </Card>
+      </div>
 
-        <AnimatePresence mode="wait">
-          <div key={activeTab}>{tabContentByKey[activeTab]}</div>
-        </AnimatePresence>
-      </main>
-    </div>
+      <div id="mobile-profile-achievements" style={{ padding: '0 18px 32px' }}>
+        <SectionHead kanji="旗" title={copy.achievementsTitle} />
+        <Card pad={20}>
+          <AchievementGallery />
+        </Card>
+      </div>
+    </PageShell>
   );
+};
+
+type MyCopy = {
+  levelLabel: string;
+  premium: string;
+  streakChip: (n: number) => string;
+  statsWords: string;
+  statsGrammar: string;
+  statsTime: string;
+  libraryTitle: string;
+  vocabTitle: string;
+  vocabSub: (total: number, due: number) => string;
+  wrongTitle: string;
+  wrongSub: (n: number) => string;
+  notesTitle: string;
+  notesSub: string;
+  achievementsTitle: string;
+  achievementsSub: (n: number) => string;
+  settingsTitle: string;
+  subInfoTitle: string;
+  subPremium: string;
+  subFree: string;
+  notificationsTitle: string;
+  notificationsSub: string;
+  supportTitle: string;
+  supportSub: string;
+  languageTitle: string;
+  languageSub: string;
+};
+
+const getMyCopy = (language: string): MyCopy => {
+  if (language.startsWith('zh')) {
+    return {
+      levelLabel: 'TOPIK 学习者',
+      premium: '高级会员',
+      streakChip: n => `${n} 天连续`,
+      statsWords: '认识单词',
+      statsGrammar: '掌握语法',
+      statsTime: '学习时长',
+      libraryTitle: '我的资料',
+      vocabTitle: '单词本',
+      vocabSub: (total, due) => `${total} 个单词 · ${due} 待复习`,
+      wrongTitle: '错题本',
+      wrongSub: n => `${n} 题 · FSRS 复习`,
+      notesTitle: '笔记本',
+      notesSub: '收藏与笔记',
+      achievementsTitle: '成就与徽章',
+      achievementsSub: n => (n > 0 ? `${n} 次考试 · 查看徽章墙` : '查看你的徽章墙'),
+      settingsTitle: '设置',
+      subInfoTitle: '订阅管理',
+      subPremium: '高级版 · 感谢支持',
+      subFree: '免费版 · 升级获得更多',
+      notificationsTitle: '提醒与通知',
+      notificationsSub: '学习提醒和系统消息',
+      supportTitle: '帮助与反馈',
+      supportSub: '联系支持团队',
+      languageTitle: '显示语言',
+      languageSub: '切换界面和学习内容的显示语言。',
+    };
+  }
+  if (language.startsWith('vi')) {
+    return {
+      levelLabel: 'Học viên TOPIK',
+      premium: 'Premium',
+      streakChip: n => `${n} ngày liên tiếp`,
+      statsWords: 'Từ đã học',
+      statsGrammar: 'Ngữ pháp',
+      statsTime: 'Thời gian',
+      libraryTitle: 'Thư viện của tôi',
+      vocabTitle: 'Sổ từ',
+      vocabSub: (total, due) => `${total} từ · ${due} chờ ôn`,
+      wrongTitle: 'Sổ câu sai',
+      wrongSub: n => `${n} câu · FSRS`,
+      notesTitle: 'Ghi chú',
+      notesSub: 'Lưu & ghi chú',
+      achievementsTitle: 'Huy hiệu & thành tựu',
+      achievementsSub: n => (n > 0 ? `${n} lần thi · xem bộ sưu tập` : 'Xem bộ sưu tập huy hiệu'),
+      settingsTitle: 'Cài đặt',
+      subInfoTitle: 'Gói đăng ký',
+      subPremium: 'Premium · cảm ơn',
+      subFree: 'Miễn phí · nâng cấp',
+      notificationsTitle: 'Thông báo',
+      notificationsSub: 'Nhắc học và thông báo hệ thống',
+      supportTitle: 'Trợ giúp & phản hồi',
+      supportSub: 'Liên hệ đội hỗ trợ',
+      languageTitle: 'Ngôn ngữ hiển thị',
+      languageSub: 'Đổi ngôn ngữ giao diện và nội dung học tập.',
+    };
+  }
+  if (language.startsWith('mn')) {
+    return {
+      levelLabel: 'TOPIK суралцагч',
+      premium: 'Премиум',
+      streakChip: n => `${n} өдөр дараалан`,
+      statsWords: 'Үг мэдлэг',
+      statsGrammar: 'Дүрэм',
+      statsTime: 'Хугацаа',
+      libraryTitle: 'Миний сан',
+      vocabTitle: 'Үгсийн дэвтэр',
+      vocabSub: (total, due) => `${total} үг · ${due} давтах`,
+      wrongTitle: 'Алдааны дэвтэр',
+      wrongSub: n => `${n} асуулт · FSRS`,
+      notesTitle: 'Тэмдэглэл',
+      notesSub: 'Хадгалсан & тэмдэглэл',
+      achievementsTitle: 'Амжилт ба тэмдэг',
+      achievementsSub: n => (n > 0 ? `${n} шалгалт · тэмдгийн сан` : 'Тэмдгийн сангаа харах'),
+      settingsTitle: 'Тохиргоо',
+      subInfoTitle: 'Захиалга',
+      subPremium: 'Премиум · баярлалаа',
+      subFree: 'Үнэгүй · шинэчлэх',
+      notificationsTitle: 'Мэдэгдэл',
+      notificationsSub: 'Суралцах сануулга ба системийн мэдэгдэл',
+      supportTitle: 'Тусламж ба санал',
+      supportSub: 'Дэмжлэгтэй холбогдох',
+      languageTitle: 'Харагдах хэл',
+      languageSub: 'Интерфейс ба сургалтын хэлээ солих.',
+    };
+  }
+  return {
+    levelLabel: 'TOPIK learner',
+    premium: 'Premium',
+    streakChip: n => `${n} day streak`,
+    statsWords: 'Words known',
+    statsGrammar: 'Grammar',
+    statsTime: 'Study time',
+    libraryTitle: 'My library',
+    vocabTitle: 'Vocab book',
+    vocabSub: (total, due) => `${total} words · ${due} due`,
+    wrongTitle: 'Wrong answers',
+    wrongSub: n => `${n} items · FSRS`,
+    notesTitle: 'Notebook',
+    notesSub: 'Saves & notes',
+    achievementsTitle: 'Achievements & badges',
+    achievementsSub: n => (n > 0 ? `${n} exams taken · open gallery` : 'Open your badge gallery'),
+    settingsTitle: 'Settings',
+    subInfoTitle: 'Subscription',
+    subPremium: 'Premium · thank you',
+    subFree: 'Free · upgrade',
+    notificationsTitle: 'Notifications',
+    notificationsSub: 'Study reminders and system alerts',
+    supportTitle: 'Help & feedback',
+    supportSub: 'Contact support',
+    languageTitle: 'Display language',
+    languageSub: 'Change the language for the interface and learning content.',
+  };
 };

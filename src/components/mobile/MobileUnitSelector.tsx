@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Book, ChevronDown, Check, X } from 'lucide-react';
 import { m as motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
-import { Button } from '../ui';
+import { KT } from './ksoft/ksoft';
 
 interface MobileUnitSelectorProps {
   currentUnitId: number | 'ALL';
@@ -31,49 +31,73 @@ export default function MobileUnitSelector({
     return `${t('vocab.unit', { defaultValue: 'Unit' })} ${unitId}`;
   };
 
+  const triggerStyle: CSSProperties =
+    variant === 'minimal'
+      ? {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          background: KT.bg2,
+          border: `1px solid ${KT.line}`,
+          borderRadius: 20,
+          padding: '5px 12px',
+          cursor: 'pointer',
+          minWidth: 0,
+          overflow: 'hidden',
+          fontFamily: KT.font,
+        }
+      : {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          background: KT.bg2,
+          border: `1px solid ${KT.line}`,
+          borderRadius: 20,
+          padding: '8px 16px',
+          cursor: 'pointer',
+          boxShadow: KT.shSm,
+          fontFamily: KT.font,
+        };
+
   return (
     <>
-      <Button
-        variant="ghost"
-        size="auto"
-        onClick={() => setIsOpen(true)}
-        className={
-          variant === 'minimal'
-            ? 'flex items-center gap-1.5 bg-muted border border-border rounded-full px-3 py-1 active:scale-95 transition-all min-w-0 overflow-hidden'
-            : 'flex items-center gap-2 bg-muted border border-border rounded-full px-4 py-2 shadow-sm active:scale-95 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary'
-        }
-      >
-        <Book
-          className={
-            variant === 'minimal'
-              ? 'w-3.5 h-3.5 text-indigo-600 shrink-0'
-              : 'w-4 h-4 text-indigo-600'
-          }
-        />
-        <div className="text-left min-w-0">
+      <button type="button" onClick={() => setIsOpen(true)} style={triggerStyle}>
+        <Book size={variant === 'minimal' ? 13 : 15} style={{ color: KT.crimson, flexShrink: 0 }} />
+        <div style={{ textAlign: 'left', minWidth: 0 }}>
           {variant !== 'minimal' && (
-            <div className="text-[9px] font-black text-muted-foreground/70 uppercase tracking-[0.15em] leading-none mb-0.5">
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: KT.subLight,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                lineHeight: 1,
+                marginBottom: 2,
+              }}
+            >
               {t('vocab.currentScope', { defaultValue: 'Current Scope' })}
             </div>
           )}
           <div
-            className={
-              variant === 'minimal'
-                ? 'text-[11px] font-black text-foreground leading-tight truncate'
-                : 'text-xs font-black italic text-foreground leading-none tracking-tight'
-            }
+            style={{
+              fontSize: variant === 'minimal' ? 11 : 12,
+              fontWeight: 800,
+              color: KT.ink,
+              lineHeight: 1.1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
           >
             {getLabel(currentUnitId)}
           </div>
         </div>
         <ChevronDown
-          className={
-            variant === 'minimal'
-              ? 'w-3 h-3 text-muted-foreground shrink-0'
-              : 'w-3.5 h-3.5 text-muted-foreground ml-0.5'
-          }
+          size={variant === 'minimal' ? 11 : 13}
+          style={{ color: KT.sub, flexShrink: 0 }}
         />
-      </Button>
+      </button>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetPortal>
@@ -93,109 +117,227 @@ export default function MobileUnitSelector({
               initial={false}
               animate={isOpen ? { y: 0 } : { y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-              className="pointer-events-auto bg-card rounded-t-[3rem] max-h-[85vh] flex flex-col shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.3)] border-t border-border"
+              style={{
+                pointerEvents: 'auto',
+                background: KT.card,
+                borderTopLeftRadius: 32,
+                borderTopRightRadius: 32,
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 -12px 40px rgba(31,27,23,0.18)',
+                borderTop: `1px solid ${KT.line}`,
+                fontFamily: KT.font,
+              }}
             >
-              <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted-foreground/20" />
-              <div className="px-8 py-6 flex items-center justify-between shrink-0">
-                <h3 className="font-black italic text-2xl tracking-tighter text-foreground">
+              {/* Drag handle */}
+              <div
+                style={{
+                  margin: '12px auto 0',
+                  width: 44,
+                  height: 5,
+                  borderRadius: 3,
+                  background: KT.line2,
+                }}
+              />
+
+              {/* Header */}
+              <div
+                style={{
+                  padding: '18px 22px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: KT.ink,
+                    letterSpacing: -0.5,
+                  }}
+                >
                   {t('vocab.selectScope', { defaultValue: 'Select Scope' })}
                 </h3>
-                <Button
-                  variant="ghost"
-                  size="auto"
+                <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
-                  className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center active:scale-95 transition-transform"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    background: KT.bg2,
+                    border: `1px solid ${KT.line}`,
+                    color: KT.sub,
+                    display: 'grid',
+                    placeItems: 'center',
+                    cursor: 'pointer',
+                  }}
                 >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </Button>
+                  <X size={16} />
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 pb-12 pt-2 space-y-3">
-                {/* All Units Option */}
-                <Button
-                  variant="ghost"
-                  size="auto"
+              {/* Options list */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '0 18px',
+                  paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                {/* All Units */}
+                <button
+                  type="button"
                   onClick={() => {
                     onSelect('ALL');
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all ${
-                    currentUnitId === 'ALL'
-                      ? 'bg-indigo-50/50 border-indigo-500/50 shadow-inner ring-1 ring-indigo-500/20'
-                      : 'bg-card border-border active:scale-[0.97]'
-                  }`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    borderRadius: 18,
+                    border:
+                      currentUnitId === 'ALL' ? `2px solid ${KT.crimson}` : `1px solid ${KT.line}`,
+                    background: currentUnitId === 'ALL' ? 'rgba(162,59,46,0.06)' : KT.card,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: KT.font,
+                    boxShadow: KT.shSm,
+                  }}
                 >
-                  <div className="text-left">
+                  <div>
                     <div
-                      className={`text-base font-black ${currentUnitId === 'ALL' ? 'text-indigo-700' : 'text-foreground'}`}
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: currentUnitId === 'ALL' ? KT.crimson : KT.ink,
+                      }}
                     >
                       {t('vocab.allUnits', { defaultValue: 'All Units' })}
                     </div>
-                    <div className="text-xs text-muted-foreground font-semibold">
+                    <div style={{ fontSize: 12, color: KT.sub, fontWeight: 600, marginTop: 2 }}>
                       {allWordsCount} {t('vocab.words', { defaultValue: 'words' })}
                     </div>
                   </div>
                   {currentUnitId === 'ALL' && (
-                    <div className="w-7 h-7 rounded-full bg-indigo-500 shadow-md flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        background: KT.crimson,
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      <Check size={14} style={{ color: '#fff' }} />
                     </div>
                   )}
-                </Button>
+                </button>
 
-                <div className="flex items-center gap-4 px-2 py-2">
-                  <div className="h-px flex-1 bg-border/50" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                {/* Divider */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '4px 6px',
+                  }}
+                >
+                  <div style={{ height: 1, flex: 1, background: KT.line }} />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: 1.5,
+                      textTransform: 'uppercase',
+                      color: KT.subLight,
+                    }}
+                  >
                     Individual Units
                   </span>
-                  <div className="h-px flex-1 bg-border/50" />
+                  <div style={{ height: 1, flex: 1, background: KT.line }} />
                 </div>
 
-                {/* Individual Units */}
-                <div className="grid grid-cols-1 gap-2">
-                  {availableUnits.map(u => {
-                    const count = unitCounts.get(u) || 0;
-                    const isSelected = currentUnitId === u;
-                    const isDisabled = count === 0;
+                {/* Individual units */}
+                {availableUnits.map(u => {
+                  const count = unitCounts.get(u) || 0;
+                  const isSelected = currentUnitId === u;
+                  const isDisabled = count === 0;
 
-                    return (
-                      <Button
-                        variant="ghost"
-                        size="auto"
-                        key={u}
-                        disabled={isDisabled}
-                        onClick={() => {
-                          onSelect(u);
-                          setIsOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all ${
-                          isSelected
-                            ? 'bg-indigo-50/50 border-indigo-500/50 shadow-inner ring-1 ring-indigo-500/20'
-                            : isDisabled
-                              ? 'bg-muted/50 border-transparent opacity-40'
-                              : 'bg-card border-border hover:bg-muted/30 active:scale-[0.97]'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <div
-                            className={`text-base font-black ${isSelected ? 'text-indigo-700' : 'text-foreground'}`}
-                          >
-                            {u === 0
-                              ? t('vocab.unassigned', { defaultValue: 'Unassigned' })
-                              : `${t('vocab.unit', { defaultValue: 'Unit' })} ${u}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-semibold">
-                            {count} {t('vocab.words', { defaultValue: 'words' })}
-                          </div>
+                  return (
+                    <button
+                      type="button"
+                      key={u}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        onSelect(u);
+                        setIsOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: 18,
+                        border: isSelected ? `2px solid ${KT.crimson}` : `1px solid ${KT.line}`,
+                        background: isSelected
+                          ? 'rgba(162,59,46,0.06)'
+                          : isDisabled
+                            ? KT.bg2
+                            : KT.card,
+                        cursor: isDisabled ? 'default' : 'pointer',
+                        textAlign: 'left',
+                        opacity: isDisabled ? 0.45 : 1,
+                        fontFamily: KT.font,
+                        boxShadow: isDisabled ? 'none' : KT.shSm,
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 800,
+                            color: isSelected ? KT.crimson : KT.ink,
+                          }}
+                        >
+                          {u === 0
+                            ? t('vocab.unassigned', { defaultValue: 'Unassigned' })
+                            : `${t('vocab.unit', { defaultValue: 'Unit' })} ${u}`}
                         </div>
-                        {isSelected && (
-                          <div className="w-7 h-7 rounded-full bg-indigo-500 shadow-md flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </Button>
-                    );
-                  })}
-                </div>
+                        <div style={{ fontSize: 12, color: KT.sub, fontWeight: 600, marginTop: 2 }}>
+                          {count} {t('vocab.words', { defaultValue: 'words' })}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            background: KT.crimson,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Check size={14} style={{ color: '#fff' }} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           </SheetContent>

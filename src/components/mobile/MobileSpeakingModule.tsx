@@ -2,15 +2,14 @@ import { useRef, useState, useEffect } from 'react';
 import { Mic, Square, Play, RotateCcw, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
+import { KT } from './ksoft/ksoft';
 
 interface MobileSpeakingModuleProps {
   readonly unitTitle: string;
-  readonly targetSentence: string; // The sentence to read
-  readonly referenceAudioUrl?: string; // Optional reference audio
+  readonly targetSentence: string;
+  readonly referenceAudioUrl?: string;
   readonly translation?: string;
   readonly onBack: () => void;
   readonly onComplete?: () => void;
@@ -66,7 +65,6 @@ export function MobileSpeakingModule({
     }
   };
 
-  // Reset play state on end
   useEffect(() => {
     const refAudio = referenceAudioRef.current;
     const userAudio = userAudioRef.current;
@@ -90,39 +88,109 @@ export function MobileSpeakingModule({
   };
 
   return (
-    <div className="flex flex-col h-screen bg-muted">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100dvh',
+        background: KT.bg2,
+        fontFamily: KT.font,
+      }}
+    >
       <MobileWorkspaceHeader
         title={unitTitle}
         subtitle={t('mobileSpeakingModule.subtitle', {
           defaultValue: 'Listen, record, and compare your pronunciation.',
         })}
-        eyebrow={t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' })}
+        eyebrow={t('mobileSpeakingModule.title', { defaultValue: '說 · SPEAKING' })}
         onBack={onBack}
         backLabel={t('common.back', { defaultValue: 'Back' })}
       />
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
-        {/* Card */}
-        <div className="w-full bg-card rounded-[2rem] p-8 shadow-lg border border-border flex flex-col items-center text-center space-y-6">
-          <h1 className="text-2xl font-black text-foreground leading-relaxed">{targetSentence}</h1>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 22px',
+          gap: 24,
+        }}
+      >
+        {/* Sentence Card */}
+        <div
+          style={{
+            width: '100%',
+            background: KT.card,
+            borderRadius: 28,
+            padding: '28px 24px',
+            boxShadow: KT.sh,
+            border: `1px solid ${KT.line}`,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 14,
+            textAlign: 'center',
+          }}
+        >
+          {/* Hanja watermark */}
+          <div
+            style={{
+              fontFamily: KT.serif,
+              fontSize: 13,
+              color: KT.crimson,
+              letterSpacing: 3,
+              fontWeight: 500,
+              opacity: 0.7,
+            }}
+          >
+            說 · SPEAK
+          </div>
+
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: KT.ink,
+              lineHeight: 1.5,
+              letterSpacing: -0.3,
+            }}
+          >
+            {targetSentence}
+          </h1>
 
           {translation && (
-            <p className="text-lg text-muted-foreground font-medium">{translation}</p>
+            <p style={{ fontSize: 14, color: KT.sub, fontWeight: 500, lineHeight: 1.5 }}>
+              {translation}
+            </p>
           )}
 
-          {/* Reference Audio Control */}
+          {/* Reference Audio */}
           {normalizedReferenceAudioUrl && (
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
+              type="button"
               onClick={toggleReferencePlay}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full font-bold text-sm hover:bg-indigo-100 transition-colors"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '9px 18px',
+                borderRadius: 20,
+                border: `1px solid rgba(162,59,46,0.2)`,
+                background: 'rgba(162,59,46,0.07)',
+                color: KT.crimson,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
+                fontFamily: KT.font,
+              }}
             >
               {isPlayingReference ? (
-                <Square size={14} fill="currentColor" />
+                <Square size={13} fill="currentColor" />
               ) : (
-                <Volume2 size={16} />
+                <Volume2 size={15} />
               )}
               <span>
                 {t('mobileSpeakingModule.listenToReference', {
@@ -130,14 +198,22 @@ export function MobileSpeakingModule({
                 })}
               </span>
               <audio ref={referenceAudioRef} src={normalizedReferenceAudioUrl} />
-            </Button>
+            </button>
           )}
         </div>
 
-        {/* Feedback Area */}
-        <div className="h-24 flex items-center justify-center w-full">
+        {/* Feedback / Waveform Area */}
+        <div
+          style={{
+            height: 80,
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {isRecording ? (
-            <div className="flex items-center gap-1">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {[
                 { h: 14, d: 0.55 },
                 { h: 24, d: 0.7 },
@@ -147,72 +223,130 @@ export function MobileSpeakingModule({
               ].map((b, i) => (
                 <div
                   key={i}
-                  className="w-2 bg-rose-500 rounded-full animate-bounce"
-                  style={{ height: `${b.h}px`, animationDuration: `${b.d}s` }}
+                  style={{
+                    width: 6,
+                    height: b.h,
+                    background: KT.crimson,
+                    borderRadius: 3,
+                    animation: `bounce ${b.d}s infinite alternate`,
+                  }}
                 />
               ))}
-              <span className="ml-3 font-mono font-bold text-rose-500">
+              <span
+                style={{
+                  marginLeft: 10,
+                  fontFamily: 'monospace',
+                  fontWeight: 700,
+                  color: KT.crimson,
+                  fontSize: 15,
+                }}
+              >
                 {formatTime(recordingTime)}
               </span>
             </div>
           ) : normalizedUserAudioUrl ? (
-            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2">
-              <Button
-                variant="ghost"
-                size="auto"
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <button
+                type="button"
                 onClick={toggleUserPlay}
-                className="w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  background: KT.ink,
+                  color: KT.bg,
+                  display: 'grid',
+                  placeItems: 'center',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: KT.sh,
+                }}
               >
                 {isPlayingUser ? (
-                  <Square size={20} fill="currentColor" />
+                  <Square size={18} fill="currentColor" />
                 ) : (
-                  <Play size={24} fill="currentColor" className="ml-1" />
+                  <Play size={22} fill="currentColor" style={{ marginLeft: 2 }} />
                 )}
                 <audio ref={userAudioRef} src={normalizedUserAudioUrl} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="auto"
+              </button>
+              <button
+                type="button"
                 onClick={resetRecording}
-                className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted transition-colors"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: KT.bg2,
+                  border: `1px solid ${KT.line}`,
+                  color: KT.sub,
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                }}
               >
-                <RotateCcw size={18} />
-              </Button>
+                <RotateCcw size={16} />
+              </button>
             </div>
           ) : (
-            <p className="text-muted-foreground font-medium text-sm">
+            <p style={{ color: KT.sub, fontSize: 14, fontWeight: 500 }}>
               {t('mobileSpeakingModule.tapMicToRecord', { defaultValue: 'Tap mic to record' })}
             </p>
           )}
         </div>
       </div>
 
-      {/* Footer / Controls */}
-      <div className="bg-card border-t border-border p-8 pt-6 pb-[calc(var(--mobile-safe-bottom)+32px)] flex flex-col items-center justify-center rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-        {error && <p className="text-rose-500 text-sm mb-4 font-medium">{error}</p>}
+      {/* Footer / Record Button */}
+      <div
+        style={{
+          background: KT.card,
+          borderTop: `1px solid ${KT.line}`,
+          padding: '24px 22px',
+          paddingBottom: 'calc(var(--mobile-safe-bottom, env(safe-area-inset-bottom)) + 24px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          boxShadow: '0 -8px 32px rgba(31,27,23,0.06)',
+        }}
+      >
+        {error && (
+          <p style={{ color: KT.crimson, fontSize: 13, marginBottom: 14, fontWeight: 500 }}>
+            {error}
+          </p>
+        )}
 
-        <Button
-          variant="ghost"
-          size="auto"
-          // On mobile, touch events are better for "hold to record", but for simplicity start with toggle
+        <button
+          type="button"
           onClick={isRecording ? stopRecording : startRecording}
-          disabled={!!audioUrl} // Disable if already recorded (must reset first)
-          className={cn(
-            'w-24 h-24 rounded-[32px] flex items-center justify-center transition-all duration-300 shadow-xl',
-            isRecording
-              ? 'bg-rose-500 shadow-rose-500/30 scale-110'
-              : audioUrl
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-primary shadow-primary/30 hover:scale-105 active:scale-95 text-white'
-          )}
+          disabled={!!audioUrl}
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 26,
+            display: 'grid',
+            placeItems: 'center',
+            border: 'none',
+            cursor: audioUrl ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s',
+            background: isRecording ? KT.crimson : audioUrl ? KT.bg2 : KT.ink,
+            color: audioUrl ? KT.subLight : KT.bg,
+            opacity: audioUrl ? 0.6 : 1,
+            boxShadow: isRecording ? `0 8px 24px rgba(162,59,46,0.35)` : audioUrl ? 'none' : KT.sh,
+          }}
         >
-          {isRecording ? (
-            <Square size={32} fill="currentColor" className="text-white" />
-          ) : (
-            <Mic size={36} className={audioUrl ? 'text-muted-foreground' : 'text-white'} />
-          )}
-        </Button>
-        <p className="mt-4 text-muted-foreground text-xs font-bold uppercase tracking-wider">
+          {isRecording ? <Square size={30} fill="currentColor" /> : <Mic size={34} />}
+        </button>
+        <p
+          style={{
+            marginTop: 12,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 1.5,
+            textTransform: 'uppercase',
+            color: KT.sub,
+          }}
+        >
           {isRecording
             ? t('mobileSpeakingModule.tapToStop', { defaultValue: 'Tap to Stop' })
             : audioUrl
@@ -220,6 +354,13 @@ export function MobileSpeakingModule({
               : t('mobileSpeakingModule.tapToRecord', { defaultValue: 'Tap to Record' })}
         </p>
       </div>
+
+      <style>{`
+        @keyframes bounce {
+          from { transform: scaleY(0.6); }
+          to { transform: scaleY(1); }
+        }
+      `}</style>
     </div>
   );
 }

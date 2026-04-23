@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAction } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { ArrowLeft, ExternalLink, Loader2, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { aRef } from '../utils/convexRefs';
+import { aRef, SEARCH, type SearchAllResult } from '../utils/convexRefs';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
@@ -38,6 +38,26 @@ type SearchResult = {
   num: number;
   entries: DictionaryEntry[];
 };
+type SearchScope = 'all' | 'dictionary';
+type GlobalSearchBucket = keyof SearchAllResult['buckets'];
+
+const GLOBAL_BUCKET_ORDER: GlobalSearchBucket[] = ['grammar', 'book', 'podcast', 'note'];
+
+function getGlobalBucketLabel(
+  bucket: GlobalSearchBucket,
+  t: ReturnType<typeof useTranslation>['t']
+) {
+  if (bucket === 'grammar') {
+    return t('search.bucket.grammar', { defaultValue: 'Grammar' });
+  }
+  if (bucket === 'book') {
+    return t('search.bucket.book', { defaultValue: 'Books' });
+  }
+  if (bucket === 'podcast') {
+    return t('search.bucket.podcast', { defaultValue: 'Podcasts' });
+  }
+  return t('search.bucket.note', { defaultValue: 'Notes' });
+}
 
 function getMeaning(entry: DictionaryEntry): string {
   const first = (entry.senses ?? [])
@@ -54,6 +74,7 @@ export default function DictionarySearchPage() {
   const { t } = useTranslation();
   const { language } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const scope: SearchScope = searchParams.get('scope') === 'all' ? 'all' : 'dictionary';
   const returnTo = useMemo(() => {
     return resolveSafeReturnTo(searchParams.get('returnTo'), '/dashboard');
   }, [searchParams]);
@@ -69,6 +90,12 @@ export default function DictionarySearchPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailEntry, setDetailEntry] = useState<DictionaryEntry | null>(null);
+  const globalSearchResult = useQuery(
+    SEARCH.searchAll,
+    scope === 'all' && initialQuery.length >= 2
+      ? { query: initialQuery, limitPerBucket: 6 }
+      : 'skip'
+  );
 
   const searchDictionary = useAction(
     aRef<
@@ -150,13 +177,19 @@ export default function DictionarySearchPage() {
   );
 
   useEffect(() => {
+    if (scope === 'all') {
+      setResult(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     if (!initialQuery) {
       setResult(null);
       setError(null);
       return;
     }
     void runSearch(initialQuery);
-  }, [initialQuery, runSearch]);
+  }, [initialQuery, runSearch, scope]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +197,9 @@ export default function DictionarySearchPage() {
     if (!q) return;
     const nextParams = new URLSearchParams();
     nextParams.set('q', q);
+    if (scope === 'all') {
+      nextParams.set('scope', 'all');
+    }
     if (returnTo) {
       nextParams.set('returnTo', returnTo);
     }
@@ -209,6 +245,13 @@ export default function DictionarySearchPage() {
       .slice()
       .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
   }, [detailEntry]);
+  const globalSearchLoading =
+    scope === 'all' && initialQuery.length >= 2 && globalSearchResult === undefined;
+  const isSearching = scope === 'all' ? globalSearchLoading : loading;
+  const globalTotalCount = globalSearchResult?.totalCount ?? 0;
+  const hasGlobalResults = globalTotalCount > 0;
+  const showGlobalEmpty =
+    scope === 'all' && !globalSearchLoading && initialQuery.length >= 2 && !hasGlobalResults;
 
   return (
     <div className="min-h-[100dvh] bg-background pb-safe">
@@ -226,7 +269,9 @@ export default function DictionarySearchPage() {
               <ArrowLeft className="w-4 h-4 text-muted-foreground" />
             </Button>
             <h1 className="text-lg font-black text-foreground">
-              {t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
+              {scope === 'all'
+                ? t('common.search', { defaultValue: 'Search' })
+                : t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
             </h1>
           </div>
 
@@ -235,17 +280,23 @@ export default function DictionarySearchPage() {
             <Input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder={t('dashboard.dictionary.placeholder', {
-                defaultValue: 'Search Korean word...',
-              })}
+              placeholder={
+                scope === 'all'
+                  ? t('search.globalPlaceholder', {
+                      defaultValue: 'Search grammar, books, podcasts, notes...',
+                    })
+                  : t('dashboard.dictionary.placeholder', {
+                      defaultValue: 'Search Korean word...',
+                    })
+              }
               className="w-full !h-11 !rounded-xl !border-border !bg-muted !pl-9 !pr-20 text-sm font-semibold text-foreground focus-visible:!ring-2 focus-visible:!ring-indigo-300 dark:focus-visible:!ring-indigo-200/70 focus-visible:!bg-card !shadow-none"
             />
             <Button
               type="submit"
               variant="ghost"
               size="auto"
-              disabled={loading || !query.trim()}
-              loading={loading}
+              disabled={isSearching || !query.trim()}
+              loading={isSearching}
               loadingText={t('search', { defaultValue: 'Search' })}
               loadingIconClassName="w-3 h-3"
               className="absolute right-1.5 top-1.5 h-8 px-3 rounded-lg bg-primary text-white text-xs font-bold !border-0 !shadow-none"
@@ -257,7 +308,7 @@ export default function DictionarySearchPage() {
       </header>
 
       <main className="px-4 md:px-8 max-w-3xl mx-auto py-6 pb-[130px] md:pb-32">
-        {loading && (
+        {isSearching && (
           <div className="py-16 flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="w-6 h-6 animate-spin" />
             <span className="text-sm font-semibold">
@@ -266,58 +317,113 @@ export default function DictionarySearchPage() {
           </div>
         )}
 
-        {!loading && error && (
+        {!isSearching && error && (
           <div className="rounded-xl border border-rose-200 dark:border-rose-300/35 bg-rose-50 dark:bg-rose-400/12 p-4 text-sm font-semibold text-rose-700 dark:text-rose-200">
             {error}
           </div>
         )}
 
-        {!loading && !error && result && result.entries.length === 0 && (
+        {!isSearching &&
+          !error &&
+          scope === 'dictionary' &&
+          result &&
+          result.entries.length === 0 && (
+            <div className="py-16 text-center text-muted-foreground">
+              <p className="text-sm font-semibold">
+                {t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
+              </p>
+            </div>
+          )}
+
+        {!isSearching &&
+          !error &&
+          scope === 'dictionary' &&
+          result &&
+          result.entries.length > 0 && (
+            <div className="space-y-2">
+              {result.entries.map(entry => (
+                <article
+                  key={entry.targetCode}
+                  className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl md:text-2xl font-black text-foreground">
+                        {entry.word}
+                      </h2>
+                      <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-1">
+                        {[entry.pronunciation, entry.pos].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[15px] md:text-base text-muted-foreground leading-relaxed">
+                    {getMeaning(entry) ||
+                      t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground font-semibold">
+                      #{entry.targetCode}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="auto"
+                      onClick={() => void handleOpenDetail(entry)}
+                      className="h-8 px-3 rounded-lg border border-border bg-muted text-foreground text-xs font-bold"
+                    >
+                      {t('common.details', { defaultValue: 'Details' })}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+        {!isSearching && !error && showGlobalEmpty && (
           <div className="py-16 text-center text-muted-foreground">
             <p className="text-sm font-semibold">
-              {t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
+              {t('search.noResults', { defaultValue: 'No matching results' })}
             </p>
           </div>
         )}
 
-        {!loading && !error && result && result.entries.length > 0 && (
-          <div className="space-y-2">
-            {result.entries.map(entry => (
-              <article
-                key={entry.targetCode}
-                className="rounded-xl border border-border bg-card p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl md:text-2xl font-black text-foreground">{entry.word}</h2>
-                    <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-1">
-                      {[entry.pronunciation, entry.pos].filter(Boolean).join(' · ')}
-                    </p>
+        {!isSearching && !error && scope === 'all' && hasGlobalResults && globalSearchResult && (
+          <div className="space-y-5">
+            {GLOBAL_BUCKET_ORDER.map(bucket => {
+              const bucketHits = globalSearchResult.buckets[bucket];
+              if (!bucketHits || bucketHits.length === 0) return null;
+              return (
+                <section key={bucket} className="space-y-2">
+                  <h2 className="text-xs font-black tracking-widest text-muted-foreground uppercase">
+                    {getGlobalBucketLabel(bucket, t)}
+                  </h2>
+                  <div className="space-y-2">
+                    {bucketHits.map(hit => (
+                      <button
+                        key={`${bucket}-${hit.id}`}
+                        type="button"
+                        onClick={() => navigate(hit.linkPath)}
+                        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm"
+                      >
+                        <div className="text-sm font-bold text-foreground leading-tight">
+                          {hit.title}
+                        </div>
+                        {hit.subtitle ? (
+                          <div className="mt-1 text-xs font-semibold text-muted-foreground">
+                            {hit.subtitle}
+                          </div>
+                        ) : null}
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <p className="mt-3 text-[15px] md:text-base text-muted-foreground leading-relaxed">
-                  {getMeaning(entry) ||
-                    t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground font-semibold">#{entry.targetCode}</p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() => void handleOpenDetail(entry)}
-                    className="h-8 px-3 rounded-lg border border-border bg-muted text-foreground text-xs font-bold"
-                  >
-                    {t('common.details', { defaultValue: 'Details' })}
-                  </Button>
-                </div>
-              </article>
-            ))}
+                </section>
+              );
+            })}
           </div>
         )}
       </main>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog open={scope === 'dictionary' ? detailOpen : false} onOpenChange={setDetailOpen}>
         <DialogContent className="w-[min(92vw,760px)] max-h-[85vh] overflow-hidden p-0">
           <div className="border-b border-border px-5 py-4 md:px-6 md:py-5">
             <DialogHeader>

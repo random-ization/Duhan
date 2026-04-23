@@ -1,14 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import {
-  Layers,
-  Puzzle,
-  BrainCircuit,
-  ClipboardCheck,
-  Settings,
-  ChevronDown,
-  X,
-  BookMarked,
-} from 'lucide-react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Settings, ChevronDown, X, BookMarked } from 'lucide-react';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
 import { useGlobalSettings } from '../../hooks/useGlobalSettings';
 import { useTranslation } from 'react-i18next';
@@ -27,21 +18,13 @@ import FlashcardSettingsModal from '../../features/vocab/components/FlashcardSet
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
-import { Button } from '../ui';
-import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { KT } from './ksoft/ksoft';
 
 interface MobileVocabViewProps {
   // Data
-  readonly allWords: ExtendedVocabItem[]; // Current filtered words
+  readonly allWords: ExtendedVocabItem[];
   readonly filteredWords: ExtendedVocabItem[];
-  readonly gameWords: Array<{
-    id: string;
-    korean: string;
-    english: string;
-    unit: number;
-    partOfSpeech?: string;
-    pos?: string;
-  }>;
+  readonly gameWords: any[];
 
   // State
   readonly currentUnitId: number | 'ALL';
@@ -55,7 +38,7 @@ interface MobileVocabViewProps {
   readonly onStar: (id: string) => void;
   readonly onSpeak: (text: string) => void;
   readonly isStarred: (id: string) => boolean;
-  readonly onFsrsReview: (wordId: string, isCorrect: boolean) => void; // For Test mode
+  readonly onFsrsReview: (wordId: string, isCorrect: boolean) => void;
 
   // Navigation
   readonly instituteId: string;
@@ -66,7 +49,42 @@ interface MobileVocabViewProps {
 
 type TabId = 'flashcard' | 'match' | 'learn' | 'test';
 
+// K-Soft Hanja labels for each tab mode
+const TAB_META: Record<TabId, { hanja: string }> = {
+  flashcard: { hanja: '閃' },
+  match: { hanja: '配' },
+  learn: { hanja: '學' },
+  test: { hanja: '試' },
+};
+
 const VocabMatch = lazy(() => import('../../features/vocab/components/VocabMatch'));
+
+// ── Shared icon-button style ──────────────────────────────────────────────────
+const iconBtn: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  background: KT.card,
+  border: `1px solid ${KT.line2}`,
+  boxShadow: KT.shSm,
+  display: 'grid',
+  placeItems: 'center',
+  cursor: 'pointer',
+  flexShrink: 0,
+};
+
+const closeBtn: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  background: KT.ink,
+  border: 'none',
+  boxShadow: KT.shSm,
+  display: 'grid',
+  placeItems: 'center',
+  cursor: 'pointer',
+  flexShrink: 0,
+};
 
 export default function MobileVocabView({
   allWords,
@@ -124,12 +142,11 @@ export default function MobileVocabView({
     safeSetLocalStorageItem(tabStorageKey, activeTab);
   }, [activeTab, tabStorageKey]);
 
-  // Tabs Configuration
   const tabs = [
-    { id: 'flashcard', icon: Layers, label: t('vocab.flashcard', { defaultValue: 'Flashcard' }) },
-    { id: 'match', icon: Puzzle, label: t('vocab.match', { defaultValue: 'Match' }) },
-    { id: 'learn', icon: BrainCircuit, label: t('vocab.learn', { defaultValue: 'Learn' }) },
-    { id: 'test', icon: ClipboardCheck, label: t('vocab.quiz', { defaultValue: 'Test' }) },
+    { id: 'flashcard', label: t('vocab.flashcard', { defaultValue: 'Flashcard' }) },
+    { id: 'match', label: t('vocab.match', { defaultValue: 'Match' }) },
+    { id: 'learn', label: t('vocab.learn', { defaultValue: 'Learn' }) },
+    { id: 'test', label: t('vocab.quiz', { defaultValue: 'Test' }) },
   ];
 
   const closeFocusOverlay = () => {
@@ -140,10 +157,6 @@ export default function MobileVocabView({
       navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
     navigate('/courses');
   };
 
@@ -151,10 +164,6 @@ export default function MobileVocabView({
     const returnTo = searchParams.get('returnTo');
     if (hasSafeReturnTo(returnTo)) {
       navigate(resolveSafeReturnTo(returnTo, '/courses'));
-      return;
-    }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
       return;
     }
     navigate('/courses');
@@ -186,7 +195,6 @@ export default function MobileVocabView({
       })();
       return;
     }
-
     setActiveTab(tabId);
     setModeMenuOpen(false);
     setFocusOpen(true);
@@ -198,172 +206,237 @@ export default function MobileVocabView({
   const flashcardCurrentPosition =
     filteredWords.length > 0 ? Math.min(cardIndex + 1, filteredWords.length) : 0;
 
+  const masteryPct = Math.round((masteryCount / Math.max(allWords.length, 1)) * 100);
+
+  // ── Overlay headers ─────────────────────────────────────────────────────────
+
   const defaultFocusHeader = (
-    <div className="flex items-center justify-between px-4 py-4 border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-30">
-      <div className="relative">
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 16px',
+        paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+        background: 'rgba(251,248,243,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${KT.line2}`,
+      }}
+    >
+      {/* Mode selector dropdown */}
+      <div style={{ position: 'relative' }}>
         <DropdownMenu open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
               type="button"
-              className="h-11 px-4 rounded-full bg-muted/50 hover:bg-muted text-foreground font-black italic text-sm flex items-center gap-2 border border-border/50 transition-all active:scale-95 shadow-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                borderRadius: 999,
+                background: KT.card,
+                border: `1px solid ${KT.line2}`,
+                boxShadow: KT.shSm,
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 800,
+                color: KT.ink,
+                fontFamily: KT.font,
+              }}
             >
-              {tabs.find(x => x.id === activeTab)?.label ??
-                t('vocab.flashcard', { defaultValue: 'Flashcard' })}
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </Button>
+              <span
+                style={{ fontFamily: KT.serif, fontSize: 15, fontWeight: 500, color: KT.crimson }}
+              >
+                {TAB_META[activeTab].hanja}
+              </span>
+              {tabs.find(x => x.id === activeTab)?.label}
+              <ChevronDown size={12} color={KT.sub} />
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             unstyled
-            className="absolute left-0 top-full mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl overflow-hidden z-[96] animate-in fade-in zoom-in-95"
+            className="absolute left-0 top-full mt-2 w-44 overflow-hidden rounded-2xl border border-border bg-card/95 shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 z-[96]"
           >
             {tabs.map(item => (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={item.id}
                 type="button"
-                onClick={() => {
-                  handleSelectTab(item.id as TabId);
+                onClick={() => handleSelectTab(item.id as TabId)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '12px 16px',
+                  background: activeTab === item.id ? `${KT.crimson}12` : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: activeTab === item.id ? KT.crimson : KT.sub,
+                  fontFamily: KT.font,
+                  textAlign: 'left',
                 }}
-                className={`w-full text-left px-4 py-3 font-black text-sm transition-colors ${
-                  activeTab === item.id
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted/50'
-                }`}
               >
+                <span style={{ fontFamily: KT.serif, fontSize: 16, fontWeight: 500 }}>
+                  {TAB_META[item.id as TabId].hanja}
+                </span>
                 {item.label}
-              </Button>
+              </button>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 flex justify-center min-w-0 px-2 pl-4">
+      {/* Unit selector */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '0 8px 0 12px',
+          minWidth: 0,
+        }}
+      >
         <MobileUnitSelector
           currentUnitId={currentUnitId}
           availableUnits={availableUnits}
           unitCounts={unitCounts}
           onSelect={u => {
             onSelectUnit(u);
-            setCardIndex(0); // Reset card index on unit change
+            setCardIndex(0);
           }}
           allWordsCount={allWords.length}
           variant="minimal"
         />
       </div>
 
-      <div className="flex items-center gap-2 pl-2">
-        <Button
-          variant="ghost"
-          size="auto"
+      {/* Action buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button
           type="button"
           onClick={() => navigate(switchMaterialPath)}
-          className="w-11 h-11 rounded-full bg-muted/50 hover:bg-muted flex items-center justify-center border border-border/50 active:scale-90 transition-all"
+          style={iconBtn}
           aria-label={t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
         >
-          <BookMarked className="w-5 h-5 text-muted-foreground" />
-        </Button>
+          <BookMarked size={16} color={KT.sub} />
+        </button>
         {activeTab === 'flashcard' && (
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
             type="button"
             onClick={() => setShowFlashcardSettings(true)}
-            className="w-11 h-11 rounded-full bg-muted/50 hover:bg-muted flex items-center justify-center border border-border/50 active:scale-90 transition-all"
+            style={iconBtn}
             aria-label={t('vocab.settings', { defaultValue: 'Settings' })}
           >
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </Button>
+            <Settings size={16} color={KT.sub} />
+          </button>
         )}
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
           type="button"
           onClick={closeFocusOverlay}
-          className="w-11 h-11 rounded-full bg-muted/50 hover:bg-muted flex items-center justify-center border border-border/50 active:scale-90 transition-all"
+          style={closeBtn}
           aria-label={t('common.close', { defaultValue: 'Close' })}
         >
-          <X className="w-5 h-5 text-muted-foreground" />
-        </Button>
+          <X size={16} color="#fff" />
+        </button>
       </div>
     </div>
   );
 
   const flashcardFocusHeader = (
-    <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-white/50 bg-[rgba(230,231,233,0.75)] px-5 pb-4 pt-[calc(env(safe-area-inset-top)+10px)] backdrop-blur-[24px]">
-      <Button
-        variant="ghost"
-        size="auto"
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 20px',
+        paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+        background: 'rgba(251,248,243,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${KT.line2}`,
+      }}
+    >
+      {/* Close */}
+      <button
         type="button"
         onClick={closeFocusOverlay}
-        className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-slate-900 text-white shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.1)] transition-transform active:scale-95"
+        style={closeBtn}
         aria-label={t('common.close', { defaultValue: 'Close' })}
       >
-        <X className="h-4 w-4" />
-      </Button>
+        <X size={16} color="#fff" />
+      </button>
 
-      <div className="mx-6 flex-1">
-        <div className="mb-1.5 flex items-end justify-between px-1">
-          <div className="relative">
-            <DropdownMenu open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  type="button"
-                  className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors outline-none"
-                >
-                  {tabs.find(x => x.id === activeTab)?.label ?? t('dashboard.progress.title', { defaultValue: 'Progress' })}
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                unstyled
-                className="absolute left-0 top-full mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl overflow-hidden z-[96] animate-in fade-in zoom-in-95 pointer-events-auto"
-              >
-              {tabs.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelectTab(item.id as TabId)}
-                  className={`w-full text-left flex items-center gap-3 px-4 py-3 font-black text-sm transition-colors ${
-                    activeTab === item.id
-                      ? 'bg-blue-50/80 text-blue-600'
-                      : 'text-slate-600 hover:bg-slate-100/50'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4 flex-shrink-0" />
-                  {item.label}
-                </button>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          </div>
-          <span className="text-[12px] font-black text-slate-800">
+      {/* Progress bar */}
+      <div style={{ flex: 1, margin: '0 16px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: 6,
+            padding: '0 2px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: KT.sub,
+              letterSpacing: 1,
+              fontFamily: KT.font,
+              textTransform: 'uppercase',
+            }}
+          >
+            {t('dashboard.progress.title', { defaultValue: 'Progress' })}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: KT.ink, fontFamily: KT.font }}>
             {flashcardCurrentPosition}
-            <span className="text-[10px] font-bold text-slate-400">/{filteredWords.length}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: KT.sub }}>
+              /{filteredWords.length}
+            </span>
           </span>
         </div>
-        <div className="flex h-1.5 w-full overflow-hidden rounded-full border border-white/60 bg-slate-300/40 shadow-inner">
+        <div
+          style={{
+            height: 6,
+            borderRadius: 999,
+            background: KT.bg2,
+            overflow: 'hidden',
+          }}
+        >
           <div
-            className="rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-            style={{ width: `${flashcardProgressPercent}%` }}
+            style={{
+              height: '100%',
+              width: `${flashcardProgressPercent}%`,
+              background: KT.ink,
+              borderRadius: 999,
+              transition: 'width 0.3s ease',
+            }}
           />
         </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="auto"
+      {/* Settings */}
+      <button
         type="button"
         onClick={() => setShowFlashcardSettings(true)}
-        className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-slate-200 bg-white text-slate-600 shadow-sm transition-transform hover:bg-slate-50 active:scale-95"
+        style={iconBtn}
         aria-label={t('vocab.settings', { defaultValue: 'Settings' })}
       >
-        <Settings className="h-4 w-4" />
-      </Button>
+        <Settings size={16} color={KT.sub} />
+      </button>
     </div>
   );
+
+  // ── Focus-overlay content ───────────────────────────────────────────────────
 
   const renderFocusContent = () => {
     if (activeTab === 'flashcard') {
@@ -431,8 +504,19 @@ export default function MobileVocabView({
     );
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-mobile-nav">
+    <div
+      style={{
+        minHeight: '100vh',
+        background: KT.bg,
+        display: 'flex',
+        flexDirection: 'column',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 64px)',
+      }}
+    >
+      {/* Modals / Overlays ─────────────────────────────────────────────────── */}
       <FlashcardSettingsModal
         isOpen={showFlashcardSettings}
         onClose={() => setShowFlashcardSettings(false)}
@@ -452,61 +536,138 @@ export default function MobileVocabView({
         <div className="h-full bg-background">{renderFocusContent()}</div>
       </VocabLearnOverlay>
 
-      <MobileWorkspaceHeader
-        title={t('dashboard.vocab.title', { defaultValue: 'Vocab' })}
-        subtitle={scopeTitle}
-        eyebrow={t('nav.learn', { defaultValue: 'Learning' })}
-        onBack={handleBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="auto"
+      {/* ── Shell Header ─────────────────────────────────────────────────── */}
+      <div
+        style={{
+          padding: '14px 22px 20px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
+      >
+        {/* Back */}
+        <button
+          type="button"
+          onClick={handleBack}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 16,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: KT.sub,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: KT.font,
+          }}
+        >
+          ← {t('common.back', { defaultValue: 'Back' })}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 13,
+                color: KT.crimson,
+                letterSpacing: 4,
+                marginBottom: 4,
+                fontWeight: 500,
+              }}
+            >
+              詞彙 · VOCAB
+            </div>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.6,
+              }}
+            >
+              {t('dashboard.vocab.title', { defaultValue: '단어장' })}
+            </div>
+            <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>{scopeTitle}</div>
+          </div>
+
+          {/* Actions: switch material + mastery ring */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
               onClick={() => navigate(switchMaterialPath)}
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-90 active:bg-muted transition-all"
-              title={t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 14,
+                background: KT.card,
+                border: `1px solid ${KT.line2}`,
+                boxShadow: KT.shSm,
+                display: 'grid',
+                placeItems: 'center',
+                cursor: 'pointer',
+              }}
               aria-label={t('learningFlow.actions.switchMaterial', {
                 defaultValue: 'Switch textbook',
               })}
             >
-              <BookMarked className="w-5 h-5 text-muted-foreground/80" />
-            </Button>
-            <div className="relative h-11 w-11 rounded-2xl border border-white/10 bg-card/50 shadow-xl p-1.5 overflow-hidden rim-light">
+              <BookMarked size={18} color={KT.sub} />
+            </button>
+
+            {/* Mastery radial ring */}
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 14,
+                background: KT.card,
+                border: `1px solid ${KT.line2}`,
+                boxShadow: KT.shSm,
+                position: 'relative',
+                padding: 5,
+                overflow: 'hidden',
+              }}
+            >
               <svg
-                className="w-full h-full -rotate-90 drop-shadow-[0_0_12px_rgba(34,197,94,0.4)]"
+                style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
                 viewBox="0 0 36 36"
               >
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke={KT.bg2} strokeWidth="3.5" />
                 <circle
-                  className="text-muted/20"
                   cx="18"
                   cy="18"
                   r="15.9155"
                   fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                />
-                <circle
-                  className="text-emerald-500 transition-all duration-1000 ease-out"
-                  strokeDasharray={`${(masteryCount / Math.max(allWords.length, 1)) * 100}, 100`}
-                  cx="18"
-                  cy="18"
-                  r="15.9155"
-                  fill="none"
-                  stroke="currentColor"
+                  stroke={KT.jade}
                   strokeWidth="3.5"
                   strokeLinecap="round"
+                  strokeDasharray={`${masteryPct}, 100`}
+                  style={{ transition: 'stroke-dasharray 1s ease-out' }}
                 />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black italic tracking-tighter text-foreground drop-shadow-sm">
-                {Math.round((masteryCount / Math.max(allWords.length, 1)) * 100)}%
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  fontFamily: KT.font,
+                }}
+              >
+                {masteryPct}%
               </div>
             </div>
           </div>
-        }
-      >
+        </div>
+
+        {/* Unit selector (only when overlay is closed) */}
         {!focusOpen && (
-          <div className="flex justify-center -mt-2">
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
             <MobileUnitSelector
               currentUnitId={currentUnitId}
               availableUnits={availableUnits}
@@ -519,47 +680,98 @@ export default function MobileVocabView({
             />
           </div>
         )}
-      </MobileWorkspaceHeader>
-
-      {/* Tabs - Segmented Control */}
-      <div className="px-6 py-6 shrink-0">
-        <div className="bg-muted/50 p-1.5 rounded-[2rem] flex border border-border/50 shadow-inner">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <Button
-                variant="ghost"
-                size="auto"
-                key={tab.id}
-                onClick={() => handleSelectTab(tab.id as TabId)}
-                className={`flex-1 py-3 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                  isActive
-                    ? 'bg-card shadow-sm text-foreground ring-1 ring-border/50'
-                    : 'text-muted-foreground/60 hover:text-foreground hover:bg-card/30'
-                }`}
-              >
-                <Icon
-                  className={`w-3.5 h-3.5 ${isActive ? 'text-primary' : 'text-muted-foreground/40'}`}
-                />
-                {tab.label}
-              </Button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 px-8 pb-10 flex flex-col justify-end">
-        <Button
-          variant="ghost"
-          size="auto"
+      {/* ── Mode Tabs ─────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          padding: '0 18px 16px',
+          display: 'flex',
+          gap: 8,
+        }}
+      >
+        {tabs.map(tab => {
+          const meta = TAB_META[tab.id as TabId];
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleSelectTab(tab.id as TabId)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 3,
+                padding: '10px 6px',
+                borderRadius: 16,
+                background: isActive ? KT.card : 'transparent',
+                border: isActive ? `1px solid ${KT.line2}` : '1px solid transparent',
+                boxShadow: isActive ? KT.shSm : 'none',
+                cursor: 'pointer',
+                transition: 'background 0.15s, box-shadow 0.15s',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 20,
+                  color: isActive ? KT.crimson : KT.sub,
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  opacity: isActive ? 1 : 0.5,
+                }}
+              >
+                {meta.hanja}
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: isActive ? KT.ink : KT.sub,
+                  letterSpacing: 0.5,
+                  fontFamily: KT.font,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Continue CTA ──────────────────────────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          padding: '0 18px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <button
           type="button"
           onClick={() => setFocusOpen(true)}
-          className="w-full h-16 rounded-[2rem] bg-primary text-primary-foreground font-black italic text-lg tracking-tighter shadow-[0_8px_16px_-4px_rgba(var(--primary-rgb),0.3)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-3"
+          style={{
+            width: '100%',
+            height: 60,
+            borderRadius: 20,
+            background: KT.ink,
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 800,
+            fontFamily: KT.font,
+            letterSpacing: -0.3,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: `0 8px 20px -4px ${KT.ink}55`,
+          }}
         >
           {t('common.continue', { defaultValue: 'Continue' })}
-        </Button>
+        </button>
       </div>
     </div>
   );

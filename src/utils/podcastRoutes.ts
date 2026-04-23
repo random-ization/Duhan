@@ -1,3 +1,5 @@
+import { hasSafeReturnTo, sanitizeReturnToPath } from './navigation';
+
 type PodcastRouteChannel = {
   _id?: string | number | null;
   id?: string | number | null;
@@ -6,8 +8,10 @@ type PodcastRouteChannel = {
 };
 
 function applyReturnTo(params: URLSearchParams, returnTo?: string | null) {
-  if (typeof returnTo !== 'string' || !returnTo.trim()) return;
-  params.set('returnTo', returnTo);
+  if (typeof returnTo !== 'string') return;
+  const trimmed = returnTo.trim();
+  if (!hasSafeReturnTo(trimmed)) return;
+  params.set('returnTo', sanitizeReturnToPath(trimmed));
 }
 
 export function buildPodcastSearchPath(query: string, returnTo?: string | null): string | null {
@@ -38,4 +42,11 @@ export function buildPodcastChannelPath(
 
   const query = params.toString();
   return query ? `/podcasts/channel?${query}` : '/podcasts/channel';
+}
+
+export function buildPodcastPlayerPath(returnTo?: string | null): string {
+  const params = new URLSearchParams();
+  applyReturnTo(params, returnTo);
+  const query = params.toString();
+  return query ? `/podcasts/player?${query}` : '/podcasts/player';
 }

@@ -37,6 +37,7 @@ import {
 } from '../components/ui';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { sanitizeHtml } from '../utils/sanitize';
+import { appendReturnToPath } from '../utils/navigation';
 import {
   ContextualCountBadge,
   ContextualEmptyState,
@@ -710,7 +711,10 @@ export default function NotebookV2Page() {
 
   const handleOpenSource = () => {
     const path = toSourcePath(selectedSearchItem?.sourceRef);
-    if (path) navigate(path);
+    if (!path) return;
+    const currentPath =
+      typeof window === 'undefined' ? null : `${window.location.pathname}${window.location.search}`;
+    navigate(appendReturnToPath(path, currentPath));
   };
 
   const handleRetrySave = async () => {

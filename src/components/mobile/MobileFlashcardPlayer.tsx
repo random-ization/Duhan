@@ -1,10 +1,13 @@
 import { useAction } from 'convex/react';
-import { m as motion, useMotionValue, useTransform, useAnimation } from 'framer-motion';
-import { Bookmark, Volume2, ArrowLeftRight } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Bookmark, Check, Volume2, X } from 'lucide-react';
+import type { TouchEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { aRef } from '../../utils/convexRefs';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
+import { Button } from '../ui';
+import { Chip, KT } from './ksoft/ksoft';
 
 interface MobileFlashcardPlayerProps {
   readonly words: ExtendedVocabItem[];
@@ -44,12 +47,56 @@ type PreviewCardState = {
 };
 
 type RatingButtonColor = 'again' | 'hard' | 'good' | 'easy';
+type SwipeDirection = 'left' | 'right';
 
-const NOISE_BACKGROUND =
-  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E\")";
+const GRADE_BUTTON_STYLES: Record<
+  RatingButtonColor,
+  { readonly bg: string; readonly fg: string; readonly shadow: string }
+> = {
+  again: {
+    bg: KT.pink,
+    fg: KT.pinkDeep,
+    shadow: '0 10px 24px -18px rgba(201,122,110,0.75)',
+  },
+  hard: {
+    bg: KT.butter,
+    fg: KT.butterDeep,
+    shadow: '0 10px 24px -18px rgba(168,135,46,0.72)',
+  },
+  good: {
+    bg: KT.mint,
+    fg: KT.mintDeep,
+    shadow: '0 10px 24px -18px rgba(91,132,114,0.72)',
+  },
+  easy: {
+    bg: KT.sky,
+    fg: KT.skyDeep,
+    shadow: '0 10px 24px -18px rgba(63,106,133,0.72)',
+  },
+};
 
-const BODY_NOISE =
-  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E\")";
+const SWIPE_HINT_STYLES: Record<
+  SwipeDirection,
+  {
+    readonly bg: string;
+    readonly fg: string;
+    readonly border: string;
+    readonly icon: typeof X;
+  }
+> = {
+  left: {
+    bg: `${KT.pink}D9`,
+    fg: KT.pinkDeep,
+    border: `1px solid ${KT.pinkDeep}22`,
+    icon: X,
+  },
+  right: {
+    bg: `${KT.mint}D9`,
+    fg: KT.mintDeep,
+    border: `1px solid ${KT.mintDeep}22`,
+    icon: Check,
+  },
+};
 
 const formatScheduledLabel = (days: number | undefined) => {
   if (typeof days !== 'number' || !Number.isFinite(days)) return '...';
@@ -79,6 +126,25 @@ const buildPreviewCardState = (word: ExtendedVocabItem | undefined): PreviewCard
   };
 };
 
+const getPartOfSpeechLabel = (word: ExtendedVocabItem | undefined, fallback: string) => {
+  if (!word) return fallback;
+  if (typeof word.partOfSpeech === 'string' && word.partOfSpeech.trim()) {
+    return word.partOfSpeech;
+  }
+  if (typeof word.pos === 'string' && word.pos.trim()) {
+    return word.pos;
+  }
+  return fallback;
+};
+
+const getDecorativeSeal = (word: ExtendedVocabItem | undefined) => {
+  const hanja = word?.hanja?.trim();
+  if (hanja) {
+    return hanja.slice(0, 2);
+  }
+  return '詞';
+};
+
 export default function MobileFlashcardPlayer({
   words,
   currentIndex,
@@ -92,7 +158,11 @@ export default function MobileFlashcardPlayer({
   settings,
 }: MobileFlashcardPlayerProps) {
   const { t } = useTranslation();
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [flipState, setFlipState] = useState<{ index: number | null; visible: boolean }>({
+    index: null,
+    visible: false,
+  });
+  const [swipeHint, setSwipeHint] = useState<SwipeDirection | null>(null);
   const [preview, setPreview] = useState<SchedulingPreview | null>(null);
 
   const controls = useAnimation();
@@ -115,22 +185,24 @@ export default function MobileFlashcardPlayer({
   const exampleSentence = currentWord?.exampleSentence || '';
   const exampleMeaning = currentWord?.exampleMeaning || currentWord?.exampleTranslation || '';
   const pronunciation = currentWord?.pronunciation || '';
-  
+  const partOfSpeechLabel = getPartOfSpeechLabel(
+    currentWord,
+    t('vocab.word', { defaultValue: 'Word' })
+  );
+  const decorativeSeal = getDecorativeSeal(currentWord);
   const currentCardState = useMemo(() => buildPreviewCardState(currentWord), [currentWord]);
-  const getSchedulingPreview = useAction(aRef<{ currentCard?: PreviewCardState; now?: number }, SchedulingPreview>('fsrs:getSchedulingPreview'));
+  const isFlipped = flipState.visible && flipState.index === currentIndex;
+
+  const getSchedulingPreview = useAction(
+    aRef<{ currentCard?: PreviewCardState; now?: number }, SchedulingPreview>(
+      'fsrs:getSchedulingPreview'
+    )
+  );
 
   useEffect(() => {
     if (!settings.autoTTS || !korean) return;
     onSpeak(korean);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, settings.autoTTS]);
-
-  useEffect(() => {
-    setIsFlipped(false);
-    x.set(0);
-    y.set(0);
-    controls.set({ x: 0, y: 0, opacity: 1, scale: 1 });
-  }, [currentIndex, x, y, controls]);
+  }, [currentIndex, korean, onSpeak, settings.autoTTS]);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,31 +220,35 @@ export default function MobileFlashcardPlayer({
 
   if (!currentWord) {
     return (
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center text-slate-500" style={{ backgroundImage: BODY_NOISE }}>
-        <p className="font-bold">{t('vocab.noWords', { defaultValue: 'No words available' })}</p>
+      <div
+        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        style={{
+          background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+          color: KT.sub,
+          fontFamily: KT.font,
+        }}
+      >
+        <p className="text-sm font-bold">
+          {t('vocab.noWords', { defaultValue: 'No words available' })}
+        </p>
       </div>
     );
   }
 
-  const handleGrade = async (quality: number) => {
-    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
-    
-    // Animate fly out based on quality
-    const flyOutX = quality <= 2 ? -windowWidth : windowWidth;
-    
-    await controls.start({
-      x: flyOutX,
-      y: y.get() + 50,
-      opacity: 0,
-      rotate: quality <= 2 ? -20 : 20,
-      transition: { duration: 0.3, ease: 'easeOut' }
-    });
-    
+  const handleGrade = (quality: number) => {
+    setFlipState({ index: null, visible: false });
     onReview(currentWord, quality);
   };
 
   const handleCardFlip = () => {
-    setIsFlipped((prev) => !prev);
+    if (swipeTriggeredRef.current) {
+      return;
+    }
+    setFlipState(previous =>
+      previous.visible && previous.index === currentIndex
+        ? { index: null, visible: false }
+        : { index: currentIndex, visible: true }
+    );
   };
 
   const handleDragEnd = async (event: any, info: any) => {
@@ -193,198 +269,448 @@ export default function MobileFlashcardPlayer({
     { quality: 3, label: t('vocab.remembered', '已掌握'), previewLabel: formatScheduledLabel(preview?.good.scheduled_days), color: 'good' as const, badgeClass: 'text-emerald-600 bg-emerald-50' },
   ];
 
+  const rightHint = SWIPE_HINT_STYLES.right;
+  const leftHint = SWIPE_HINT_STYLES.left;
+  const RightHintIcon = rightHint.icon;
+  const LeftHintIcon = leftHint.icon;
+
   return (
-    <div className="flex h-full flex-col overflow-hidden text-slate-900" style={{ backgroundColor: '#E6E7E9', backgroundImage: BODY_NOISE, WebkitFontSmoothing: 'antialiased', overscrollBehaviorY: 'contain' }}>
-      <style>{`
-        .perspective-1000 { perspective: 1200px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        
-        .card-paper-face {
-            background: #FCFCFA;
-            box-shadow: 0 32px 64px -16px rgba(0,0,0,0.15), 0 4px 12px -4px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 1px rgba(0,0,0,0.03);
-            border: 1px solid rgba(0,0,0,0.06);
-            background-image: ${NOISE_BACKGROUND};
-        }
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      style={{
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+        color: KT.ink,
+        fontFamily: KT.font,
+        WebkitFontSmoothing: 'antialiased',
+      }}
+    >
+      <main className="relative flex flex-1 items-center justify-center px-5 pb-4 pt-3">
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: swipeHint === 'left' ? 1 : 0,
+            x: swipeHint === 'left' ? -18 : -6,
+            scale: swipeHint === 'left' ? 1 : 0.94,
+          }}
+          transition={{ duration: 0.18 }}
+          style={{
+            position: 'absolute',
+            left: 6,
+            top: '50%',
+            zIndex: 30,
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 12px',
+            borderRadius: 18,
+            background: leftHint.bg,
+            color: leftHint.fg,
+            border: leftHint.border,
+            boxShadow: KT.shSm,
+            pointerEvents: 'none',
+          }}
+        >
+          <LeftHintIcon size={16} />
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>
+              {t('vocab.swipeLeft', { defaultValue: 'Swipe Left' })}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700 }}>
+              {t('vocab.swipeMistakeHint', { defaultValue: 'Did not recall' })}
+            </div>
+          </div>
+        </motion.div>
 
-        .card-stack-1 {
-            background: #F3F3F1;
-            box-shadow: 0 16px 32px -12px rgba(0,0,0,0.1);
-            border: 1px solid rgba(0,0,0,0.04);
-            transform: translateY(16px) scale(0.94);
-        }
-        .card-stack-2 {
-            background: #EBEBE9;
-            box-shadow: 0 8px 16px -8px rgba(0,0,0,0.05);
-            border: 1px solid rgba(0,0,0,0.03);
-            transform: translateY(30px) scale(0.88);
-        }
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: swipeHint === 'right' ? 1 : 0,
+            x: swipeHint === 'right' ? 18 : 6,
+            scale: swipeHint === 'right' ? 1 : 0.94,
+          }}
+          transition={{ duration: 0.18 }}
+          style={{
+            position: 'absolute',
+            right: 6,
+            top: '50%',
+            zIndex: 30,
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 12px',
+            borderRadius: 18,
+            background: rightHint.bg,
+            color: rightHint.fg,
+            border: rightHint.border,
+            boxShadow: KT.shSm,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>
+              {t('vocab.swipeRight', { defaultValue: 'Swipe Right' })}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700 }}>
+              {t('vocab.swipeCorrectHint', { defaultValue: 'Recalled it' })}
+            </div>
+          </div>
+          <RightHintIcon size={16} />
+        </motion.div>
 
-        .letterpress-text {
-            color: #1A1A1C;
-            text-shadow: 0 1px 1px rgba(255,255,255,0.9);
-        }
-
-        .stamp {
-            position: absolute;
-            top: 40px;
-            padding: 8px 16px;
-            border: 4px solid;
-            border-radius: 12px;
-            font-size: 28px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        .stamp-again {
-            right: 30px;
-            color: #F43F5E;
-            border-color: #F43F5E;
-            box-shadow: inset 0 0 10px rgba(244,63,94,0.2), 0 0 10px rgba(244,63,94,0.2);
-        }
-
-        .stamp-got-it {
-            left: 30px;
-            color: #10B981;
-            border-color: #10B981;
-            box-shadow: inset 0 0 10px rgba(16,185,129,0.2), 0 0 10px rgba(16,185,129,0.2);
-        }
-
-        .btn-tactile {
-            background: linear-gradient(180deg, #FFFFFF 0%, #F4F4F5 100%);
-            box-shadow: 0 4px 0px #D4D4D8, 0 8px 16px rgba(0,0,0,0.08), inset 0 1px 1px #FFFFFF;
-            border: 1px solid #E4E4E7;
-            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn-tactile:active {
-            transform: translateY(4px);
-            box-shadow: 0 0px 0px #D4D4D8, 0 2px 4px rgba(0,0,0,0.05), inset 0 2px 4px rgba(0,0,0,0.05);
-            background: #F4F4F5;
-        }
-        .key-again { border-top: 2px solid #FDA4AF; }
-        .key-hard { border-top: 2px solid #FCD34D; }
-        .key-good { border-top: 2px solid #93C5FD; }
-        .key-easy { border-top: 2px solid #86EFAC; }
-      `}</style>
-
-      {/* Header Overlay provides spacing, so use a simple spacer */}
-      <div className="h-14 shrink-0"></div>
-
-      <main className="flex-1 relative flex items-center justify-center px-5 mt-[-20px] pointer-events-none">
-        
-        {/* Static Background Stacks */}
-        <div className="absolute w-full max-w-[350px] aspect-[3/4] rounded-[2.5rem] card-stack-2 z-0"></div>
-        <div className="absolute w-full max-w-[350px] aspect-[3/4] rounded-[2.5rem] card-stack-1 z-10"></div>
-
-        {/* Draggable 3D Engine */}
-        <div className="perspective-1000 w-full max-w-[350px] aspect-[3/4] z-20 pointer-events-auto">
+        <div
+          className="relative z-20 flex w-full max-w-[360px] items-center justify-center"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          role="presentation"
+          style={{ perspective: '1000px' }}
+        >
           <motion.div
-            id="flashcard"
-            className="w-full h-full relative transform-style-3d cursor-grab active:cursor-grabbing rounded-[2.5rem]"
-            style={{ x, y, rotateZ: rotate }}
-            animate={controls}
-            drag
-            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-            dragElastic={0.8}
-            onDragEnd={handleDragEnd}
-            onClick={(e) => {
-              // Prevent flip if dragging
-              if (Math.abs(x.get()) > 5 || Math.abs(y.get()) > 5) return;
-              handleCardFlip();
+            animate={{
+              rotate: swipeHint === 'left' ? -2 : swipeHint === 'right' ? 2 : 0,
+              x: swipeHint === 'left' ? -12 : swipeHint === 'right' ? 12 : 0,
             }}
+            transition={{ duration: 0.28, type: 'spring', stiffness: 240, damping: 20 }}
+            className="relative flex min-h-[66vh] max-h-[72vh] w-full cursor-grab flex-col overflow-hidden rounded-[2rem] active:cursor-grabbing"
+            style={{
+              background: KT.card,
+              boxShadow: KT.shLg,
+              border: `1px solid ${KT.line}`,
+            }}
+            tabIndex={0}
+            onClick={handleCardFlip}
+            onKeyDown={event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleCardFlip();
+              }
+              if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                setFlipState({ index: null, visible: false });
+                onPrev();
+              }
+              if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                setFlipState({ index: null, visible: false });
+                onNext();
+              }
+            }}
+            role="button"
+            aria-label={t('vocab.flipCard', { defaultValue: 'Flip flashcard' })}
+            aria-pressed={isFlipped}
           >
-            {/* Dynamic Stamps */}
-            <motion.div
-                className="stamp stamp-again"
-                style={{ opacity: stampAgainOpacity, scale: stampAgainScale, rotate: 15 }}
+            <div
+              style={{
+                position: 'relative',
+                height: '100%',
+                width: '100%',
+                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                transformStyle: 'preserve-3d',
+                transition: 'transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
             >
-                需重来
-            </motion.div>
-            <motion.div
-                className="stamp stamp-got-it"
-                style={{ opacity: stampGotItOpacity, scale: stampGotItScale, rotate: -15 }}
-            >
-                已掌握
-            </motion.div>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 18,
+                    right: 22,
+                    fontFamily: KT.serif,
+                    fontSize: 52,
+                    color: KT.crimson,
+                    opacity: 0.14,
+                    fontWeight: 500,
+                    lineHeight: 1,
+                  }}
+                >
+                  {decorativeSeal}
+                </div>
 
-            <motion.div
-              className="absolute inset-0 backface-hidden card-paper-face rounded-[2.5rem] flex flex-col"
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
-            >
-              <div className="px-6 pt-6 pb-2 flex justify-between items-start">
-                  <div className="bg-blue-50/80 text-blue-600 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest border border-blue-100 uppercase shadow-sm">
-                      {scopeTitle || '复习'}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '22px 22px 0',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minWidth: 0 }}>
+                    <Chip tone="pink">{partOfSpeechLabel}</Chip>
+                    <Chip tone="muted">{scopeTitle}</Chip>
+                    {currentWord.hanja ? <Chip tone="butter">{currentWord.hanja}</Chip> : null}
                   </div>
-                  <button 
-                      className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-500" 
-                      onClick={(e) => { e.stopPropagation(); onStar(currentWord.id); }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                  >
-                      <Bookmark className={`w-4 h-4 ${isStarred(currentWord.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  </button>
-              </div>
 
-              <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10 pointer-events-none">
-                  {pronunciation && (
-                      <p className="text-[13px] font-bold text-slate-400 tracking-widest mb-3 font-mono">[{pronunciation}]</p>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onStar(currentWord.id);
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: `1px solid ${KT.line}`,
+                      background: KT.bg,
+                      color: isStarred(currentWord.id) ? KT.crimson : KT.sub,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                    aria-label={t('vocabBook.save', { defaultValue: 'Save word' })}
+                  >
+                    <Bookmark size={16} fill={isStarred(currentWord.id) ? KT.crimson : 'none'} />
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    padding: '18px 28px 18px',
+                  }}
+                >
+                  {(pronunciation || currentWord.hanja) && (
+                    <div
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 13,
+                        color: KT.crimson,
+                        letterSpacing: 2.5,
+                        marginBottom: 12,
+                        fontWeight: 500,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {pronunciation ? `[${pronunciation}]` : currentWord.hanja}
+                    </div>
                   )}
-                  <h2 className="text-5xl font-black letterpress-text tracking-tight mb-12 text-center leading-tight">
-                      {heroText}
-                  </h2>
-                  
-                  <button 
-                      className="bg-gradient-to-b from-[#7A8D9A] to-[#61717A] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-[0_8px_16px_-4px_rgba(97,113,122,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] pointer-events-auto active:scale-95 transition-transform" 
-                      onClick={(e) => { e.stopPropagation(); onSpeak(korean || heroText); }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                  >
-                      <Volume2 className="w-5 h-5" />
-                  </button>
-              </div>
-              
-              <div className="pb-6 text-center pointer-events-none">
-                  <span className="text-[10px] font-bold text-slate-300 tracking-widest uppercase flex items-center justify-center gap-1.5">
-                      <ArrowLeftRight className="w-3.5 h-3.5" /> 左右滑动 或 点击翻转
-                  </span>
-              </div>
-            </motion.div>
 
-            <motion.div
-              className="absolute inset-0 backface-hidden card-paper-face rounded-[2.5rem] flex flex-col"
-              initial={{ rotateY: -180 }}
-              animate={{ rotateY: isFlipped ? 0 : -180 }}
-              transition={{ duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
-            >
-              <div className="px-6 pt-6 pb-2 flex justify-between items-start">
-                  <div className="bg-emerald-50/80 text-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest border border-emerald-100 uppercase shadow-sm">
-                      释义与例句
-                  </div>
-                  <button 
-                      className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-500" 
-                      onClick={(e) => { e.stopPropagation(); onStar(currentWord.id); }}
-                      onPointerDown={(e) => e.stopPropagation()}
+                  <div
+                    style={{
+                      fontSize: heroText.length > 10 ? 42 : 54,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      letterSpacing: heroText.length > 10 ? -1.2 : -2,
+                      lineHeight: 1.05,
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                    }}
                   >
-                      <Bookmark className={`w-4 h-4 ${isStarred(currentWord.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                    {heroText}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: KT.sub,
+                      textAlign: 'center',
+                      marginTop: 16,
+                      lineHeight: 1.6,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {t('vocab.tapToReveal', { defaultValue: 'Tap to reveal' })}
+                  </div>
+                </div>
+
+                <div style={{ padding: '0 0 24px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onSpeak(korean || heroText);
+                    }}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      border: 'none',
+                      background: KT.bg2,
+                      color: KT.ink,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                    }}
+                    aria-label={t('vocab.listenAgain', { defaultValue: 'Listen again' })}
+                  >
+                    <Volume2 size={18} />
                   </button>
+                </div>
               </div>
 
-              <div className="flex-1 flex flex-col justify-center px-6 pointer-events-none">
-                  <div className="text-center mb-6">
-                      <p className="text-[14px] font-black text-slate-400 tracking-widest mb-1 font-mono">{korean || heroText}</p>
-                      <h2 className="text-3xl font-black text-slate-800 tracking-tight leading-tight">{detailText}</h2>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '22px 22px 0',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minWidth: 0 }}>
+                    <Chip tone="mint">
+                      {t('vocab.cardBackMeaning', { defaultValue: 'Meaning & Example' })}
+                    </Chip>
+                    {currentWord.hanja ? <Chip tone="butter">{currentWord.hanja}</Chip> : null}
                   </div>
-                  
-                  <div className="bg-[#F8F9FA] rounded-[1.2rem] p-5 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-                      <p className="text-[15px] font-black text-slate-800 mb-3 leading-relaxed">
-                          {exampleSentence ? exampleSentence : <span className="text-slate-400">无例句</span>}
-                      </p>
-                      {exampleMeaning && (
-                          <p className="text-[13px] font-medium text-slate-500 tracking-wide">{exampleMeaning}</p>
+
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onStar(currentWord.id);
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: `1px solid ${KT.line}`,
+                      background: KT.bg,
+                      color: isStarred(currentWord.id) ? KT.crimson : KT.sub,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                    aria-label={t('vocabBook.save', { defaultValue: 'Save word' })}
+                  >
+                    <Bookmark size={16} fill={isStarred(currentWord.id) ? KT.crimson : 'none'} />
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    padding: '18px 24px 20px',
+                  }}
+                >
+                  <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                    <div
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 13,
+                        color: KT.crimson,
+                        letterSpacing: 2.5,
+                        marginBottom: 8,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {korean || heroText}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 30,
+                        fontWeight: 800,
+                        color: KT.ink,
+                        lineHeight: 1.2,
+                        letterSpacing: -0.8,
+                      }}
+                    >
+                      {detailText}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: KT.bg,
+                      borderRadius: 20,
+                      padding: 18,
+                      border: `1px solid ${KT.line}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: KT.sub,
+                        letterSpacing: 1,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {t('vocab.example', { defaultValue: 'Example' })}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        color: KT.ink,
+                        lineHeight: 1.6,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {exampleSentence || (
+                        <span style={{ color: KT.sub }}>
+                          {t('vocab.noExample', { defaultValue: 'No example sentence' })}
+                        </span>
                       )}
+                    </div>
+                    {exampleMeaning ? (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: KT.sub,
+                          lineHeight: 1.5,
+                          marginTop: 8,
+                        }}
+                      >
+                        {exampleMeaning}
+                      </div>
+                    ) : null}
                   </div>
+                </div>
+
+                <div style={{ padding: '0 0 24px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={event => {
+                      event.stopPropagation();
+                      onSpeak(korean || heroText);
+                    }}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      border: 'none',
+                      background: KT.ink,
+                      color: KT.card,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                    }}
+                    aria-label={t('vocab.listenAgain', { defaultValue: 'Listen again' })}
+                  >
+                    <Volume2 size={18} />
+                  </button>
+                </div>
               </div>
               
               <div className="pb-6 flex justify-center pointer-events-auto">
@@ -402,24 +728,184 @@ export default function MobileFlashcardPlayer({
         </div>
       </main>
 
-      <footer className="px-4 pb-8 pt-4 z-40 bg-gradient-to-t from-[#E6E7E9] via-[#E6E7E9] to-transparent shrink-0">
-        <p className="text-center text-[10px] font-bold text-slate-400 tracking-[0.2em] mb-3 uppercase">请评估记忆掌握度</p>
-        <div className={`grid gap-2.5 max-w-[420px] mx-auto grid-cols-2`}>
-            {ratingButtons.map((btn) => (
-                <button 
-                  key={btn.quality}
-                  className={`btn-tactile key-${btn.color} rounded-[1.2rem] py-3.5 flex flex-col items-center justify-center space-y-1.5`}
-                  onClick={() => handleGrade(btn.quality)}
-                >
-                    <span className="text-[14px] font-black text-slate-800 tracking-tight">{btn.label}</span>
-                    <span className={`text-[10px] font-black px-1.5 rounded-[4px] ${btn.badgeClass}`}>
-                        {btn.previewLabel}
-                    </span>
-                </button>
-            ))}
+      <footer
+        style={{
+          padding: '0 18px calc(env(safe-area-inset-bottom) + 18px)',
+          background: `linear-gradient(180deg, rgba(245,239,229,0) 0%, ${KT.bg2} 30%, ${KT.bg2} 100%)`,
+        }}
+      >
+        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 12px',
+                borderRadius: 18,
+                background: `${KT.pink}B3`,
+                color: KT.pinkDeep,
+                border: `1px solid ${KT.pinkDeep}22`,
+              }}
+            >
+              <X size={16} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4 }}>
+                  {t('vocab.didNotRecall', { defaultValue: 'Missed' })}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>
+                  {t('vocab.didNotRecallHint', { defaultValue: 'Use Again / Hard' })}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                padding: '10px 12px',
+                borderRadius: 18,
+                background: `${KT.mint}B3`,
+                color: KT.mintDeep,
+                border: `1px solid ${KT.mintDeep}22`,
+              }}
+            >
+              <div style={{ minWidth: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4 }}>
+                  {t('vocab.recalled', { defaultValue: 'Recalled' })}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>
+                  {t('vocab.recalledHint', { defaultValue: 'Use Good / Easy' })}
+                </div>
+              </div>
+              <Check size={16} />
+            </div>
+          </div>
+
+          {!isFlipped ? (
+            <button
+              type="button"
+              onClick={() => setFlipState({ index: currentIndex, visible: true })}
+              style={{
+                width: '100%',
+                padding: '16px 18px',
+                borderRadius: 18,
+                border: 'none',
+                background: KT.ink,
+                color: KT.card,
+                fontSize: 15,
+                fontWeight: 800,
+                fontFamily: KT.font,
+                letterSpacing: 0.3,
+                cursor: 'pointer',
+                boxShadow: '0 10px 24px -18px rgba(31,27,23,0.7)',
+              }}
+            >
+              {t('vocab.showMeaning', { defaultValue: 'Show answer' })}
+            </button>
+          ) : (
+            <>
+              <p
+                style={{
+                  marginBottom: 10,
+                  textAlign: 'center',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: KT.sub,
+                  letterSpacing: 1,
+                }}
+              >
+                {t('vocab.rateMemory', { defaultValue: 'Rate your recall' })}
+              </p>
+
+              <div
+                className={
+                  settings.ratingMode === 'PASS_FAIL'
+                    ? 'grid grid-cols-2 gap-2.5'
+                    : 'grid grid-cols-4 gap-2.5'
+                }
+              >
+                {ratingButtons.map(button => (
+                  <GradeButton
+                    key={`${button.color}-${button.quality}`}
+                    label={button.label}
+                    previewLabel={button.previewLabel}
+                    color={button.color}
+                    onClick={() => handleGrade(button.quality)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </footer>
 
     </div>
+  );
+}
+
+function GradeButton({
+  label,
+  previewLabel,
+  color,
+  onClick,
+}: {
+  readonly label: string;
+  readonly previewLabel: string;
+  readonly color: RatingButtonColor;
+  readonly onClick: () => void;
+}) {
+  const style = GRADE_BUTTON_STYLES[color];
+
+  return (
+    <Button
+      variant="ghost"
+      size="auto"
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-2 py-3 transition-transform duration-100 active:scale-[0.98]"
+      style={{
+        background: style.bg,
+        color: style.fg,
+        boxShadow: style.shadow,
+        border: 'none',
+      }}
+    >
+      <span
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          color: style.fg,
+          letterSpacing: -0.2,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          display: 'inline-block',
+          fontSize: 10,
+          fontWeight: 800,
+          color: style.fg,
+          background: 'rgba(255,255,255,0.55)',
+          padding: '2px 8px',
+          borderRadius: 999,
+          letterSpacing: 0.3,
+          minWidth: 36,
+          textAlign: 'center',
+        }}
+      >
+        {previewLabel}
+      </span>
+    </Button>
   );
 }

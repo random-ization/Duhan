@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '../ui';
-import { cn } from '../../lib/utils';
+import { KT } from './ksoft/ksoft';
 
 interface MobileWorkspaceHeaderProps {
   title: string;
@@ -22,45 +21,108 @@ export function MobileWorkspaceHeader({
   backLabel,
   actions,
   children,
-  className,
 }: Readonly<MobileWorkspaceHeaderProps>) {
   return (
     <header
-      className={cn(
-        'sticky top-0 z-30 border-b border-border/50 bg-background px-4 pt-[calc(var(--mobile-safe-top)+12px)] pb-7 shadow-sm',
-        className
-      )}
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        borderBottom: `1px solid ${KT.line}`,
+        background: KT.bg,
+        padding: '0 18px 20px',
+        paddingTop: 'calc(var(--mobile-safe-top, env(safe-area-inset-top)) + 12px)',
+        boxShadow: KT.shSm,
+        fontFamily: KT.font,
+      }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-4">
-          <Button
-            variant="ghost"
-            size="auto"
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 14,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
+          {/* Back button */}
+          <button
+            type="button"
             onClick={onBack}
-            className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-card shadow-sm active:scale-90 transition-all duration-200"
             aria-label={backLabel}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              color: KT.ink,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              marginTop: 2,
+              boxShadow: KT.shSm,
+            }}
           >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </Button>
-          <div className="min-w-0 pt-0.5">
-            {eyebrow ? (
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+            <ArrowLeft size={18} />
+          </button>
+
+          {/* Text */}
+          <div style={{ minWidth: 0, paddingTop: 2 }}>
+            {eyebrow && (
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: KT.crimson,
+                  letterSpacing: 3,
+                  textTransform: 'uppercase',
+                  fontFamily: KT.serif,
+                  marginBottom: 4,
+                }}
+              >
                 {eyebrow}
               </div>
-            ) : null}
-            <h1 className="mt-1 text-2xl font-black italic tracking-tighter text-foreground leading-[1.15] text-balance uppercase">
+            )}
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.5,
+                lineHeight: 1.2,
+                marginTop: eyebrow ? 0 : 4,
+              }}
+            >
               {title}
             </h1>
-            {subtitle ? (
-              <p className="mt-2 text-[11px] font-bold leading-relaxed text-muted-foreground/90 text-pretty">
+            {subtitle && (
+              <p
+                style={{
+                  marginTop: 6,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: KT.sub,
+                  lineHeight: 1.5,
+                }}
+              >
                 {subtitle}
               </p>
-            ) : null}
+            )}
           </div>
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2 pt-1">{actions}</div> : null}
+
+        {actions && (
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 4 }}
+          >
+            {actions}
+          </div>
+        )}
       </div>
-      {children ? <div className="mt-5">{children}</div> : null}
+
+      {children && <div style={{ marginTop: 18 }}>{children}</div>}
     </header>
   );
 }

@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
@@ -16,13 +16,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTopikExams } from '../hooks/useTopikExams';
 import { WritingExamSession } from '../components/topik/WritingExamSession';
 import { WritingEvaluationReport } from '../components/topik/WritingEvaluationReport';
-import { Navigate } from 'react-router-dom';
 import type { Id } from '../../convex/_generated/dataModel';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
+import { appendReturnToPath } from '../utils/navigation';
 
 import { api } from '../../convex/_generated/api';
 
@@ -60,6 +60,8 @@ const TopikWritingPage: React.FC = () => {
   const { user } = useAuth();
   const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const { startUpgradeFlow } = useUpgradeFlow();
   const isMobile = useIsMobile();
@@ -71,6 +73,8 @@ const TopikWritingPage: React.FC = () => {
     api.topikWriting.getWritingQuestions,
     exam?._id ? { examId: exam._id as Id<'topik_exams'> } : 'skip'
   );
+  const topikLobbyPath = appendReturnToPath('/topik', searchParams.get('returnTo'));
+  const writingReturnPath = `${location.pathname}${location.search}`;
 
   const [state, setPageState] = useState<PageState>({ phase: 'loading' });
 
@@ -94,7 +98,7 @@ const TopikWritingPage: React.FC = () => {
           startUpgradeFlow({
             plan: 'ANNUAL',
             source: entitlementError.upgradeSource,
-            returnTo: `/topik/writing/${examId}`,
+            returnTo: writingReturnPath,
           });
           return;
         }
@@ -103,13 +107,13 @@ const TopikWritingPage: React.FC = () => {
             defaultValue: 'Unable to start this writing exam right now.',
           })
         );
-        navigate('/topik');
+        navigate(topikLobbyPath);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examId, user, exam, navigate, startUpgradeFlow, t]);
+  }, [examId, user, exam, navigate, startUpgradeFlow, t, topikLobbyPath, writingReturnPath]);
 
   if (!user) return <Navigate to="/" replace />;
-  if (!examId) return <Navigate to="/topik" replace />;
+  if (!examId) return <Navigate to={topikLobbyPath} replace />;
 
   // ── Render loading ──────────────────────────────────────────────────────────
   if (state.phase === 'loading') {
@@ -131,7 +135,7 @@ const TopikWritingPage: React.FC = () => {
             subtitle={t('topikWriting.session.loadingExam', {
               defaultValue: 'Preparing writing exam...',
             })}
-            onBack={() => navigate('/topik')}
+            onBack={() => navigate(topikLobbyPath)}
             backLabel={t('topikWriting.report.back', { defaultValue: 'Back' })}
           />
           <div className="flex min-h-[calc(100dvh-var(--mobile-header-offset))] items-center justify-center px-4 pb-mobile-safe pt-8">
@@ -155,7 +159,7 @@ const TopikWritingPage: React.FC = () => {
         <WritingEvaluationReport
           sessionId={state.sessionId}
           originalAnswers={state.answers}
-          onBack={() => navigate('/topik')}
+          onBack={() => navigate(topikLobbyPath)}
         />
       </div>
     );
@@ -232,7 +236,7 @@ const TopikWritingPage: React.FC = () => {
           startUpgradeFlow({
             plan: 'ANNUAL',
             source: entitlementError.upgradeSource,
-            returnTo: `/topik/writing/${examId}`,
+            returnTo: writingReturnPath,
           });
           return;
         }
@@ -250,7 +254,7 @@ const TopikWritingPage: React.FC = () => {
         });
       }}
       onExit={() => {
-        navigate('/topik');
+        navigate(topikLobbyPath);
       }}
     />
   );

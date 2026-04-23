@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { X, RefreshCw, ChevronRight, Play } from 'lucide-react';
+import { RefreshCw, Play } from 'lucide-react';
 import { useKoreanTyping, TypingStats } from '../../features/typing/hooks/useKoreanTyping';
 import { HiddenInput } from '../../features/typing/components/HiddenInput';
 import {
@@ -8,23 +8,80 @@ import {
   PracticeCategory,
   PRACTICE_PARAGRAPHS,
   PracticeParagraph,
-} from '../../features/typing/data/practiceTexts'; // Import data
+} from '../../features/typing/data/practiceTexts';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import toast from 'react-hot-toast';
-import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Dialog, DialogContent, DialogPortal } from '../ui';
-import { Button, Select } from '../ui';
+import { Dialog, DialogContent, DialogPortal, Select } from '../ui';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
-import { MobileImmersiveHeader } from './MobileImmersiveHeader';
 import { VOCAB } from '../../utils/convexRefs';
+import { KT, Chip, HanjaSeal, PageShell } from './ksoft/ksoft';
 
-// --- TYPES ---
 type TypingMode = 'sentence' | 'word' | 'paragraph';
 type GameState = 'lobby' | 'playing' | 'results';
+type WordPracticeSelection = { courseId: string; unitId: number };
+type TypingGameData = PracticeCategory | PracticeParagraph | WordPracticeSelection;
+type TypingUserStats = {
+  totalTests: number;
+  averageWpm: number;
+  averageAccuracy: number;
+  highestWpm: number;
+  totalTime: number;
+  recentWpm: Array<{ wpm: number; date: number }>;
+  sessionsThisWeek: number;
+  lastPracticeMode: string | null;
+  lastCategoryId: string | null;
+  latestAccuracy: number | null;
+};
+
+function isWordPracticeSelection(data: TypingGameData): data is WordPracticeSelection {
+  return 'courseId' in data;
+}
+
+function isPracticeCategory(data: TypingGameData): data is PracticeCategory {
+  return 'sentences' in data;
+}
+
+function isPracticeParagraph(data: TypingGameData): data is PracticeParagraph {
+  return 'text' in data;
+}
+
+function getPracticeModeLabel(
+  mode: string | null,
+  t: ReturnType<typeof useTranslation>['t']
+): string {
+  if (mode === 'word') {
+    return t('typingLobby.word.title', { defaultValue: 'Word' });
+  }
+  if (mode === 'paragraph') {
+    return t('typingLobby.paragraph.title', { defaultValue: 'Paragraph' });
+  }
+  return t('typingLobby.sentence.title', { defaultValue: 'Sentence' });
+}
+
+function getTypingErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null) {
+    if ('data' in error) {
+      const data = error.data;
+      if (typeof data === 'object' && data !== null && 'message' in data) {
+        const message = data.message;
+        if (typeof message === 'string' && message.length > 0) {
+          return message;
+        }
+      }
+    }
+    if ('message' in error) {
+      const message = error.message;
+      if (typeof message === 'string' && message.length > 0) {
+        return message;
+      }
+    }
+  }
+  return fallback;
+}
 
 function hashString(input: string): number {
   let hash = 0;
@@ -42,155 +99,484 @@ function deterministicShuffle(items: string[]): string[] {
     .map(item => item.value);
 }
 
-// --- COMPONENTS ---
+// ─── Hanja mapping for modes ──────────────────────────────
+const MODE_META: Record<TypingMode, { hanja: string; tone: 'sky' | 'lilac' | 'butter' }> = {
+  sentence: { hanja: '文', tone: 'sky' },
+  word: { hanja: '詞', tone: 'lilac' },
+  paragraph: { hanja: '段', tone: 'butter' },
+};
 
-// 1. LOBBY COMPONENT
+// ─── 1. LOBBY ─────────────────────────────────────────────
 const MobileLobby = ({
   onStart,
   activeTab,
   setActiveTab,
   onBack,
 }: {
-  onStart: (mode: TypingMode, data: any) => void;
+  onStart: (mode: TypingMode, data: TypingGameData) => void;
   activeTab: TypingMode;
   setActiveTab: (m: TypingMode) => void;
   onBack: () => void;
 }) => {
   const { t } = useTranslation();
+  const typingStats = useQuery(api.typing.getUserStats) as TypingUserStats | null | undefined;
 
-  // Word Mode Data Fetching
   const rawCourses = useQuery(api.institutes.getAll);
   const courses = useMemo(() => rawCourses || [], [rawCourses]);
-
-  // Group courses by name
   const coursesByName = useMemo(() => {
     const groups: Record<string, typeof courses> = {};
-    if (!courses) return groups;
     courses.forEach(c => {
       if (!groups[c.name]) groups[c.name] = [];
       groups[c.name].push(c);
     });
     return groups;
   }, [courses]);
-
-  // Word Selection State
   const [selectedCourseName, setSelectedCourseName] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const courseNames = useMemo(() => Object.keys(coursesByName), [coursesByName]);
   const effectiveCourseName = selectedCourseName || courseNames[0] || '';
   const effectiveCourseId = selectedCourseId || coursesByName[effectiveCourseName]?.[0]?._id || '';
 
+  const modes: TypingMode[] = ['sentence', 'word', 'paragraph'];
+  const hasTypingStats = Boolean(typingStats && typingStats.totalTests > 0);
+  const lastModeLabel = getPracticeModeLabel(typingStats?.lastPracticeMode ?? null, t);
+
   return (
-    <div className="flex flex-col h-full bg-muted">
-      <MobileImmersiveHeader
-        title={t('typingLobby.title', { defaultValue: 'Duhan Typing' })}
-        subtitle={t('typing.mobile.lobbyIntro', {
-          defaultValue: 'Build rhythm with sentence, word, and paragraph drills.',
-        })}
-        eyebrow={t('nav.practice', { defaultValue: 'Practice' })}
-        onBack={onBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        className="sticky top-0 z-20"
+    <PageShell>
+      {/* ── Header ─────────────────────────────────── */}
+      <div
+        style={{
+          padding: '14px 22px 20px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
       >
-        <div className="flex p-1 rounded-2xl bg-muted/70 relative">
-          <div
-            className="absolute top-1 bottom-1 bg-card rounded-xl shadow-sm transition-all duration-300 ease-out"
-            style={{
-              left: activeTab === 'sentence' ? '1%' : activeTab === 'word' ? '34%' : '67%',
-              width: '32%',
-            }}
-          />
-
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setActiveTab('sentence')}
-            className={clsx(
-              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
-              activeTab === 'sentence'
-                ? 'font-bold text-muted-foreground'
-                : 'font-medium text-muted-foreground'
-            )}
-          >
-            {t('typingLobby.sentence.title', { defaultValue: 'Sentence' })}
-          </Button>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setActiveTab('word')}
-            className={clsx(
-              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
-              activeTab === 'word'
-                ? 'font-bold text-muted-foreground'
-                : 'font-medium text-muted-foreground'
-            )}
-          >
-            {t('typingLobby.word.title', { defaultValue: 'Word' })}
-          </Button>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setActiveTab('paragraph')}
-            className={clsx(
-              'flex-1 relative z-10 py-2.5 text-sm transition-colors',
-              activeTab === 'paragraph'
-                ? 'font-bold text-muted-foreground'
-                : 'font-medium text-muted-foreground'
-            )}
-          >
-            {t('typingLobby.paragraph.title', { defaultValue: 'Paragraph' })}
-          </Button>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 16,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: KT.sub,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: KT.font,
+          }}
+        >
+          ← {t('common.back', { defaultValue: 'Back' })}
+        </button>
+        <div
+          style={{
+            fontFamily: KT.serif,
+            fontSize: 13,
+            color: KT.crimson,
+            letterSpacing: 4,
+            marginBottom: 4,
+            fontWeight: 500,
+          }}
+        >
+          寫 · TYPING
         </div>
-      </MobileImmersiveHeader>
+        <div style={{ fontSize: 28, fontWeight: 800, color: KT.ink, letterSpacing: -0.6 }}>
+          {t('typingLobby.title', { defaultValue: '타자 연습' })}
+        </div>
+        <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
+          {t('typing.mobile.lobbyIntro', {
+            defaultValue: 'Build rhythm with sentence, word, and paragraph drills.',
+          })}
+        </div>
 
-      {/* List Content */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 pb-24 no-scrollbar">
-        {/* 1. Sentence Mode */}
-        {activeTab === 'sentence' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {PRACTICE_CATEGORIES.map(cat => (
-              <Button
-                variant="ghost"
-                size="auto"
-                key={cat.id}
-                onClick={() => onStart('sentence', cat)}
-                className="w-full group bg-card p-6 rounded-[2rem] border border-indigo-50 dark:border-indigo-300/20 shadow-sm active:scale-[0.98] transition-all text-left relative overflow-hidden !block !whitespace-normal"
+        <div
+          style={{
+            marginTop: 18,
+            background: KT.card,
+            borderRadius: 20,
+            boxShadow: KT.sh,
+            padding: '18px 16px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: 2,
+              fontFamily: KT.serif,
+              fontSize: 54,
+              color: KT.sky,
+              opacity: 0.16,
+              lineHeight: 1,
+              pointerEvents: 'none',
+            }}
+          >
+            記
+          </span>
+
+          {typingStats === undefined ? (
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ width: 140, height: 12, borderRadius: 999, background: KT.line2 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {Array.from({ length: 3 }, (_, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      height: 76,
+                      borderRadius: 16,
+                      background: KT.bg2,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : hasTypingStats && typingStats ? (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                }}
               >
-                <div className="absolute top-0 right-0 p-8 opacity-5 text-6xl select-none group-active:scale-110 transition-transform">
-                  {cat.icon}
-                </div>
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <span className="bg-indigo-50 text-indigo-600 dark:bg-indigo-400/14 dark:text-indigo-200 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                    {t('typing.mobile.sets', {
-                      count: cat.sentences.length,
-                      defaultValue: `${cat.sentences.length} Sets`,
-                    })}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 transition-colors">
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300" />
+                <div>
+                  <div
+                    style={{
+                      fontFamily: KT.serif,
+                      fontSize: 12,
+                      color: KT.crimson,
+                      letterSpacing: 2,
+                      fontWeight: 500,
+                      marginBottom: 4,
+                    }}
+                  >
+                    記錄 · PROGRESS
+                  </div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: KT.ink }}>
+                    {t('typing.mobile.personalBest', { defaultValue: '개인 기록' })}
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-muted-foreground mb-1 relative z-10">
-                  {cat.title}
-                </h3>
-                <p className="text-sm text-muted-foreground font-medium leading-relaxed relative z-10 max-w-[85%]">
-                  {cat.description}
-                </p>
-              </Button>
-            ))}
-          </div>
-        )}
+                <Chip tone="sky">
+                  {t('typing.mobile.thisWeekCount', {
+                    count: typingStats.sessionsThisWeek,
+                    defaultValue: `${typingStats.sessionsThisWeek} this week`,
+                  })}
+                </Chip>
+              </div>
 
-        {/* 2. Word Mode */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 8,
+                  marginTop: 14,
+                }}
+              >
+                {[
+                  {
+                    seal: '速',
+                    label: t('typing.mobile.bestWpm', { defaultValue: 'Best WPM' }),
+                    value: `${typingStats.highestWpm}`,
+                    tone: KT.ink,
+                  },
+                  {
+                    seal: '均',
+                    label: t('typing.mobile.averageWpm', { defaultValue: 'Average' }),
+                    value: `${typingStats.averageWpm}`,
+                    tone: KT.indigo,
+                  },
+                  {
+                    seal: '精',
+                    label: t('typingGame.accuracy', { defaultValue: 'Accuracy' }),
+                    value: `${typingStats.averageAccuracy}%`,
+                    tone: KT.mintDeep,
+                  },
+                ].map(item => (
+                  <div
+                    key={item.seal}
+                    style={{
+                      background: KT.bg2,
+                      borderRadius: 16,
+                      padding: '14px 10px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 14,
+                        color: KT.crimson,
+                        opacity: 0.82,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {item.seal}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: item.tone }}>
+                      {item.value}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: KT.sub,
+                        fontWeight: 700,
+                        marginTop: 2,
+                        fontFamily: KT.font,
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                  fontSize: 11,
+                  color: KT.sub,
+                  fontWeight: 700,
+                  fontFamily: KT.font,
+                }}
+              >
+                <span>
+                  {t('typing.mobile.lastDrill', { defaultValue: 'Last drill' })}: {lastModeLabel}
+                </span>
+                <span>
+                  {t('typing.mobile.totalSessions', {
+                    count: typingStats.totalTests,
+                    defaultValue: `${typingStats.totalTests} sessions`,
+                  })}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 12,
+                  color: KT.crimson,
+                  letterSpacing: 2,
+                  fontWeight: 500,
+                  marginBottom: 4,
+                }}
+              >
+                記錄 · READY
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: KT.ink }}>
+                {t('typing.mobile.firstSessionTitle', {
+                  defaultValue: '첫 타자 기록을 만들어 보세요',
+                })}
+              </div>
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 13,
+                  color: KT.sub,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  maxWidth: '88%',
+                }}
+              >
+                {t('typing.mobile.firstSessionSubtitle', {
+                  defaultValue:
+                    'Finish one drill and your best speed, weekly sessions, and accuracy will appear here.',
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Mode tabs ────────────────────────────── */}
+        <div
+          style={{
+            marginTop: 18,
+            display: 'flex',
+            background: 'rgba(31,27,23,0.06)',
+            borderRadius: 16,
+            padding: 4,
+            gap: 4,
+            position: 'relative',
+          }}
+        >
+          {modes.map(mode => {
+            const isActive = activeTab === mode;
+            const meta = MODE_META[mode];
+            const label =
+              mode === 'sentence'
+                ? t('typingLobby.sentence.title', { defaultValue: 'Sentence' })
+                : mode === 'word'
+                  ? t('typingLobby.word.title', { defaultValue: 'Word' })
+                  : t('typingLobby.paragraph.title', { defaultValue: 'Paragraph' });
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setActiveTab(mode)}
+                style={{
+                  flex: 1,
+                  padding: '10px 4px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: isActive ? KT.card : 'transparent',
+                  cursor: 'pointer',
+                  boxShadow: isActive ? KT.shSm : 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 16,
+                    color: isActive ? KT.crimson : KT.sub,
+                    fontWeight: 500,
+                    lineHeight: 1,
+                  }}
+                >
+                  {meta.hanja}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: isActive ? 800 : 600,
+                    color: isActive ? KT.ink : KT.sub,
+                    fontFamily: KT.font,
+                  }}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Content ─────────────────────────────────── */}
+      <div style={{ padding: '0 18px 100px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* 1. Sentence mode */}
+        {activeTab === 'sentence' &&
+          PRACTICE_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => onStart('sentence', cat)}
+              style={{
+                width: '100%',
+                background: KT.card,
+                borderRadius: 22,
+                boxShadow: KT.sh,
+                padding: '20px 18px',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* watermark */}
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: 8,
+                  fontFamily: KT.serif,
+                  fontSize: 64,
+                  color: KT.sky,
+                  opacity: 0.18,
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
+              >
+                文
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                }}
+              >
+                <Chip tone="sky">
+                  {t('typing.mobile.sets', {
+                    count: cat.sentences.length,
+                    defaultValue: `${cat.sentences.length} Sets`,
+                  })}
+                </Chip>
+                <span style={{ fontSize: 16, color: KT.sub }}>→</span>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: KT.ink, marginBottom: 4 }}>
+                {cat.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: KT.sub,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  maxWidth: '85%',
+                }}
+              >
+                {cat.description}
+              </div>
+            </button>
+          ))}
+
+        {/* 2. Word mode */}
         {activeTab === 'word' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Course Selectors */}
-            <div className="bg-card p-6 rounded-[2rem] border border-border shadow-sm space-y-4">
+          <div
+            style={{
+              background: KT.card,
+              borderRadius: 22,
+              boxShadow: KT.sh,
+              padding: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 13,
+                color: KT.crimson,
+                letterSpacing: 2,
+                fontWeight: 500,
+              }}
+            >
+              詞 · 단어 선택
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <label className="text-xs font-bold text-muted-foreground uppercase ml-1 mb-1.5 block">
+                <label
+                  htmlFor="typing-course-select"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    letterSpacing: 1,
+                    display: 'block',
+                    marginBottom: 6,
+                    fontFamily: KT.font,
+                  }}
+                >
                   {t('typingGame.course', { defaultValue: 'Course' })}
                 </label>
                 <Select
+                  id="typing-course-select"
                   value={effectiveCourseName}
                   onChange={e => {
                     const name = e.target.value;
@@ -198,7 +584,8 @@ const MobileLobby = ({
                     const variants = coursesByName[name];
                     if (variants?.[0]) setSelectedCourseId(variants[0]._id);
                   }}
-                  className="w-full !h-auto !p-4 !rounded-2xl !bg-muted !border-0 font-bold text-muted-foreground focus-visible:!ring-2 focus-visible:!ring-primary outline-none appearance-none !shadow-none"
+                  className="w-full !h-auto !p-4 !rounded-2xl !border-0 font-bold focus-visible:!ring-2 focus-visible:!ring-primary outline-none appearance-none !shadow-none"
+                  style={{ background: KT.bg2 }}
                 >
                   {courseNames.map(name => (
                     <option key={name} value={name}>
@@ -207,16 +594,28 @@ const MobileLobby = ({
                   ))}
                 </Select>
               </div>
-
               {effectiveCourseName && (
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase ml-1 mb-1.5 block">
+                  <label
+                    htmlFor="typing-level-select"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: KT.sub,
+                      letterSpacing: 1,
+                      display: 'block',
+                      marginBottom: 6,
+                      fontFamily: KT.font,
+                    }}
+                  >
                     {t('typingGame.volumeLevel', { defaultValue: 'Volume / Level' })}
                   </label>
                   <Select
+                    id="typing-level-select"
                     value={effectiveCourseId}
                     onChange={e => setSelectedCourseId(e.target.value)}
-                    className="w-full !h-auto !p-4 !rounded-2xl !bg-muted !border-0 font-bold text-muted-foreground focus-visible:!ring-2 focus-visible:!ring-primary outline-none appearance-none !shadow-none"
+                    className="w-full !h-auto !p-4 !rounded-2xl !border-0 font-bold focus-visible:!ring-2 focus-visible:!ring-primary outline-none appearance-none !shadow-none"
+                    style={{ background: KT.bg2 }}
                   >
                     {coursesByName[effectiveCourseName]?.map(c => (
                       <option key={c._id} value={c._id}>
@@ -226,64 +625,108 @@ const MobileLobby = ({
                   </Select>
                 </div>
               )}
-
-              <Button
-                variant="ghost"
-                size="auto"
-                onClick={() => onStart('word', { courseId: effectiveCourseId, unitId: 1 })}
-                disabled={!effectiveCourseId}
-                className="w-full py-4 bg-indigo-600 dark:bg-indigo-400/80 text-primary-foreground rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:scale-100"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                {t('typing.mobile.startWordPractice', { defaultValue: 'Start Word Practice' })}
-              </Button>
             </div>
-
-            <div className="px-4 text-center">
-              <p className="text-sm text-muted-foreground font-medium">
-                {t('typing.mobile.practiceWordHint', {
-                  defaultValue: 'Practice vocabulary from your enrolled courses.',
-                })}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => onStart('word', { courseId: effectiveCourseId, unitId: 1 })}
+              disabled={!effectiveCourseId}
+              style={{
+                width: '100%',
+                padding: '14px 0',
+                borderRadius: 16,
+                border: 'none',
+                background: KT.ink,
+                color: KT.bg,
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontFamily: KT.font,
+                opacity: effectiveCourseId ? 1 : 0.4,
+              }}
+            >
+              <Play size={15} fill={KT.bg} />
+              {t('typing.mobile.startWordPractice', { defaultValue: 'Start Word Practice' })}
+            </button>
           </div>
         )}
 
-        {/* 3. Paragraph Mode */}
-        {activeTab === 'paragraph' && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {PRACTICE_PARAGRAPHS.map(para => (
-              <Button
-                variant="ghost"
-                size="auto"
-                key={para.id}
-                onClick={() => onStart('paragraph', para)}
-                className="w-full group bg-card p-6 rounded-[2rem] border border-pink-50 dark:border-pink-300/20 shadow-sm active:scale-[0.98] transition-all text-left relative overflow-hidden !block !whitespace-normal"
+        {/* 3. Paragraph mode */}
+        {activeTab === 'paragraph' &&
+          PRACTICE_PARAGRAPHS.map(para => (
+            <button
+              key={para.id}
+              type="button"
+              onClick={() => onStart('paragraph', para)}
+              style={{
+                width: '100%',
+                background: KT.card,
+                borderRadius: 22,
+                boxShadow: KT.sh,
+                padding: '20px 18px',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: 8,
+                  fontFamily: KT.serif,
+                  fontSize: 64,
+                  color: KT.butter,
+                  opacity: 0.25,
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
               >
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <span className="bg-pink-50 text-pink-600 dark:bg-pink-400/14 dark:text-pink-200 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                    {t('typing.mobile.longText', { defaultValue: 'Long Text' })}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-pink-50 dark:group-hover:bg-pink-400/12 transition-colors">
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-pink-600 dark:group-hover:text-pink-300" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-black text-muted-foreground mb-1 relative z-10">
-                  {para.title}
-                </h3>
-                <p className="text-sm text-muted-foreground font-medium leading-relaxed relative z-10 line-clamp-2">
-                  {para.description}
-                </p>
-              </Button>
-            ))}
-          </div>
-        )}
+                段
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                }}
+              >
+                <Chip tone="butter">
+                  {t('typing.mobile.longText', { defaultValue: 'Long Text' })}
+                </Chip>
+                <span style={{ fontSize: 16, color: KT.sub }}>→</span>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: KT.ink, marginBottom: 4 }}>
+                {para.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: KT.sub,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}
+              >
+                {para.description}
+              </div>
+            </button>
+          ))}
       </div>
-    </div>
+    </PageShell>
   );
 };
 
-// 2. SESSION COMPONENT
+// ─── 2. SESSION ────────────────────────────────────────────
 const MobileSession = ({
   mode,
   data,
@@ -291,40 +734,40 @@ const MobileSession = ({
   onExit,
 }: {
   mode: TypingMode;
-  data: any;
+  data: TypingGameData;
   onFinish: (stats: TypingStats) => void;
   onExit: () => void;
 }) => {
   const { t } = useTranslation();
   const [queueIndex, setQueueIndex] = useState(0);
 
-  // Init Setup
   const courseWords = useQuery(
     VOCAB.getOfCourse,
-    mode === 'word' && data.courseId ? { courseId: data.courseId, unitId: 1 } : 'skip'
+    mode === 'word' && isWordPracticeSelection(data) && data.courseId
+      ? { courseId: data.courseId, unitId: 1 }
+      : 'skip'
   );
 
   const queue = useMemo(() => {
-    if (mode === 'sentence') {
-      const cat = data as PracticeCategory;
+    if (mode === 'sentence' && isPracticeCategory(data)) {
+      const cat = data;
       return deterministicShuffle(cat.sentences);
     }
-
-    if (mode === 'paragraph') {
-      const para = data as PracticeParagraph;
+    if (mode === 'paragraph' && isPracticeParagraph(data)) {
+      const para = data;
       return [para.text];
     }
-
-    if (mode === 'word' && courseWords) {
-      const words = courseWords.map(w => w.word).filter(Boolean);
-      return deterministicShuffle(words);
+    if (mode === 'word' && courseWords && isWordPracticeSelection(data)) {
+      return deterministicShuffle(
+        courseWords.flatMap(word =>
+          typeof word.word === 'string' && word.word.length > 0 ? [word.word] : []
+        )
+      );
     }
-
     return [];
   }, [mode, data, courseWords]);
-  const targetText = queue[queueIndex] || '';
 
-  // -- TYPING HOOK --
+  const targetText = queue[queueIndex] || '';
   const { userInput, completedIndex, phase, stats, inputRef, reset, checkInput } = useKoreanTyping(
     targetText,
     mode
@@ -332,18 +775,11 @@ const MobileSession = ({
 
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // Focus Management
   const ensureFocus = () => {
     inputRef.current?.focus();
     setIsKeyboardOpen(true);
   };
 
-  const handleBlur = () => {
-    // Optional: detect blur to hide keyboard UI adjustments if needed
-    // setIsKeyboardOpen(false); // Often unreliable on mobile, better to keep manual
-  };
-
-  // Auto-Advance Logic
   useEffect(() => {
     if (phase === 'finish') {
       const timer = setTimeout(() => {
@@ -353,143 +789,205 @@ const MobileSession = ({
         } else {
           onFinish(stats);
         }
-      }, 500); // 500ms delay to seeing "green" completion
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [phase, queueIndex, queue.length, reset, onFinish, stats]);
 
-  // Visualize Typing
-  const renderTypingText = () => {
-    const chars = targetText.split('');
-
-    return (
-      <div className="text-center leading-relaxed break-keep select-none w-full max-w-lg">
-        {chars.map((char, i) => {
-          const inputChar = userInput[i];
-          const status = checkInput(char, inputChar, targetText[i + 1]);
-
-          let colorClass = 'text-muted-foreground'; // Pending / Future
-
-          if (i < userInput.length) {
-            if (status === 'correct') {
-              colorClass = 'text-muted-foreground';
-            } else if (status === 'incorrect') {
-              colorClass = 'text-red-500 dark:text-red-300';
-            } else if (status === 'pending') {
-              colorClass = 'text-muted-foreground';
-            }
-          }
-
-          // Cursor Logic
-          const isCursor = i === userInput.length;
-
-          return (
-            <span key={i} className="relative inline-block">
-              <span
-                className={clsx(
-                  'text-2xl md:text-3xl font-bold transition-colors duration-100',
-                  colorClass,
-                  status === 'correct' && 'border-b-2 border-foreground/10'
-                )}
-              >
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-              {isCursor && (
-                <span className="absolute -bottom-1 left-0 w-full h-1 bg-indigo-500 dark:bg-indigo-300 rounded-full animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.5)] dark:shadow-[0_0_10px_rgba(165,180,252,0.35)]" />
-              )}
-            </span>
-          );
-        })}
-      </div>
-    );
-  };
+  const progressPct = targetText.length ? (completedIndex / targetText.length) * 100 : 0;
+  const meta = MODE_META[mode];
 
   return (
     <div
-      className={clsx('flex flex-col h-[100dvh] bg-muted relative overflow-hidden transition-all')}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: KT.bg,
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: KT.font,
+      }}
       onClick={ensureFocus}
     >
-      <MobileImmersiveHeader
-        title={t('typing.mobile.sessionTitle', { defaultValue: 'Typing session' })}
-        subtitle={t(`typingLobby.${mode}.title`, {
-          defaultValue: mode === 'word' ? 'Word' : mode === 'paragraph' ? 'Paragraph' : 'Sentence',
-        })}
-        eyebrow={t('sidebar.typing', { defaultValue: 'Typing' })}
-        onBack={() => onExit()}
-        backLabel={t('common.close', { defaultValue: 'Close' })}
-        backIcon={<X className="h-4 w-4 text-foreground" />}
-        status={
-          <div className="flex items-center gap-2">
-            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                WPM
-              </div>
-              <div className="text-base font-black leading-none text-foreground font-mono">
-                {stats.wpm}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                ACC
-              </div>
-              <div
-                className={clsx(
-                  'text-base font-black leading-none font-mono',
-                  stats.accuracy >= 98
-                    ? 'text-green-500 dark:text-green-300'
-                    : stats.accuracy >= 90
-                      ? 'text-indigo-500 dark:text-indigo-300'
-                      : 'text-amber-500 dark:text-amber-300'
-                )}
-              >
-                {stats.accuracy}%
-              </div>
-            </div>
-          </div>
-        }
-      />
-
-      {/* 2. Main Content */}
+      {/* Header bar */}
       <div
-        className={clsx(
-          'flex-1 flex flex-col items-center justify-center px-6 transition-all duration-300 relative',
-          isKeyboardOpen ? 'pb-[40vh]' : 'pb-[calc(var(--mobile-safe-bottom)+5rem)]'
-        )}
+        style={{
+          padding: '10px 18px 10px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: KT.card,
+          borderBottom: `1px solid ${KT.line}`,
+          flexShrink: 0,
+        }}
       >
-        {/* Progress Line */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-muted">
+        <button
+          type="button"
+          onClick={onExit}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            border: 'none',
+            background: KT.bg2,
+            fontSize: 16,
+            cursor: 'pointer',
+            boxShadow: KT.shSm,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
+
+        {/* progress bar */}
+        <div
+          style={{
+            flex: 1,
+            height: 5,
+            borderRadius: 3,
+            background: KT.line2,
+            overflow: 'hidden',
+          }}
+        >
           <div
-            className="h-full bg-indigo-500 dark:bg-indigo-300 transition-all duration-500"
             style={{
-              width: `${targetText.length ? (completedIndex / targetText.length) * 100 : 0}%`,
+              width: `${progressPct}%`,
+              height: '100%',
+              background: KT.ink,
+              borderRadius: 3,
+              transition: 'width 0.2s',
             }}
           />
         </div>
 
-        {/* Text Card */}
-        <div className="w-full py-12 flex flex-col items-center justiy-center">
-          {renderTypingText()}
+        {/* mini stats */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[
+            { n: `${stats.wpm}`, l: 'WPM', color: KT.ink },
+            { n: `${stats.accuracy}%`, l: '정확', color: KT.mintDeep },
+          ].map(s => (
+            <div
+              key={s.l}
+              style={{
+                background: KT.bg2,
+                borderRadius: 10,
+                padding: '5px 9px',
+                textAlign: 'center',
+                boxShadow: KT.shSm,
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 800, color: s.color, letterSpacing: -0.3 }}>
+                {s.n}
+              </div>
+              <div style={{ fontSize: 8, color: KT.sub, fontWeight: 700 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main typing area */}
+      <div
+        style={{
+          flex: 1,
+          padding: '20px 22px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
+          paddingBottom: isKeyboardOpen ? '42vh' : 'calc(env(safe-area-inset-bottom) + 80px)',
+        }}
+      >
+        {/* Text card */}
+        <div
+          style={{
+            background: KT.card,
+            borderRadius: 22,
+            boxShadow: KT.sh,
+            padding: 22,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <Chip tone={meta.tone}>
+              {meta.hanja} · {mode.toUpperCase()}
+            </Chip>
+            <Chip tone="muted">TOPIK</Chip>
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: KT.sub,
+              marginBottom: 16,
+              fontWeight: 600,
+            }}
+          >
+            {t('typingGame.tapToStartTyping', { defaultValue: '문장을 따라 입력하세요' })}
+          </div>
+
+          {/* Typing text with character highlighting */}
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              lineHeight: 1.6,
+              letterSpacing: -0.4,
+              color: KT.subLight,
+              fontFamily: KT.font,
+            }}
+          >
+            {targetText.split('').map((char, i) => {
+              const inputChar = userInput[i];
+              const status = checkInput(char, inputChar, targetText[i + 1]);
+              const done = i < userInput.length;
+              const isCursor = i === userInput.length;
+              let color: string = KT.subLight;
+              if (done) {
+                color = status === 'correct' ? KT.ink : KT.pinkDeep;
+              }
+              return (
+                <span
+                  key={i}
+                  style={{
+                    color,
+                    background: isCursor ? KT.butter : 'transparent',
+                    borderRadius: isCursor ? 3 : 0,
+                    padding: isCursor ? '0 2px' : 0,
+                    textDecoration: done && status !== 'correct' ? 'underline' : 'none',
+                    transition: 'color 0.08s',
+                  }}
+                >
+                  {char === ' ' ? '\u00A0' : char}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
-        {/* English Translation (If available in sentence obj? Currently practice texts are string[]) */}
-        {/* <p className="mt-8 text-sm font-medium text-muted-foreground">
-                    Translations coming soon...
-                </p> */}
-
-        {/* Hint Message */}
+        {/* Tap hint */}
         {!isKeyboardOpen && (
-          <div className="absolute bottom-20 text-muted-foreground text-xs font-bold uppercase tracking-widest animate-pulse">
-            {t('typingGame.tapToStartTyping', { defaultValue: 'Tap here to start typing' })}
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: 11,
+              color: KT.sub,
+              fontWeight: 700,
+              letterSpacing: 1.5,
+              opacity: 0.7,
+            }}
+          >
+            {t('typingGame.tapToStartTyping', { defaultValue: 'TAP TO START TYPING' })}
           </div>
         )}
       </div>
 
-      <HiddenInput ref={inputRef} onBlur={handleBlur} />
+      <HiddenInput ref={inputRef} onBlur={() => {}} />
     </div>
   );
 };
 
-// 3. RESULTS COMPONENT
+// ─── 3. RESULTS ────────────────────────────────────────────
 const MobileResults = ({
   stats,
   onRetry,
@@ -500,7 +998,7 @@ const MobileResults = ({
   onExit: () => void;
 }) => {
   const { t } = useTranslation();
-  const isHighScore = stats.wpm > 200; // Arbitrary target
+  const isHighScore = stats.wpm > 60;
 
   return (
     <Dialog open onOpenChange={open => !open && onExit()}>
@@ -509,98 +1007,200 @@ const MobileResults = ({
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className="fixed inset-0 z-50 bg-muted flex flex-col items-center justify-center p-6"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            background: KT.bg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            fontFamily: KT.font,
+          }}
         >
-          <div className="w-full max-w-sm bg-card rounded-[2.5rem] shadow-2xl shadow-black/10 dark:shadow-none overflow-hidden border border-border">
-            {/* Header */}
-            <div className="bg-primary p-8 text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 dark:from-indigo-300/16 dark:to-purple-300/16" />
-              <div className="relative z-10">
-                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner ring-4 ring-background border-2 border-border">
-                  <span className="text-4xl">{isHighScore ? '🏆' : '👍'}</span>
-                </div>
-                <h2 className="text-2xl font-black text-primary-foreground mb-1">
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 360,
+              background: KT.card,
+              borderRadius: 28,
+              boxShadow: KT.shLg,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Result header */}
+            <div
+              style={{
+                background: `linear-gradient(135deg, ${KT.indigo} 0%, #4A5A90 100%)`,
+                padding: '28px 24px 24px',
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: 4,
+                  fontFamily: KT.serif,
+                  fontSize: 80,
+                  color: 'rgba(255,255,255,0.07)',
+                  lineHeight: 1,
+                }}
+              >
+                成
+              </span>
+              <div style={{ position: 'relative' }}>
+                <HanjaSeal
+                  c={isHighScore ? '優' : '成'}
+                  size={64}
+                  bg="rgba(255,255,255,0.18)"
+                  round={18}
+                />
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: '#fff',
+                    marginTop: 14,
+                    letterSpacing: -0.3,
+                  }}
+                >
                   {isHighScore
-                    ? t('typing.mobile.greatJob', { defaultValue: 'Great Job!' })
-                    : t('typing.mobile.sessionComplete', { defaultValue: 'Session Complete' })}
-                </h2>
-                <p className="text-primary-foreground/75 font-medium text-sm">
-                  {t('typing.mobile.gettingFaster', { defaultValue: "You're getting faster!" })}
-                </p>
+                    ? t('typing.mobile.greatJob', { defaultValue: '잘했어요!' })
+                    : t('typing.mobile.sessionComplete', { defaultValue: '완료' })}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'rgba(255,255,255,0.65)',
+                    marginTop: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  {t('typing.mobile.gettingFaster', { defaultValue: '점점 빨라지고 있어요!' })}
+                </div>
               </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                  {t('typing.speed', { defaultValue: 'Speed' })}
-                </span>
-                <div className="text-right">
-                  <span className="text-3xl font-black text-muted-foreground mr-1">
-                    {stats.wpm}
-                  </span>
-                  <span className="text-xs font-bold text-muted-foreground">WPM</span>
-                </div>
-              </div>
-              {/* Bar */}
-              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 dark:bg-indigo-300 rounded-full"
-                  style={{ width: `${Math.min(stats.wpm / 3, 100)}%` }} // 300 wpm max scale
-                />
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                  {t('typingGame.accuracy', { defaultValue: 'Accuracy' })}
-                </span>
-                <div className="text-right">
-                  <span
-                    className={clsx(
-                      'text-3xl font-black mr-1',
-                      stats.accuracy >= 95
-                        ? 'text-green-500 dark:text-green-300'
-                        : 'text-amber-500 dark:text-amber-300'
-                    )}
+            {/* Stats */}
+            <div style={{ padding: '24px 24px 20px' }}>
+              {[
+                {
+                  k: '速',
+                  l: t('typing.speed', { defaultValue: 'Speed' }),
+                  v: `${stats.wpm}`,
+                  u: 'WPM',
+                  bar: Math.min(stats.wpm / 3, 100),
+                  barColor: KT.indigo,
+                },
+                {
+                  k: '精',
+                  l: t('typingGame.accuracy', { defaultValue: 'Accuracy' }),
+                  v: `${stats.accuracy}`,
+                  u: '%',
+                  bar: stats.accuracy,
+                  barColor: stats.accuracy >= 95 ? KT.mintDeep : KT.butterDeep,
+                },
+              ].map(s => (
+                <div key={s.k} style={{ marginBottom: 20 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                    }}
                   >
-                    {stats.accuracy}%
-                  </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span
+                        style={{
+                          fontFamily: KT.serif,
+                          fontSize: 16,
+                          color: KT.crimson,
+                          fontWeight: 500,
+                          opacity: 0.8,
+                        }}
+                      >
+                        {s.k}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: KT.sub }}>{s.l}</span>
+                    </div>
+                    <span
+                      style={{ fontSize: 26, fontWeight: 800, color: KT.ink, letterSpacing: -0.5 }}
+                    >
+                      {s.v}
+                      <span style={{ fontSize: 12, color: KT.sub, marginLeft: 2 }}>{s.u}</span>
+                    </span>
+                  </div>
+                  <div
+                    style={{ height: 6, background: KT.bg2, borderRadius: 3, overflow: 'hidden' }}
+                  >
+                    <div
+                      style={{
+                        width: `${s.bar}%`,
+                        height: '100%',
+                        background: s.barColor,
+                        borderRadius: 3,
+                        transition: 'width 0.8s ease',
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-              {/* Bar */}
-              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={clsx(
-                    'h-full rounded-full',
-                    stats.accuracy >= 95
-                      ? 'bg-green-500 dark:bg-green-300'
-                      : 'bg-amber-500 dark:bg-amber-300'
-                  )}
-                  style={{ width: `${stats.accuracy}%` }}
-                />
-              </div>
+              ))}
             </div>
 
-            {/* Footer Actions */}
-            <div className="p-6 bg-muted flex gap-4">
-              <Button
-                variant="ghost"
-                size="auto"
+            {/* Actions */}
+            <div
+              style={{
+                padding: '0 20px 24px',
+                display: 'flex',
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
                 onClick={onExit}
-                className="flex-1 py-4 rounded-xl text-muted-foreground font-bold bg-card border border-border shadow-sm active:scale-95 transition-transform"
+                style={{
+                  flex: 1,
+                  padding: '13px 0',
+                  borderRadius: 14,
+                  border: `1px solid ${KT.line2}`,
+                  background: KT.bg2,
+                  color: KT.sub,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontFamily: KT.font,
+                }}
               >
                 {t('typing.mobile.lobby', { defaultValue: 'Lobby' })}
-              </Button>
-              <Button
-                variant="ghost"
-                size="auto"
+              </button>
+              <button
+                type="button"
                 onClick={onRetry}
-                className="flex-1 py-4 rounded-xl text-primary-foreground font-bold bg-indigo-600 dark:bg-indigo-400/80 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                style={{
+                  flex: 1,
+                  padding: '13px 0',
+                  borderRadius: 14,
+                  border: 'none',
+                  background: KT.ink,
+                  color: KT.bg,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  fontFamily: KT.font,
+                }}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw size={13} />
                 {t('typing.mobile.retry', { defaultValue: 'Retry' })}
-              </Button>
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -609,7 +1209,7 @@ const MobileResults = ({
   );
 };
 
-// --- MAIN PAGE COMPONENT ---
+// ─── MAIN PAGE ─────────────────────────────────────────────
 export const MobileTypingPage: React.FC = () => {
   const { t } = useTranslation();
   const typingTabStorageKey = 'mobileTypingActiveTab';
@@ -623,12 +1223,12 @@ export const MobileTypingPage: React.FC = () => {
     return 'sentence';
   });
   const [gameMode, setGameMode] = useState<TypingMode>('sentence');
-  const [gameData, setGameData] = useState<any>(null); // CourseId, Category object, etc
+  const [gameData, setGameData] = useState<TypingGameData | null>(null);
   const [lastStats, setLastStats] = useState<TypingStats | null>(null);
 
   const saveRecord = useMutation(api.typing.saveRecord);
 
-  const handleStart = (mode: TypingMode, data: any) => {
+  const handleStart = (mode: TypingMode, data: TypingGameData) => {
     setGameMode(mode);
     setGameData(data);
     setGameState('playing');
@@ -638,33 +1238,19 @@ export const MobileTypingPage: React.FC = () => {
     setLastStats(stats);
     setGameState('results');
 
-    // Save Record
     const duration = stats.startTime ? Date.now() - stats.startTime : 0;
-    const targetWpm = 40; // Default target
+    const targetWpm = 40;
     const isTargetAchieved = stats.wpm >= targetWpm;
-
-    // Determine Category ID
     let categoryId = 'unknown';
-    if (gameMode === 'sentence' || gameMode === 'paragraph') {
-      categoryId = gameData?.id || 'unknown';
-    } else if (gameMode === 'word') {
-      categoryId = gameData?.courseId || 'vocab';
+    if (gameMode === 'sentence' && gameData && isPracticeCategory(gameData)) {
+      categoryId = gameData.id;
+    } else if (gameMode === 'paragraph' && gameData && isPracticeParagraph(gameData)) {
+      categoryId = gameData.id;
+    } else if (gameMode === 'word' && gameData && isWordPracticeSelection(gameData)) {
+      categoryId = gameData.courseId || 'vocab';
     }
 
     try {
-      console.log('[MobileTypingPage] Saving record...', {
-        practiceMode: gameMode,
-        categoryId,
-        wpm: stats.wpm,
-        accuracy: stats.accuracy,
-        errorCount: stats.errorCount,
-        duration,
-        charactersTyped: Math.round((stats.wpm * 5 * duration) / 60000) || 0,
-        sentencesCompleted: 1,
-        targetWpm,
-        isTargetAchieved,
-      });
-
       await saveRecord({
         practiceMode: gameMode,
         categoryId,
@@ -677,24 +1263,14 @@ export const MobileTypingPage: React.FC = () => {
         targetWpm,
         isTargetAchieved,
       });
-      console.log('[MobileTypingPage] Record saved successfully');
       toast.success(t('typing.mobile.resultSaved', { defaultValue: 'Result saved!' }));
-    } catch (e: any) {
-      console.error('Failed to save record:', e);
-      const msg =
-        e.data?.message ||
-        e.message ||
-        t('typing.mobile.unknownError', { defaultValue: 'Unknown error' });
+    } catch (error: unknown) {
+      const msg = getTypingErrorMessage(
+        error,
+        t('typing.mobile.unknownError', { defaultValue: 'Unknown error' })
+      );
       toast.error(t('typing.mobile.failedToSave', { msg, defaultValue: `Failed to save: ${msg}` }));
     }
-  };
-
-  const handleExit = () => {
-    setGameState('lobby');
-  };
-
-  const handleRetry = () => {
-    setGameState('playing');
   };
 
   useEffect(() => {
@@ -712,7 +1288,7 @@ export const MobileTypingPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-muted overflow-hidden font-sans">
+    <div style={{ height: '100dvh', width: '100%', overflow: 'hidden' }}>
       {gameState === 'lobby' && (
         <MobileLobby
           onStart={handleStart}
@@ -721,18 +1297,20 @@ export const MobileTypingPage: React.FC = () => {
           onBack={handleBack}
         />
       )}
-
       {gameState === 'playing' && gameData && (
         <MobileSession
           mode={gameMode}
           data={gameData}
           onFinish={handleFinish}
-          onExit={handleExit}
+          onExit={() => setGameState('lobby')}
         />
       )}
-
       {gameState === 'results' && lastStats && (
-        <MobileResults stats={lastStats} onRetry={handleRetry} onExit={handleExit} />
+        <MobileResults
+          stats={lastStats}
+          onRetry={() => setGameState('playing')}
+          onExit={() => setGameState('lobby')}
+        />
       )}
     </div>
   );

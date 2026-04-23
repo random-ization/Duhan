@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
-import { Play, Pause, ChevronDown, ListMusic, SkipBack, SkipForward, X } from 'lucide-react';
-import { Button } from '../ui';
+import { Play, Pause, ChevronDown, SkipBack, SkipForward, X } from 'lucide-react';
 import { Slider } from '../ui';
 import { Sheet, SheetContent, SheetPortal } from '../ui';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
+import { KT } from './ksoft/ksoft';
 
 function formatClock(seconds: number) {
   if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
@@ -80,57 +80,140 @@ export const MobileGlobalPlayer: React.FC = () => {
 
   if (!activeEpisode) return null;
 
+  const progressPct = duration > 0 ? ((progress || 0) / duration) * 100 : 0;
+
+  const iconBtnStyle = (variant: 'light' | 'dark' = 'light'): React.CSSProperties => ({
+    width: 44,
+    height: 44,
+    borderRadius: '50%',
+    background: variant === 'dark' ? 'rgba(255,255,255,0.1)' : KT.bg2,
+    border: variant === 'dark' ? '1px solid rgba(255,255,255,0.12)' : `1px solid ${KT.line}`,
+    color: variant === 'dark' ? 'rgba(255,255,255,0.75)' : KT.sub,
+    display: 'grid',
+    placeItems: 'center',
+    cursor: 'pointer',
+    flexShrink: 0,
+  });
+
   return (
     <>
+      {/* Minimized bar */}
       {isMinimized && (
-        <div className="fixed bottom-mobile-floating left-4 right-4 z-[50] pointer-events-none">
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(env(safe-area-inset-bottom) + 72px)',
+            left: 14,
+            right: 14,
+            zIndex: 50,
+          }}
+        >
           <div
-            className="pointer-events-auto bg-card/80 dark:bg-card/60 backdrop-blur-2xl rounded-[1.5rem] p-2 pr-3 flex items-center shadow-lg shadow-black/10 border border-border/50"
+            style={{
+              background: `${KT.card}ee`,
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: 22,
+              padding: '8px 12px 8px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: KT.shLg,
+              border: `1px solid ${KT.line}`,
+              cursor: 'pointer',
+            }}
             onClick={() => setMinimized(false)}
             role="button"
             tabIndex={0}
+            onKeyDown={e => {
+              if (e.key === 'Enter') setMinimized(false);
+            }}
           >
             <img
               src={artworkSrc}
-              className="w-12 h-12 rounded-[14px] bg-muted object-cover shrink-0 shadow-sm"
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                objectFit: 'cover',
+                flexShrink: 0,
+                boxShadow: KT.shSm,
+              }}
               alt={t('mobilePlayer.artAlt', { defaultValue: 'Art' })}
               loading="lazy"
             />
-            <div className="flex-1 min-w-0 mx-3 flex flex-col justify-center">
-              <h4 className="text-foreground font-bold text-[13px] tracking-tight truncate">
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                margin: '0 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+              }}
+            >
+              <h4
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: KT.ink,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontFamily: KT.font,
+                }}
+              >
                 {activeEpisode.title}
               </h4>
-              <p className="text-muted-foreground text-[11px] font-semibold truncate mt-0.5">
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: KT.sub,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  marginTop: 2,
+                  fontFamily: KT.font,
+                }}
+              >
                 {activeEpisode.channelTitle}
               </p>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                className="w-10 h-10 rounded-full text-foreground hover:bg-muted active:scale-90 transition-transform"
-                onClick={e => {
-                  e.stopPropagation();
-                  togglePlay();
-                }}
-                aria-label={
-                  isPlaying
-                    ? t('common.pause', { defaultValue: 'Pause' })
-                    : t('common.play', { defaultValue: 'Play' })
-                }
-              >
-                {isPlaying ? (
-                  <Pause className="w-6 h-6 fill-current" />
-                ) : (
-                  <Play className="w-6 h-6 fill-current" />
-                )}
-              </Button>
-            </div>
+            <button
+              type="button"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: KT.ink,
+                border: 'none',
+                color: KT.bg,
+                display: 'grid',
+                placeItems: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              onClick={e => {
+                e.stopPropagation();
+                togglePlay();
+              }}
+              aria-label={
+                isPlaying
+                  ? t('common.pause', { defaultValue: 'Pause' })
+                  : t('common.play', { defaultValue: 'Play' })
+              }
+            >
+              {isPlaying ? (
+                <Pause size={20} fill="currentColor" />
+              ) : (
+                <Play size={20} fill="currentColor" style={{ marginLeft: 2 }} />
+              )}
+            </button>
           </div>
         </div>
       )}
 
+      {/* Full player sheet */}
       <Sheet open={!isMinimized} onOpenChange={open => setMinimized(!open)}>
         <SheetPortal>
           <SheetContent
@@ -138,136 +221,232 @@ export const MobileGlobalPlayer: React.FC = () => {
             forceMount
             closeOnEscape={false}
             lockBodyScroll={false}
-            className="fixed inset-0 z-[100] bg-card flex flex-col transition-transform duration-300 data-[state=open]:translate-y-0 data-[state=closed]:translate-y-[105%] data-[state=closed]:pointer-events-none"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100,
+              background: KT.ink,
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.3s cubic-bezier(0.32, 0, 0.67, 0)',
+              fontFamily: KT.font,
+            }}
+            className="data-[state=open]:translate-y-0 data-[state=closed]:translate-y-[105%] data-[state=closed]:pointer-events-none"
           >
-            <div className="px-6 py-4 flex items-center justify-between mt-8 sticky top-0">
-              <Button
-                variant="ghost"
-                size="auto"
+            {/* Top bar */}
+            <div
+              style={{
+                padding: '14px 22px 0',
+                paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <button
                 type="button"
                 onClick={() => setMinimized(true)}
-                className="p-2 -ml-2 text-muted-foreground"
+                style={iconBtnStyle('dark')}
                 aria-label={t('mobilePlayer.minimize', { defaultValue: 'Minimize' })}
               >
-                <ChevronDown className="w-8 h-8" />
-              </Button>
-              <span className="font-bold text-muted-foreground text-xs tracking-widest uppercase">
+                <ChevronDown size={22} />
+              </button>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.5)',
+                }}
+              >
                 {t('podcast.nowPlaying', { defaultValue: 'Now Playing' })}
               </span>
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 type="button"
                 onClick={() => closePlayer()}
-                className="p-2 -mr-2 text-muted-foreground"
+                style={iconBtnStyle('dark')}
                 aria-label={t('common.close', { defaultValue: 'Close' })}
               >
-                <X className="w-6 h-6" />
-              </Button>
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="flex-1 px-8 flex flex-col justify-center pb-12 overflow-y-auto">
-              <div className="w-full aspect-square rounded-[2rem] bg-muted shadow-2xl mb-12 relative overflow-hidden">
+            {/* Main content */}
+            <div
+              style={{
+                flex: 1,
+                padding: '32px 28px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                overflowY: 'auto',
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 32px)',
+              }}
+            >
+              {/* Artwork */}
+              <div
+                style={{
+                  width: '100%',
+                  aspectRatio: '1/1',
+                  borderRadius: 28,
+                  overflow: 'hidden',
+                  background: 'rgba(255,255,255,0.08)',
+                  boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                  marginBottom: 40,
+                  flexShrink: 0,
+                }}
+              >
                 <img
                   src={artworkSrc}
-                  className="w-full h-full object-cover"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   alt={t('mobilePlayer.artworkAlt', { defaultValue: 'Artwork' })}
                 />
               </div>
 
-              <div className="mb-8">
-                <h2 className="text-2xl font-black text-foreground leading-tight mb-2">
+              {/* Track info */}
+              <div style={{ marginBottom: 28 }}>
+                <h2
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: '#fff',
+                    lineHeight: 1.2,
+                    letterSpacing: -0.5,
+                    marginBottom: 6,
+                  }}
+                >
                   {activeEpisode.title}
                 </h2>
-                <p className="text-lg text-indigo-500 font-bold">{activeEpisode.channelTitle}</p>
+                <p style={{ fontSize: 15, color: KT.crimson, fontWeight: 700 }}>
+                  {activeEpisode.channelTitle}
+                </p>
               </div>
 
-              <div className="mb-4">
-                <Slider
-                  value={progress || 0}
-                  max={duration || 1}
-                  step={1}
-                  onChange={e => handleSeek(Number(e.target.value))}
-                  className="cursor-pointer"
-                />
-                <div className="flex justify-between text-xs font-bold text-muted-foreground mt-2">
+              {/* Progress */}
+              <div style={{ marginBottom: 12 }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    height: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginBottom: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      height: 3,
+                      borderRadius: 2,
+                      background: 'rgba(255,255,255,0.15)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      width: `${progressPct}%`,
+                      height: 3,
+                      borderRadius: 2,
+                      background: KT.crimson,
+                    }}
+                  />
+                  <Slider
+                    value={progress || 0}
+                    max={duration || 1}
+                    step={1}
+                    onChange={e => handleSeek(Number(e.target.value))}
+                    style={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0,
+                      cursor: 'pointer',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.4)',
+                  }}
+                >
                   <span>{formatClock(progress || 0)}</span>
                   <span>{duration > 0 ? formatClock(duration) : '--:--'}</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mb-12">
-                <Button
-                  variant="ghost"
-                  size="auto"
+              {/* Controls */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 16,
+                }}
+              >
+                <button
                   type="button"
-                  className="text-muted-foreground p-2 hover:text-muted-foreground"
+                  style={iconBtnStyle('dark')}
+                  onClick={() => skip(-15)}
+                  aria-label={t('mobilePlayer.skipBack15', {
+                    defaultValue: 'Skip back 15 seconds',
+                  })}
                 >
-                  <ListMusic className="w-6 h-6" />
-                </Button>
+                  <SkipBack size={22} fill="currentColor" />
+                </button>
 
-                <div className="flex items-center gap-6">
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    className="text-foreground p-2 active:scale-90 transition-transform"
-                    onClick={() => skip(-15)}
-                    aria-label={t('mobilePlayer.skipBack15', {
-                      defaultValue: 'Skip back 15 seconds',
-                    })}
-                  >
-                    <SkipBack className="w-8 h-8 fill-foreground text-foreground" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-                    onClick={togglePlay}
-                    aria-label={
-                      isPlaying
-                        ? t('common.pause', { defaultValue: 'Pause' })
-                        : t('common.play', { defaultValue: 'Play' })
-                    }
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-8 h-8 fill-current" />
-                    ) : (
-                      <Play className="w-8 h-8 fill-current ml-1" />
-                    )}
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="auto"
-                    type="button"
-                    className="text-foreground p-2 active:scale-90 transition-transform"
-                    onClick={() => skip(15)}
-                    aria-label={t('mobilePlayer.skipForward15', {
-                      defaultValue: 'Skip forward 15 seconds',
-                    })}
-                  >
-                    <SkipForward className="w-8 h-8 fill-foreground text-foreground" />
-                  </Button>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="auto"
+                <button
                   type="button"
-                  className="text-muted-foreground p-2 hover:text-muted-foreground"
+                  onClick={togglePlay}
+                  style={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: 24,
+                    background: KT.crimson,
+                    border: 'none',
+                    color: '#fff',
+                    display: 'grid',
+                    placeItems: 'center',
+                    cursor: 'pointer',
+                    boxShadow: `0 12px 32px rgba(162,59,46,0.5)`,
+                  }}
+                  aria-label={
+                    isPlaying
+                      ? t('common.pause', { defaultValue: 'Pause' })
+                      : t('common.play', { defaultValue: 'Play' })
+                  }
                 >
-                  <span className="text-xl font-bold tracking-widest">•••</span>
-                </Button>
+                  {isPlaying ? (
+                    <Pause size={30} fill="currentColor" />
+                  ) : (
+                    <Play size={30} fill="currentColor" style={{ marginLeft: 3 }} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  style={iconBtnStyle('dark')}
+                  onClick={() => skip(15)}
+                  aria-label={t('mobilePlayer.skipForward15', {
+                    defaultValue: 'Skip forward 15 seconds',
+                  })}
+                >
+                  <SkipForward size={22} fill="currentColor" />
+                </button>
               </div>
             </div>
           </SheetContent>
         </SheetPortal>
       </Sheet>
 
-      {/* Persist the audio element across minimized/full UI */}
+      {/* Persistent audio element */}
       <audio
         ref={audioRef}
         src={normalizedEpisodeUrl}

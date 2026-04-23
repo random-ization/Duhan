@@ -13,6 +13,7 @@ import { aRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobilePodcastSearch } from '../components/mobile/MobilePodcastSearch';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { buildPodcastChannelPath } from '../utils/podcastRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 
@@ -136,7 +137,7 @@ const DesktopPodcastSearchPage = () => {
   const [results, setResults] = useState<PodcastChannel[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast'));
   const currentPath = `${location.pathname}${location.search}`;
 
   const searchPodcastsAction = useAction(

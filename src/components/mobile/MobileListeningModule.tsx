@@ -2,9 +2,7 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MobileAudioPlayer } from './MobileAudioPlayer';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui';
-import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { KT } from './ksoft/ksoft';
 
 interface TranscriptSegment {
   start: number;
@@ -33,13 +31,11 @@ export function MobileListeningModule({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const activeSegmentRef = useRef<HTMLDivElement>(null);
 
-  // Karaoke Logic
   const activeSegmentIndex = useMemo(() => {
     if (!transcriptData) return -1;
     return transcriptData.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
   }, [currentTime, transcriptData]);
 
-  // Auto-scroll to active segment
   useEffect(() => {
     if (activeSegmentIndex >= 0 && activeSegmentRef.current) {
       activeSegmentRef.current.scrollIntoView({
@@ -51,37 +47,125 @@ export function MobileListeningModule({
   }, [activeSegmentIndex]);
 
   return (
-    <div className="flex flex-col h-screen bg-muted">
-      <MobileWorkspaceHeader
-        title={unitTitle}
-        subtitle={t('mobileListeningModule.followAlong', {
-          defaultValue: 'Follow the transcript while the active line stays in focus.',
-        })}
-        eyebrow={t('mobileListeningModule.listening', { defaultValue: 'Listening' })}
-        onBack={onBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100dvh',
+        background: KT.bg2,
+        fontFamily: KT.font,
+        color: KT.ink,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: '0 22px 14px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: KT.bg2,
+          borderBottom: `1px solid ${KT.line}`,
+          flexShrink: 0,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            border: 'none',
+            background: KT.card,
+            color: KT.ink,
+            fontSize: 16,
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+            boxShadow: KT.shSm,
+          }}
+        >
+          ←
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: KT.sub, fontWeight: 700, letterSpacing: 1 }}>
+            {t('mobileListeningModule.listening', { defaultValue: '聽 · LISTENING' })}
+          </div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: KT.ink,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginTop: 1,
+            }}
           >
-            <MoreHorizontal size={18} className="text-muted-foreground" />
-          </Button>
-        }
-      />
+            {unitTitle}
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            border: 'none',
+            background: KT.card,
+            color: KT.sub,
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
+            boxShadow: KT.shSm,
+          }}
+          aria-label="More options"
+        >
+          <MoreHorizontal size={18} />
+        </button>
+      </div>
 
-      {/* Transcript View */}
+      {/* Transcript */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-6 pb-[calc(var(--mobile-safe-bottom)+9rem)] space-y-6"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '20px 22px',
+          paddingBottom: 'calc(var(--mobile-safe-bottom, 0px) + 9rem)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+        }}
       >
         {transcriptData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p className="font-bold">
-              {t('mobileListeningModule.noTranscript', { defaultValue: 'No transcript available' })}
-            </p>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 48,
+                color: KT.crimson,
+                opacity: 0.2,
+                marginBottom: 12,
+              }}
+            >
+              聽
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: KT.sub }}>
+              {t('mobileListeningModule.noTranscript', { defaultValue: '자막이 없습니다' })}
+            </div>
           </div>
         ) : (
           transcriptData.map((segment, index) => {
@@ -90,23 +174,37 @@ export function MobileListeningModule({
               <div
                 key={index}
                 ref={isActive ? activeSegmentRef : null}
-                className={cn(
-                  'transition-all duration-500 p-4 rounded-2xl',
-                  isActive
-                    ? 'bg-card shadow-lg shadow-primary/10 scale-105 border border-primary/20 opacity-100'
-                    : 'opacity-60 grayscale-[0.5] scale-100'
-                )}
+                style={{
+                  transition: 'all 0.4s',
+                  padding: '16px 18px',
+                  borderRadius: 20,
+                  background: isActive ? KT.card : 'transparent',
+                  boxShadow: isActive ? KT.sh : 'none',
+                  opacity: isActive ? 1 : 0.55,
+                  transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  border: isActive ? `1px solid ${KT.line}` : '1px solid transparent',
+                }}
               >
                 <p
-                  className={cn(
-                    'text-lg font-medium leading-relaxed mb-2 transition-colors',
-                    isActive ? 'text-foreground' : 'text-muted-foreground'
-                  )}
+                  style={{
+                    fontSize: 17,
+                    fontWeight: isActive ? 600 : 500,
+                    lineHeight: 1.6,
+                    color: isActive ? KT.ink : KT.ink2,
+                    marginBottom: isActive && segment.translation ? 8 : 0,
+                  }}
                 >
                   {segment.text}
                 </p>
                 {segment.translation && isActive && (
-                  <p className="text-sm text-indigo-500 font-medium animate-in fade-in slide-in-from-top-1">
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: KT.sub,
+                      lineHeight: 1.4,
+                      fontWeight: 500,
+                    }}
+                  >
                     {segment.translation}
                   </p>
                 )}
@@ -116,13 +214,9 @@ export function MobileListeningModule({
         )}
       </div>
 
-      {/* Mobile Player */}
+      {/* Audio player */}
       {audioUrl && (
-        <MobileAudioPlayer
-          audioUrl={audioUrl}
-          onTimeUpdate={setCurrentTime}
-          initialTime={0} // Could wire up seeking
-        />
+        <MobileAudioPlayer audioUrl={audioUrl} onTimeUpdate={setCurrentTime} initialTime={0} />
       )}
     </div>
   );

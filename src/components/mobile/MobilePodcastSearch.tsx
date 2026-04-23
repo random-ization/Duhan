@@ -7,10 +7,11 @@ import { aRef } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { buildMediaPath } from '../../utils/mediaRoutes';
 import { buildPodcastChannelPath } from '../../utils/podcastRoutes';
 import { resolveSafeReturnTo } from '../../utils/navigation';
-import { Button } from '../ui';
 import { Input } from '../ui';
+import { KT } from './ksoft/ksoft';
 
 export const MobilePodcastSearch: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,7 +27,7 @@ export const MobilePodcastSearch: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts');
+  const backPath = resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast'));
   const currentPath = `${location.pathname}${location.search}`;
 
   const searchPodcastsAction = useAction(
@@ -41,7 +42,7 @@ export const MobilePodcastSearch: React.FC = () => {
       try {
         const data = await searchPodcastsAction({ term });
         setResults(data || []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
         setError(searchErrorText);
       } finally {
@@ -51,9 +52,6 @@ export const MobilePodcastSearch: React.FC = () => {
     [searchPodcastsAction, searchErrorText]
   );
 
-  // Debounce or just search on submit? Mobile usually likes immediate or submit.
-  // Let's stick to Submit for now to save API calls, or simple debounce.
-  // The Desktop version acts on effect [query]. Let's mimic that.
   useEffect(() => {
     if (query) {
       handleSearchRequest(query);
@@ -84,89 +82,245 @@ export const MobilePodcastSearch: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
+    <div
+      style={{
+        minHeight: '100dvh',
+        background: KT.bg2,
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: KT.font,
+      }}
+    >
       {/* Sticky Header */}
-      <div className="sticky top-0 z-20 bg-card border-b border-border shadow-sm px-4 py-3 flex gap-3 items-center">
-        <Button
-          variant="ghost"
-          size="auto"
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 20,
+          background: KT.card,
+          borderBottom: `1px solid ${KT.line}`,
+          boxShadow: KT.shSm,
+          padding: '10px 16px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
+        <button
+          type="button"
           onClick={() => navigate(backPath)}
-          className="w-10 h-10 flex items-center justify-center -ml-2 text-muted-foreground active:scale-90 transition-transform"
+          style={{
+            width: 38,
+            height: 38,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: 12,
+            border: `1px solid ${KT.line}`,
+            background: KT.bg2,
+            color: KT.ink,
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
         >
-          <ArrowLeft className="w-6 h-6" />
-        </Button>
-        <form className="flex-1 relative" onSubmit={handleSubmit}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <ArrowLeft size={17} />
+        </button>
+        <form style={{ flex: 1, position: 'relative' }} onSubmit={handleSubmit}>
+          <Search
+            size={15}
+            style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: KT.sub,
+              pointerEvents: 'none',
+            }}
+          />
           <Input
             ref={inputRef}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder={labels.podcast?.searchPlaceholder || 'Search podcasts...'}
-            className="pl-9 pr-9 h-10 bg-muted border-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl font-bold text-foreground placeholder:font-normal"
+            style={{
+              paddingLeft: 36,
+              paddingRight: searchTerm ? 36 : 12,
+              height: 40,
+              borderRadius: 12,
+              background: KT.bg2,
+              border: `1px solid ${KT.line}`,
+              fontSize: 14,
+              fontWeight: 600,
+              color: KT.ink,
+              fontFamily: KT.font,
+              width: '100%',
+              outline: 'none',
+            }}
             enterKeyHint="search"
           />
           {searchTerm && (
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
               type="button"
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground p-1"
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: KT.sub,
+                display: 'grid',
+                placeItems: 'center',
+              }}
             >
-              <X className="w-4 h-4" />
-            </Button>
+              <X size={14} />
+            </button>
           )}
         </form>
       </div>
 
-      {/* Results List */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      {/* Results */}
+      <div
+        style={{
+          flex: 1,
+          padding: '14px 16px',
+          overflowY: 'auto',
+        }}
+      >
         {loading ? (
-          <div className="py-20 flex flex-col items-center text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500 dark:text-indigo-300" />
-            <p className="font-bold text-sm">{labels.podcast?.searching || 'Searching...'}</p>
+          <div
+            style={{
+              padding: '60px 0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              color: KT.sub,
+              gap: 14,
+            }}
+          >
+            <Loader2
+              size={30}
+              style={{ color: KT.crimson, animation: 'spin 1s linear infinite' }}
+            />
+            <p style={{ fontWeight: 700, fontSize: 14 }}>
+              {labels.podcast?.searching || 'Searching...'}
+            </p>
           </div>
         ) : error ? (
-          <div className="py-20 text-center text-red-500 dark:text-red-300 font-bold">{error}</div>
+          <div
+            style={{
+              padding: '60px 0',
+              textAlign: 'center',
+              color: KT.crimson,
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            {error}
+          </div>
         ) : results.length > 0 ? (
-          <div className="space-y-4 pb-20">
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              paddingBottom: 80,
+            }}
+          >
             {results.map(channel => (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
+                type="button"
                 key={channel.itunesId || channel.id}
                 onClick={() => navigate(buildPodcastChannelPath(channel, currentPath))}
-                className="w-full flex items-center gap-4 bg-card p-3 rounded-2xl border border-border shadow-sm active:scale-[0.98] transition-all text-left"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  background: KT.card,
+                  padding: '12px 14px',
+                  borderRadius: 18,
+                  border: `1px solid ${KT.line}`,
+                  boxShadow: KT.shSm,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: KT.font,
+                }}
               >
                 <img
                   src={channel.artworkUrl || channel.artwork}
-                  className="w-16 h-16 rounded-xl bg-muted object-cover border border-border"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 12,
+                    objectFit: 'cover',
+                    border: `1px solid ${KT.line}`,
+                    flexShrink: 0,
+                  }}
                   alt={channel.title}
                 />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-foreground line-clamp-2 leading-tight mb-1">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      color: KT.ink,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      lineHeight: 1.4,
+                      marginBottom: 4,
+                    }}
+                  >
                     {channel.title}
                   </h3>
-                  <p className="text-xs font-bold text-muted-foreground line-clamp-1">
+                  <p
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: KT.sub,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {channel.author}
                   </p>
                 </div>
-              </Button>
+              </button>
             ))}
           </div>
         ) : query ? (
-          <div className="py-20 text-center text-muted-foreground">
-            <Podcast className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p className="font-bold text-muted-foreground">
+          <div
+            style={{
+              padding: '60px 0',
+              textAlign: 'center',
+              color: KT.sub,
+            }}
+          >
+            <Podcast style={{ width: 44, height: 44, margin: '0 auto 14px', opacity: 0.2 }} />
+            <p style={{ fontWeight: 700, fontSize: 14 }}>
               {labels.podcast?.noResults || 'No podcasts found'}
             </p>
           </div>
         ) : (
-          <div className="py-20 text-center text-muted-foreground">
+          <div
+            style={{
+              padding: '60px 0',
+              textAlign: 'center',
+              color: KT.sub,
+              fontSize: 14,
+            }}
+          >
             <p>{labels.podcast?.searchPlaceholder || 'Type to search...'}</p>
           </div>
         )}
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };

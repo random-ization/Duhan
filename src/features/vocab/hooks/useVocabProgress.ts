@@ -6,6 +6,7 @@ import {
   safeSetSessionStorageItem,
 } from '../../../utils/browserStorage';
 import { logger } from '../../../utils/logger';
+import { useOfflineMutation } from '../../../hooks/useOfflineMutation';
 import {
   calculateNextReview,
   calculateFSRSReview,
@@ -426,7 +427,7 @@ export function useFSRSBatchProgress(options?: {
     FSRSBatchMutationArgs,
     { success: boolean; processed: number; updated: number; inserted: number }
   >('vocab:updateProgressBatch');
-  const updateProgressBatch = useMutation(updateProgressBatchRef);
+  const updateProgressBatch = useOfflineMutation(updateProgressBatchRef);
 
   const queueRef = useRef<BatchQueueEntry[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useState } from 'react';
-import { Navigate, useLocation, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTopikExams } from '../hooks/useTopikExams';
@@ -28,6 +28,8 @@ import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getUpgradeBenefitCopy } from '../utils/upgradeCopy';
+import { formatTopikLabel } from '../utils/topik';
+import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../utils/navigation';
 import {
   ContextualCountBadge,
   ContextualEmptyState,
@@ -90,6 +92,7 @@ const TopikPage: React.FC = () => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
   const upgradeCopy = getUpgradeBenefitCopy(language);
   const [now] = React.useState(() => Date.now());
@@ -108,6 +111,13 @@ const TopikPage: React.FC = () => {
   const { examId } = useParams();
   const pathWithoutLang = stripLocalePrefix(location.pathname);
   const isHistoryRoute = pathWithoutLang === '/topik/history';
+  const returnToParam = searchParams.get('returnTo');
+  const linkReturnTo = hasSafeReturnTo(returnToParam) ? returnToParam : null;
+  const topikBackPath = resolveSafeReturnTo(returnToParam, '/courses');
+  const withReturnTo = useCallback(
+    (path: string) => appendReturnToPath(path, linkReturnTo),
+    [linkReturnTo]
+  );
   const topikAnnotations = useQuery(
     qRef<{ prefix: string; limit?: number }, Annotation[]>('annotations:getByPrefix'),
     user && examId ? { prefix: `TOPIK-${examId}`, limit: 4000 } : 'skip'
@@ -241,7 +251,7 @@ const TopikPage: React.FC = () => {
                     subtitle={
                       attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'
                     }
-                    onClick={() => navigate('/topik/history')}
+                    onClick={() => navigate(withReturnTo('/topik/history'))}
                     trailing={
                       <div className="text-right">
                         <p className="text-xs font-black">
@@ -279,12 +289,12 @@ const TopikPage: React.FC = () => {
         {examHistory.length > 0 ? (
           <ContextualPrimaryActionButton
             label={t('topikLobby.viewAllHistory')}
-            onClick={() => navigate('/topik/history')}
+            onClick={() => navigate(withReturnTo('/topik/history'))}
           />
         ) : null}
       </div>
     ),
-    [examHistory, navigate, t]
+    [examHistory, navigate, t, withReturnTo]
   );
 
   useContextualSidebar({
@@ -349,19 +359,17 @@ const TopikPage: React.FC = () => {
   // Mobile Lobby View
   if (isMobile) {
     return (
-      <Suspense fallback={<ContentSkeleton />}>
-        <LazyMobileTopikPage
-          onSelectExam={id => {
-            const targetExam = topikExams.find(exam => exam.id === id);
-            if ((targetExam?.type as string) === 'WRITING') {
-              navigate(`/topik/writing/${id}`);
-              return;
-            }
-            navigate(`/topik/${id}`);
-          }}
-          topikExams={topikExams}
-        />
-      </Suspense>
+      <MobileTopikPage
+        onSelectExam={id => {
+          const targetExam = topikExams.find(exam => exam.id === id);
+          if ((targetExam?.type as string) === 'WRITING') {
+            navigate(withReturnTo(`/topik/writing/${id}`));
+            return;
+          }
+          navigate(withReturnTo(`/topik/${id}`));
+        }}
+        topikExams={topikExams}
+      />
     );
   }
 
@@ -376,7 +384,7 @@ const TopikPage: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="flex items-center gap-4 mb-4">
-          <BackButton onClick={() => navigate('/courses')} />
+          <BackButton onClick={() => navigate(topikBackPath)} />
           <div>
             <h2 className="text-4xl font-black font-display text-foreground tracking-tight">
               {t('dashboard.topik.examCenter')}
@@ -533,7 +541,9 @@ const TopikPage: React.FC = () => {
                     type="button"
                     variant="default"
                     size="auto"
-                    onClick={() => navigate(`/topik/${topikLobbyStats.recommended?.id}`)}
+                    onClick={() =>
+                      navigate(withReturnTo(`/topik/${topikLobbyStats.recommended?.id}`))
+                    }
                     className="w-full flex items-center justify-between rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
                   >
                     <span>{topikLobbyStats.recommended.title}</span>
@@ -682,7 +692,7 @@ const TopikPage: React.FC = () => {
                       type="button"
                       variant="ghost"
                       size="auto"
-                      onClick={() => navigate(`/topik/writing/${exam.id}`)}
+                      onClick={() => navigate(withReturnTo(`/topik/writing/${exam.id}`))}
                       className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
                     >
                       <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
@@ -743,7 +753,7 @@ const TopikPage: React.FC = () => {
                           return;
                         }
                         setExpandedLockedExamId(null);
-                        navigate(`/topik/${exam.id}`);
+                        navigate(withReturnTo(`/topik/${exam.id}`));
                       }}
                       className="!flex !items-stretch !justify-start bg-card rounded-2xl p-0 border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
                     >
@@ -765,8 +775,8 @@ const TopikPage: React.FC = () => {
                         </div>
                         <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
                           {exam.type === 'READING'
-                            ? `TOPIK II ${t('dashboard.topik.reading')}`
-                            : `TOPIK II ${t('dashboard.topik.listening')}`}
+                            ? `${formatTopikLabel(exam.level)} ${t('dashboard.topik.reading')}`
+                            : `${formatTopikLabel(exam.level)} ${t('dashboard.topik.listening')}`}
                         </div>
                       </div>
                       <div className="p-4 flex-1 flex flex-col justify-between">

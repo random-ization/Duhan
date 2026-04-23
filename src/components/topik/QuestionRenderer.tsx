@@ -5,6 +5,7 @@ import { Check, X, Sparkles, Bookmark, BookmarkCheck } from 'lucide-react';
 import { getLabels } from '../../utils/i18n';
 import { sanitizeStrictHtml } from '../../utils/sanitize';
 import { aRef, NOTE_PAGES } from '../../utils/convexRefs';
+import { appendReturnToPath } from '../../utils/navigation';
 import { Button } from '../ui';
 import { useNotebookPicker } from '../../contexts/NotebookPickerContext';
 
@@ -1086,6 +1087,11 @@ const SaveToast = ({
   onDismiss: () => void;
 }) => {
   if (!show) return null;
+  const currentPath =
+    typeof globalThis.window !== 'undefined'
+      ? `${globalThis.window.location.pathname}${globalThis.window.location.search}`
+      : null;
+  const notebookPath = appendReturnToPath('/notebook', currentPath);
 
   if (saveError) {
     return (
@@ -1107,7 +1113,7 @@ const SaveToast = ({
       icon={<BookmarkCheck className="w-5 h-5" />}
       title={savedToast}
       body={
-        <a href="/notebook" className="text-emerald-100 text-sm hover:text-white underline">
+        <a href={notebookPath} className="text-emerald-100 text-sm hover:text-white underline">
           {viewNotebook}
         </a>
       }

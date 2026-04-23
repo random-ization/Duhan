@@ -134,7 +134,9 @@ const LanguageAwareRoutes: React.FC = () => {
           element={withPageLoader(<LegalDocumentPage language={language} documentType="refund" />)}
         />
         <Route path="pricing" element={withPageLoader(<SubscriptionPage />)} />
+        <Route path="subscription" element={withPageLoader(<SubscriptionPage />)} />
         <Route path="pricing/details" element={withPageLoader(<PricingDetailsPage />)} />
+        <Route path="subscription/details" element={withPageLoader(<PricingDetailsPage />)} />
         <Route path="learn" element={withPageLoader(<LearnHubPage />)} />
         <Route path="learn/:guideSlug" element={withPageLoader(<LearnGuidePage />)} />
         <Route path="payment/success" element={withPageLoader(<PaymentSuccessPage />)} />
