@@ -22,7 +22,7 @@ import { qRef } from '../utils/convexRefs';
 import { api } from '../../convex/_generated/api';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import MobileTopikPage from '../components/mobile/MobileTopikPage';
+import { ContentSkeleton } from '../components/common';
 import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
@@ -37,6 +37,7 @@ import {
 } from '../components/layout/contextualSidebarBlocks';
 
 const TopikModule = lazy(() => import('../components/topik'));
+const LazyMobileTopikPage = lazy(() => import('../components/mobile/MobileTopikPage'));
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
 const ONE_DAY_MS = 86400000;
@@ -348,17 +349,19 @@ const TopikPage: React.FC = () => {
   // Mobile Lobby View
   if (isMobile) {
     return (
-      <MobileTopikPage
-        onSelectExam={id => {
-          const targetExam = topikExams.find(exam => exam.id === id);
-          if ((targetExam?.type as string) === 'WRITING') {
-            navigate(`/topik/writing/${id}`);
-            return;
-          }
-          navigate(`/topik/${id}`);
-        }}
-        topikExams={topikExams}
-      />
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileTopikPage
+          onSelectExam={id => {
+            const targetExam = topikExams.find(exam => exam.id === id);
+            if ((targetExam?.type as string) === 'WRITING') {
+              navigate(`/topik/writing/${id}`);
+              return;
+            }
+            navigate(`/topik/${id}`);
+          }}
+          topikExams={topikExams}
+        />
+      </Suspense>
     );
   }
 
@@ -373,14 +376,14 @@ const TopikPage: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto space-y-12">
         <div className="flex items-center gap-4 mb-4">
-          <BackButton onClick={() => navigate('/practice')} />
+          <BackButton onClick={() => navigate('/courses')} />
           <div>
             <h2 className="text-4xl font-black font-display text-foreground tracking-tight">
               {t('dashboard.topik.examCenter')}
             </h2>
             <p className="text-muted-foreground font-bold">{t('dashboard.topik.realExam')}</p>
           </div>
-          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="" />
+          <img src="/emojis/Trophy.webp" className="w-14 h-14 animate-bounce-slow" alt="" />
         </div>
 
         {/* ─── TOPIK Stats Card ─── */}
@@ -389,7 +392,7 @@ const TopikPage: React.FC = () => {
             {/* ── Panel 1: Core Stats ── */}
             <div className="p-6 space-y-4">
               <div className="flex items-center gap-2">
-                <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
+                <img src="/emojis/Trophy.webp" className="w-8 h-8" alt="" />
                 <span className="font-black text-sm text-foreground uppercase tracking-wider">
                   {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
                 </span>

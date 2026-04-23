@@ -17,7 +17,20 @@ export function PostHogTracker() {
 
   useEffect(() => {
     if (!isPostHogEnabled()) return;
-    initPostHog();
+
+    // Initialize PostHog at idle time so the lazy-loaded `posthog-js` chunk
+    // (~58 kB gzip) never competes with first paint or hydration. Safari and
+    // older browsers fall back to a short setTimeout.
+    const w = globalThis.window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+    const scheduler = w?.requestIdleCallback?.bind(w);
+    const handle = scheduler
+      ? scheduler(() => void initPostHog(), { timeout: 2000 })
+      : (globalThis.setTimeout(() => void initPostHog(), 1500) as unknown as number);
+    return () => {
+      const cancelIdle = (globalThis.window as Window & { cancelIdleCallback?: (handle: number) => void })?.cancelIdleCallback;
+      if (cancelIdle) cancelIdle(handle);
+      else globalThis.clearTimeout(handle);
+    };
   }, []);
 
   useEffect(() => {

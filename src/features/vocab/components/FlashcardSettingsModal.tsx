@@ -5,18 +5,13 @@ import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../com
 import { Button } from '../../../components/ui';
 import { Checkbox } from '../../../components/ui';
 import { Radio } from '../../../components/ui';
-
-interface SettingsState {
-  autoTTS: boolean;
-  cardFront: 'KOREAN' | 'NATIVE';
-  ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
-}
+import type { GlobalFlashcardPreferenceState } from '../../../types/globalUserSettings';
 
 interface FlashcardSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: SettingsState;
-  onUpdate: (settings: SettingsState) => void;
+  settings: GlobalFlashcardPreferenceState;
+  onUpdate: (settings: GlobalFlashcardPreferenceState) => void;
   labels: ReturnType<typeof getLabels>;
 }
 

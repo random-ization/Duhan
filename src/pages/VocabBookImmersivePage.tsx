@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } fro
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { Eye, EyeOff, ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
-import { motion, type PanInfo } from 'framer-motion';
+import { m as motion, type PanInfo } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels, type Labels } from '../utils/i18n';

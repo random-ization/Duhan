@@ -3,10 +3,6 @@ import { safeGetSessionStorageItem, safeSetSessionStorageItem } from './browserS
 export type VocabBookListenSessionState = {
   index: number;
   mode: 'BASIC' | 'ADVANCED';
-  playMeaning: boolean;
-  playExampleTranslation: boolean;
-  repeatCount: 1 | 2 | 3 | 'INFINITE';
-  speed: 0.8 | 1 | 1.2 | 1.4;
   timestamp: number;
 };
 
@@ -14,9 +10,6 @@ export type VocabBookDictationSessionState = {
   index: number;
   started: boolean;
   mode: 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
-  playCount: 1 | 2 | 3;
-  gapSeconds: 2 | 4 | 6 | 8;
-  autoNext: boolean;
   timestamp: number;
 };
 
@@ -39,13 +32,6 @@ function isListenSessionState(value: unknown): value is VocabBookListenSessionSt
   return (
     isFiniteNumber(state.index) &&
     (state.mode === 'BASIC' || state.mode === 'ADVANCED') &&
-    typeof state.playMeaning === 'boolean' &&
-    typeof state.playExampleTranslation === 'boolean' &&
-    (state.repeatCount === 1 ||
-      state.repeatCount === 2 ||
-      state.repeatCount === 3 ||
-      state.repeatCount === 'INFINITE') &&
-    (state.speed === 0.8 || state.speed === 1 || state.speed === 1.2 || state.speed === 1.4) &&
     isFiniteNumber(state.timestamp)
   );
 }
@@ -57,12 +43,6 @@ function isDictationSessionState(value: unknown): value is VocabBookDictationSes
     isFiniteNumber(state.index) &&
     typeof state.started === 'boolean' &&
     (state.mode === 'HEAR_PRONUNCIATION' || state.mode === 'HEAR_MEANING') &&
-    (state.playCount === 1 || state.playCount === 2 || state.playCount === 3) &&
-    (state.gapSeconds === 2 ||
-      state.gapSeconds === 4 ||
-      state.gapSeconds === 6 ||
-      state.gapSeconds === 8) &&
-    typeof state.autoNext === 'boolean' &&
     isFiniteNumber(state.timestamp)
   );
 }

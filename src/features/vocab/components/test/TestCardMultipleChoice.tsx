@@ -1,7 +1,5 @@
-import { Check, X } from 'lucide-react';
-import { getLabels } from '../../../../utils/i18n';
-import type { Language } from '../../../../types';
 import { Button } from '../../../../components/ui';
+import type { Language } from '../../../../types';
 
 type Answer = {
   selectedIndex: number;
@@ -35,29 +33,45 @@ const OptionButton = ({
   onSelect: (idx: number) => void;
 }) => {
   const isCorrect = idx === correctIndex;
-  const isCorrectChoice = isSelected && isCorrect;
-  const isWrongChoice = isSelected && !isCorrect;
+  const isCorrectChoice = isReview && isSelected && isCorrect;
+  const isWrongChoice = isReview && isSelected && !isCorrect;
+  const isCorrectNotSelected = isReview && isCorrect && !isSelected;
 
-  const base =
-    'w-full rounded-2xl border-2 px-4 py-4 text-left font-black transition-all flex items-center justify-between gap-3';
+  let containerClass = 'vt-test-option w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between group transition-all';
+  let letterClass = 'w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-[11px] font-black transition-colors';
+  let labelClass = 'font-bold text-[15px] tracking-wide transition-colors';
 
-  let className = base;
+  if (isSelected || isCorrectChoice) {
+    containerClass += ' selected';
+  }
 
+  // Handle Review colors override
   if (isReview) {
     if (isCorrectChoice) {
-      className += ' bg-green-500 border-green-600 text-white';
+      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between bg-emerald-50 border-emerald-500 shadow-sm transition-all';
+      labelClass = 'option-label font-bold text-[15px] tracking-wide text-emerald-700';
+      letterClass = 'option-letter w-7 h-7 rounded-full bg-emerald-500 border-emerald-600 flex items-center justify-center text-[11px] font-black text-white';
     } else if (isWrongChoice) {
-      className += ' bg-red-500 border-red-600 text-white';
-    } else if (isCorrect) {
-      className += ' bg-green-50 border-green-300 text-green-700';
+      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between bg-rose-50 border-rose-500 shadow-sm transition-all';
+      labelClass = 'option-label font-bold text-[15px] tracking-wide text-rose-700';
+      letterClass = 'option-letter w-7 h-7 rounded-full bg-rose-500 border-rose-600 flex items-center justify-center text-[11px] font-black text-white';
+    } else if (isCorrectNotSelected) {
+      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between border-dashed border-emerald-300 bg-emerald-50/30 transition-all';
+      labelClass = 'option-label font-bold text-[15px] tracking-wide text-emerald-600';
+      letterClass = 'option-letter w-7 h-7 rounded-full border border-emerald-300 flex items-center justify-center text-[11px] font-black text-emerald-500';
     } else {
-      className += ' bg-card border-border text-muted-foreground';
+      labelClass += ' option-label text-slate-400';
+      letterClass += ' option-letter text-slate-300 bg-slate-50';
     }
   } else if (isSelected) {
-    className += ' bg-blue-600 border-blue-700 text-white';
+    labelClass += ' option-label';
+    letterClass += ' option-letter';
   } else {
-    className += ' bg-card border-border text-foreground hover:border-border';
+    labelClass += ' option-label text-slate-700';
+    letterClass += ' option-letter text-slate-400 bg-white';
   }
+
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return (
     <Button
@@ -66,17 +80,15 @@ const OptionButton = ({
       type="button"
       disabled={isReview}
       onClick={() => onSelect(idx)}
-      className={className}
+      className={containerClass}
     >
-      <span className="min-w-0 truncate">{opt}</span>
-      {isReview && isCorrect ? <Check className="w-5 h-5 shrink-0" /> : null}
-      {isReview && isWrongChoice ? <X className="w-5 h-5 shrink-0" /> : null}
+      <span className={labelClass}>{opt}</span>
+      <span className={letterClass}>{letters[idx] || '?'}</span>
     </Button>
   );
 };
 
 export default function TestCardMultipleChoice({
-  language,
   prompt,
   options,
   answered,
@@ -84,16 +96,16 @@ export default function TestCardMultipleChoice({
   correctIndex,
   onSubmit,
 }: Props) {
-  const labels = getLabels(language);
   const isReview = mode === 'review' && typeof correctIndex === 'number';
-  return (
-    <div className="mt-6">
-      <div className="text-xs font-black text-muted-foreground">
-        {labels.vocabTest?.chooseAnswer || 'Choose an answer'}
-      </div>
-      <div className="text-3xl font-black text-foreground mt-3">{prompt}</div>
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+  return (
+    <div className="flex flex-col">
+      <div className="text-center mb-8">
+        <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] mb-4">选择正确的含义</p>
+        <h4 className="text-5xl font-black text-slate-900 tracking-tight">{prompt}</h4>
+      </div>
+
+      <div className="space-y-3.5">
         {options.map((opt, idx) => (
           <OptionButton
             key={`${opt}-${idx}`}
@@ -109,3 +121,4 @@ export default function TestCardMultipleChoice({
     </div>
   );
 }
+

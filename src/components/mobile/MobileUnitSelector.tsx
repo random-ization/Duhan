@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Book, ChevronDown, Check, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
 import { Button } from '../ui';

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Trophy, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { GrammarPointData } from '../../types';
@@ -152,7 +152,7 @@ function extractTextContent(node: React.ReactNode): string {
 }
 
 function getRedEyeMaskClass(enabled: boolean): string {
-  return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
+  return enabled ? 'red-eye-mask red-eye-active' : '';
 }
 
 function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
@@ -325,31 +325,18 @@ const MarkdownRenderer: React.FC<{
           </h3>
         ),
         p: ({ children, node: _node }) => {
-          const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
-
           return (
-            <p
-              className={`my-3 text-sm leading-relaxed text-muted-foreground ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
-            >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+            <p className="my-3 text-sm leading-relaxed text-muted-foreground">
+              {renderMaskedNode(children, redEyeEnabled)}
             </p>
           );
         },
         ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
         ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
         li: ({ children, node: _node }) => {
-          const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
           return (
-            <li
-              className={`text-sm leading-relaxed text-muted-foreground ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
-            >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+            <li className="text-sm leading-relaxed text-muted-foreground">
+              {renderMaskedNode(children, redEyeEnabled)}
             </li>
           );
         },
@@ -372,15 +359,9 @@ const MarkdownRenderer: React.FC<{
           <th className="border-b border-border bg-muted px-3 py-2 font-bold">{children}</th>
         ),
         td: ({ children }) => {
-          const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
           return (
-            <td
-              className={`border-b border-border px-3 py-2 align-top ${
-                maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''
-              }`}
-            >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+            <td className="border-b border-border px-3 py-2 align-top">
+              {renderMaskedNode(children, redEyeEnabled)}
             </td>
           );
         },
@@ -581,8 +562,8 @@ export default function MobileGrammarDetailSheet({
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-950 rounded-t-[2rem] z-[61] flex flex-col shadow-2xl overflow-hidden border-t border-border transition-[height] duration-300 ease-out ${
-            isExpanded ? 'h-[92dvh]' : 'h-[50dvh]'
+          className={`fixed bottom-0 left-0 right-0 bg-[#F8F9FA] rounded-t-[2.5rem] z-[61] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] overflow-hidden transition-[height] duration-300 ease-out border-t border-slate-200 ${
+            isExpanded ? 'h-[92dvh]' : 'h-[65dvh]'
           }`}
         >
           {/* Drag Handle + Header */}
@@ -595,167 +576,146 @@ export default function MobileGrammarDetailSheet({
             onClick={() => setIsExpanded(prev => !prev)}
           >
             {/* Pill handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-border" />
+            <div className="w-full pt-4 pb-2 flex justify-center">
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full"></div>
             </div>
 
             {/* Header content */}
             <div
-              className="px-5 pt-3 pb-4 border-b border-border flex items-start justify-between relative z-10"
+              className="px-6 pb-4 flex items-center justify-between border-b border-slate-200 shrink-0"
               onCopy={e => e.preventDefault()}
               onContextMenu={e => e.preventDefault()}
             >
-              <div className="flex-1 min-w-0 pr-3">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-black uppercase">
-                    {grammar.type}
-                  </span>
-                  <span className="text-xs font-bold text-muted-foreground">{grammar.level}</span>
-                </div>
-                <h2 className="text-2xl font-black text-foreground leading-tight mb-2 truncate">
-                  {localizedTitle}
-                </h2>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${status === 'MASTERED' ? 'bg-green-500' : 'bg-amber-500'}`}
-                      style={{ width: `${proficiency}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-muted-foreground shrink-0">
-                    {proficiency}%
-                  </span>
-                </div>
+              <div>
+                  <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase opacity-80">{grammar.type} • {grammar.level || 'Lv.3'}</span>
+                  <h2 className="text-3xl font-black tracking-tight text-slate-900 mt-1">
+                    {localizedTitle}
+                  </h2>
               </div>
+              
               <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="auto"
+                <button
                   onClick={() => setRedEyeEnabled(prev => !prev)}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+                  className={
                     redEyeEnabled
-                      ? 'bg-red-50 border-red-300 text-red-600'
-                      : 'bg-muted border-border text-muted-foreground'
-                  }`}
+                      ? 'w-10 h-10 rounded-[12px] bg-red-50 text-red-500 border border-red-200 flex items-center justify-center shadow-sm transition-all'
+                      : 'w-10 h-10 rounded-[12px] bg-white text-slate-500 border border-slate-200 shadow-sm flex items-center justify-center transition-all scale-105'
+                  }
                 >
-                  {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  onClick={handleToggleStatus}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                    status === 'MASTERED'
-                      ? 'bg-green-100 border-green-500 text-green-600'
-                      : 'bg-muted border-border text-muted-foreground'
-                  }`}
-                >
-                  <Trophy className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="auto"
+                  {redEyeEnabled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+                <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
+                  className="w-10 h-10 rounded-[12px] bg-white border border-slate-200 flex items-center justify-center text-slate-400 active:scale-95 transition-transform"
                 >
                   <X className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Summary — always visible (collapsed & expanded) */}
+          {/* Summary — always visible */}
           <div
-            className="px-5 pt-4 pb-2 shrink-0 select-none"
+            className="px-6 pt-6 pb-2 shrink-0 select-none"
             onClick={() => setIsExpanded(prev => !prev)}
             onCopy={e => e.preventDefault()}
           >
-            <div className="text-sm font-semibold text-muted-foreground leading-relaxed bg-muted/60 px-4 py-3 rounded-2xl border border-border">
-              <Sparkles className="w-3.5 h-3.5 mb-1.5 text-indigo-400 inline-block" />
-              <span className={isExpanded ? '' : 'line-clamp-2'}>{localizedSummary}</span>
+            <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
+              Meaning / 释义
+            </p>
+            <div className="text-[14px] font-bold leading-relaxed text-slate-700">
+              <span className={isExpanded ? '' : 'line-clamp-3'}>{localizedSummary}</span>
             </div>
           </div>
 
           {/* Full content — only visible when expanded */}
           <div
-            className={`flex-1 overflow-y-auto px-5 py-2 space-y-5 select-none print:hidden transition-opacity duration-200 ${
+            className={`flex-1 overflow-y-auto px-6 py-4 space-y-8 select-none print:hidden transition-opacity duration-200 ${
               isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none h-0'
             }`}
             onCopy={e => e.preventDefault()}
             onContextMenu={e => e.preventDefault()}
             onDragStart={e => e.preventDefault()}
           >
-            {/* Explanation */}
-            <div className="grammar-prose prose prose-slate dark:prose-invert max-w-none">
-              <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
-            </div>
-
             {/* Rules */}
             {Object.keys(rulesObject).length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-4">
+              <section>
+                <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
                   {t('grammarDetail.rules')}
-                </h3>
-                <div className="flex flex-wrap gap-3">
+                </p>
+                <div className="flex flex-col gap-3">
                   {Object.entries(rulesObject).map(([key, val]) => (
                     <div
                       key={key}
-                      className="flex items-center bg-card/40 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-2.5 shadow-xl rim-light"
+                      className="bg-white border border-slate-200 rounded-[1.2rem] p-4 flex items-center justify-between text-[13px] font-black tracking-wide shadow-sm"
                     >
-                      <span className="font-black text-xs text-muted-foreground mr-3">{key}</span>
-                      <span className="text-indigo-400 font-black mr-3">→</span>
-                      <span className="font-black text-sm text-foreground">{String(val)}</span>
+                      <span className="text-indigo-600">{key}</span>
+                      <span className="font-bold text-slate-300">+</span>
+                      <span className="text-slate-700">{String(val)}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
             {/* Examples */}
             <div>
-              <h3 className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-4">
+              <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
                 {t('grammarDetail.examples')}
-              </h3>
+              </p>
               <div className="space-y-4">
                 {examples.map((ex, i) => (
                   <div
                     key={i}
-                    className="bg-card/40 backdrop-blur-md border border-white/10 rounded-[2rem] p-5 active:scale-[0.98] active:bg-muted/30 transition-all shadow-xl rim-light grain-overlay"
+                    className="bg-white border border-slate-200 rounded-[1.2rem] p-5 shadow-sm"
                   >
-                    <p className="font-black text-lg text-foreground mb-1 leading-tight tracking-tight italic">
+                    <p className="text-[15px] font-black leading-relaxed mb-2.5 text-slate-800">
                       {ex.kr}
                     </p>
-                    <p className="text-sm text-muted-foreground/80 font-semibold italic">
-                      {getExampleTranslation(ex, language)}
-                    </p>
+                    <div className={`flex items-start space-x-2 ${redEyeEnabled ? 'red-eye-mask red-eye-active' : ''}`}>
+                        <p className="text-[12px] font-medium tracking-wider text-slate-500">
+                            {getExampleTranslation(ex, language)}
+                        </p>
+                    </div>
                   </div>
                 ))}
               </div>
+              <p className="text-[9px] font-bold text-center text-slate-400 mt-4 tracking-widest">
+                  按住模糊区域可临时查看翻译
+              </p>
             </div>
 
+            {localizedExplanation && (
+                <section>
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
+                        Detailed Explanation
+                    </p>
+                    <div className="grammar-prose prose max-w-none text-slate-700 prose-p:my-2 prose-strong:text-indigo-600">
+                        <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
+                    </div>
+                </section>
+            )}
+
             {localizedCustomNote ? (
-              <div>
-                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">
+              <section>
+                <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">
                   {t('grammarDetail.customNote')}
-                </h3>
-                <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap bg-muted border border-border rounded-xl p-4">
+                </p>
+                <div className="text-[13px] font-medium text-slate-600 leading-relaxed whitespace-pre-wrap bg-white border border-slate-200 rounded-[1.2rem] p-4 shadow-sm">
                   {localizedCustomNote}
                 </div>
-              </div>
+              </section>
             ) : null}
+            
+            <div className="h-4"></div>
           </div>
 
           {/* AI Practice input fixed at bottom */}
-          <div className="px-5 py-4 bg-white dark:bg-zinc-950 border-t border-border pb-safe relative z-10">
+          <div className="px-6 py-4 bg-white border-t border-slate-200 pb-safe relative z-10 w-full">
             {aiFeedback && (
               <div
-                className={`mb-4 p-4 rounded-2xl text-sm font-black italic tracking-tight flex items-start gap-3 shadow-xl rim-light ${aiFeedback.isCorrect ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}
+                className={`mb-4 p-4 rounded-[1.2rem] text-sm font-black italic tracking-tight flex items-start gap-3 shadow-sm ${aiFeedback.isCorrect ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}
               >
-                {aiFeedback.isCorrect ? (
-                  <Trophy className="w-5 h-5 shrink-0 mt-0.5 text-emerald-500" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-500" />
-                )}
                 <div>
                   <p className="leading-tight">{aiFeedback.feedback}</p>
                 </div>
@@ -766,7 +726,7 @@ export default function MobileGrammarDetailSheet({
                 value={practiceSentence}
                 onChange={e => setPracticeSentence(e.target.value)}
                 placeholder={t('grammarDetail.practicePlaceholder', { title: localizedTitle })}
-                className="flex-1 h-12 bg-muted/50 border border-white/10 rounded-2xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:bg-card transition-all shadow-inner px-5"
+                className="flex-1 h-12 bg-slate-50 border border-slate-200 rounded-[1.2rem] font-bold tracking-tight text-slate-800 placeholder:text-slate-400 focus:bg-[#FCFCFA] transition-all shadow-inner px-5"
                 onKeyDown={e => e.key === 'Enter' && handleCheck()}
               />
               <Button
@@ -774,8 +734,8 @@ export default function MobileGrammarDetailSheet({
                 disabled={isCheckDisabled}
                 loading={isChecking}
                 loadingText={t('grammarDetail.checking')}
-                loadingIconClassName="w-4 h-4"
-                className="h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-[0_8px_16px_rgba(79,70,229,0.3)] active:translate-y-1 active:shadow-none transition-all rim-light"
+                loadingIconClassName="w-4 h-4 text-emerald-900"
+                className="h-12 px-6 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-[1.2rem] shadow-[0_4px_12px_rgba(16,185,129,0.3)] active:translate-y-1 active:shadow-none transition-all"
               >
                 {t('grammarDetail.check')}
               </Button>

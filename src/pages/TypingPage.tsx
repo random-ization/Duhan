@@ -2004,7 +2004,7 @@ const DesktopTypingPage: React.FC = () => {
   if (gameState === 'lobby') {
     return (
       <TypingLobby
-        onBack={() => navigate('/practice')}
+        onBack={() => navigate('/courses')}
         onStartWord={handleStartWord}
         onStartSentence={handleStartSentence}
         onStartParagraph={handleStartParagraph}

@@ -11,6 +11,7 @@ import { createServer } from 'node:http';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Beasties from 'beasties';
 import {
   DEFAULT_LANGUAGE,
   PUBLIC_ROUTES as BASE_PUBLIC_ROUTES,
@@ -1649,13 +1650,44 @@ async function preRenderRoutes() {
   const context = browser ? await browser.newContext() : null;
   const page = context ? await context.newPage() : null;
 
+  // Beasties inlines the subset of each stylesheet that the prerendered HTML
+  // actually uses, and rewrites the remaining <link rel=stylesheet> tags to
+  // async-load. One shared instance is safe: `process(html)` is stateless
+  // with `pruneSource: false`. `publicPath: '/'` maps href="/assets/*.css"
+  // to `${DIST_DIR}/assets/*.css`.
+  const beasties = new Beasties({
+    path: DIST_DIR,
+    publicPath: '/',
+    logLevel: 'silent',
+    preload: 'swap',
+    pruneSource: false,
+    inlineFonts: false,
+    mergeStylesheets: true,
+  });
+
   let successCount = 0;
+  let inlineBytesSaved = 0;
+  let inlineBytesAdded = 0;
 
   for (const route of routesToRender) {
     try {
       console.log(`📄 Pre-rendering: ${route.path}`);
       const renderedHtml = await renderRouteHtml(page, origin, route, baseHtml);
       const html = normalizeSeoHtml(renderedHtml, route);
+
+      // Inline the critical CSS subset actually referenced by this route's
+      // SSG'd DOM. Non-critical selectors stay in the async-swapped sheet.
+      let finalHtml = html;
+      try {
+        const beforeBytes = Buffer.byteLength(html, 'utf-8');
+        finalHtml = await beasties.process(html);
+        const afterBytes = Buffer.byteLength(finalHtml, 'utf-8');
+        inlineBytesAdded += Math.max(0, afterBytes - beforeBytes);
+      } catch (err) {
+        // Beasties failure shouldn't block deploy — fall back to the
+        // un-inlined HTML so the page still ships.
+        console.warn(`   ⚠️  Beasties skipped for ${route.path}: ${err.message}`);
+      }
 
       // Determine output path
       const routePath = route.path.slice(1); // Remove leading slash
@@ -1664,7 +1696,7 @@ async function preRenderRoutes() {
       const outputPath = join(routeDir, 'index.html');
 
       // Write the pre-rendered HTML
-      writeFileSync(outputPath, html, 'utf-8');
+      writeFileSync(outputPath, finalHtml, 'utf-8');
       console.log(`   ✅ Generated: ${outputPath.replace(DIST_DIR, 'dist')}\n`);
       successCount++;
     } catch (error) {
@@ -1672,6 +1704,11 @@ async function preRenderRoutes() {
       console.error('');
     }
   }
+
+  // Signal unused var so ESLint doesn't flag; used in case we later compute
+  // deferred-CSS savings by diffing the old vs new <link> tag set.
+  void inlineBytesSaved;
+  void inlineBytesAdded;
 
   if (page) await page.close();
   if (context) await context.close();

@@ -169,7 +169,7 @@ export const migrateAudioToSpaces = action({
           const contentType = sourceRes.headers.get('content-type') ?? 'audio/mpeg';
           const filename = buildFilename(sourceUrl, contentType, `${args.table}-${item.id}`);
           const key = `audio/${args.table}/${item.id}-${filename}`;
-          const presigned = createPresignedUploadUrl({
+          const presigned = await createPresignedUploadUrl({
             filename,
             contentType,
             folder: 'audio',

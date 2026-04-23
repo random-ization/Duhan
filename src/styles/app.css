@@ -1,0 +1,17 @@
+/**
+ * Authenticated-app stylesheet.
+ *
+ * Imported by `src/components/layout/AppLayout.tsx`, which is itself
+ * lazy-loaded via `React.lazy()` in `src/routes.tsx`. Vite automatically
+ * code-splits this CSS into AppLayout's chunk, so it is only fetched
+ * after the user reaches an authenticated route — it does NOT ship with
+ * the landing / auth / legal / pricing / learn pages.
+ *
+ * Base tokens, @theme definitions and global helpers live in
+ * `src/index.css`, which is loaded on every page via `src/index.tsx`.
+ * Here we only pull in Tailwind utilities (scanning the whole `src/`)
+ * plus plugins that authed pages need.
+ */
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@custom-variant dark (&:where(.dark, .dark *));

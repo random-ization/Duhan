@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileMediaPage } from '../components/mobile/MobileMediaPage';
+import { ContentSkeleton } from '../components/common';
 import { NEWS, READING_BOOKS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,6 +24,12 @@ import {
   normalizeReadingDifficultyFilter,
   resolvePictureBookLevelFilter,
 } from '../utils/readingDiscoveryFilters';
+
+const LazyMobileMediaPage = lazy(() =>
+  import('../components/mobile/MobileMediaPage').then(module => ({
+    default: module.MobileMediaPage,
+  }))
+);
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -574,7 +580,11 @@ export default function ReadingDiscoveryPage() {
   }, [featuredArticles, language, t]);
 
   if (isMobile) {
-    return <MobileMediaPage />;
+    return (
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileMediaPage />
+      </Suspense>
+    );
   }
 
   return (

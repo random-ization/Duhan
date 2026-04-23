@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { Play, Library, Search, Disc, History as HistoryIcon, ArrowLeft } from 'lucide-react';
 import { useAction, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,11 +14,13 @@ import { getLabel, getLabels, Labels } from '../utils/i18n';
 import { NoArgs, aRef, qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobilePodcastDashboard } from '../components/mobile/MobilePodcastDashboard';
+import { ContentSkeleton } from '../components/common';
 import { buildPodcastChannelPath, buildPodcastSearchPath } from '../utils/podcastRoutes';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import { formatSafeDateLabel } from '../utils/dateLabel';
 import type { Language } from '../types';
+
+const LazyMobilePodcastDashboard = lazy(() => import('../components/mobile/MobilePodcastDashboard'));
 
 interface PodcastChannel {
   _id?: string;
@@ -1147,7 +1149,11 @@ export default function PodcastDashboard() {
 
   // Mobile View (after all hooks)
   if (isMobile) {
-    return <MobilePodcastDashboard />;
+    return (
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobilePodcastDashboard />
+      </Suspense>
+    );
   }
 
   return (

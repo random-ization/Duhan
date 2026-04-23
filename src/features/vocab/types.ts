@@ -24,6 +24,7 @@ export interface VocabSettings {
     random: boolean;
     cardFront: 'KOREAN' | 'NATIVE';
     autoTTS: boolean;
+    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
   };
   learn: {
     batchSize: number;

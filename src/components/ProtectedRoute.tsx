@@ -1,12 +1,23 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
-import { useConvexAuth } from 'convex/react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Loading } from './common/Loading';
 import { ensureLocaleNamespaces } from '../utils/i18nNamespaceLoader';
 import { DEFAULT_LANGUAGE, isValidLanguage } from './LanguageRouter';
+
+// NOTE: We used to call `useConvexAuth()` directly here. That pulled
+// `convex/react` into the entry chunk because `routes.tsx` imports
+// `ProtectedRoute` statically. We now derive the same signals from
+// `useAuth()`:
+//   - `loading`  = Convex session loading OR viewer doc loading
+//   - `user`     = the resolved viewer (or null if signed out / stale)
+// The Convex-backed `useAuth()` value is only provided once a user
+// actually navigates to an authed route (via the lazy
+// `AuthedAppProviders` chunk); on public routes `PublicAuthProvider`
+// supplies `{ loading: false, user: null }` so this component simply
+// redirects to /auth without any Convex code being loaded.
 
 interface ProtectedRouteProps {
   requireAdmin?: boolean;
@@ -31,8 +42,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const { lang } = useParams<{ lang: string }>();
   const { t } = useTranslation();
-  const { isLoading, isAuthenticated } = useConvexAuth();
-  const { user, loading: userDataLoading, language } = useAuth();
+  const { user, loading, language } = useAuth();
+  // Once `loading` has settled, a truthy `user` means the Convex session
+  // resolved to a valid viewer. On public pages `PublicAuthProvider` always
+  // reports `user === null`, so we fall through to the redirect below.
+  const isAuthenticated = !loading && user !== null;
   useQuery({
     queryKey: ['i18n', 'namespace', 'app', language],
     queryFn: () => ensureLocaleNamespaces(language, ['app']),
@@ -48,8 +62,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // }, [sessionExpired, isLoading, userDataLoading]);
 
   // Step 1: ANY loading state = show loading, DO NOT redirect
-  // This is CRITICAL to avoid the race condition
-  if (isLoading || userDataLoading) {
+  // This is CRITICAL to avoid the race condition. `loading` is already
+  // the AuthContext-combined flag: session loading OR viewer-doc loading.
+  if (loading) {
     return (
       <Loading fullScreen size="lg" text={t('common.loading', { defaultValue: 'Loading...' })} />
     );

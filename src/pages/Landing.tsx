@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, Navigate } from 'react-router-dom';
-import { useConvexAuth, useAction } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
+// Landing used to depend on `convex/react` + `convex/_generated/api` for
+// two things: `useConvexAuth()` (to redirect signed-in visitors to
+// /dashboard) and `useAction(api.lemonsqueezy.getVariantPrices)` (to
+// fetch live pricing). Both pulled the ~25 kB gz `vendor-convex`
+// chunk + spun up a WebSocket on every visit. We replace them with a
+// synchronous localStorage token probe and a direct HTTP POST, so no
+// pre-auth page preloads Convex anymore.
+import { callPublicConvexAction, hasConvexAuthToken } from '../utils/publicConvexClient';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { trackEvent } from '../utils/analytics';
 import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
@@ -35,7 +41,11 @@ import {
   SkipForward,
   X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+// LazyMotion + `m` uses framer-motion's mini bundle (no full motion engine
+// shipped to the landing page). Since Landing only needs DOM CSS transitions
+// (no drag / layout animations / AnimatePresence), `domAnimation` is enough.
+// This cuts ~20–25 kB gzip off the landing-page JS bundle.
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { Button } from '../components/ui';
 
 type PricePlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
@@ -569,46 +579,46 @@ const LandingStats = () => {
 
   return (
     <div className="border-y border-slate-200 bg-white py-8 md:py-12">
-      <motion.div
+      <m.div
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
         variants={staggerContainer}
         className="max-w-6xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8"
       >
-        <motion.div variants={fadeInUp} className="text-center">
+        <m.div variants={fadeInUp} className="text-center">
           <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.topikCoverageValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.topikCoverageLabel')}
           </div>
-        </motion.div>
-        <motion.div variants={fadeInUp} className="text-center">
+        </m.div>
+        <m.div variants={fadeInUp} className="text-center">
           <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.aiValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.aiLabel')}
           </div>
-        </motion.div>
-        <motion.div variants={fadeInUp} className="text-center">
+        </m.div>
+        <m.div variants={fadeInUp} className="text-center">
           <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.fsrsValue')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.fsrsLabel')}
           </div>
-        </motion.div>
-        <motion.div variants={fadeInUp} className="text-center">
+        </m.div>
+        <m.div variants={fadeInUp} className="text-center">
           <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
             {t('landing.stats.levelRange')}
           </div>
           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             {t('landing.stats.levelSupportLabel')}
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </div>
   );
 };
@@ -619,21 +629,21 @@ const LandingTopik = () => {
   return (
     <section id="topik" className="py-16 md:py-32 overflow-hidden bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
           className="md:w-1/2 relative z-10"
         >
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-200 rounded-lg font-bold text-sm mb-6"
           >
             <Trophy className="w-4 h-4" />
             {t('landing.topik.badge')}
-          </motion.div>
-          <motion.h2
+          </m.div>
+          <m.h2
             variants={fadeInUp}
             className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
           >
@@ -642,12 +652,12 @@ const LandingTopik = () => {
             <span className="text-emerald-600 dark:text-emerald-300">
               {t('landing.topik.titleHighlight')}
             </span>
-          </motion.h2>
-          <motion.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
+          </m.h2>
+          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
             {t('landing.topik.desc')}
-          </motion.p>
-          <motion.ul variants={staggerContainer} className="space-y-4 mb-8">
-            <motion.li variants={fadeInUp} className="flex items-start gap-4">
+          </m.p>
+          <m.ul variants={staggerContainer} className="space-y-4 mb-8">
+            <m.li variants={fadeInUp} className="flex items-start gap-4">
               <div className="bg-emerald-100 dark:bg-emerald-400/15 p-2 rounded-lg text-emerald-600 dark:text-emerald-200 mt-1">
                 <Check className="w-4 h-4" />
               </div>
@@ -655,8 +665,8 @@ const LandingTopik = () => {
                 <h3 className="font-bold text-slate-900">{t('landing.topik.point1Title')}</h3>
                 <p className="text-sm text-slate-500">{t('landing.topik.point1Desc')}</p>
               </div>
-            </motion.li>
-            <motion.li variants={fadeInUp} className="flex items-start gap-4">
+            </m.li>
+            <m.li variants={fadeInUp} className="flex items-start gap-4">
               <div className="bg-emerald-100 dark:bg-emerald-400/15 p-2 rounded-lg text-emerald-600 dark:text-emerald-200 mt-1">
                 <BarChart3 className="w-4 h-4" />
               </div>
@@ -664,11 +674,11 @@ const LandingTopik = () => {
                 <h3 className="font-bold text-slate-900">{t('landing.topik.point2Title')}</h3>
                 <p className="text-sm text-slate-500">{t('landing.topik.point2Desc')}</p>
               </div>
-            </motion.li>
-          </motion.ul>
-        </motion.div>
+            </m.li>
+          </m.ul>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, x: 50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-100px' }}
@@ -745,7 +755,7 @@ const LandingTopik = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
@@ -757,21 +767,21 @@ const LandingFsrs = () => {
   return (
     <section id="fsrs" className="py-16 md:py-32 bg-slate-50 relative border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20">
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
           className="md:w-1/2"
         >
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className="inline-flex items-center gap-2 px-3 py-1 bg-brand-yellow/30 dark:bg-amber-300/20 text-slate-900 rounded-lg font-bold text-sm mb-6"
           >
             <BrainCircuit className="w-4 h-4" />
             {t('landing.fsrs.badge')}
-          </motion.div>
-          <motion.h2
+          </m.div>
+          <m.h2
             variants={fadeInUp}
             className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight"
           >
@@ -780,11 +790,11 @@ const LandingFsrs = () => {
             <span className="text-brand-yellow dark:text-amber-300 drop-shadow-sm">
               {t('landing.fsrs.titleHighlight')}
             </span>
-          </motion.h2>
-          <motion.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
+          </m.h2>
+          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
             {t('landing.fsrs.desc')}
-          </motion.p>
-          <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-6">
+          </m.p>
+          <m.div variants={fadeInUp} className="grid grid-cols-2 gap-6">
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
               <div className="text-3xl font-bold text-slate-900 mb-1">
                 {t('landing.fsrs.stat1Value')}
@@ -797,10 +807,10 @@ const LandingFsrs = () => {
               </div>
               <div className="text-sm font-bold text-slate-500">{t('landing.fsrs.stat2Label')}</div>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, x: -50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-100px' }}
@@ -869,7 +879,7 @@ const LandingFsrs = () => {
             </div>
             <div className="absolute top-4 left-4 w-full h-full bg-brand-yellow/30 dark:bg-amber-300/20 rounded-2xl border-2 border-black -z-10 transform rotate-2" />
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
@@ -881,21 +891,21 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
   return (
     <section id="ai" className="py-16 md:py-32 bg-white border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
           className="md:w-1/2"
         >
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-200 rounded-lg font-bold text-sm mb-6"
           >
             <Sparkles className="w-4 h-4" />
             {t('landing.ai.badge')}
-          </motion.div>
-          <motion.h2
+          </m.div>
+          <m.h2
             variants={fadeInUp}
             className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
           >
@@ -904,11 +914,11 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
             <span className="text-violet-600 dark:text-violet-300">
               {t('landing.ai.titleHighlight')}
             </span>
-          </motion.h2>
-          <motion.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
+          </m.h2>
+          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
             {t('landing.ai.desc')}
-          </motion.p>
-          <motion.div
+          </m.p>
+          <m.div
             variants={fadeInUp}
             className="bg-slate-50 p-6 rounded-2xl border border-slate-200"
           >
@@ -930,10 +940,10 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
                 {t('landing.ai.feature4')}
               </span>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, x: 50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-100px' }}
@@ -972,7 +982,7 @@ const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
@@ -991,7 +1001,7 @@ const LandingToolbox = ({
     <section className="py-16 md:py-24 px-4 md:px-6 relative overflow-hidden bg-white text-slate-900">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <motion.h2
+          <m.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -999,8 +1009,8 @@ const LandingToolbox = ({
             className="text-4xl md:text-7xl font-heading font-extrabold tracking-tight mb-5"
           >
             {t('landing.toolbox.title')}
-          </motion.h2>
-          <motion.p
+          </m.h2>
+          <m.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1008,10 +1018,10 @@ const LandingToolbox = ({
             className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto"
           >
             {t('landing.toolbox.subtitle')}
-          </motion.p>
+          </m.p>
         </div>
 
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
@@ -1019,7 +1029,7 @@ const LandingToolbox = ({
           className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start"
         >
           {/* Card 1: PDF */}
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-amber-400 dark:hover:border-amber-300 hover:bg-slate-50 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
               expandedFeatureCards.pdf
@@ -1164,10 +1174,10 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* Card 2: Podcast */}
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className={`group rounded-3xl border transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm bg-gradient-to-b from-pink-50/80 via-white to-white dark:from-pink-400/10 dark:via-white dark:to-white border-pink-300/60 dark:border-pink-300/35 hover:border-pink-400 dark:hover:border-pink-200 ${
               expandedFeatureCards.podcast
@@ -1299,10 +1309,10 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* Card 3: Video */}
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className={`group rounded-3xl border transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm bg-gradient-to-b from-violet-50/80 via-white to-white dark:from-violet-400/10 dark:via-white dark:to-white border-violet-300/60 dark:border-violet-300/35 hover:border-violet-400 dark:hover:border-violet-200 ${
               expandedFeatureCards.video
@@ -1426,8 +1436,8 @@ const LandingToolbox = ({
                 </div>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
     </section>
   );
@@ -1439,7 +1449,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
   return (
     <section className="py-16 md:py-24 bg-white relative overflow-hidden">
       {/* Background Blobs */}
-      <motion.div
+      <m.div
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -1451,7 +1461,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
         }}
         className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 dark:bg-blue-400/12 rounded-full blur-3xl opacity-50 pointer-events-none"
       />
-      <motion.div
+      <m.div
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -1468,22 +1478,22 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
           {/* Left Content */}
-          <motion.div
+          <m.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-100px' }}
             variants={staggerContainer}
             className="lg:w-1/2 space-y-8 text-left"
           >
-            <motion.div
+            <m.div
               variants={fadeInUp}
               className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-300/30"
             >
               <span className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-300 animate-pulse" />
               {t('landing.typing.badge')}
-            </motion.div>
+            </m.div>
 
-            <motion.h2
+            <m.h2
               variants={fadeInUp}
               className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight"
             >
@@ -1492,17 +1502,17 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-300 dark:to-cyan-300">
                 {t('landing.typing.titleHighlight')}
               </span>
-            </motion.h2>
+            </m.h2>
 
-            <motion.p
+            <m.p
               variants={fadeInUp}
               className="text-lg text-slate-500 leading-relaxed max-w-xl"
             >
               {t('landing.typing.desc')}
-            </motion.p>
+            </m.p>
 
-            <motion.div variants={staggerContainer} className="space-y-4">
-              <motion.div variants={fadeInUp} className="flex items-start gap-3">
+            <m.div variants={staggerContainer} className="space-y-4">
+              <m.div variants={fadeInUp} className="flex items-start gap-3">
                 <div className="mt-1 w-5 h-5 rounded-full bg-green-100 dark:bg-emerald-400/15 flex items-center justify-center text-green-600 dark:text-emerald-200 flex-shrink-0">
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </div>
@@ -1512,8 +1522,8 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
                   </h3>
                   <p className="text-slate-500 text-sm">{t('landing.typing.feature1Desc')}</p>
                 </div>
-              </motion.div>
-              <motion.div variants={fadeInUp} className="flex items-start gap-3">
+              </m.div>
+              <m.div variants={fadeInUp} className="flex items-start gap-3">
                 <div className="mt-1 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-400/15 flex items-center justify-center text-blue-600 dark:text-blue-200 flex-shrink-0">
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </div>
@@ -1523,11 +1533,11 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
                   </h3>
                   <p className="text-slate-500 text-sm">{t('landing.typing.feature2Desc')}</p>
                 </div>
-              </motion.div>
-            </motion.div>
+              </m.div>
+            </m.div>
 
-            <motion.div variants={fadeInUp} className="pt-4">
-              <motion.button
+            <m.div variants={fadeInUp} className="pt-4">
+              <m.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/learn?module=typing')}
@@ -1535,12 +1545,12 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
               >
                 <span>{t('landing.typing.cta')}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-            </motion.div>
-          </motion.div>
+              </m.button>
+            </m.div>
+          </m.div>
 
           {/* Right Preview */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: '-100px' }}
@@ -1644,7 +1654,7 @@ const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
               </div>
             </div>
             <div className="absolute -z-10 top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100/30 via-transparent to-purple-100/30 dark:from-blue-400/12 dark:to-violet-400/12 rounded-full blur-3xl" />
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </section>
@@ -1705,7 +1715,7 @@ const LandingPricing = ({
     <section id="pricing" className="py-16 md:py-32 bg-[#F8FAFF]">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="text-center mb-10 md:mb-16">
-          <motion.h2
+          <m.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1713,8 +1723,8 @@ const LandingPricing = ({
             className="text-3xl md:text-4xl font-heading font-bold mb-4"
           >
             {t('landing.pricing.title')}
-          </motion.h2>
-          <motion.p
+          </m.h2>
+          <m.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1722,11 +1732,11 @@ const LandingPricing = ({
             className="text-slate-600"
           >
             {t('landing.pricing.subtitle')}
-          </motion.p>
+          </m.p>
         </div>
 
         {showLocalizedPromo && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1769,17 +1779,17 @@ const LandingPricing = ({
             >
               {t('pricingDetails.promo.card.cta')}
             </Button>
-          </motion.div>
+          </m.div>
         )}
 
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center"
         >
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
           >
@@ -1808,9 +1818,9 @@ const LandingPricing = ({
             >
               {t('landing.pricing.free.cta')}
             </Button>
-          </motion.div>
+          </m.div>
 
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className={`p-8 text-white rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-brand-yellow overflow-hidden ${
               showLocalizedPromo ? 'bg-[#0B2545]' : 'bg-slate-900'
@@ -1866,7 +1876,7 @@ const LandingPricing = ({
               ))}
             </ul>
 
-            <motion.button
+            <m.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() =>
@@ -1885,10 +1895,10 @@ const LandingPricing = ({
               {showLocalizedPromo
                 ? t('pricingDetails.promo.subscribe')
                 : t('landing.pricing.pro.cta')}
-            </motion.button>
-          </motion.div>
+            </m.button>
+          </m.div>
 
-          <motion.div
+          <m.div
             variants={fadeInUp}
             className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
           >
@@ -1925,10 +1935,10 @@ const LandingPricing = ({
             >
               {t('landing.pricing.lifetime.cta')}
             </Button>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -1970,7 +1980,7 @@ const LandingPricing = ({
               </div>
             ))}
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
@@ -1982,7 +1992,7 @@ const LandingFaq = () => {
   return (
     <section id="faq" className="py-24 bg-slate-50 border-t border-slate-200">
       <div className="max-w-3xl mx-auto px-6">
-        <motion.h2
+        <m.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -1990,15 +2000,15 @@ const LandingFaq = () => {
           className="text-3xl font-heading font-bold mb-12 text-center"
         >
           {t('landing.faq.title')}
-        </motion.h2>
-        <motion.div
+        </m.h2>
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={staggerContainer}
           className="space-y-6"
         >
-          <motion.details
+          <m.details
             variants={fadeInUp}
             className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
           >
@@ -2007,8 +2017,8 @@ const LandingFaq = () => {
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a1')}</p>
-          </motion.details>
-          <motion.details
+          </m.details>
+          <m.details
             variants={fadeInUp}
             className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
           >
@@ -2017,8 +2027,8 @@ const LandingFaq = () => {
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a2')}</p>
-          </motion.details>
-          <motion.details
+          </m.details>
+          <m.details
             variants={fadeInUp}
             className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
           >
@@ -2027,8 +2037,8 @@ const LandingFaq = () => {
               <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a3')}</p>
-          </motion.details>
-        </motion.div>
+          </m.details>
+        </m.div>
       </div>
     </section>
   );
@@ -2064,7 +2074,7 @@ const LandingGuidesCluster = () => {
   return (
     <section id="guides" className="py-20 bg-white border-t border-slate-200">
       <div className="max-w-6xl mx-auto px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -2082,9 +2092,9 @@ const LandingGuidesCluster = () => {
                 'Build your roadmap with SEO-optimized guide pages for TOPIK, vocabulary, grammar, and writing.',
             })}
           </p>
-        </motion.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
@@ -2092,7 +2102,7 @@ const LandingGuidesCluster = () => {
           className="mt-8 grid gap-4 md:grid-cols-3"
         >
           {guideLinks.map(guide => (
-            <motion.article
+            <m.article
               key={guide.to}
               variants={fadeInUp}
               className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
@@ -2106,9 +2116,9 @@ const LandingGuidesCluster = () => {
                 {t('landing.guides.readMore', { defaultValue: 'Read guide' })}
                 <ArrowRight className="h-4 w-4" />
               </LocalizedLink>
-            </motion.article>
+            </m.article>
           ))}
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
@@ -2159,7 +2169,10 @@ export default function Landing() {
   const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  const { isLoading: authLoading, isAuthenticated } = useConvexAuth();
+  // Synchronous probe replaces `useConvexAuth()`: reads only localStorage
+  // so no Convex module or WebSocket is loaded. If the probe is wrong
+  // (stale token), /dashboard will re-validate and bounce back to /login.
+  const hasAuthToken = React.useMemo(() => hasConvexAuthToken(), []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [shouldLoadPrices, setShouldLoadPrices] = useState(false);
   const isScrolled = useLandingScroll();
@@ -2167,7 +2180,6 @@ export default function Landing() {
 
   // Dynamic Pricing for Landing
   const [prices, setPrices] = useState<VariantPrices | null>(null);
-  const getPrices = useAction(api.lemonsqueezy.getVariantPrices);
 
   useEffect(() => {
     if (shouldLoadPrices) {
@@ -2238,10 +2250,25 @@ export default function Landing() {
       return;
     }
 
-    runConvexActionWithRetry(getPrices, {}, { retries: 2, initialDelayMs: 300 })
-      .then(setPrices)
-      .catch(console.error);
-  }, [getPrices, shouldLoadPrices]);
+    const controller = new AbortController();
+    runConvexActionWithRetry(
+      () =>
+        callPublicConvexAction<Record<string, never>, VariantPrices>(
+          'lemonsqueezy:getVariantPrices',
+          {},
+          { signal: controller.signal }
+        ),
+      undefined,
+      { retries: 2, initialDelayMs: 300 }
+    )
+      .then(result => setPrices(result))
+      .catch(err => {
+        if ((err as { name?: string } | null)?.name === 'AbortError') return;
+        console.error(err);
+      });
+
+    return () => controller.abort();
+  }, [shouldLoadPrices]);
 
   // Condition return AFTER hooks
   const meta = getRouteMeta(location.pathname);
@@ -2266,66 +2293,75 @@ export default function Landing() {
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
 
-  if (!authLoading && isAuthenticated) {
+  // If the visitor has a Convex Auth token stashed in localStorage, fast-path
+  // them to the dashboard. /dashboard re-validates the token server-side and
+  // will redirect to /login if it's stale, so a false positive here is safe.
+  if (hasAuthToken) {
     return <Navigate to="dashboard" replace />;
   }
 
   return (
-    <div className="min-h-screen font-landing antialiased text-slate-900 overflow-x-hidden bg-[#FAFAFA] selection:bg-brand-yellow dark:selection:bg-amber-300 selection:text-black">
-      <Seo
-        title={localizedSeoTitle}
-        description={localizedSeoDescription}
-        keywords={localizedSeoKeywords}
-        noIndex={meta.noIndex}
-      />
-      <LandingJsonLd
-        description={localizedSeoDescription}
-        prices={prices}
-        faqItems={faqItems}
-        language={normalizedLanguage}
-        canonicalUrl={canonicalUrl}
-        featuredGuidesListName={featuredGuidesListName}
-      />
-      <LandingNav
-        isScrolled={isScrolled}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-      />
-
-      <LandingHero />
-      <LandingStats />
-
-      <main className="space-y-0">
-        <LandingTopik />
-        <div className="w-full h-px bg-slate-50" />
-        <LandingFsrs />
-        <div className="w-full h-px bg-slate-50" />
-        <LandingAi userAvatar={DEMO_ASSETS.userAvatar} />
-        <div className="w-full h-px bg-slate-50" />
-
-        <LandingTyping navigate={navigate} />
-        <div className="w-full h-px bg-slate-50" />
-
-        <LandingToolbox
-          expandedFeatureCards={expandedFeatureCards}
-          toggleFeatureCard={toggleFeatureCard}
+    // LazyMotion with the `domAnimation` feature set enables all `m.*` tags
+    // used across this page (opacity / transform / scale transitions, hover/
+    // tap gestures, viewport-triggered animations). Landing does not use
+    // drag, layout, or AnimatePresence, so we intentionally skip `domMax`.
+    <LazyMotion features={domAnimation} strict>
+      <div className="min-h-screen font-landing antialiased text-slate-900 overflow-x-hidden bg-[#FAFAFA] selection:bg-brand-yellow dark:selection:bg-amber-300 selection:text-black">
+        <Seo
+          title={localizedSeoTitle}
+          description={localizedSeoDescription}
+          keywords={localizedSeoKeywords}
+          noIndex={meta.noIndex}
         />
-        <div className="w-full h-px bg-slate-50" />
-
-        <LandingPricing
-          showLocalizedPromo={showLocalizedPromo}
-          navigate={navigate}
+        <LandingJsonLd
+          description={localizedSeoDescription}
           prices={prices}
+          faqItems={faqItems}
+          language={normalizedLanguage}
+          canonicalUrl={canonicalUrl}
+          featuredGuidesListName={featuredGuidesListName}
         />
-        <div className="w-full h-px bg-slate-50" />
+        <LandingNav
+          isScrolled={isScrolled}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
 
-        <LandingGuidesCluster />
-        <div className="w-full h-px bg-slate-50" />
+        <LandingHero />
+        <LandingStats />
 
-        <LandingFaq />
+        <main className="space-y-0">
+          <LandingTopik />
+          <div className="w-full h-px bg-slate-50" />
+          <LandingFsrs />
+          <div className="w-full h-px bg-slate-50" />
+          <LandingAi userAvatar={DEMO_ASSETS.userAvatar} />
+          <div className="w-full h-px bg-slate-50" />
 
-        <LandingFooter />
-      </main>
-    </div>
+          <LandingTyping navigate={navigate} />
+          <div className="w-full h-px bg-slate-50" />
+
+          <LandingToolbox
+            expandedFeatureCards={expandedFeatureCards}
+            toggleFeatureCard={toggleFeatureCard}
+          />
+          <div className="w-full h-px bg-slate-50" />
+
+          <LandingPricing
+            showLocalizedPromo={showLocalizedPromo}
+            navigate={navigate}
+            prices={prices}
+          />
+          <div className="w-full h-px bg-slate-50" />
+
+          <LandingGuidesCluster />
+          <div className="w-full h-px bg-slate-50" />
+
+          <LandingFaq />
+
+          <LandingFooter />
+        </main>
+      </div>
+    </LazyMotion>
   );
 }

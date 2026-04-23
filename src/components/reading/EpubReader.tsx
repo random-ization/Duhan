@@ -5,7 +5,9 @@ import { READING_LIBRARY } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ChevronLeft, Settings, X, BookOpen } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Settings, X, BookOpen, Eye, List, Lock } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Slider } from '../ui/slider';
 import { logError, logInfo } from '../../utils/logger';
 
 type ReaderTheme = 'light' | 'dark' | 'sepia';
@@ -44,7 +46,25 @@ export const EpubReader: React.FC = () => {
   const bookId = bookDetail?.book?._id;
   const currentChapter = bookDetail?.userProgress?.chapterIndex ?? 0;
 
-  const epubUrl = bookDetail?.epubUrl;
+  const epubUrl = bookDetail?.epubUrl ? 
+    (() => {
+      // Extract object key from various URL formats
+      const originalUrl = bookDetail.epubUrl;
+      logInfo('EPUB URL transformation', { originalUrl });
+      
+      const url = new URL(originalUrl);
+      // Get the pathname and remove leading slash
+      const objectKey = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+      const proxyUrl = `/epub?key=${encodeURIComponent(objectKey)}`;
+      
+      logInfo('EPUB proxy URL constructed', { 
+        objectKey, 
+        proxyUrl 
+      });
+      
+      return proxyUrl;
+    })() : 
+    undefined;
 
   // Debug logging
   useEffect(() => {

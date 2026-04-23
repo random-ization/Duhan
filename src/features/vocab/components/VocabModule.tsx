@@ -14,6 +14,7 @@ import { shuffleArray } from '../utils';
 import { logger } from '../../../utils/logger';
 import { Button } from '../../../components/ui';
 import { Select } from '../../../components/ui';
+import { useGlobalSettings } from '../../../hooks/useGlobalSettings';
 
 interface VocabModuleProps {
   course: CourseSelection;
@@ -38,6 +39,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
 }) => {
   const { logActivity } = useActivityLogger();
   const labels = getLabels(language);
+  const { settings: globalSettings, updateSettings: updateGlobalSettings } = useGlobalSettings();
 
   // Helper function to get custom list title
   const getCustomListTitle = (
@@ -59,12 +61,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
   const [sessionStartTime, setSessionStartTime] = useState<number>(() => Date.now());
 
   // Settings
-  const [settings, setSettings] = useState<VocabSettings>({
+  const [localSettings, setLocalSettings] = useState<VocabSettings>({
     flashcard: {
       batchSize: 20,
       random: false,
       cardFront: 'KOREAN',
       autoTTS: true,
+      ratingMode: 'PASS_FAIL',
     },
     learn: {
       batchSize: 20,
@@ -80,6 +83,24 @@ const VocabModule: React.FC<VocabModuleProps> = ({
       },
     },
   });
+
+  const settings = useMemo<VocabSettings>(
+    () => ({
+      ...localSettings,
+      flashcard: {
+        ...localSettings.flashcard,
+        autoTTS: globalSettings.flashcardAutoTTS,
+        cardFront: globalSettings.flashcardFront,
+        ratingMode: globalSettings.flashcardRatingMode,
+      },
+    }),
+    [
+      globalSettings.flashcardAutoTTS,
+      globalSettings.flashcardFront,
+      globalSettings.flashcardRatingMode,
+      localSettings,
+    ]
+  );
 
   // Derived Words (sync parsing)
   const parsedWords = useMemo(() => {
@@ -292,6 +313,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
               language={language}
               onComplete={handleSessionComplete}
               onSaveWord={onSaveWord}
+              onUpdateFlashcardSettings={nextSettings => {
+                void updateGlobalSettings({
+                  flashcardAutoTTS: nextSettings.autoTTS,
+                  flashcardFront: nextSettings.cardFront,
+                  flashcardRatingMode: nextSettings.ratingMode,
+                });
+              }}
             />
           )}
 
@@ -320,8 +348,13 @@ const VocabModule: React.FC<VocabModuleProps> = ({
         initialTab={viewMode === 'LEARN' ? 'LEARN' : 'FLASHCARD'}
         onClose={() => setShowSettings(false)}
         onUpdate={newSettings => {
-          setSettings(newSettings);
+          setLocalSettings(newSettings);
           setIsSessionComplete(false); // Reset session when settings change
+          void updateGlobalSettings({
+            flashcardAutoTTS: newSettings.flashcard.autoTTS,
+            flashcardFront: newSettings.flashcard.cardFront,
+            flashcardRatingMode: newSettings.flashcard.ratingMode,
+          });
         }}
       />
     </div>

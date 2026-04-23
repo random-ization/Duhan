@@ -12,7 +12,7 @@ import {
   Volume2,
   X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
@@ -23,6 +23,7 @@ import { VocabBookListenSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import { useGlobalSettings } from '../hooks/useGlobalSettings';
 import { buildVocabBookPath } from '../utils/vocabBookRoutes';
 import {
   matchesVocabBookPracticeCategory,
@@ -156,15 +157,24 @@ const VocabBookListenPage: React.FC = () => {
   const [mode, setMode] = useState<ListenMode>(() => persistedState?.mode ?? 'BASIC');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [playMeaning, setPlayMeaning] = useState(() => persistedState?.playMeaning ?? true);
-  const [playExampleTranslation, setPlayExampleTranslation] = useState(
-    () => persistedState?.playExampleTranslation ?? true
-  );
+  const { settings, updateSettings } = useGlobalSettings();
+  const playMeaning = settings.listenPlayMeaning;
+  const playExampleTranslation = settings.listenPlayExampleTranslation;
+  const repeatCount = settings.audioRepeatCount;
+  const speed = settings.audioSpeed;
 
-  const [repeatCount, setRepeatCount] = useState<1 | 2 | 3 | 'INFINITE'>(
-    () => persistedState?.repeatCount ?? 2
-  );
-  const [speed, setSpeed] = useState<0.8 | 1 | 1.2 | 1.4>(() => persistedState?.speed ?? 1);
+  const setPlayMeaning = (val: boolean) => {
+    void updateSettings({ listenPlayMeaning: val });
+  };
+  const setPlayExampleTranslation = (val: boolean) => {
+    void updateSettings({ listenPlayExampleTranslation: val });
+  };
+  const setRepeatCount = (val: 1 | 2 | 3 | 'INFINITE') => {
+    void updateSettings({ audioRepeatCount: val });
+  };
+  const setSpeed = (val: 0.8 | 1 | 1.2 | 1.4) => {
+    void updateSettings({ audioSpeed: val });
+  };
 
   useLayoutEffect(() => {
     setPageCursor(null);
@@ -172,10 +182,6 @@ const VocabBookListenPage: React.FC = () => {
     setNextCursor(null);
     setIndex(persistedState?.index ?? 0);
     setMode(persistedState?.mode ?? 'BASIC');
-    setPlayMeaning(persistedState?.playMeaning ?? true);
-    setPlayExampleTranslation(persistedState?.playExampleTranslation ?? true);
-    setRepeatCount(persistedState?.repeatCount ?? 2);
-    setSpeed(persistedState?.speed ?? 1);
   }, [persistedState, sessionStorageKey]);
 
   useEffect(() => {
@@ -193,13 +199,9 @@ const VocabBookListenPage: React.FC = () => {
     persistVocabBookListenSessionState(sessionStorageKey, {
       index,
       mode,
-      playMeaning,
-      playExampleTranslation,
-      repeatCount,
-      speed,
       timestamp: Date.now(),
     });
-  }, [index, mode, playMeaning, playExampleTranslation, repeatCount, speed, sessionStorageKey]);
+  }, [index, mode, sessionStorageKey]);
 
   useEffect(() => {
     if (!nextCursor || loadingMore || total === 0) return;

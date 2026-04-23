@@ -2,165 +2,481 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { TopikQuestion } from '../../../types';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
-import { Button } from '../../ui';
+
+const FILL_BLANK_PATTERN = /\(\s+\)|\(\s*\u3000\s*\)|\(\s*\)/;
+const FILL_BLANK_PATTERN_GLOBAL = /\(\s+\)|\(\s*\u3000\s*\)|\(\s*\)/g;
+
+/* ─────────────── Premium Tactile V3 Exam Styles ─────────────── */
+const EXAM_TACTILE_STYLES = `
+.card-paper {
+  background: #FCFCFA;
+  box-shadow:
+    0 16px 32px -12px rgba(0,0,0,0.08),
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -2px 1px rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.topik-option {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 4px 0px #E2E8F0, 0 4px 8px rgba(0,0,0,0.02);
+  transition: all 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+.topik-option:active, .topik-option.topik-selected {
+  transform: translateY(4px);
+  box-shadow: 0 0px 0px #E2E8F0, inset 0 2px 4px rgba(0,0,0,0.04);
+  background: #EFF6FF;
+  border-color: #3B82F6;
+}
+.topik-option.topik-selected .option-num {
+  background: #3B82F6; color: white; border-color: #2563EB;
+}
+.topik-option.topik-selected .option-text { color: #1D4ED8; font-weight: 900; }
+.print-graphic-slot {
+  background: #FFFFFF;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,1);
+  border: 1px solid rgba(0,0,0,0.1);
+  filter: contrast(1.1) grayscale(20%);
+}
+.sequence-block {
+  background: #F8F9FA;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-left: 3px solid #94A3B8;
+}
+.target-sentence-card {
+  background: linear-gradient(160deg, #1E293B 0%, #0F172A 100%);
+  box-shadow: 0 12px 24px -6px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1);
+  color: white;
+}
+.insert-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  background: #E2E8F0;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,1);
+  font-size: 11px;
+  font-weight: 900;
+  color: #64748B;
+  margin: 0 4px;
+  vertical-align: middle;
+  transition: all 0.2s;
+}
+.insert-slot.insert-slot-active {
+  background: #3B82F6;
+  color: white;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 12px rgba(59,130,246,0.4);
+  transform: scale(1.1);
+}
+
+/* ───────── Newspaper Headline (Q25-27) ───────── */
+.newspaper-cutout {
+  background: #FDFBF7; /* slight warm paper tint */
+  border-top: 4px solid #1E293B;
+  border-bottom: 2px solid #1E293B;
+  padding: 24px 16px;
+  position: relative;
+  text-align: center;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
+}
+.newspaper-cutout::before {
+  content: "NEWS FLASH";
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1E293B;
+  color: white;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 8px;
+  letter-spacing: 0.1em;
+  border-radius: 4px;
+}
+.headline-text {
+  font-family: inherit; /* use standard system/sans for news title */
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #0F172A;
+  word-break: keep-all;
+}
+
+/* ───────── Fill in the Blank (Slot) ───────── */
+.blank-slot {
+  display: inline-block;
+  min-width: 60px;
+  height: 24px;
+  margin: 0 6px;
+  background-color: #F1F5F9;
+  border-bottom: 2px dashed #94A3B8;
+  vertical-align: bottom;
+  position: relative;
+  top: -2px;
+}
+
+.reading-text {
+  font-family: "KoPub Batang", "Apple Myungjo", "Batang", serif;
+  line-height: 1.8;
+  color: #334155;
+  text-align: left;
+  word-break: keep-all;
+}
+`;
+
+/* ─────────────── Insert Slot Markers ─────────────── */
+const INSERT_MARKERS = ['㉠', '㉡', '㉢', '㉣'];
+
+/* ─────────────── Sequence Markers ─────────────── */
+const SEQUENCE_MARKER_REGEX = /\(([가-라])\)\s*/g;
+
+function parseSequenceBlocks(text: string): { label: string; content: string }[] {
+  const blocks: { label: string; content: string }[] = [];
+  const parts = text.split(SEQUENCE_MARKER_REGEX);
+  // parts = ["prefix", "가", "content after 가", "나", "content after 나", ...]
+  for (let i = 1; i < parts.length; i += 2) {
+    const label = parts[i];
+    const content = (parts[i + 1] || '').trim();
+    if (label && content) {
+      blocks.push({ label: `(${label})`, content });
+    }
+  }
+  return blocks;
+}
+
+/* ─────────────── Question Type Detection ─────────────── */
+function getQuestionVariant(question: TopikQuestion): 'sequence' | 'insert' | 'visual' | 'headline' | 'fill-blank' | 'default' {
+  const qNum = question.number || question.id;
+  
+  // Q25-27 Newspaper Headlines
+  if (question.layout === 'NEWS_HEADLINE' || (qNum >= 25 && qNum <= 27)) {
+    return 'headline';
+  }
+  
+  // Q39-41 Sentence Insertion: fixed options ㉠㉡㉢㉣ and contextBox present
+  if (
+    qNum >= 39 && qNum <= 41 &&
+    question.contextBox &&
+    question.options?.some(opt => INSERT_MARKERS.includes(opt))
+  ) {
+    return 'insert';
+  }
+  // Q13-15 Sequence ordering: contextBox contains (가)(나)(다)(라)
+  if (
+    qNum >= 13 && qNum <= 15 &&
+    question.contextBox &&
+    /\([가나다라]\)/.test(question.contextBox)
+  ) {
+    return 'sequence';
+  }
+  // Q5-12 Visual/Graph: has image
+  if (question.layout === 'IMAGE' || question.imageUrl || question.image) {
+    return 'visual';
+  }
+  
+  // Fill in the blank (checks for empty parentheses pattern in question or passage)
+  const isFillBlank = (text?: string) => Boolean(text && FILL_BLANK_PATTERN.test(text));
+  if (isFillBlank(question.question) || isFillBlank(question.passage) || isFillBlank(question.instruction)) {
+      return 'fill-blank';
+  }
+
+  return 'default';
+}
+
+/* ─────────────── Get Question Type Label ─────────────── */
+function getQuestionTypeLabel(variant: ReturnType<typeof getQuestionVariant>, question: TopikQuestion): string {
+  switch (variant) {
+    case 'visual': return '图表阅读';
+    case 'sequence': return '段落排序';
+    case 'insert': return '句子插入';
+    case 'headline': return '新闻阅读';
+    case 'fill-blank': return '信息填空';
+    default:
+      if (question.passage) return '阅读理解';
+      return '选择题';
+  }
+}
+
+/* ─────────────── Advanced Text Formatters ─────────────── */
+function formatFillBlank(text: string): string {
+  // Matches any empty parentheses, replacing them with a custom physical slot HTML
+  return text.replace(FILL_BLANK_PATTERN_GLOBAL, '<span class="blank-slot"></span>');
+}
+
+/* ─────────────── Render Passage with Insert Slots ─────────────── */
+function renderPassageWithSlots(passage: string, selectedOption?: number): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const markerRegex = /[㉠㉡㉢㉣]/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = markerRegex.exec(passage)) !== null) {
+    // Add text before the marker
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={`t-${lastIndex}`}>
+          {passage.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+    // Add the slot marker
+    const markerChar = match[0];
+    const markerIndex = INSERT_MARKERS.indexOf(markerChar);
+    const isActive = selectedOption === markerIndex;
+    nodes.push(
+      <span
+        key={`slot-${markerIndex}`}
+        className={clsx('insert-slot', isActive && 'insert-slot-active')}
+      >
+        {markerChar}
+      </span>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  // Add remaining text
+  if (lastIndex < passage.length) {
+    nodes.push(
+      <span key={`t-end`}>{passage.slice(lastIndex)}</span>
+    );
+  }
+  return nodes;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Component: MobileQuestionRenderer (Premium Tactile V3)
+   ═══════════════════════════════════════════════════════════════ */
 
 interface MobileQuestionRendererProps {
   question: TopikQuestion;
   userAnswer?: number;
   onAnswerChange: (optionIndex: number) => void;
+  showPassage?: boolean;
 }
 
-export const MobileQuestionRenderer: React.FC<
-  MobileQuestionRendererProps & { showPassage?: boolean }
-> = ({ question, userAnswer, onAnswerChange, showPassage = false }) => {
+export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
+  question,
+  userAnswer,
+  onAnswerChange,
+  showPassage = false,
+}) => {
   const sanitize = (html?: string) => sanitizeStrictHtml(String(html ?? ''));
-  // Check both imageUrl and image (legacy/alias)
+  const variant = getQuestionVariant(question);
+  const typeLabel = getQuestionTypeLabel(variant, question);
   const questionImage = question.imageUrl || question.image;
-  const isImageQuestion = question.layout === 'IMAGE' || !!questionImage;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Question Header / Prompts */}
-      <div className="bg-card rounded-2xl shadow-sm p-4 mb-4 border border-border shrink-0">
-        <div className="flex items-start gap-3">
-          <span className="bg-indigo-600 dark:bg-indigo-400/75 text-white w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 shadow-sm">
+    <div className="flex flex-col gap-6">
+      <style>{EXAM_TACTILE_STYLES}</style>
+
+      <section className="card-paper w-full rounded-[1.5rem] p-5 relative">
+        {/* ── Header ── */}
+        <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+          <span className="bg-slate-800 text-white rounded-full px-2.5 py-0.5 text-[11px] font-black">
             {question.number || '?'}
           </span>
-          <div className="min-w-0 flex-1">
-            <h2
-              className="font-bold text-lg text-foreground leading-snug break-keep whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: sanitize(question.question) }}
-            />
-            {question.instruction && (
-              <p className="text-muted-foreground text-xs mt-1 font-medium">
-                {question.instruction}
-              </p>
-            )}
-          </div>
+          <span className="text-[11px] font-black text-slate-400 tracking-widest uppercase">
+            {typeLabel}
+          </span>
         </div>
 
-        {/* Optional Passage (for non-grouped questions like Q5-8) */}
-        {showPassage && question.passage && (
-          <div
-            className="mt-4 bg-amber-50 dark:bg-amber-400/12 rounded-xl p-5 text-muted-foreground leading-8 text-base whitespace-pre-wrap border border-amber-100/50 dark:border-amber-300/20 font-serif break-keep text-justify"
-            dangerouslySetInnerHTML={{ __html: sanitize(question.passage) }}
+        {/* ── Instruction (if present) ── */}
+        {question.instruction && (
+          <p 
+            className="text-[11px] font-bold text-slate-400 leading-relaxed mb-3 tracking-wide"
+            dangerouslySetInnerHTML={{ __html: sanitize(variant === 'fill-blank' ? formatFillBlank(question.instruction) : question.instruction) }}
           />
         )}
 
-        {/* Image Display */}
-        {isImageQuestion && questionImage && (
-          <div className="mt-4 bg-muted rounded-xl overflow-hidden border border-border relative aspect-[4/3] flex items-center justify-center group">
+        {/* ── Question Text ── */}
+        {question.question && (
+          <h4
+            className="text-[14px] font-black text-slate-900 leading-relaxed mb-4 tracking-wide break-keep"
+            dangerouslySetInnerHTML={{ __html: sanitize(variant === 'fill-blank' ? formatFillBlank(question.question) : question.question) }}
+          />
+        )}
+
+        {/* ═══════ Variant: VISUAL / GRAPH (Q9-12) ═══════ */}
+        {variant === 'visual' && questionImage && (
+          <div className="print-graphic-slot rounded-[1rem] p-3 mb-6 flex items-center justify-center min-h-[160px] overflow-hidden">
             <img
               src={questionImage}
               alt={question.number ? String(question.number) : ''}
-              className="w-full h-full object-contain"
+              className="w-full h-auto max-h-[280px] object-contain"
             />
           </div>
         )}
 
-        {/* Context Box (Example: <보기> or just reading text) */}
-        {question.contextBox && (
-          <div className="mt-4 bg-muted border border-border rounded-xl p-5 font-serif text-base leading-8 text-muted-foreground break-keep text-justify">
-            {question.contextBox.includes('<보기>')
-              ? null
-              : // Only show <보기> if it's explicitly needed or maybe just let the text handle it?
-                // Usually "Bo-gi" is part of the box title.
-                // If we want to be safe, let's just render the content nicely.
-                // But wait, some questions might rely on "Bo-gi" context.
-                // Actually, standard TOPIK Q5-8 text is just text.
-                // Let's remove the hardcoded label and assume content is sufficient.
-                null}
-            <div
-              className="whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: sanitize(question.contextBox) }}
+        {/* ═══════ Variant: SEQUENCE / ORDERING (Q13-15) ═══════ */}
+        {variant === 'sequence' && question.contextBox && (() => {
+          const blocks = parseSequenceBlocks(question.contextBox);
+          if (blocks.length === 0) {
+            // Fallback: render raw contextBox
+            return (
+              <div className="bg-[#F8F9FA] rounded-[1.2rem] p-4 mb-6 border border-slate-100 shadow-inner">
+                <p className="reading-text text-[14px]">{question.contextBox}</p>
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-2 mb-6">
+              {blocks.map((block, idx) => (
+                <div key={idx} className="sequence-block rounded-r-[0.8rem] p-3 flex items-start space-x-3">
+                  <span className="text-[12px] font-black text-slate-500 shrink-0 mt-0.5">
+                    {block.label}
+                  </span>
+                  <p className="reading-text text-[14px]">{block.content}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ═══════ Variant: INSERT / SENTENCE INSERTION (Q39-41) ═══════ */}
+        {variant === 'insert' && (
+          <>
+            {/* Target Sentence Card */}
+            {question.contextBox && (
+              <div className="target-sentence-card rounded-[1.2rem] p-4 mb-6 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-2 py-0.5 rounded-[4px] text-[9px] font-black tracking-widest uppercase shadow-sm">
+                  Target Sentence
+                </div>
+                <p className="text-[15px] font-bold text-center leading-relaxed tracking-wide text-white mt-1">
+                  {question.contextBox}
+                </p>
+              </div>
+            )}
+
+            {/* Passage with Insert Slots */}
+            {question.passage && (
+              <div className="bg-[#F8F9FA] rounded-[1.2rem] p-5 mb-6 border border-slate-100 shadow-inner">
+                <p className="reading-text text-[15px]">
+                  {renderPassageWithSlots(question.passage, userAnswer)}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ═══════ Variant: HEADLINE (Q25-27) ═══════ */}
+        {variant === 'headline' && question.passage && (
+          <div className="newspaper-cutout mb-6 mt-2">
+            <h5 className="headline-text" dangerouslySetInnerHTML={{ __html: sanitize(question.passage) }} />
+          </div>
+        )}
+
+        {/* ═══════ Variant: FILL IN THE BLANK ═══════ */}
+        {variant === 'fill-blank' && showPassage && question.passage && (
+          <div className="bg-[#F8F9FA] rounded-[1.2rem] p-5 mb-6 border border-slate-100 shadow-inner">
+            <p
+              className="reading-text text-[15px] whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: sanitize(formatFillBlank(question.passage)) }}
             />
           </div>
         )}
-      </div>
 
-      {/* Choices Area */}
-      <div className="space-y-3 pb-8">
+        {/* ═══════ Default: Standard Passage ═══════ */}
+        {variant === 'default' && showPassage && question.passage && (
+          <div className="bg-[#F8F9FA] rounded-[1.2rem] p-5 mb-6 border border-slate-100 shadow-inner">
+            <p
+              className="reading-text text-[15px] whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: sanitize(question.passage) }}
+            />
+          </div>
+        )}
+
+        {/* ═══════ Context Box Fallback ═══════ */}
+        {(variant === 'default' || variant === 'fill-blank') && question.contextBox && (
+          <div className="bg-[#F8F9FA] rounded-[1.2rem] p-5 mb-6 border border-slate-100 shadow-inner">
+            <p
+              className="reading-text text-[15px] whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: sanitize(variant === 'fill-blank' ? formatFillBlank(question.contextBox) : question.contextBox) }}
+            />
+          </div>
+        )}
+
+        {/* ═══════ Options ═══════ */}
+
+        {/* Image-based options (Listening Q1-3) */}
         {question.optionImages && question.optionImages.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {question.optionImages.map((imgUrl, idx) => {
-              const isSelectedOption = userAnswer === idx;
+              const isSelected = userAnswer === idx;
               return (
-                <Button
-                  variant="ghost"
-                  size="auto"
+                <button
                   key={idx}
                   onClick={() => onAnswerChange(idx)}
                   className={clsx(
-                    'relative rounded-xl border overflow-hidden aspect-[4/3] transition-all active:scale-[0.98] group',
-                    isSelectedOption
-                      ? 'border-indigo-600 dark:border-indigo-300 ring-2 ring-indigo-600 dark:ring-indigo-300 ring-offset-1'
-                      : 'border-border hover:border-indigo-200 dark:hover:border-indigo-300/40'
+                    'topik-option relative rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center active:scale-[0.98] transition-transform select-none touch-manipulation',
+                    isSelected && 'topik-selected'
                   )}
                 >
                   <img
                     src={imgUrl}
                     alt={String(idx + 1)}
-                    className="w-full h-full object-contain bg-card"
+                    className="w-full h-full object-contain"
                   />
-                  <div
-                    className={clsx(
-                      'absolute top-2 left-2 w-7 h-7 rounded-full font-bold flex items-center justify-center text-xs shadow-sm',
-                      isSelectedOption
-                        ? 'bg-indigo-600 dark:bg-indigo-400/80 text-white'
-                        : 'bg-card/90 text-muted-foreground backdrop-blur-sm border border-border'
-                    )}
-                  >
+                  <span className={clsx(
+                    'option-num absolute top-2 left-2 w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black',
+                    isSelected && 'bg-blue-500 text-white border-blue-600'
+                  )}>
                     {idx + 1}
-                  </div>
-                </Button>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : variant === 'insert' ? (
+          /* Insert questions: 4-column grid with compact ㉠㉡㉢㉣ buttons */
+          <div className="grid grid-cols-4 gap-3">
+            {question.options.map((option, idx) => {
+              const isSelected = userAnswer === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onAnswerChange(idx)}
+                  className={clsx(
+                    'topik-option w-full rounded-xl py-3 flex justify-center active:scale-[0.98] transition-transform select-none touch-manipulation',
+                    isSelected && 'topik-selected'
+                  )}
+                >
+                  <span className={clsx(
+                    'option-num w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black'
+                  )}>
+                    {option}
+                  </span>
+                </button>
               );
             })}
           </div>
         ) : (
-          question.options.map((option: string, idx: number) => {
-            const isSelectedOption = userAnswer === idx;
-
-            return (
-              <Button
-                variant="ghost"
-                size="auto"
-                key={idx}
-                onClick={() => onAnswerChange(idx)}
-                className={clsx(
-                  'w-full p-4 rounded-xl border text-left active:scale-[0.99] transition-all group relative overflow-hidden',
-                  isSelectedOption
-                    ? 'border-indigo-600 dark:border-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 shadow-sm ring-1 ring-indigo-600 dark:ring-indigo-300'
-                    : 'border-border bg-card hover:border-indigo-200 dark:hover:border-indigo-300/40'
-                )}
-              >
-                <div className="flex items-start gap-4 relative z-10">
-                  <span
-                    className={clsx(
-                      'w-7 h-7 rounded-full font-bold flex items-center justify-center text-xs shrink-0 transition-colors mt-0.5',
-                      isSelectedOption
-                        ? 'bg-indigo-600 dark:bg-indigo-400/80 text-white'
-                        : 'bg-muted text-muted-foreground group-hover:bg-indigo-50 dark:group-hover:bg-indigo-400/12 group-hover:text-indigo-600 dark:group-hover:text-indigo-300'
-                    )}
-                  >
+          /* Standard text options */
+          <div className="space-y-3">
+            {question.options.map((option, idx) => {
+              const isSelected = userAnswer === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onAnswerChange(idx)}
+                  className={clsx(
+                    'topik-option w-full rounded-[1rem] py-3 px-4 flex items-center text-left active:scale-[0.98] transition-transform select-none touch-manipulation',
+                    isSelected && 'topik-selected'
+                  )}
+                >
+                  <span className={clsx(
+                    'option-num w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black shrink-0 mr-3'
+                  )}>
                     {idx + 1}
                   </span>
-                  <span
-                    className={clsx(
-                      'text-base font-medium leading-relaxed',
-                      isSelectedOption
-                        ? 'text-indigo-900 dark:text-indigo-100'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    {/* Use dangerouslySetInnerHTML for options too if they might have tags? Usually no, but to be sure... strictly options are strings. */}
+                  <span className="option-text font-bold text-[13px] text-slate-700">
                     {option}
                   </span>
-                </div>
-              </Button>
-            );
-          })
+                </button>
+              );
+            })}
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

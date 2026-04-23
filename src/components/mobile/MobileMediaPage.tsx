@@ -27,7 +27,7 @@ import { formatSafeDateLabel } from '../../utils/dateLabel';
 import { MobileReadingDiscoveryView } from './MobileReadingDiscoveryView';
 import { MobileSectionHeader } from './MobileSectionHeader';
 import { MobileStateCard } from './MobileStateCard';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 // --- TYPES ---

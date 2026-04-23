@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { ContentSkeleton } from './components/common';
 import {
@@ -15,6 +14,9 @@ import {
 
 // Lazy load pages for code splitting
 const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const ProtectedRoute = lazy(() =>
+  import('./components/ProtectedRoute').then(m => ({ default: m.ProtectedRoute }))
+);
 const Landing = lazy(() => import('./pages/Landing'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
@@ -35,7 +37,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
-const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
 const ReviewDashboardPage = lazy(() => import('./pages/ReviewDashboardPage'));
 const ReviewQuizPage = lazy(() => import('./pages/ReviewQuizPage'));
 const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
@@ -140,15 +141,15 @@ const LanguageAwareRoutes: React.FC = () => {
         <Route path="preview/mobile" element={withPageLoader(<MobilePreviewPage />)} />
         {/* === Admin login page (public) === */}
         <Route path="admin/login" element={withPageLoader(<AdminLoginPage />)} />
-        <Route element={<ProtectedRoute />}>
+        <Route element={withPageLoader(<ProtectedRoute />)}>
           <Route element={withPageLoader(<AppLayout />)}>
-            <Route path="profile" element={<ProfilePage language={language} />} />
+            <Route path="profile/*" element={<ProfilePage language={language} />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="dashboard/course" element={<CourseDashboard />} />
             <Route path="dashboard/:moduleParam" element={<ModulePage />} />
             {/* Courses */}
             <Route path="courses" element={<CoursesOverview />} />
-            <Route path="practice" element={<PracticeHubPage />} />
+            <Route path="practice" element={<Navigate to={`/${language}/courses`} replace />} />
             <Route path="review" element={<ReviewDashboardPage />} />
             <Route path="review/quiz" element={<ReviewQuizPage />} />
             <Route path="media" element={<MediaHubPage />} />
@@ -194,10 +195,12 @@ const LanguageAwareRoutes: React.FC = () => {
         {/* === Admin routes (standalone pages, Admin permission required) === */}
         <Route
           element={
-            <ProtectedRoute
-              requireAdmin={true}
-              redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`}
-            />
+            withPageLoader(
+              <ProtectedRoute
+                requireAdmin={true}
+                redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`}
+              />
+            )
           }
         >
           <Route path="admin" element={withPageLoader(<AdminPage />)} />

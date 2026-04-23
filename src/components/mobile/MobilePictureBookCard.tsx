@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 
 interface MobilePictureBookCardProps {

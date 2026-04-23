@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, lazy, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   BookOpen,
@@ -20,7 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,7 +30,6 @@ import { getLocalizedContent } from '../utils/languageUtils';
 import { VOCAB, VOCAB_PDF } from '../utils/convexRefs';
 import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileVocabDashboard } from '../components/mobile/MobileVocabDashboard';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Input } from '../components/ui';
@@ -40,6 +39,7 @@ import { buildVocabBookModePath } from '../utils/vocabBookRoutes';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import type { Id } from '../../convex/_generated/dataModel';
+import { ContentSkeleton } from '../components/common';
 type ExportMode = 'A4_DICTATION' | 'LANG_LIST' | 'KO_LIST';
 
 type VocabBookCategory = 'UNLEARNED' | 'DUE' | 'MASTERED';
@@ -70,6 +70,12 @@ const getLocalizedMeaning = (word: VocabBookItemDto, language: string): string =
   word.meaningVi ||
   word.meaningMn ||
   '';
+
+const LazyMobileVocabDashboard = lazy(() =>
+  import('../components/mobile/MobileVocabDashboard').then(module => ({
+    default: module.MobileVocabDashboard,
+  }))
+);
 
 type ExportModalCopy = {
   exportPdfButton: string;
@@ -711,7 +717,7 @@ const VocabBookPage: React.FC = () => {
                   navigate('/vocab-book');
                   return;
                 }
-                navigate('/practice');
+                navigate('/courses');
               }}
               className="p-2 rounded-xl bg-white border border-slate-200 hover:border-teal-400 transition-all shadow-sm"
             >
@@ -1292,11 +1298,13 @@ const VocabBookPage: React.FC = () => {
 
   if (isMobile && !isMobileListMode) {
     return (
-      <MobileVocabDashboard
-        savedWordsCount={stats.total}
-        onOpenSavedWords={() => navigate('/vocab-book?mobileView=list')}
-        onOpenMistakes={() => navigate('/dashboard/vocabulary?list=mistakes')}
-      />
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileVocabDashboard
+          savedWordsCount={stats.total}
+          onOpenSavedWords={() => navigate('/vocab-book?mobileView=list')}
+          onOpenMistakes={() => navigate('/dashboard/vocabulary?list=mistakes')}
+        />
+      </Suspense>
     );
   }
 

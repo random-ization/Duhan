@@ -1211,7 +1211,7 @@ async function translateSingleTextWithEmergencyFallback(
 async function cacheTranscriptToSpaces(episodeId: string, segments: TranscriptSegment[]) {
   try {
     const payload = JSON.stringify({ segments });
-    const presigned = createPresignedUploadUrl({
+    const presigned = await createPresignedUploadUrl({
       filename: `${episodeId}.json`,
       contentType: 'application/json',
       folder: 'transcripts',

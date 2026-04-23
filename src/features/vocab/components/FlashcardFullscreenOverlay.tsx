@@ -7,6 +7,7 @@ import FlashcardSettingsModal from './FlashcardSettingsModal';
 import { Dialog, DialogContent, DialogPortal } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../../components/ui';
 import { Button } from '../../../components/ui';
+import type { GlobalFlashcardPreferenceState } from '../../../types/globalUserSettings';
 
 interface FlashcardFullscreenOverlayProps {
   words: ExtendedVocabularyItem[];
@@ -18,18 +19,14 @@ interface FlashcardFullscreenOverlayProps {
   language: Language;
   showSettings: boolean;
   fullscreenMenuOpen: boolean;
-  localSettings: {
-    autoTTS: boolean;
-    cardFront: 'KOREAN' | 'NATIVE';
-    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
-  };
+  localSettings: GlobalFlashcardPreferenceState;
   flashcard: React.ReactNode;
   toolbar: React.ReactNode;
   onSetShowSettings: (show: boolean) => void;
   onSetFullscreenMenuOpen: (open: boolean) => void;
   onToggleFullscreen: () => void;
   onRequestNavigate?: (target: 'flashcard' | 'learn' | 'test' | 'match') => void;
-  onUpdateSettings: (settings: any) => void;
+  onUpdateSettings: (settings: GlobalFlashcardPreferenceState) => void;
 }
 
 const FlashcardFullscreenOverlay: React.FC<FlashcardFullscreenOverlayProps> = ({

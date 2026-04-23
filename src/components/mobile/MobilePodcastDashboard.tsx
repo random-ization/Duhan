@@ -10,7 +10,7 @@ import { resolveSafeReturnTo } from '../../utils/navigation';
 import { buildPodcastChannelPath, buildPodcastSearchPath } from '../../utils/podcastRoutes';
 import { formatSafeDateLabel } from '../../utils/dateLabel';
 import { Button, Input } from '../ui';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 
 interface PodcastChannel {
   _id?: string;

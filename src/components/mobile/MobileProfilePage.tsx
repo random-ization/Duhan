@@ -15,7 +15,7 @@ import {
   History,
   BookMarked,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';

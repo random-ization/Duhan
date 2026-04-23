@@ -25,6 +25,7 @@ import {
 } from '../../../utils/browserStorage';
 import { Button } from '../../../components/ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../../../components/ui';
+import type { GlobalFlashcardPreferenceState } from '../../../types/globalUserSettings';
 
 export type FlashcardSessionSnapshot = {
   cardIndex: number;
@@ -55,17 +56,8 @@ interface FlashcardViewProps {
   progressKey?: string;
   resumeSnapshot?: FlashcardSessionSnapshot | null;
   onSessionSnapshot?: (snapshot: FlashcardSessionSnapshot) => void;
+  onUpdateFlashcardSettings?: (settings: GlobalFlashcardPreferenceState) => void;
 }
-
-const useFlashcardSettings = (settings: VocabSettings) => {
-  const [localSettings, setLocalSettings] = useState(() => ({
-    autoTTS: settings.flashcard.autoTTS,
-    cardFront: settings.flashcard.cardFront,
-    ratingMode: (settings.flashcard as any).ratingMode || 'PASS_FAIL',
-  }));
-  const [showSettings, setShowSettings] = useState(false);
-  return { localSettings, setLocalSettings, showSettings, setShowSettings };
-};
 
 const useFlashcardDrag = (onRate: (result: boolean) => void) => {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
@@ -422,12 +414,16 @@ const Flashcard: React.FC<FlashcardProps> = ({
   );
 
   return (
-    <Button
-      variant="ghost"
-      size="auto"
-      type="button"
-      className="perspective-1000 w-full max-w-2xl h-96 relative group select-none touch-none bg-transparent border-none p-0 outline-none"
+    <div
+      role="button"
+      tabIndex={0}
+      className="perspective-1000 w-full max-w-2xl h-96 relative group select-none touch-none bg-transparent border-none p-0 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-2xl"
       onClick={onFlip}
+      onKeyDown={event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onFlip();
+      }}
       onMouseDown={e => onDragStart(e.clientX, e.clientY)}
       onMouseMove={e => onDragMove(e.clientX, e.clientY)}
       onMouseUp={onDragEnd}
@@ -507,7 +503,7 @@ const Flashcard: React.FC<FlashcardProps> = ({
           )}
         </div>
       </div>
-    </Button>
+    </div>
   );
 };
 
@@ -708,14 +704,27 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
     progressKey,
     resumeSnapshot,
     onSessionSnapshot,
+    onUpdateFlashcardSettings,
   }) => {
     const labels = useMemo(() => getLabels(language), [language]);
     const { speak: speakTTS, stop: stopTTS } = useTTS();
     const { sidebarHidden } = useLayoutChromeState();
     const { setSidebarHidden } = useLayoutActions();
-
-    const { localSettings, setLocalSettings, showSettings, setShowSettings } =
-      useFlashcardSettings(settings);
+    const [showSettings, setShowSettings] = useState(false);
+    const flashcardSettings = useMemo<GlobalFlashcardPreferenceState>(
+      () => ({
+        autoTTS: settings.flashcard.autoTTS,
+        cardFront: settings.flashcard.cardFront,
+        ratingMode: settings.flashcard.ratingMode,
+      }),
+      [settings.flashcard.autoTTS, settings.flashcard.cardFront, settings.flashcard.ratingMode]
+    );
+    const handleUpdateFlashcardSettings = useCallback(
+      (nextSettings: GlobalFlashcardPreferenceState) => {
+        onUpdateFlashcardSettings?.(nextSettings);
+      },
+      [onUpdateFlashcardSettings]
+    );
 
     const storageKey = useMemo(() => {
       if (progressKey) return `flashcard_progress_${progressKey}`;
@@ -801,19 +810,19 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
       isFlipped,
       setIsFlipped,
       handleCardRate,
-      ratingMode: localSettings.ratingMode,
+      ratingMode: flashcardSettings.ratingMode,
     });
 
     // Auto TTS
     useEffect(() => {
-      if (localSettings.autoTTS && currentCard && !isFlipped) {
+      if (flashcardSettings.autoTTS && currentCard && !isFlipped) {
         if (onSpeak) {
           onSpeak(currentCard.korean);
         } else {
           speakKorean(currentCard.korean);
         }
       }
-    }, [cardIndex, localSettings.autoTTS, currentCard, isFlipped, onSpeak, speakKorean]);
+    }, [cardIndex, flashcardSettings.autoTTS, currentCard, isFlipped, onSpeak, speakKorean]);
 
     const onToggleTrackProgress = useCallback(() => {
       setTrackProgress(prev => !prev);
@@ -828,7 +837,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
         cardIndex={cardIndex}
         totalCards={words.length}
         trackProgress={trackProgress}
-        ratingMode={localSettings.ratingMode}
+        ratingMode={flashcardSettings.ratingMode}
         isRandom={isRandom}
         canUndo={history.length > 0}
         labels={labels}
@@ -850,7 +859,7 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
         dragOffset={dragOffset}
         language={language}
         labels={labels}
-        cardFront={localSettings.cardFront}
+        cardFront={flashcardSettings.cardFront}
         onFlip={() => !isDragging && setIsFlipped(!isFlipped)}
         onSpeak={speakKorean}
         onDragStart={handleDragStart}
@@ -869,14 +878,14 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
           language={language}
           showSettings={showSettings}
           fullscreenMenuOpen={fullscreenMenuOpen}
-          localSettings={localSettings}
+          localSettings={flashcardSettings}
           flashcard={flashcard}
           toolbar={toolbar}
           onSetShowSettings={setShowSettings}
           onSetFullscreenMenuOpen={setFullscreenMenuOpen}
           onToggleFullscreen={toggleFullscreen}
           onRequestNavigate={onRequestNavigate}
-          onUpdateSettings={setLocalSettings}
+          onUpdateSettings={handleUpdateFlashcardSettings}
         />
       );
     }
@@ -887,8 +896,8 @@ const FlashcardView: React.FC<FlashcardViewProps> = React.memo(
         <FlashcardSettingsModal
           isOpen={showSettings}
           onClose={() => setShowSettings(false)}
-          settings={localSettings}
-          onUpdate={setLocalSettings}
+          settings={flashcardSettings}
+          onUpdate={handleUpdateFlashcardSettings}
           labels={labels}
         />
         {flashcard}

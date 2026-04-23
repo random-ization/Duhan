@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, BookOpen, GraduationCap, Target, FileText, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import NoteCard from '../components/notebook/NoteCard';
@@ -128,7 +128,7 @@ export const DesktopNotebookPage: React.FC = () => {
               </p>
             </div>
             <Button
-              onClick={() => navigate('/practice')}
+              onClick={() => navigate('/courses')}
               variant="ghost"
               size="auto"
               className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"

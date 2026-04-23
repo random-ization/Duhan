@@ -60,6 +60,7 @@ export const reading_library_books = defineTable({
   updatedAt: v.number(),
 })
   .index('by_owner', ['ownerUserId', 'status'])
+  .index('by_owner_updatedAt', ['ownerUserId', 'updatedAt'])
   .index('by_status', ['status', 'createdAt'])
   .index('by_visibility', ['visibility', 'status', 'createdAt'])
   .index('by_slug', ['slug'])

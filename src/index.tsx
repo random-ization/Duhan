@@ -7,11 +7,11 @@ import { AppProvider } from './contexts/AppContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import './utils/i18next-config'; // Initialize i18n
 import './index.css';
-import { ConvexReactClient } from 'convex/react';
-import { ConvexAuthProvider } from '@convex-dev/auth/react';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
-import { getConvexUrl } from './utils/convexConfig';
+// Vercel Analytics + SpeedInsights are mounted via a small wrapper that
+// idle-defers their React.lazy imports, so their modules (~4 kB gz combined
+// in the entry chunk) now ship in a separate post-idle chunk that doesn't
+// compete with first paint on any pre-auth page.
+import DeferredAnalytics from './components/common/DeferredAnalytics';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { initSentry } from './utils/sentry';
 import { isStaleChunkError, recoverFromStaleChunk } from './utils/staleChunkRecovery';
@@ -35,8 +35,6 @@ if (typeof globalThis.window !== 'undefined') {
   });
 }
 
-const convexUrl = getConvexUrl();
-const convex = new ConvexReactClient(convexUrl);
 initSentry();
 registerServiceWorker();
 
@@ -45,18 +43,21 @@ if (!rootElement) {
   throw new Error('Could not find root element to mount to');
 }
 
+// Note: the Convex React client and <ConvexAuthProvider> used to be
+// mounted HERE at the root of the tree. They have moved into
+// `src/contexts/AuthedAppProviders.tsx`, which is only imported (via
+// React.lazy) when a user lands on an authed route. That's how we keep
+// `vendor-convex` (~25 kB gz) out of every pre-auth page's preload set
+// and avoid opening a Convex WebSocket for signed-out visitors.
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="system" storageKey="duhan-theme">
       <BrowserRouter>
-        <ConvexAuthProvider client={convex}>
-          <AppProvider>
-            <App />
-            <Analytics />
-            <SpeedInsights />
-          </AppProvider>
-        </ConvexAuthProvider>
+        <AppProvider>
+          <App />
+          <DeferredAnalytics />
+        </AppProvider>
       </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>

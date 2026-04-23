@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { Language } from '../types';
 import { getLabels } from '../utils/i18n';
 import { sanitizeHtml } from '../utils/sanitize';
-import { useQuery } from 'convex/react';
+// Direct HTTP call replaces `useQuery` so this pre-auth page doesn't pull
+// `convex/react` (and therefore `vendor-convex`) into its route chunk.
+// The server function signature is unchanged; only the transport differs.
+import { callPublicConvexQuery } from '../utils/publicConvexClient';
 import { Loading } from '../components/common/Loading';
 import { FileText, Calendar } from 'lucide-react';
 import BackButton from '../components/ui/BackButton';
-import { qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+
+type LegalDocumentResult = {
+  id: string;
+  title?: string;
+  content?: string;
+  updatedAt?: number;
+} | null;
 
 interface LegalDocumentPageProps {
   language: Language;
@@ -23,13 +32,27 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);
-  const doc = useQuery(
-    qRef<
-      { type: LegalDocumentPageProps['documentType'] },
-      { id: string; title?: string; content?: string; updatedAt?: number } | null
-    >('legal:getDocument'),
-    { type: documentType }
-  );
+
+  // `undefined` = still loading, `null` = request completed but document
+  // absent. Mirrors the tri-state useQuery used to return so the rest of
+  // this component needs no changes.
+  const [doc, setDoc] = useState<LegalDocumentResult | undefined>(undefined);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setDoc(undefined);
+    callPublicConvexQuery<{ type: typeof documentType }, LegalDocumentResult>(
+      'legal:getDocument',
+      { type: documentType },
+      { signal: controller.signal }
+    )
+      .then(result => setDoc(result ?? null))
+      .catch(err => {
+        if ((err as { name?: string } | null)?.name === 'AbortError') return;
+        setDoc(null);
+      });
+    return () => controller.abort();
+  }, [documentType]);
 
   const loading = doc === undefined;
   // Convert Convex doc result to matching frontend interface if needed, or use directly

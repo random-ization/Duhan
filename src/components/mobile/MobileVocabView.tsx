@@ -10,10 +10,12 @@ import {
   BookMarked,
 } from 'lucide-react';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
+import { useGlobalSettings } from '../../hooks/useGlobalSettings';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import MobileUnitSelector from './MobileUnitSelector';
 import MobileFlashcardPlayer from './MobileFlashcardPlayer';
+import { MobileLearnMode } from './MobileLearnMode';
 import VocabQuiz from '../../features/vocab/components/VocabQuiz';
 import VocabTest from '../../features/vocab/components/VocabTest';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
@@ -32,7 +34,14 @@ interface MobileVocabViewProps {
   // Data
   readonly allWords: ExtendedVocabItem[]; // Current filtered words
   readonly filteredWords: ExtendedVocabItem[];
-  readonly gameWords: any[]; // ExtendedVocabItem serialized for games
+  readonly gameWords: Array<{
+    id: string;
+    korean: string;
+    english: string;
+    unit: number;
+    partOfSpeech?: string;
+    pos?: string;
+  }>;
 
   // State
   readonly currentUnitId: number | 'ALL';
@@ -94,43 +103,21 @@ export default function MobileVocabView({
   const [showFlashcardSettings, setShowFlashcardSettings] = useState(false);
 
   const labels = useMemo(() => getLabels(language), [language]);
-
-  const settingsStorageKey = `mobileFlashcardSettings:${instituteId}`;
   const switchMaterialPath = buildLearningPickerPath('vocabulary');
-  const [flashcardSettings, setFlashcardSettings] = useState<{
-    autoTTS: boolean;
-    cardFront: 'KOREAN' | 'NATIVE';
-    ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
-  }>(() => {
-    if (globalThis.window === undefined) {
-      return { autoTTS: false, cardFront: 'KOREAN', ratingMode: 'FOUR_BUTTONS' };
-    }
-    try {
-      const raw = safeGetLocalStorageItem(settingsStorageKey);
-      if (!raw) return { autoTTS: false, cardFront: 'KOREAN', ratingMode: 'FOUR_BUTTONS' };
-      const parsed = JSON.parse(raw) as Partial<{
-        autoTTS: boolean;
-        cardFront: 'KOREAN' | 'NATIVE';
-        ratingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
-      }>;
-      return {
-        autoTTS: typeof parsed.autoTTS === 'boolean' ? parsed.autoTTS : false,
-        cardFront: parsed.cardFront === 'NATIVE' ? 'NATIVE' : 'KOREAN',
-        ratingMode: parsed.ratingMode === 'PASS_FAIL' ? 'PASS_FAIL' : 'FOUR_BUTTONS',
-      };
-    } catch {
-      return { autoTTS: false, cardFront: 'KOREAN', ratingMode: 'FOUR_BUTTONS' };
-    }
-  });
 
-  useEffect(() => {
-    if (globalThis.window === undefined) return;
-    try {
-      safeSetLocalStorageItem(settingsStorageKey, JSON.stringify(flashcardSettings));
-    } catch {
-      // ignore
-    }
-  }, [flashcardSettings, settingsStorageKey]);
+  const { settings, updateSettings } = useGlobalSettings();
+  const flashcardSettings = {
+    autoTTS: settings.flashcardAutoTTS,
+    cardFront: settings.flashcardFront,
+    ratingMode: settings.flashcardRatingMode,
+  };
+  const setFlashcardSettings = (newSettings: typeof flashcardSettings) => {
+    void updateSettings({
+      flashcardAutoTTS: newSettings.autoTTS,
+      flashcardFront: newSettings.cardFront,
+      flashcardRatingMode: newSettings.ratingMode,
+    });
+  };
 
   useEffect(() => {
     if (globalThis.window === undefined) return;
@@ -319,9 +306,39 @@ export default function MobileVocabView({
 
       <div className="mx-6 flex-1">
         <div className="mb-1.5 flex items-end justify-between px-1">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            {t('dashboard.progress.title', { defaultValue: 'Progress' })}
-          </span>
+          <div className="relative">
+            <DropdownMenu open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  type="button"
+                  className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors outline-none"
+                >
+                  {tabs.find(x => x.id === activeTab)?.label ?? t('dashboard.progress.title', { defaultValue: 'Progress' })}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                unstyled
+                className="absolute left-0 top-full mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl overflow-hidden z-[96] animate-in fade-in zoom-in-95 pointer-events-auto"
+              >
+              {tabs.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleSelectTab(item.id as TabId)}
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 font-black text-sm transition-colors ${
+                    activeTab === item.id
+                      ? 'bg-blue-50/80 text-blue-600'
+                      : 'text-slate-600 hover:bg-slate-100/50'
+                  }`}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  {item.label}
+                </button>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          </div>
           <span className="text-[12px] font-black text-slate-800">
             {flashcardCurrentPosition}
             <span className="text-[10px] font-bold text-slate-400">/{filteredWords.length}</span>
@@ -390,18 +407,11 @@ export default function MobileVocabView({
 
     if (activeTab === 'learn') {
       return (
-        <div className="h-full overflow-auto p-4">
-          <VocabQuiz
+        <div className="h-full overflow-hidden">
+          <MobileLearnMode
             words={gameWords}
-            courseId={instituteId}
-            onComplete={() => {}}
-            onNextUnit={() => {}}
-            hasNextUnit={false}
-            userId={userId}
+            onComplete={() => setFocusOpen(false)}
             onFsrsReview={onFsrsReview}
-            language={language}
-            variant="learn"
-            currentUnitLabel={scopeTitle}
           />
         </div>
       );
@@ -437,7 +447,7 @@ export default function MobileVocabView({
         language={language}
         title={tabs.find(x => x.id === activeTab)?.label}
         variant="fullscreen"
-        headerContent={activeTab === 'flashcard' ? flashcardFocusHeader : defaultFocusHeader}
+        headerContent={activeTab === 'flashcard' ? flashcardFocusHeader : activeTab === 'learn' ? <></> : defaultFocusHeader}
       >
         <div className="h-full bg-background">{renderFocusContent()}</div>
       </VocabLearnOverlay>

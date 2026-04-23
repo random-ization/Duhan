@@ -2,6 +2,7 @@ import { httpRouter, makeFunctionReference } from 'convex/server';
 import { httpAction } from './_generated/server';
 import { auth } from './auth';
 import { paymentLogger, podcastLogger } from './logger';
+import { getPublicObjectUrl } from './storage';
 
 type WebhookResult = { success: boolean; error?: string };
 type LemonWebhookArgs = { body: string; signature: string };
@@ -25,6 +26,51 @@ http.route({
   method: 'GET',
   handler: httpAction(async () => {
     return new Response('OK', { status: 200 });
+  }),
+});
+
+// EPUB proxy endpoint to bypass CORS
+http.route({
+  path: '/epub',
+  method: 'GET',
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const objectKey = url.searchParams.get('key');
+    
+    if (!objectKey) {
+      return new Response('Missing object key', { status: 400 });
+    }
+    
+    try {
+      // Get the public URL from DigitalOcean Spaces
+      const publicUrl = getPublicObjectUrl(objectKey);
+      
+      // Fetch the EPUB file
+      const response = await fetch(publicUrl);
+      
+      if (!response.ok) {
+        return new Response('Failed to fetch EPUB', { status: response.status });
+      }
+      
+      // Get content type from response or default to epub
+      const contentType = response.headers.get('content-type') || 'application/epub+zip';
+      
+      // Create a new response with CORS headers
+      const epubData = await response.arrayBuffer();
+      return new Response(epubData, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        },
+      });
+    } catch (error) {
+      podcastLogger.error('EPUB proxy error', error);
+      return new Response('Internal server error', { status: 500 });
+    }
   }),
 });
 

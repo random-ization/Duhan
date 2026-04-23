@@ -129,14 +129,10 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
   const handleBack = () => {
     const returnTo = searchParams.get('returnTo');
     if (hasSafeReturnTo(returnTo)) {
-      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/practice');
+    navigate('/courses');
   };
 
   return (

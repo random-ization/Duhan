@@ -77,20 +77,26 @@ const ExitExamConfirmDialog = ({
   labels: ReturnType<typeof getLabels>;
 }) => (
   <AlertDialog open={open} onOpenChange={onOpenChange}>
-    <AlertDialogContent className="max-w-md border-2 border-foreground rounded-2xl shadow-pop">
-      <AlertDialogHeader>
-        <AlertDialogTitle className="font-black text-foreground">
+    <AlertDialogContent className="w-[90%] max-w-sm border border-slate-100 bg-[#FCFCFA] rounded-[24px] shadow-[0_24px_40px_-8px_rgba(0,0,0,0.1),_0_0_2px_rgba(0,0,0,0.05)] p-6 gap-6 outline-none">
+      <AlertDialogHeader className="space-y-3">
+        <AlertDialogTitle className="font-black text-xl text-slate-800 text-center">
           {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
         </AlertDialogTitle>
-        <AlertDialogDescription className="text-sm font-semibold text-muted-foreground">
-          {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam?'}
+        <AlertDialogDescription className="text-[15px] font-medium text-slate-500 text-center leading-relaxed">
+          {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam? Your progress will be saved.'}
         </AlertDialogDescription>
       </AlertDialogHeader>
-      <AlertDialogFooter className="flex-row justify-end gap-2">
-        <AlertDialogCancel onClick={() => onOpenChange(false)}>
+      <AlertDialogFooter className="flex-col sm:flex-row gap-3 pt-2">
+        <AlertDialogCancel 
+          onClick={() => onOpenChange(false)}
+          className="mt-0 w-full rounded-xl py-6 bg-slate-100 border-none text-slate-600 font-bold hover:bg-slate-200 active:scale-[0.98] transition-transform"
+        >
           {labels.common?.cancel || 'Cancel'}
         </AlertDialogCancel>
-        <AlertDialogAction onClick={onConfirm}>
+        <AlertDialogAction 
+          onClick={onConfirm}
+          className="w-full rounded-xl py-6 bg-emerald-600 text-white font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-700 active:scale-[0.98] transition-transform"
+        >
           {labels.common?.confirm || 'Confirm'}
         </AlertDialogAction>
       </AlertDialogFooter>

@@ -1,5 +1,4 @@
 import { Check, X } from 'lucide-react';
-import { getLabels } from '../../../../utils/i18n';
 import type { Language } from '../../../../types';
 import { Button } from '../../../../components/ui';
 
@@ -20,7 +19,6 @@ type Props = Readonly<{
 }>;
 
 export default function TestCardTrueFalse({
-  language,
   prompt,
   statement,
   answered,
@@ -28,36 +26,45 @@ export default function TestCardTrueFalse({
   correctIsTrue,
   onSubmit,
 }: Props) {
-  const labels = getLabels(language);
-  const trueLabel = labels.vocabTest?.trueLabel || 'True';
-  const falseLabel = labels.vocabTest?.falseLabel || 'False';
   const isReview = mode === 'review' && typeof correctIsTrue === 'boolean';
 
   const renderButton = (isTrue: boolean) => {
     const isSelected = answered?.isTrue === isTrue;
-    const base =
-      'flex-1 h-14 rounded-2xl border-2 font-black text-lg flex items-center justify-center gap-2 transition-all';
+    const isCorrect = isReview && isTrue === correctIsTrue;
+    const isWrongChoice = isReview && isSelected && isTrue !== correctIsTrue;
+    const isCorrectNotSelected = isReview && isTrue === correctIsTrue && !isSelected;
 
-    let className = base;
+    let containerClass = 'vt-test-option rounded-[1.2rem] py-5 flex flex-col items-center justify-center space-y-2.5 transition-all w-full';
+    let iconClass = 'w-10 h-10 rounded-full flex items-center justify-center border transition-colors';
+    let labelClass = 'font-black text-[14px] tracking-widest transition-colors';
+
+    if (isSelected || (isReview && isCorrect)) {
+        containerClass += ' selected';
+    }
 
     if (isReview) {
-      const isTheCorrectAnswer = correctIsTrue === isTrue;
-      const isCorrectChoice = isSelected && isTheCorrectAnswer;
-      const isWrongChoice = isSelected && !isTheCorrectAnswer;
-
-      if (isCorrectChoice) {
-        className += ' bg-green-500 border-green-600 text-white';
-      } else if (isWrongChoice) {
-        className += ' bg-red-500 border-red-600 text-white';
-      } else if (isTheCorrectAnswer) {
-        className += ' bg-green-50 border-green-300 text-green-700';
-      } else {
-        className += ' bg-card border-border text-muted-foreground';
-      }
+        if (isCorrect && isSelected) {
+            containerClass = 'rounded-[1.2rem] py-5 flex flex-col items-center justify-center space-y-2.5 bg-emerald-50 border-emerald-500 shadow-sm transition-all w-full';
+            iconClass = 'w-10 h-10 rounded-full bg-emerald-500 text-white border-emerald-600 flex items-center justify-center';
+            labelClass = 'font-black text-[14px] tracking-widest text-emerald-700';
+        } else if (isWrongChoice) {
+            containerClass = 'rounded-[1.2rem] py-5 flex flex-col items-center justify-center space-y-2.5 bg-rose-50 border-rose-500 shadow-sm transition-all w-full';
+            iconClass = 'w-10 h-10 rounded-full bg-rose-500 text-white border-rose-600 flex items-center justify-center';
+            labelClass = 'font-black text-[14px] tracking-widest text-rose-700';
+        } else if (isCorrectNotSelected) {
+            containerClass = 'rounded-[1.2rem] py-5 flex flex-col items-center justify-center space-y-2.5 border-dashed border-emerald-300 bg-emerald-50/30 transition-all w-full';
+            iconClass = 'w-10 h-10 rounded-full bg-white text-emerald-500 border-emerald-200 flex items-center justify-center';
+            labelClass = 'font-black text-[14px] tracking-widest text-emerald-600';
+        } else {
+            iconClass += ' bg-slate-50 text-slate-300 border-slate-100';
+            labelClass += ' text-slate-300';
+        }
     } else if (isSelected) {
-      className += ' bg-blue-600 border-blue-700 text-white';
+        iconClass += ' bg-blue-100 text-blue-600 border-blue-200';
+        labelClass += ' text-blue-700';
     } else {
-      className += ' bg-card border-border text-foreground hover:border-border';
+        iconClass += ' bg-slate-100 text-slate-400 border-slate-200';
+        labelClass += ' text-slate-600';
     }
 
     return (
@@ -67,37 +74,27 @@ export default function TestCardTrueFalse({
         type="button"
         disabled={isReview}
         onClick={() => onSubmit(isTrue)}
-        className={className}
+        className={containerClass}
       >
-        {isReview && correctIsTrue === isTrue ? <Check className="w-5 h-5" /> : null}
-        {isReview && isSelected && correctIsTrue !== isTrue ? <X className="w-5 h-5" /> : null}
-        {isTrue ? trueLabel : falseLabel}
+        <div className={iconClass}>
+          {isTrue ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+        </div>
+        <span className={labelClass}>{isTrue ? '正确' : '错误'}</span>
       </Button>
     );
   };
 
   return (
-    <div className="mt-6">
-      <div className="bg-card rounded-3xl border-2 border-border overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2">
-          <div className="p-6 sm:p-8 border-b sm:border-b-0 sm:border-r border-border">
-            <div className="text-xs font-black text-muted-foreground">
-              {labels.vocabTest?.definitionLabel || 'Definition'}
-            </div>
-            <div className="mt-3 text-3xl font-black text-foreground leading-tight">
-              {statement}
-            </div>
-          </div>
-          <div className="p-6 sm:p-8">
-            <div className="text-xs font-black text-muted-foreground">
-              {labels.vocabTest?.termLabel || 'Term'}
-            </div>
-            <div className="mt-3 text-3xl font-black text-foreground leading-tight">{prompt}</div>
-          </div>
+    <div className="flex flex-col">
+      <div className="text-center mb-10">
+        <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] mb-4">判断释义是否匹配</p>
+        <h4 className="text-5xl font-black text-slate-900 tracking-tight mb-5">{prompt}</h4>
+        <div className="vt-inset-slot rounded-[1rem] py-3.5 px-6 inline-block">
+          <span className="text-[15px] font-black text-slate-800 tracking-wide">{statement}</span>
         </div>
       </div>
 
-      <div className="mt-6 flex gap-4">
+      <div className="grid grid-cols-2 gap-4 option-group">
         {renderButton(true)}
         {renderButton(false)}
       </div>

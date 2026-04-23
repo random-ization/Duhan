@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Trash2, BookOpen, GraduationCap, XCircle, FileText, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useQuery, useMutation } from 'convex/react';
 import { mRef, qRef } from '../../utils/convexRefs';
 import { Button } from '../ui';

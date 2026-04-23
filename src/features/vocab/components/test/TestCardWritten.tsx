@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Check, X } from 'lucide-react';
-import { getLabels } from '../../../../utils/i18n';
+import { useState } from 'react';
+import { Keyboard, Check, X } from 'lucide-react';
 import type { Language } from '../../../../types';
 import { Button } from '../../../../components/ui';
-import { Input } from '../../../../components/ui';
 
 type Answer = {
   input: string;
@@ -22,100 +20,79 @@ type Props = Readonly<{
 
 const normalizeText = (s: string) => s.trim().replaceAll(/\s+/g, ' ').toLowerCase();
 
-const ResultDisplay = ({
-  isCorrect,
-  language,
-  correctAnswer,
-}: {
-  isCorrect: boolean;
-  language: Language;
-  correctAnswer: string;
-}) => {
-  const labels = getLabels(language);
-  const correctLabel = labels.vocabTest?.correct || 'Correct';
-  const wrongLabel = labels.vocabTest?.wrong || 'Wrong';
-  const resultLabel = isCorrect ? correctLabel : wrongLabel;
-
-  return (
-    <div className="mt-4 flex items-center justify-between gap-3">
-      <div
-        className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl font-black ${
-          isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}
-      >
-        {isCorrect ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
-        {resultLabel}
-      </div>
-      <div className="text-sm text-muted-foreground font-bold">
-        {labels.vocabTest?.answerLabel || 'Answer: '}
-        <span className="font-black text-foreground">{correctAnswer}</span>
-      </div>
-    </div>
-  );
-};
-
 export default function TestCardWritten({
-  language,
   prompt,
   answered,
   mode = 'test',
   correctAnswer,
   onSubmit,
 }: Props) {
-  const labels = getLabels(language);
   const [input, setInput] = useState(() => answered?.input ?? '');
   const isReview = mode === 'review' && typeof correctAnswer === 'string';
   const isCorrectReview =
     isReview && correctAnswer ? normalizeText(input) === normalizeText(correctAnswer) : null;
 
-  const placeholder = useMemo(() => {
-    return labels.vocabTest?.writtenPlaceholder || 'Type your answer...';
-  }, [labels.vocabTest?.writtenPlaceholder]);
-
   const submit = () => {
     const v = input.trim();
-    onSubmit(v);
+    if (v.length > 0) onSubmit(v);
   };
 
   return (
-    <div className="mt-6">
-      <div className="text-xs font-black text-muted-foreground">
-        {labels.vocabTest?.writtenAnswer || 'Written answer'}
+    <div className="flex flex-col">
+      <div className="text-center mb-8">
+        <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] mb-4">根据释义拼写单词</p>
+        <h4 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">{prompt}</h4>
       </div>
-      <div className="text-3xl font-black text-foreground mt-3">{prompt}</div>
 
-      <div className="mt-6">
-        <Input
+      <div className={`vt-inset-slot rounded-[1.2rem] p-2 flex items-center mb-6 transition-all ${isReview ? (isCorrectReview ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200') : 'focus-within:ring-2 focus-within:ring-blue-500/50'}`}>
+        <div className={`w-10 h-10 rounded-[10px] bg-white border flex items-center justify-center shadow-sm shrink-0 ${isReview ? (isCorrectReview ? 'text-emerald-500 border-emerald-100' : 'text-rose-500 border-rose-100') : 'text-slate-400 border-slate-200'}`}>
+          <Keyboard className="w-4 h-4" />
+        </div>
+        <input
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder={placeholder}
+          placeholder="输入拼写..."
           disabled={isReview}
-          className="w-full px-5 py-4 rounded-2xl border-2 border-border bg-card text-lg font-bold text-foreground disabled:bg-muted"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submit();
+          }}
+          className={`w-full bg-transparent border-none text-center text-2xl font-black placeholder-slate-300 focus:outline-none px-2 ${isReview ? (isCorrectReview ? 'text-emerald-700' : 'text-rose-700') : 'text-slate-900'}`}
         />
-
-        {isReview && correctAnswer && typeof isCorrectReview === 'boolean' ? (
-          <ResultDisplay
-            isCorrect={isCorrectReview}
-            language={language}
-            correctAnswer={correctAnswer}
-          />
-        ) : (
-          <div className="mt-4 flex justify-end">
-            <Button
-              variant="ghost"
-              size="auto"
-              type="button"
-              onClick={submit}
-              disabled={input.trim().length === 0}
-              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-primary text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Check className="w-5 h-5" />
-              {labels.vocabTest?.confirm || 'Confirm'}
-            </Button>
-          </div>
-        )}
       </div>
+
+      {isReview ? (
+        <div className={`p-4 rounded-xl border text-center ${isCorrectReview ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-rose-50/50 border-rose-100 text-rose-800'}`}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-60">
+            {isCorrectReview ? '拼写正确' : '正确答案'}
+          </p>
+          <p className="text-xl font-black">{correctAnswer}</p>
+          {!isCorrectReview && (
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold opacity-70">
+                  <X className="w-3 h-3" />
+                  <span>你的输入: {input || '(未填写)'}</span>
+              </div>
+          )}
+          {isCorrectReview && (
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold opacity-70">
+                  <Check className="w-3 h-3" />
+                  <span>Perfect Score</span>
+              </div>
+          )}
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="auto"
+          type="button"
+          onClick={submit}
+          disabled={input.trim().length === 0}
+          className="w-full text-[13px] font-black text-white bg-slate-900 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.2)] active:scale-95 transition-transform tracking-widest disabled:opacity-40 disabled:pointer-events-none hover:bg-slate-900 hover:text-white"
+        >
+          提交答案
+        </Button>
+      )}
     </div>
   );
 }
+

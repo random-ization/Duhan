@@ -14,6 +14,15 @@ import { getAuthUserId, getOptionalAuthUserId } from './utils';
 import { getSpacesPublicConfig, getSpacesHost, getSpacesCdnBaseUrl } from './spacesConfig';
 
 type ReadingLibraryBook = Doc<'reading_library_books'>;
+const readingLibraryStatusValidator = v.union(
+  v.literal('DRAFT_UPLOADED'),
+  v.literal('PROCESSING'),
+  v.literal('READY_FOR_REVIEW'),
+  v.literal('IN_REVIEW'),
+  v.literal('PUBLISHED'),
+  v.literal('REJECTED'),
+  v.literal('PROCESSING_FAILED')
+);
 
 const processUploadedBookAction = makeFunctionReference<
   'action',
@@ -168,30 +177,51 @@ export const getPublicShelf = query({
   },
 });
 
-export const getMyUploads = query({
+export const listReadingLibraryBooks = query({
   args: {
-    status: v.optional(v.string()),
+    status: v.optional(readingLibraryStatusValidator),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    let books = await ctx.db
-      .query('reading_library_books')
-      .withIndex('by_owner', q => q.eq('ownerUserId', userId))
-      .collect();
-
+    
+    // Use the appropriate index based on whether we're filtering by status
     if (args.status) {
-      books = books.filter(book => book.status === args.status);
+      // Use by_owner index for status filtering
+      let books = await ctx.db
+        .query('reading_library_books')
+        .withIndex('by_owner', q => {
+          const baseQuery = q.eq('ownerUserId', userId);
+          return args.status ? baseQuery.eq('status', args.status) : baseQuery;
+        })
+        .collect();
+      // Sort by updatedAt in memory
+      books.sort((a, b) => b.updatedAt - a.updatedAt);
+      
+      return books.map(book =>
+        toClientBook(book, {
+          isOwner: true,
+          canRead: book.chapterCount > 0,
+          canSubmitForReview: false,
+          canShare: canBookBeShared(book),
+        })
+      );
+    } else {
+      // Use by_owner_updatedAt index for sorted results without filtering
+      let books = await ctx.db
+        .query('reading_library_books')
+        .withIndex('by_owner_updatedAt', q => q.eq('ownerUserId', userId))
+        .order('desc')
+        .collect();
+      
+      return books.map(book =>
+        toClientBook(book, {
+          isOwner: true,
+          canRead: book.chapterCount > 0,
+          canSubmitForReview: false,
+          canShare: canBookBeShared(book),
+        })
+      );
     }
-
-    books.sort((a, b) => b.updatedAt - a.updatedAt);
-    return books.map(book =>
-      toClientBook(book, {
-        isOwner: true,
-        canRead: book.chapterCount > 0,
-        canSubmitForReview: false,
-        canShare: canBookBeShared(book),
-      })
-    );
   },
 });
 

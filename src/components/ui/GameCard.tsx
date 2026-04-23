@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, type HTMLMotionProps } from 'framer-motion';
+import { m as motion, type HTMLMotionProps } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

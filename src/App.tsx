@@ -1,52 +1,34 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 
-import UpgradePrompt from './components/UpgradePrompt';
 import { useAuth } from './contexts/AuthContext';
-import { useLearningSelection } from './contexts/LearningContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { PostHogTracker } from './components/common/PostHogTracker';
-import { useUpdateLearningProgress } from './hooks/useUpdateLearningProgress';
+// `useUpdateLearningProgress` pulls `useMutation` from `convex/react`, which
+// used to drag the full Convex SDK into the entry chunk. The side-effect
+// that consumed it has moved into `<LearningProgressTracker />`, mounted
+// inside the lazy `AuthedAppProviders` subtree so pre-auth pages no longer
+// import any Convex code.
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
 
 const AppRoutes = lazy(() => import('./routes').then(m => ({ default: m.AppRoutes })));
-
-// Create a client with optimized defaults
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 min, no refetch
-      gcTime: 1000 * 60 * 30, // 30 minutes - keep in cache
-      refetchOnWindowFocus: false, // Disable refetch on tab focus
-      retry: 1, // Only retry once on failure
-    },
-  },
-});
+const LazyUpgradePrompt = lazy(() => import('./components/UpgradePrompt'));
 
 function App() {
   const { t } = useTranslation();
-  const { user, language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
-  const updateLearningProgress = useUpdateLearningProgress();
-  const { selectedInstitute, selectedLevel } = useLearningSelection();
+  const { language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
 
-  // Track learning progress when user changes institute/level
   useEffect(() => {
     finalizeStaleChunkRecovery();
   }, []);
 
-  useEffect(() => {
-    if (user && selectedInstitute && Number.isFinite(selectedLevel)) {
-      // Prevent feedback loop/concurrent updates
-      if (user.lastInstitute === selectedInstitute && user.lastLevel === selectedLevel) {
-        return;
-      }
-      updateLearningProgress(selectedInstitute, selectedLevel);
-    }
-  }, [selectedInstitute, selectedLevel, user, updateLearningProgress]);
+  // Learning-progress sync used to live here, but it required `useMutation`
+  // from `convex/react`, which forced the Convex SDK into the entry chunk.
+  // It has moved to `<LearningProgressTracker />`, rendered inside the
+  // lazy `AuthedAppProviders` subtree.
 
   // Warm likely next-route chunks after login-area entry.
   useEffect(() => {
@@ -136,30 +118,32 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
-        <GlobalModalProvider>
-          <PostHogTracker />
-          <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
-            <AppRoutes />
-          </Suspense>
+    <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
+      <GlobalModalProvider>
+        <PostHogTracker />
+        <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
+          <AppRoutes />
+        </Suspense>
 
-          <UpgradePrompt
-            isOpen={showUpgradePrompt}
-            onClose={() => setShowUpgradePrompt(false)}
-            language={language}
-          />
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 2800,
-              className:
-                'rounded-xl border border-border bg-card text-foreground font-bold shadow-pop-sm',
-            }}
-          />
-        </GlobalModalProvider>
-      </ErrorBoundary>
-    </QueryClientProvider>
+        {showUpgradePrompt ? (
+          <Suspense fallback={null}>
+            <LazyUpgradePrompt
+              isOpen={showUpgradePrompt}
+              onClose={() => setShowUpgradePrompt(false)}
+              language={language}
+            />
+          </Suspense>
+        ) : null}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 2800,
+            className:
+              'rounded-xl border border-border bg-card text-foreground font-bold shadow-pop-sm',
+          }}
+        />
+      </GlobalModalProvider>
+    </ErrorBoundary>
   );
 }
 

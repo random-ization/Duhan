@@ -64,7 +64,12 @@ const getStoredUserLanguage = (): Language | null => {
   return null;
 };
 
-const buildLocalizedPath = (pathname: string, nextLang: Language, search = '', hash = '') => {
+export const buildLocalizedPath = (
+  pathname: string,
+  nextLang: Language,
+  search = '',
+  hash = ''
+) => {
   const normalizedPathname = normalizeLocalizedPathname(pathname);
   const segments = normalizedPathname.split('/').filter(Boolean);
   if (segments[0] && isValidLanguage(segments[0])) {

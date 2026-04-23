@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GripVertical, FileText, ChevronRight, BookOpen } from 'lucide-react';
+import { FileText, ChevronRight, BookOpen } from 'lucide-react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { BentoCard } from '../components/dashboard/BentoCard';
+import type { EditableDashboardGridItem } from '../components/dashboard/EditableDashboardGrid';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
 import { useLayoutActions, useLayoutDashboardState } from '../contexts/LayoutContext';
@@ -12,11 +13,10 @@ import DictionarySearchDropdown from '../components/dashboard/DictionarySearchDr
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { VOCAB, qRef } from '../utils/convexRefs';
-import { MobileDashboard } from '../components/mobile/MobileDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button } from '../components/ui';
 import { useTTS } from '../hooks/useTTS';
-import { Skeleton } from '../components/common';
+import { ContentSkeleton, Skeleton } from '../components/common';
 import { ReviewWordsCard } from '../features/vocab/components/ReviewWordsCard';
 import { trackEvent } from '../utils/analytics';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
@@ -28,6 +28,18 @@ import {
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import { buildLearningModulePath, resolveLearningEntryTarget } from '../utils/learningFlow';
 
+const LazyMobileDashboard = lazy(() =>
+  import('../components/mobile/MobileDashboard').then(module => ({
+    default: module.MobileDashboard,
+  }))
+);
+
+const LazyEditableDashboardGrid = lazy(() =>
+  import('../components/dashboard/EditableDashboardGrid').then(module => ({
+    default: module.EditableDashboardGrid,
+  }))
+);
+
 interface DailyPhraseData {
   id: string;
   korean: string;
@@ -35,84 +47,20 @@ interface DailyPhraseData {
   translation: string;
 }
 
-// DnD Kit
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
 // Assets - Locally hosted emoji images
 const ASSETS = {
-  wave: '/emojis/Waving_Hand.png',
-  fire: '/emojis/Fire.png',
-  gem: '/emojis/Gem_Stone.png',
-  tiger: '/emojis/Tiger_Face.png',
-  sparkles: '/emojis/Sparkles.png',
+  wave: '/emojis/Waving_Hand.webp',
+  tigerAvif: '/emojis/Tiger_Face.avif',
+  tigerWebp: '/emojis/Tiger_Face.webp',
+  tigerPng: '/emojis/Tiger_Face.png',
   books: '/emojis/Books.png',
   book: '/emojis/Open_Book.png',
-  trophy: '/emojis/Trophy.png',
   tv: '/emojis/Television.png',
   headphone: '/emojis/Headphone.png',
-  memo: '/emojis/Spiral_Calendar.png',
-  typing: '/emojis/keyboard_icon_3d_1769658200654.png',
-  vocabBook: '/emojis/flashcards_icon_3d_1769658215552.png',
-};
-
-// Sortable Item Wrapper
-const SortableItem = ({
-  id,
-  children,
-  isEditing,
-  className,
-}: {
-  id: string;
-  children: React.ReactNode;
-  isEditing: boolean;
-  className?: string;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 'auto',
-    opacity: isDragging ? 0.8 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative ${className} ${isEditing ? 'cursor-move' : ''} `}
-      {...attributes}
-      {...(isEditing ? listeners : {})}
-    >
-      {children}
-      {isEditing && (
-        <div className="absolute top-2 right-2 bg-card/80 p-1 rounded-full shadow-sm text-muted-foreground z-50 pointer-events-none">
-          <GripVertical size={16} />
-        </div>
-      )}
-      {/* Editing Overlay to prevent interactions while dragging */}
-      {isEditing && <div className="absolute inset-0 z-40 bg-transparent" />}
-    </div>
-  );
-};
+  memo: '/emojis/Spiral_Calendar.webp',
+  typing: '/emojis/keyboard_icon_3d_1769658200654.webp',
+  vocabBook: '/emojis/flashcards_icon_3d_1769658215552.webp',
+} as const;
 
 type DashboardTranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -312,6 +260,7 @@ function getDashboardGridClassName(isEditing: boolean) {
 }
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const TIGER_PRELOAD_SELECTOR = 'link[data-dashboard-tiger-preload="true"]';
 
 const TigerCard: React.FC<{
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -340,11 +289,16 @@ const TigerCard: React.FC<{
         onSpeakDailyPhrase();
       }}
     >
-      <img
-        src={ASSETS.tiger}
-        className="w-full h-full object-contain pointer-events-none"
-        alt={t('dashboard.alt.tigerCoach', { defaultValue: 'Tiger coach' })}
-      />
+      <picture>
+        <source srcSet={ASSETS.tigerAvif} type="image/avif" />
+        <source srcSet={ASSETS.tigerWebp} type="image/webp" />
+        <img
+          src={ASSETS.tigerPng}
+          className="w-full h-full object-contain pointer-events-none"
+          alt={t('dashboard.alt.tigerCoach', { defaultValue: 'Tiger coach' })}
+          fetchPriority="high"
+        />
+      </picture>
     </button>
     <div className="relative z-10 mt-4 bg-card border-2 border-foreground px-4 py-3 rounded-2xl shadow-sm transform -rotate-2 group-hover:rotate-0 transition min-w-[200px]">
       {dailyPhrase ? (
@@ -680,7 +634,7 @@ function renderDashboardCard(id: string, context: DashboardCardContext) {
   }
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   const { user, language, viewerAccess } = useAuth();
   const { speak, isLoading: isSpeaking } = useTTS();
   const [lowPriorityQueriesReady, setLowPriorityQueriesReady] = useState(
@@ -742,8 +696,33 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof document === 'undefined' || isMobile) {
+      return;
+    }
+
+    const existingLink = document.head.querySelector<HTMLLinkElement>(TIGER_PRELOAD_SELECTOR);
+    if (existingLink) {
+      return;
+    }
+
+    const preloadLink = document.createElement('link');
+    preloadLink.rel = 'preload';
+    preloadLink.as = 'image';
+    preloadLink.type = 'image/avif';
+    preloadLink.href = ASSETS.tigerAvif;
+    preloadLink.setAttribute('data-dashboard-tiger-preload', 'true');
+    document.head.appendChild(preloadLink);
+
+    return () => {
+      if (preloadLink.parentNode === document.head) {
+        document.head.removeChild(preloadLink);
+      }
+    };
+  }, [isMobile]);
+
+  useEffect(() => {
     if (dashboardView !== 'practice') return;
-    navigate('/practice', { replace: true });
+    navigate('/courses', { replace: true });
   }, [dashboardView, navigate]);
 
   useEffect(() => {
@@ -819,16 +798,6 @@ export default function DashboardPage() {
     dashboardView === 'practice' ? 'skip' : getCourseProgressArgs(user, selectedInstitute)
   );
 
-  // Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 }, // Prevent accidental drags
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
   const savedWordsCount = getSavedWordsCount(vocabBookCount);
   const { currentUnit, progressPercent } = useMemo(
     () => getProgressStats(courseProgress, user),
@@ -881,9 +850,11 @@ export default function DashboardPage() {
 
     return { name: instituteName, coverUrl: undefined as string | undefined };
   }, [institutes, instituteName, learningEntryTarget]);
-  const onSpeakDailyPhrase = () => {
-    if (dailyPhrase?.korean) speak(dailyPhrase.korean);
-  };
+  const onSpeakDailyPhrase = useCallback(() => {
+    if (dailyPhrase?.korean) {
+      speak(dailyPhrase.korean);
+    }
+  }, [dailyPhrase?.korean, speak]);
   const cardContext: DashboardCardContext = {
     t,
     isSpeaking,
@@ -896,26 +867,51 @@ export default function DashboardPage() {
     progressPercent,
     savedWordsCount,
   };
+  const dashboardGridItems = useMemo<EditableDashboardGridItem[]>(
+    () =>
+      filteredCardOrder.map(id => ({
+        id,
+        className: getCardStyleForId(id),
+        content: renderDashboardCard(id, cardContext),
+      })),
+    [
+      filteredCardOrder,
+      t,
+      isSpeaking,
+      dailyPhrase,
+      onSpeakDailyPhrase,
+      isInstituteNameLoading,
+      instituteName,
+      selectedLevel,
+      currentUnit,
+      progressPercent,
+      savedWordsCount,
+    ]
+  );
+  const renderStaticDashboardGrid = useCallback(
+    (className: string) => (
+      <div className={className}>
+        {dashboardGridItems.map(item => (
+          <div key={item.id} className={item.className}>
+            {item.content}
+          </div>
+        ))}
+      </div>
+    ),
+    [dashboardGridItems]
+  );
 
   if (isMobile) {
     return (
-      <MobileDashboard
-        learningEntryTarget={learningEntryTarget}
-        institutes={institutes}
-        institutesLoading={institutesLoading}
-      />
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileDashboard
+          learningEntryTarget={learningEntryTarget}
+          institutes={institutes}
+          institutesLoading={institutesLoading}
+        />
+      </Suspense>
     );
   }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = cardOrder.indexOf(active.id as string);
-      const newIndex = cardOrder.indexOf(over.id as string);
-      updateCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
-    }
-  };
 
   return (
     <div className="space-y-6 md:space-y-10 pb-10 md:pb-20">
@@ -1151,22 +1147,20 @@ export default function DashboardPage() {
       )}
 
       {/* 3. Sortable Grid */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={filteredCardOrder} strategy={rectSortingStrategy}>
-          <div className={gridClassName}>
-            {filteredCardOrder.map(id => (
-              <SortableItem
-                key={id}
-                id={id}
-                isEditing={isEditing}
-                className={getCardStyleForId(id)}
-              >
-                {renderDashboardCard(id, cardContext)}
-              </SortableItem>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {isEditing ? (
+        <Suspense fallback={renderStaticDashboardGrid(getDashboardGridClassName(true))}>
+          <LazyEditableDashboardGrid
+            items={dashboardGridItems}
+            cardOrder={cardOrder}
+            gridClassName={gridClassName}
+            onUpdateCardOrder={updateCardOrder}
+          />
+        </Suspense>
+      ) : (
+        renderStaticDashboardGrid(gridClassName)
+      )}
     </div>
   );
 }
+
+export default React.memo(DashboardPage);

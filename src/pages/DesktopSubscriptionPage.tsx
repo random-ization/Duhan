@@ -2,14 +2,16 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAction } from 'convex/react';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import BackButton from '../components/ui/BackButton';
 import PricingSection from '../components/PricingSection';
-import { aRef } from '../utils/convexRefs';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+// `/pricing` is a SSG-prerendered public route, so we avoid pulling
+// `convex/react`. The checkout action is invoked only after a user click
+// and we attach the Convex Auth JWT from localStorage at call time.
+import { callAuthenticatedConvexAction } from '../utils/publicConvexClient';
 import {
   isSafeCheckoutUrl,
   type LemonSqueezyCheckoutRequest,
@@ -29,9 +31,6 @@ const DesktopSubscriptionPage: React.FC = () => {
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);
-  const createCheckoutSession = useAction(
-    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
-  );
 
   const showLocalizedPromo =
     i18n.language === 'zh' ||
@@ -271,19 +270,24 @@ const DesktopSubscriptionPage: React.FC = () => {
             }
             try {
               setCheckoutPendingPlan(checkoutPlan);
+              const checkoutArgs: LemonSqueezyCheckoutRequest = {
+                plan: checkoutPlan,
+                userId: user.id?.toString() || '',
+                userEmail: user.email || '',
+                userName: user.name || '',
+                region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+                locale: i18n.language,
+                source: 'desktop_subscription',
+                returnTo: '/dashboard',
+                appOrigin: globalThis.location.origin,
+              };
               const { checkoutUrl } = await runConvexActionWithRetry(
-                createCheckoutSession,
-                {
-                  plan: checkoutPlan,
-                  userId: user.id?.toString() || '',
-                  userEmail: user.email || '',
-                  userName: user.name || '',
-                  region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-                  locale: i18n.language,
-                  source: 'desktop_subscription',
-                  returnTo: '/dashboard',
-                  appOrigin: globalThis.location.origin,
-                },
+                () =>
+                  callAuthenticatedConvexAction<
+                    LemonSqueezyCheckoutRequest,
+                    LemonSqueezyCheckoutResult
+                  >('lemonsqueezy:createCheckout', checkoutArgs),
+                undefined,
                 { retries: 0 }
               );
               if (!isSafeCheckoutUrl(checkoutUrl)) {

@@ -1,5 +1,3 @@
-'use node';
-import crypto from 'node:crypto';
 import { ConvexError } from 'convex/values';
 import {
   getSpacesCdnBaseUrl,
@@ -7,7 +5,7 @@ import {
   getSpacesHost,
   getSpacesRegion,
 } from './spacesConfig';
-import { getSignatureKey } from './awsSigV4';
+import { getSignatureKey, hmacSha256Hex, sha256Hex } from './awsSigV4';
 
 type PresignArgs = {
   filename: string;
@@ -26,7 +24,7 @@ export type PresignResult = {
   };
 };
 
-export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
+export async function createPresignedUploadUrl(args: PresignArgs): Promise<PresignResult> {
   const spaces = getSpacesCoreConfig();
   const region = getSpacesRegion();
   if (!spaces || !region) {
@@ -59,7 +57,7 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
 
   const sortedQuery = Array.from(queryParams.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
     .join('&');
 
   const canonicalRequest = [
@@ -75,11 +73,11 @@ export function createPresignedUploadUrl(args: PresignArgs): PresignResult {
     algorithm,
     amzDate,
     credentialScope,
-    crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
+    await sha256Hex(canonicalRequest),
   ].join('\n');
 
-  const signingKey = getSignatureKey(secretAccessKey, dateStamp, region, service);
-  const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+  const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, service);
+  const signature = await hmacSha256Hex(signingKey, stringToSign);
 
   const uploadUrl = `https://${endpointHost}${uri}?${sortedQuery}&X-Amz-Signature=${signature}`;
   const cdnUrl = getSpacesCdnBaseUrl(bucket, host);

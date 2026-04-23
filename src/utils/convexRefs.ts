@@ -6,6 +6,11 @@ import type { GrammarStatsDto, GrammarItemDto, UnitGrammarDto } from '../../conv
 import type { InstituteClientDto } from '../../convex/institutes';
 import type { SearchResult } from '../../convex/dictionary';
 import type { ViewerAccessSnapshot } from './entitlements';
+import type {
+  GlobalUserSettings,
+  GlobalUserSettingsUpdate,
+  StoredGlobalUserSettings,
+} from '../types/globalUserSettings';
 
 export type NoArgs = Record<string, never>;
 
@@ -31,6 +36,16 @@ export const STORAGE = {
       headers: Record<string, string>;
     }
   >('storage:getUploadUrl'),
+};
+
+export const USER_SETTINGS = {
+  getSettings: qRef<NoArgs, GlobalUserSettings>('userSettings:getSettings'),
+  getStoredSettings: qRef<NoArgs, StoredGlobalUserSettings | null>(
+    'userSettings:getStoredSettings'
+  ),
+  updateSettings: mRef<GlobalUserSettingsUpdate, Id<'user_settings'> | null>(
+    'userSettings:updateSettings'
+  ),
 };
 
 export const DICTIONARY = {

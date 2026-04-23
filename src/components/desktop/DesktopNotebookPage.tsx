@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, BookOpen, GraduationCap, Target, FileText, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useQuery } from 'convex/react';
 import NoteCard from '../notebook/NoteCard';

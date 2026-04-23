@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronRight, Globe, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 
 interface MobileNewsCardProps {
   readonly title: string;

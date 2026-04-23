@@ -27,6 +27,7 @@ import { useUserActions } from '../hooks/useUserActions';
 import { Popover, PopoverContent, PopoverPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
+import { ContentSkeleton } from '../components/common';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
@@ -35,9 +36,13 @@ import { buildVideoPlayerPath } from '../utils/videoRoutes';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
 
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileVideoPlayerPage } from '../components/mobile/MobileVideoPlayerPage';
 
 const LazyVideoPlayer = React.lazy(() => import('../components/media/VidstackVideoPlayer'));
+const LazyMobileVideoPlayerPage = React.lazy(() =>
+  import('../components/mobile/MobileVideoPlayerPage').then(module => ({
+    default: module.MobileVideoPlayerPage,
+  }))
+);
 
 interface TranscriptSegment {
   start: number;
@@ -754,7 +759,13 @@ const DesktopVideoPlayerPage: React.FC = () => {
 
 const VideoPlayerPage: React.FC = () => {
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileVideoPlayerPage />;
+  if (isMobile) {
+    return (
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileVideoPlayerPage />
+      </Suspense>
+    );
+  }
   return <DesktopVideoPlayerPage />;
 };
 

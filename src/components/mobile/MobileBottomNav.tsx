@@ -1,13 +1,13 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { House, BookOpen, Dumbbell, Clapperboard, Bookmark } from 'lucide-react';
+import { House, BookOpen, Clapperboard, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { cn } from '../../lib/utils';
 
 type Tab = {
-  key: 'dashboard' | 'learn' | 'practice' | 'media' | 'vocab';
+  key: 'dashboard' | 'learn' | 'media' | 'profile';
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   path: string;
   label: string;
@@ -33,22 +33,16 @@ export function MobileBottomNav() {
       label: t('nav.learn', { defaultValue: 'Learning' }),
     },
     {
-      key: 'practice',
-      icon: Dumbbell,
-      path: '/practice',
-      label: t('nav.practice', { defaultValue: 'Practice' }),
-    },
-    {
       key: 'media',
       icon: Clapperboard,
       path: '/media',
       label: t('nav.media', { defaultValue: 'Media' }),
     },
     {
-      key: 'vocab',
-      icon: Bookmark,
-      path: '/vocab-book',
-      label: t('dashboard.vocab.title', { defaultValue: 'Vocab' }),
+      key: 'profile',
+      icon: User,
+      path: '/profile',
+      label: t('nav.profile', { defaultValue: 'Profile' }),
     },
   ];
 
@@ -57,15 +51,15 @@ export function MobileBottomNav() {
       return pathWithoutLang.startsWith('/dashboard') || pathWithoutLang.startsWith('/dictionary/');
     }
     if (tab.key === 'learn') {
-      return pathWithoutLang.startsWith('/courses') || pathWithoutLang.startsWith('/course/');
-    }
-    if (tab.key === 'practice') {
       return (
-        pathWithoutLang.startsWith('/practice') ||
+        pathWithoutLang.startsWith('/courses') ||
+        pathWithoutLang.startsWith('/course/') ||
         pathWithoutLang.startsWith('/review') ||
         pathWithoutLang.startsWith('/notebook') ||
         pathWithoutLang.startsWith('/topik') ||
-        pathWithoutLang.startsWith('/typing')
+        pathWithoutLang.startsWith('/typing') ||
+        pathWithoutLang.startsWith('/vocab-book') ||
+        pathWithoutLang.startsWith('/vocabbook')
       );
     }
     if (tab.key === 'media') {
@@ -77,7 +71,7 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/podcasts')
       );
     }
-    return pathWithoutLang.startsWith('/vocab-book') || pathWithoutLang.startsWith('/vocabbook');
+    return pathWithoutLang.startsWith('/profile');
   };
 
   const handleTabPress = (path: string) => {

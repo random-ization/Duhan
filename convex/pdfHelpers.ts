@@ -129,7 +129,7 @@ export const uploadPdfToSpaces = async (pdfBuffer: Buffer, key: string, filename
     crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
   ].join('\n');
 
-  const signingKey = getSignatureKey(secretAccessKey, dateStamp, region, service);
+  const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, service);
   const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
 
   const authorization = `${algorithm} Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;

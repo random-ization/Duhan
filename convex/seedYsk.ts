@@ -504,7 +504,7 @@ async function uploadAudioToSpaces(args: {
   const filename = `chapter-${chapterPart}-${hash}.${ext}`;
   const key = `audio/${args.courseId}/${filename}`;
 
-  const presigned = createPresignedUploadUrl({
+  const presigned = await createPresignedUploadUrl({
     filename,
     contentType,
     folder: 'audio',

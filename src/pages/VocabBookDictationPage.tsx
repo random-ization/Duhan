@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { Mic, Type, Play, Square, Settings2, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
@@ -13,6 +13,7 @@ import { VocabBookDictationSkeleton } from '../components/common';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../components/ui';
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
+import { useGlobalSettings } from '../hooks/useGlobalSettings';
 import { buildVocabBookPath } from '../utils/vocabBookRoutes';
 import {
   matchesVocabBookPracticeCategory,
@@ -26,6 +27,12 @@ import {
 } from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
 import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
+import {
+  DICTATION_GAP_SECOND_VALUES,
+  DICTATION_PLAY_COUNT_VALUES,
+  type DictationGapSeconds,
+  type DictationPlayCount,
+} from '../types/globalUserSettings';
 
 type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 
@@ -35,8 +42,6 @@ const EN_VOICE = 'en-US-JennyNeural';
 const VI_VOICE = 'vi-VN-HoaiMyNeural';
 const MN_VOICE = 'mn-MN-YesuiNeural';
 
-const PLAY_COUNT_OPTIONS = [1, 2, 3] as const;
-const GAP_SECOND_OPTIONS = [2, 4, 6, 8] as const;
 const PAGE_SIZE = 80;
 const PREFETCH_THRESHOLD = 10;
 
@@ -180,12 +185,12 @@ const DictationSetupPanel = ({
   mode: DictationMode;
   setMode: React.Dispatch<React.SetStateAction<DictationMode>>;
   labels: ReturnType<typeof getLabels>;
-  playCount: 1 | 2 | 3;
-  setPlayCount: React.Dispatch<React.SetStateAction<1 | 2 | 3>>;
-  gapSeconds: 2 | 4 | 6 | 8;
-  setGapSeconds: React.Dispatch<React.SetStateAction<2 | 4 | 6 | 8>>;
+  playCount: DictationPlayCount;
+  setPlayCount: (value: DictationPlayCount) => void;
+  gapSeconds: DictationGapSeconds;
+  setGapSeconds: (value: DictationGapSeconds) => void;
   autoNext: boolean;
-  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  setAutoNext: (value: boolean) => void;
   onStart: () => void;
 }) => (
   <div className="space-y-5">
@@ -249,7 +254,7 @@ const DictationSetupPanel = ({
           {labels.vocab?.repeatCount || 'Repetitions'}
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {PLAY_COUNT_OPTIONS.map(v => (
+          {DICTATION_PLAY_COUNT_VALUES.map(v => (
             <Button
               type="button"
               variant="ghost"
@@ -273,7 +278,7 @@ const DictationSetupPanel = ({
           {labels.vocab?.playGap || 'Repeat interval'}
         </p>
         <div className="grid grid-cols-4 gap-2">
-          {GAP_SECOND_OPTIONS.map(v => (
+          {DICTATION_GAP_SECOND_VALUES.map(v => (
             <Button
               type="button"
               variant="ghost"
@@ -347,12 +352,12 @@ const DictationContent = ({
   onStartPlayback: () => void;
   onNext: () => void;
   setMode: React.Dispatch<React.SetStateAction<DictationMode>>;
-  playCount: 1 | 2 | 3;
-  setPlayCount: React.Dispatch<React.SetStateAction<1 | 2 | 3>>;
-  gapSeconds: 2 | 4 | 6 | 8;
-  setGapSeconds: React.Dispatch<React.SetStateAction<2 | 4 | 6 | 8>>;
+  playCount: DictationPlayCount;
+  setPlayCount: (value: DictationPlayCount) => void;
+  gapSeconds: DictationGapSeconds;
+  setGapSeconds: (value: DictationGapSeconds) => void;
   autoNext: boolean;
-  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  setAutoNext: (value: boolean) => void;
   onStart: () => void;
 }) => {
   if (total === 0) return <DictationEmptyState labels={labels} />;
@@ -440,14 +445,22 @@ const DictationTopBar = ({
 const DictationSettingsDialog = ({
   open,
   labels,
+  playCount,
+  setPlayCount,
+  gapSeconds,
+  setGapSeconds,
   autoNext,
   setAutoNext,
   onClose,
 }: {
   open: boolean;
   labels: ReturnType<typeof getLabels>;
+  playCount: DictationPlayCount;
+  setPlayCount: (value: DictationPlayCount) => void;
+  gapSeconds: DictationGapSeconds;
+  setGapSeconds: (value: DictationGapSeconds) => void;
   autoNext: boolean;
-  setAutoNext: React.Dispatch<React.SetStateAction<boolean>>;
+  setAutoNext: (value: boolean) => void;
   onClose: () => void;
 }) => (
   <Dialog open={open} onOpenChange={open => !open && onClose()}>
@@ -492,6 +505,54 @@ const DictationSettingsDialog = ({
           </div>
 
           <div className="space-y-3">
+            <div>
+              <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
+                {labels.vocab?.repeatCount || 'Repetitions'}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {DICTATION_PLAY_COUNT_VALUES.map(option => (
+                  <Button
+                    key={option}
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => setPlayCount(option)}
+                    className={`py-3 rounded-2xl border-[3px] font-black ${
+                      playCount === option
+                        ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
+                        : 'border-border bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {formatTemplate(labels.vocab?.repeatTimes || '{count}x', { count: option })}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-black text-muted-foreground tracking-wider uppercase mb-2">
+                {labels.vocab?.playGap || 'Repeat interval'}
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {DICTATION_GAP_SECOND_VALUES.map(option => (
+                  <Button
+                    key={option}
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => setGapSeconds(option)}
+                    className={`py-3 rounded-2xl border-[3px] font-black ${
+                      gapSeconds === option
+                        ? 'border-rose-400 bg-rose-50 text-rose-600 dark:border-rose-300/35 dark:bg-rose-400/12 dark:text-rose-200'
+                        : 'border-border bg-card text-muted-foreground'
+                    }`}
+                  >
+                    {formatTemplate(labels.vocab?.seconds || '{count}s', { count: option })}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <label className="flex items-center justify-between p-4 rounded-2xl bg-muted border-2 border-border">
               <span className="font-black text-muted-foreground">
                 {labels.vocab?.autoNext || 'Auto next'}
@@ -590,12 +651,19 @@ const VocabBookDictationPage: React.FC = () => {
     () => persistedState?.mode ?? 'HEAR_PRONUNCIATION'
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const [playCount, setPlayCount] = useState<1 | 2 | 3>(() => persistedState?.playCount ?? 2);
-  const [gapSeconds, setGapSeconds] = useState<2 | 4 | 6 | 8>(
-    () => persistedState?.gapSeconds ?? 2
-  );
-  const [autoNext, setAutoNext] = useState(() => persistedState?.autoNext ?? true);
+  const { settings, updateSettings } = useGlobalSettings();
+  const playCount = settings.dictationPlayCount;
+  const gapSeconds = settings.dictationGapSeconds;
+  const autoNext = settings.dictationAutoNext;
+  const setPlayCount = (value: DictationPlayCount) => {
+    void updateSettings({ dictationPlayCount: value });
+  };
+  const setGapSeconds = (value: DictationGapSeconds) => {
+    void updateSettings({ dictationGapSeconds: value });
+  };
+  const setAutoNext = (value: boolean) => {
+    void updateSettings({ dictationAutoNext: value });
+  };
 
   const [started, setStarted] = useState(() => persistedState?.started ?? false);
   const [index, setIndex] = useState(() => persistedState?.index ?? 0);
@@ -609,9 +677,6 @@ const VocabBookDictationPage: React.FC = () => {
     setIndex(persistedState?.index ?? 0);
     setStarted(persistedState?.started ?? false);
     setMode(persistedState?.mode ?? 'HEAR_PRONUNCIATION');
-    setPlayCount(persistedState?.playCount ?? 2);
-    setGapSeconds(persistedState?.gapSeconds ?? 2);
-    setAutoNext(persistedState?.autoNext ?? true);
   }, [persistedState, sessionStorageKey]);
 
   useEffect(() => {
@@ -630,12 +695,9 @@ const VocabBookDictationPage: React.FC = () => {
       index,
       started,
       mode,
-      playCount,
-      gapSeconds,
-      autoNext,
       timestamp: Date.now(),
     });
-  }, [autoNext, gapSeconds, index, mode, playCount, sessionStorageKey, started]);
+  }, [index, mode, sessionStorageKey, started]);
 
   useEffect(() => {
     if (!nextCursor || loadingMore || total === 0) return;
@@ -795,6 +857,10 @@ const VocabBookDictationPage: React.FC = () => {
       <DictationSettingsDialog
         open={settingsOpen}
         labels={labels}
+        playCount={playCount}
+        setPlayCount={setPlayCount}
+        gapSeconds={gapSeconds}
+        setGapSeconds={setGapSeconds}
         autoNext={autoNext}
         setAutoNext={setAutoNext}
         onClose={() => setSettingsOpen(false)}

@@ -1,6 +1,46 @@
-@import 'tailwindcss';
+/**
+ * Global (pre-auth) stylesheet.
+ *
+ * Loaded on every page via `src/index.tsx`. To keep the bundle small on
+ * landing / auth / legal / pricing / learn pages, Tailwind's automatic
+ * source detection is disabled (`source(none)`) and we explicitly list
+ * only the files that can render before the user reaches an
+ * authenticated route. Utilities for the authed app are generated in
+ * `src/styles/app.css`, which is imported by `AppLayout.tsx` and
+ * therefore loaded lazily with that chunk.
+ *
+ * When adding a new public (pre-auth) page or a component it depends
+ * on, add a matching `@source` entry below, otherwise Tailwind will
+ * not emit the classes that file uses.
+ */
+@import 'tailwindcss' source(none);
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Entrypoint / routing shell (loaded on every page) */
+@source './index.tsx';
+@source './App.tsx';
+@source './routes.tsx';
+@source './components/LanguageRouter.tsx';
+@source './components/ProtectedRoute.tsx';
+@source './components/common/**/*.{ts,tsx}';
+@source './components/ui/**/*.{ts,tsx}';
+
+/* Public (pre-auth) pages */
+@source './pages/Landing.tsx';
+@source './pages/AuthPage.tsx';
+@source './pages/VerifyEmailPage.tsx';
+@source './pages/ForgotPasswordPage.tsx';
+@source './pages/ResetPasswordPage.tsx';
+@source './pages/LegalDocumentPage.tsx';
+@source './pages/SubscriptionPage.tsx';
+@source './pages/PricingDetailsPage.tsx';
+@source './pages/LearnHubPage.tsx';
+@source './pages/LearnGuidePage.tsx';
+@source './pages/PaymentSuccessPage.tsx';
+@source './pages/MobilePreviewPage.tsx';
+@source './pages/AdminLoginPage.tsx';
+@source './pages/NotFoundPage.tsx';
 
 :root {
   --mobile-font-scale: 1;

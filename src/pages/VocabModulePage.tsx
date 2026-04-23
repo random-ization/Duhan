@@ -1,4 +1,4 @@
-import {
+import React, {
   useState,
   useEffect,
   useCallback,
@@ -34,6 +34,7 @@ import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { createLearningSessionId, useLearningAnalytics } from '../hooks/useLearningAnalytics';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { notify } from '../utils/notify';
+import { useGlobalSettings } from '../hooks/useGlobalSettings';
 
 const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
@@ -303,11 +304,12 @@ function useFlushQueueOnUnmount(flushQueue: () => Promise<void>) {
   }, [flushQueue]);
 }
 
-export default function VocabModulePage() {
+function VocabModulePage() {
   // Force Rebuild Trigger: 2026-01-02
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user, language } = useAuth();
+  const { settings: globalSettings, updateSettings: updateGlobalSettings } = useGlobalSettings();
   const { startUpgradeFlow } = useUpgradeFlow();
   const { selectedLevel } = useLearningSelection();
   const { setRecentMaterial, setSelectedInstitute, setSelectedLevel } = useLearningActions();
@@ -1552,8 +1554,9 @@ export default function VocabModulePage() {
           flashcard: {
             batchSize: 200,
             random: false,
-            autoTTS: false,
-            cardFront: 'KOREAN',
+            autoTTS: globalSettings.flashcardAutoTTS,
+            cardFront: globalSettings.flashcardFront,
+            ratingMode: globalSettings.flashcardRatingMode,
           },
           learn: {
             batchSize: 20,
@@ -1593,6 +1596,13 @@ export default function VocabModulePage() {
         }}
         onSpeak={speakWord}
         onCardReview={handleReview}
+        onUpdateFlashcardSettings={nextSettings => {
+          void updateGlobalSettings({
+            flashcardAutoTTS: nextSettings.autoTTS,
+            flashcardFront: nextSettings.cardFront,
+            flashcardRatingMode: nextSettings.ratingMode,
+          });
+        }}
       />
     </Suspense>
   );
@@ -1835,3 +1845,5 @@ export default function VocabModulePage() {
     </div>
   );
 }
+
+export default React.memo(VocabModulePage);

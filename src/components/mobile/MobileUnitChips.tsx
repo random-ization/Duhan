@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 
 interface MobileUnitChipsProps {
   readonly totalUnits: number;
@@ -59,19 +59,12 @@ export default function MobileUnitChips({
             key={unit}
             type="button"
             onClick={() => onSelect(unit)}
-            className={`relative shrink-0 cursor-pointer snap-start rounded-full px-5 py-2.5 text-xs font-black tracking-wider uppercase transition-all outline-none ${
+            className={`unit-chip rounded-full px-5 py-2 shrink-0 snap-start text-[11px] font-black tracking-widest outline-none ${
               isActive
-                ? 'text-white'
-                : 'bg-white text-slate-400 hover:text-slate-600 shadow-sm border border-slate-50'
+                ? 'active'
+                : 'text-slate-600'
             }`}
           >
-            {isActive && (
-              <motion.div
-                layoutId="activeUnitTab"
-                className="absolute inset-0 bg-indigo-600 rounded-full shadow-lg shadow-indigo-100"
-                style={{ zIndex: -1 }}
-              />
-            )}
             <span className="relative z-10">{getUnitName(unit)}</span>
           </button>
         );

@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileNotebookPage } from '../components/mobile/MobileNotebookPage';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -47,6 +46,11 @@ import {
 } from '../components/layout/contextualSidebarBlocks';
 
 const OfficialTiptapEditor = lazy(() => import('../components/notebook/OfficialTiptapEditor'));
+const LazyMobileNotebookPage = lazy(() =>
+  import('../components/mobile/MobileNotebookPage').then(module => ({
+    default: module.MobileNotebookPage,
+  }))
+);
 
 export type ViewMode = 'gallery' | 'list' | 'table';
 export type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
@@ -849,47 +853,49 @@ export default function NotebookV2Page() {
 
   if (isMobile) {
     return (
-      <MobileNotebookPage
-        {...{
-          t,
-          navigate,
-          dateLocale,
-          activeNotebookId,
-          setActiveNotebookId,
-          selectedPageId,
-          setSelectedPageId,
-          query,
-          setQuery,
-          sourceFilter,
-          setSourceFilter,
-          editorOpen,
-          setEditorOpen,
-          handleEditorOpenChange,
-          editorExpanded,
-          setEditorExpanded,
-          title,
-          setTitle,
-          noteKind,
-          setNoteKind,
-          quoteText,
-          setQuoteText,
-          editorDoc,
-          setEditorDoc,
-          saveState,
-          lastSavedAt,
-          notebooksResult,
-          sourceSummary,
-          searchResult,
-          pendingReviewCount,
-          selectedSearchItem,
-          selectedIsQuoteCard,
-          selectedPagePayload,
-          handleCreateNote,
-          handleDeletePage,
-          handleOpenSource,
-          handleRetrySave,
-        }}
-      />
+      <Suspense fallback={<div className="min-h-[50vh]" />}>
+        <LazyMobileNotebookPage
+          {...{
+            t,
+            navigate,
+            dateLocale,
+            activeNotebookId,
+            setActiveNotebookId,
+            selectedPageId,
+            setSelectedPageId,
+            query,
+            setQuery,
+            sourceFilter,
+            setSourceFilter,
+            editorOpen,
+            setEditorOpen,
+            handleEditorOpenChange,
+            editorExpanded,
+            setEditorExpanded,
+            title,
+            setTitle,
+            noteKind,
+            setNoteKind,
+            quoteText,
+            setQuoteText,
+            editorDoc,
+            setEditorDoc,
+            saveState,
+            lastSavedAt,
+            notebooksResult,
+            sourceSummary,
+            searchResult,
+            pendingReviewCount,
+            selectedSearchItem,
+            selectedIsQuoteCard,
+            selectedPagePayload,
+            handleCreateNote,
+            handleDeletePage,
+            handleOpenSource,
+            handleRetrySave,
+          }}
+        />
+      </Suspense>
     );
   }
 

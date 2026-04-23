@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { useAction } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { aRef, NoArgs } from '../../utils/convexRefs';
+// `/pricing` is SSG-prerendered so we keep `convex/react` out of this
+// chunk. Prices are fetched anonymously over HTTP; checkout uses the
+// authenticated helper that attaches the JWT from localStorage.
+import {
+  callAuthenticatedConvexAction,
+  callPublicConvexAction,
+} from '../../utils/publicConvexClient';
 import { runConvexActionWithRetry } from '../../utils/convexActionRetry';
 import {
   isSafeCheckoutUrl,
@@ -28,12 +33,6 @@ export const MobileSubscriptionPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState<LemonSqueezyVariantPrices | null>(null);
 
-  const createCheckoutSession = useAction(
-    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
-  );
-  const getVariantPrices = useAction(
-    aRef<NoArgs, LemonSqueezyVariantPrices>('lemonsqueezy:getVariantPrices')
-  );
 
   const showLocalizedPromo =
     i18n.language === 'zh' ||
@@ -69,12 +68,24 @@ export const MobileSubscriptionPage: React.FC = () => {
   );
 
   useEffect(() => {
-    runConvexActionWithRetry(getVariantPrices, {}, { retries: 2, initialDelayMs: 300 })
+    const controller = new AbortController();
+    runConvexActionWithRetry(
+      () =>
+        callPublicConvexAction<Record<string, never>, LemonSqueezyVariantPrices>(
+          'lemonsqueezy:getVariantPrices',
+          {},
+          { signal: controller.signal }
+        ),
+      undefined,
+      { retries: 2, initialDelayMs: 300 }
+    )
       .then(setPrices)
       .catch(err => {
+        if ((err as { name?: string } | null)?.name === 'AbortError') return;
         logger.warn('Failed to load variant prices for mobile subscription', err);
       });
-  }, [getVariantPrices]);
+    return () => controller.abort();
+  }, []);
 
   const handleSubscribe = async () => {
     if (authLoading) {
@@ -102,19 +113,24 @@ export const MobileSubscriptionPage: React.FC = () => {
 
     setLoading(true);
     try {
+      const checkoutArgs: LemonSqueezyCheckoutRequest = {
+        plan: billingInterval,
+        userId: user.id?.toString() || '',
+        userEmail: user.email || '',
+        userName: user.name || '',
+        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        locale: i18n.language,
+        source: 'mobile_subscription',
+        returnTo: '/dashboard',
+        appOrigin: globalThis.location.origin,
+      };
       const { checkoutUrl } = await runConvexActionWithRetry(
-        createCheckoutSession,
-        {
-          plan: billingInterval,
-          userId: user.id?.toString() || '',
-          userEmail: user.email || '',
-          userName: user.name || '',
-          region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-          locale: i18n.language,
-          source: 'mobile_subscription',
-          returnTo: '/dashboard',
-          appOrigin: globalThis.location.origin,
-        },
+        () =>
+          callAuthenticatedConvexAction<
+            LemonSqueezyCheckoutRequest,
+            LemonSqueezyCheckoutResult
+          >('lemonsqueezy:createCheckout', checkoutArgs),
+        undefined,
         { retries: 1, initialDelayMs: 250 }
       );
       if (!isSafeCheckoutUrl(checkoutUrl)) {

@@ -1,12 +1,18 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAction } from 'convex/react';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import { aRef } from '../utils/convexRefs';
+// PricingDetailsPage is a public route, so we avoid pulling `convex/react`
+// into its chunk. `getVariantPrices` is anonymous (direct HTTP call) and
+// `createCheckout` is only invoked on button click, at which point we
+// read the Convex Auth JWT from localStorage and attach it as a bearer.
+import {
+  callAuthenticatedConvexAction,
+  callPublicConvexAction,
+} from '../utils/publicConvexClient';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import {
   isSafeCheckoutUrl,
@@ -283,26 +289,30 @@ export default function PricingDetailsPage() {
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
 
-  const createCheckoutSession = useAction(
-    aRef<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>('lemonsqueezy:createCheckout')
-  );
-
   const [prices, setPrices] = useState<VariantPrices | null>(null);
   const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<
     'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME' | null
   >(null);
 
-  const getPrices = useAction(
-    aRef<Record<string, never>, VariantPrices>('lemonsqueezy:getVariantPrices')
-  );
-
   useEffect(() => {
-    runConvexActionWithRetry(getPrices, {}, { retries: 2, initialDelayMs: 300 })
+    const controller = new AbortController();
+    runConvexActionWithRetry(
+      () =>
+        callPublicConvexAction<Record<string, never>, VariantPrices>(
+          'lemonsqueezy:getVariantPrices',
+          {},
+          { signal: controller.signal }
+        ),
+      undefined,
+      { retries: 2, initialDelayMs: 300 }
+    )
       .then(setPrices)
       .catch(err => {
+        if ((err as { name?: string } | null)?.name === 'AbortError') return;
         logger.error('Failed to fetch prices', err);
       });
-  }, [getPrices]);
+    return () => controller.abort();
+  }, []);
 
   const proPlanId = useMemo(() => {
     if (billingCycle === 'monthly') return 'MONTHLY' as const;
@@ -434,19 +444,24 @@ export default function PricingDetailsPage() {
 
     try {
       setCheckoutPendingPlan(plan);
+      const checkoutArgs: LemonSqueezyCheckoutRequest = {
+        plan,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        locale: i18n.language,
+        source: checkoutSource,
+        returnTo: returnToPath,
+        appOrigin: globalThis.location.origin,
+      };
       const { checkoutUrl } = await runConvexActionWithRetry(
-        createCheckoutSession,
-        {
-          plan,
-          userId: user.id,
-          userEmail: user.email,
-          userName: user.name,
-          region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-          locale: i18n.language,
-          source: checkoutSource,
-          returnTo: returnToPath,
-          appOrigin: globalThis.location.origin,
-        },
+        () =>
+          callAuthenticatedConvexAction<
+            LemonSqueezyCheckoutRequest,
+            LemonSqueezyCheckoutResult
+          >('lemonsqueezy:createCheckout', checkoutArgs),
+        undefined,
         { retries: 1, initialDelayMs: 250 }
       );
 

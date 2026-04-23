@@ -4,6 +4,17 @@ import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { createPresignedUploadUrl } from './storagePresign';
 
+// DigitalOcean Spaces configuration
+const SPACES_ENDPOINT = process.env.DO_SPACES_ENDPOINT || 'https://joyhan.sgp1.digitaloceanspaces.com';
+const SPACES_BUCKET = process.env.DO_SPACES_BUCKET || 'joyhan';
+
+/**
+ * Get the public URL for an object in DigitalOcean Spaces
+ */
+export function getPublicObjectUrl(objectKey: string): string {
+  return `${SPACES_ENDPOINT}/${SPACES_BUCKET}/${objectKey}`;
+}
+
 const MiB = 1024 * 1024;
 
 const UPLOAD_POLICIES = {
@@ -88,7 +99,7 @@ export const getUploadUrl = action({
       fileSize: args.fileSize,
     });
 
-    return createPresignedUploadUrl({
+    return await createPresignedUploadUrl({
       filename: sanitizeFilename(args.filename),
       contentType: args.contentType.trim(),
       folder,

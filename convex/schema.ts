@@ -1389,6 +1389,33 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
   }),
 
+  // User Settings (Global Device Syncing)
+  user_settings: defineTable({
+    userId: v.id('users'),
+    // App level
+    displayLanguage: v.optional(
+      v.union(v.literal('en'), v.literal('zh'), v.literal('vi'), v.literal('mn'))
+    ),
+
+    // Flashcard defaults
+    flashcardAutoTTS: v.optional(v.boolean()),
+    flashcardFront: v.optional(v.union(v.literal('KOREAN'), v.literal('NATIVE'))),
+    flashcardRatingMode: v.optional(v.union(v.literal('PASS_FAIL'), v.literal('FOUR_BUTTONS'))),
+
+    // Listening & Dictation defaults
+    listenPlayMeaning: v.optional(v.boolean()),
+    listenPlayExampleTranslation: v.optional(v.boolean()),
+    audioRepeatCount: v.optional(
+      v.union(v.literal(1), v.literal(2), v.literal(3), v.literal('INFINITE'))
+    ),
+    audioSpeed: v.optional(v.union(v.literal(0.8), v.literal(1), v.literal(1.2), v.literal(1.4))),
+    dictationPlayCount: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
+    dictationGapSeconds: v.optional(v.union(v.literal(2), v.literal(4), v.literal(6), v.literal(8))),
+    dictationAutoNext: v.optional(v.boolean()),
+
+    updatedAt: v.number(),
+  }).index('by_user', ['userId']),
+
   // Reading Library Tables
   reading_library_books,
   reading_library_chapters,

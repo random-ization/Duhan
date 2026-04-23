@@ -5,6 +5,7 @@ import { buildVocabBookPracticeSessionStorageKey } from '../../src/utils/vocabBo
 
 const navigateMock = vi.fn();
 const useQueryMock = vi.fn();
+const useGlobalSettingsMock = vi.fn();
 
 vi.mock('../../src/hooks/useLocalizedNavigate', () => ({
   useLocalizedNavigate: () => navigateMock,
@@ -35,6 +36,10 @@ vi.mock('convex/react', () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args),
 }));
 
+vi.mock('../../src/hooks/useGlobalSettings', () => ({
+  useGlobalSettings: () => useGlobalSettingsMock(),
+}));
+
 import VocabBookListenPage from '../../src/pages/VocabBookListenPage';
 
 const renderPage = (path: string) =>
@@ -50,7 +55,26 @@ describe('VocabBookListenPage session restore', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     useQueryMock.mockReset();
+    useGlobalSettingsMock.mockReset();
     sessionStorage.clear();
+    useGlobalSettingsMock.mockReturnValue({
+      settings: {
+        displayLanguage: 'en',
+        flashcardAutoTTS: true,
+        flashcardFront: 'KOREAN',
+        flashcardRatingMode: 'PASS_FAIL',
+        listenPlayMeaning: true,
+        listenPlayExampleTranslation: true,
+        audioRepeatCount: 2,
+        audioSpeed: 1,
+        dictationPlayCount: 2,
+        dictationGapSeconds: 2,
+        dictationAutoNext: true,
+      },
+      updateSettings: vi.fn(),
+      storedSettings: null,
+      isLoading: false,
+    });
     useQueryMock.mockReturnValue({
       items: [
         {
@@ -136,6 +160,33 @@ describe('VocabBookListenPage session restore', () => {
 
     await waitFor(() => {
       expect(screen.getByText('2/2')).toBeInTheDocument();
+    });
+  });
+
+  it('persists only resume state and keeps audio preferences out of sessionStorage', async () => {
+    const key = buildVocabBookPracticeSessionStorageKey('listen', 'category=DUE');
+
+    renderPage('/vocab-book/listen?category=DUE');
+
+    await waitFor(() => {
+      const storedValue = sessionStorage.getItem(key);
+      expect(storedValue).not.toBeNull();
+      const parsed = JSON.parse(storedValue ?? '{}') as {
+        index?: number;
+        mode?: string;
+        timestamp?: number;
+        playMeaning?: boolean;
+        playExampleTranslation?: boolean;
+        repeatCount?: number | string;
+        speed?: number;
+      };
+      expect(parsed.index).toBe(0);
+      expect(parsed.mode).toBe('BASIC');
+      expect(typeof parsed.timestamp).toBe('number');
+      expect(parsed.playMeaning).toBeUndefined();
+      expect(parsed.playExampleTranslation).toBeUndefined();
+      expect(parsed.repeatCount).toBeUndefined();
+      expect(parsed.speed).toBeUndefined();
     });
   });
 });

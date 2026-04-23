@@ -1,14 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  History,
-  BookOpen,
-  Headphones,
-  PenLine,
+  PieChart,
+  Search,
+  ChevronLeft,
+  ChevronRight,
   Clock,
-  HelpCircle,
-  PlayCircle,
-  RotateCcw,
-  Archive,
+  ShieldAlert,
 } from 'lucide-react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,10 +15,76 @@ import { useSearchParams } from 'react-router-dom';
 import { qRef } from '../../utils/convexRefs';
 import { ExamAttempt, TopikExam } from '../../types';
 import { clsx } from 'clsx';
-import { Button } from '../ui';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
-import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { m as motion } from 'framer-motion';
+
+const TACTILE_V3_STYLES = `
+::-webkit-scrollbar { display: none; }
+body {
+    background-color: #E6E7E9;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
+    -webkit-font-smoothing: antialiased;
+}
+.header-glass {
+    background: rgba(230, 231, 233, 0.85);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border-bottom: 1px solid rgba(255,255,255,0.4);
+}
+.card-taupe-hero {
+    background: linear-gradient(135deg, #A8A096 0%, #8A8177 100%);
+    box-shadow: 0 24px 48px -12px rgba(138, 129, 119, 0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+    border: 1px solid rgba(0,0,0,0.05);
+    color: #ffffff;
+    transition: transform 0.15s;
+    cursor: pointer;
+}
+.card-taupe-hero:active { transform: scale(0.98); }
+.search-slot {
+    background: #F8F9FA;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), inset 0 1px 2px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,1);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.tactile-segment {
+    background: #E4E4E7;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 1px 0 rgba(255,255,255,0.8);
+    border-radius: 12px;
+    padding: 4px;
+    position: relative;
+    display: flex;
+}
+.segment-btn {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    transition: color 0.3s;
+}
+.vault-row {
+    background: #FCFCFA;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: background 0.15s;
+    cursor: pointer;
+}
+.vault-row:first-child { border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; }
+.vault-row:last-child { border-bottom-left-radius: 1.5rem; border-bottom-right-radius: 1.5rem; border-bottom: none; }
+.vault-row:active {
+    background: #F1F5F9;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+}
+.status-dot {
+    box-shadow: 0 0 4px currentColor;
+}
+`;
+
+type FilterType = 'ALL' | 'READING' | 'LISTENING' | 'WRITING';
+
+const FILTER_TABS: { id: FilterType; labelKey: string }[] = [
+  { id: 'ALL', labelKey: 'dashboard.topik.all' },
+  { id: 'READING', labelKey: 'dashboard.topik.reading' },
+  { id: 'LISTENING', labelKey: 'dashboard.topik.listening' },
+  { id: 'WRITING', labelKey: 'dashboard.topik.writing' },
+];
 
 interface MobileTopikPageProps {
   onSelectExam: (examId: string) => void;
@@ -34,7 +97,9 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING' | 'WRITING'>(() => {
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<FilterType>(() => {
     if (globalThis.window === undefined) return 'ALL';
     const saved = safeGetLocalStorageItem(filterStorageKey);
     if (saved === 'READING' || saved === 'LISTENING' || saved === 'WRITING') return saved;
@@ -52,30 +117,21 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   );
   const examHistory = examAttempts ?? [];
 
-  const upcomingExam = useMemo(() => {
-    if (topikExams.length === 0) return null;
-    return [...topikExams].sort((a, b) => b.round - a.round)[0];
+  // Sort latest exams first for upcoming
+  const sortedExams = useMemo(() => {
+    return [...topikExams].sort((a, b) => b.round - a.round);
   }, [topikExams]);
 
-  // Filter exams
-  const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);
+  const upcomingExam = sortedExams[0] || null;
 
-  // Calculate stats
-  const totalAttempts = examHistory.length;
-  const avgScore =
-    totalAttempts > 0
-      ? Math.round(
-          examHistory.reduce((sum, a) => {
-            const maxScore = a.maxScore || a.totalScore || 100;
-            return sum + (maxScore > 0 ? ((a.score || 0) / maxScore) * 100 : 0);
-          }, 0) / totalAttempts
-        )
-      : 0;
-  const passCount = examHistory.filter(a => {
-    const maxScore = a.maxScore || a.totalScore || 100;
-    return maxScore > 0 && (a.score || 0) / maxScore >= 0.6;
-  }).length;
-  const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
+  // Filter exams by tab AND search query
+  const filteredExams = sortedExams.filter(exam => {
+    const matchesTab = filterType === 'ALL' || exam.type === filterType;
+    const matchesSearch = 
+      exam.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      exam.round.toString().includes(searchQuery);
+    return matchesTab && matchesSearch;
+  });
 
   // Get best score for an exam
   const getBestScore = (examId: string) => {
@@ -92,239 +148,215 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   const handleBack = () => {
     const returnTo = searchParams.get('returnTo');
     if (hasSafeReturnTo(returnTo)) {
-      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/practice');
+    navigate('/courses');
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
-      <MobileWorkspaceHeader
-        title={t('dashboard.topik.examCenter')}
-        subtitle={t('topik.mobileSubtitle', {
-          defaultValue: 'Choose a mock exam, track your scores, and keep your timing sharp.',
-        })}
-        eyebrow={t('nav.topik', { defaultValue: 'TOPIK' })}
-        onBack={handleBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/topik/history')}
-            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
-            aria-label={t('dashboard.topik.history', { defaultValue: 'History' })}
-          >
-            <History className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        }
-      >
-        <div className="rounded-xl bg-primary p-3 text-primary-foreground flex items-center gap-3">
-          <div className="rounded bg-primary-foreground/20 px-2.5 py-1 text-sm font-extrabold text-primary-foreground">
-            {upcomingExam
-              ? t('dashboard.topik.mobile.roundBadge', {
-                  round: upcomingExam.round,
-                  defaultValue: 'R{{round}}',
-                })
-              : t('dashboard.topik.mobile.roundBadgeFallback', { defaultValue: 'TOPIK' })}
-          </div>
-          <div className="text-xs">
-            <div className="font-medium text-primary-foreground/75">
-              {t('dashboard.topik.nextExam')}
+    <div className="min-h-[100dvh] bg-[#E6E7E9] overflow-x-hidden">
+      <style>{TACTILE_V3_STYLES}</style>
+
+      {/* Header Glass */}
+      <header className="fixed top-0 left-0 right-0 px-5 pt-14 pb-4 header-glass flex items-center justify-between z-50">
+        <button 
+          onClick={handleBack}
+          className="w-10 h-10 rounded-[12px] bg-slate-900 text-white shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.1)] flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-5 h-5 text-current -ml-0.5" />
+        </button>
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+            {t('dashboard.topik.examCenter', { defaultValue: 'Topik Vault' })}
+          </span>
+          <span className="text-[11px] font-bold text-slate-800">
+            {t('dashboard.topik.mobile.totalArchived', { count: topikExams.length, defaultValue: `Archived ${topikExams.length}` })}
+          </span>
+        </div>
+        <button 
+          onClick={() => navigate('/topik/history')}
+          className="w-10 h-10 rounded-[12px] bg-white text-slate-600 shadow-sm border border-slate-200 flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <PieChart className="w-4 h-4" />
+        </button>
+      </header>
+
+      <div className="h-28"></div>
+
+      <main className="px-5 pb-24 max-w-[440px] mx-auto space-y-6">
+        
+        {/* Next Up Hero Card */}
+        {upcomingExam && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="text-[11px] font-black text-slate-400 tracking-[0.2em] uppercase">Next Up</h2>
             </div>
-            <div className="font-bold">
-              {upcomingExam?.title ||
-                t('dashboard.topik.mobile.nextExamNameFallback', {
-                  defaultValue: 'TOPIK II',
-                })}
+            <div 
+               className="card-taupe-hero w-full rounded-[2rem] p-6 relative overflow-hidden"
+               onClick={() => onSelectExam(upcomingExam.id)}
+            >
+              <div className="absolute -bottom-6 -right-4 opacity-[0.04] pointer-events-none">
+                <ShieldAlert className="w-48 h-48" />
+              </div>
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <span className="bg-slate-900 text-white px-2.5 py-1 rounded-[6px] text-[9px] font-black tracking-[0.2em] uppercase shadow-md border border-slate-700">
+                  TOPIK
+                </span>
+                <span className="text-[10px] font-bold text-white/60 tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {upcomingExam.timeLimit} Min
+                </span>
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-2xl font-black tracking-tight mb-1 text-white">R{upcomingExam.round} {upcomingExam.title}</h3>
+                <p className="text-[11px] font-bold text-white/60 tracking-wider mb-5">
+                  {upcomingExam.questions?.length || 50} Questions
+                </p>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-white/10 relative z-10">
+                <div className="flex-1 mr-4"></div>
+                <div className="flex items-center space-x-1 text-[11px] font-black text-white bg-white/10 px-4 py-2 rounded-xl border border-white/20 backdrop-blur-sm active:scale-95 transition-transform">
+                  <span>Start Engine</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </MobileWorkspaceHeader>
-
-      {/* Filter Tabs */}
-      <div className="px-4 sm:px-5 py-3 flex gap-2 bg-card border-b border-border overflow-x-auto no-scrollbar">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('ALL')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0',
-            filterType === 'ALL'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {t('dashboard.topik.all')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('READING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'READING'
-              ? 'bg-blue-600 text-white dark:bg-blue-400/30 dark:text-blue-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <BookOpen className="w-3 h-3" /> {t('dashboard.topik.reading')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('LISTENING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'LISTENING'
-              ? 'bg-violet-600 text-white dark:bg-violet-400/30 dark:text-violet-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <Headphones className="w-3 h-3" /> {t('dashboard.topik.listening')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('WRITING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'WRITING'
-              ? 'bg-rose-600 text-white dark:bg-rose-400/30 dark:text-rose-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <PenLine className="w-3 h-3" /> {t('dashboard.topik.writing')}
-        </Button>
-      </div>
-
-      {/* Stats Row */}
-      <div className="px-4 sm:px-5 py-3 grid grid-cols-3 gap-2">
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.avgScore')}
-          </div>
-          <div className="text-lg font-extrabold text-foreground">{avgScore}</div>
-        </div>
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.passRate')}
-          </div>
-          <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-300">
-            {passRate}%
-          </div>
-        </div>
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.total')}
-          </div>
-          <div className="text-lg font-extrabold text-foreground">{filteredExams.length}</div>
-        </div>
-      </div>
-
-      {/* Exam List (Compact Rows) */}
-      <div className="px-4 sm:px-5 space-y-2 pb-4">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
-          {t('dashboard.topik.availableExams')}
-        </div>
-
-        {filteredExams.length === 0 && (
-          <div className="text-center py-10">
-            <Archive className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground font-medium">{t('topikLobby.noExams')}</p>
-          </div>
+          </section>
         )}
 
-        {filteredExams.map(exam => {
-          const bestScore = getBestScore(exam.id);
-          const isReading = exam.type === 'READING';
-          const isWriting = exam.type === 'WRITING';
-          const isListening = exam.type === 'LISTENING';
+        {/* Sticky Search & Segment */}
+        <section className="sticky top-[88px] z-40 bg-[#E6E7E9] py-2">
+          {/* Search Slot */}
+          <div className="search-slot rounded-2xl p-2.5 flex items-center mb-3">
+            <Search className="w-4 h-4 text-slate-400 ml-2 mr-3" />
+            <input 
+              type="text" 
+              placeholder={t('dashboard.topik.mobile.searchPlaceholder', { defaultValue: 'Search round (e.g. 60)' })}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 w-full"
+            />
+          </div>
 
-          return (
-            <Button
-              variant="ghost"
-              size="auto"
-              key={exam.id}
-              onClick={() => onSelectExam(exam.id)}
-              className="w-full bg-card rounded-xl border border-border p-3 flex items-center gap-3 text-left active:bg-muted transition-colors"
-            >
-              {/* Round Badge */}
-              <div
-                className={clsx(
-                  'w-10 h-10 rounded-lg flex items-center justify-center font-extrabold text-sm',
-                  isReading
-                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-400/14 dark:text-blue-200'
-                    : isWriting
-                      ? 'bg-rose-100 text-rose-600 dark:bg-rose-400/14 dark:text-rose-200'
-                      : 'bg-violet-100 text-violet-600 dark:bg-violet-400/14 dark:text-violet-200'
-                )}
-              >
-                {exam.round}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-foreground text-sm line-clamp-2">{exam.title}</h3>
-                  <span
-                    className={clsx(
-                      'text-[9px] font-bold px-1 py-0.5 rounded',
-                      isReading
-                        ? 'bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200'
-                        : isWriting
-                          ? 'bg-rose-50 text-rose-600 dark:bg-rose-400/12 dark:text-rose-200'
-                          : 'bg-violet-50 text-violet-600 dark:bg-violet-400/12 dark:text-violet-200'
-                    )}
-                  >
-                    {isReading
-                      ? t('dashboard.topik.mobile.typeReadingShort', { defaultValue: 'READ' })
-                      : isListening
-                        ? t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })
-                        : t('dashboard.topik.mobile.typeWritingShort', { defaultValue: 'WRITE' })}
-                  </span>
-                </div>
-                <div className="text-[10px] text-muted-foreground font-medium mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="flex items-center gap-0.5">
-                    <Clock className="w-3 h-3" />
-                    {t('dashboard.topik.mobile.minuteShort', {
-                      minutes: exam.timeLimit,
-                      defaultValue: '{{minutes}}m',
-                    })}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    <HelpCircle className="w-3 h-3" />
-                    {t('dashboard.topik.mobile.questionCountShort', {
-                      count: exam.questions?.length || 50,
-                      defaultValue: '{{count}}Q',
-                    })}
-                  </span>
-                  {bestScore !== null && (
-                    <span className="font-bold text-emerald-600 dark:text-emerald-300">
-                      {t('dashboard.topik.mobile.bestScore', {
-                        score: bestScore,
-                        defaultValue: '{{score}}%',
-                      })}
-                    </span>
+          {/* Tactile Segment Control - 4 Tabs */}
+          <div className="tactile-segment relative flex">
+            {FILTER_TABS.map((tab) => {
+              const isActive = filterType === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setFilterType(tab.id)}
+                  className={clsx(
+                    'segment-btn flex-1 py-1.5 text-[11px] font-black tracking-widest uppercase transition-colors',
+                    isActive ? 'text-slate-800' : 'text-slate-400'
                   )}
-                </div>
-              </div>
+                >
+                  {t(tab.labelKey, { 
+                    defaultValue: tab.id === 'ALL' ? 'ALL' : tab.id.substring(0, 4) 
+                  })}
+                  {isActive && (
+                    <motion.div
+                      layoutId="tactile-segment-active"
+                      className="absolute top-0 left-0 right-0 bottom-0 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.1),0_1px_1px_rgba(0,0,0,0.05)] rounded-[8px] -z-10"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-              {/* Action Icon */}
-              {bestScore !== null ? (
-                <RotateCcw className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <PlayCircle className="w-7 h-7 text-primary dark:text-primary-foreground" />
-              )}
-            </Button>
-          );
-        })}
-      </div>
+        {/* Vault Rows List */}
+        <section>
+          {filteredExams.length > 0 ? (
+            <div className="bg-[#FCFCFA] rounded-[1.5rem] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.06),0_1px_1px_rgba(255,255,255,1)] border border-black/5 flex flex-col">
+              {filteredExams.map((exam) => {
+                const bestScore = getBestScore(exam.id);
+                // Simple assumption: >= 60% is green, else red.
+                const isPassed = bestScore !== null && bestScore >= 60;
+                
+                const isReading = exam.type === 'READING';
+                const isWriting = exam.type === 'WRITING';
+                return (
+                  <div 
+                    key={exam.id}
+                    onClick={() => onSelectExam(exam.id)}
+                    className="vault-row p-4 flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-4">
+                      {/* Round Number */}
+                      <div className="w-10 text-center">
+                        <span className="text-2xl font-black text-slate-300 tracking-tighter">
+                          {exam.round}
+                        </span>
+                      </div>
+                      
+                      {/* Details */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={clsx(
+                            "px-1.5 py-0.5 rounded text-[8px] font-black tracking-widest uppercase border",
+                            isReading ? "bg-blue-50 text-blue-600 border-blue-100" :
+                            isWriting ? "bg-rose-50 text-rose-600 border-rose-100" :
+                            "bg-violet-50 text-violet-600 border-violet-100"
+                          )}>
+                            {isReading 
+                              ? t('dashboard.topik.mobile.typeReadingShort', { defaultValue: 'READ' })
+                              : isWriting 
+                              ? t('dashboard.topik.mobile.typeWritingShort', { defaultValue: 'WRITE' })
+                              : t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })
+                            }
+                          </span>
+                          <span className="text-[13px] font-black text-slate-800 line-clamp-1 break-all mr-2">
+                            {exam.title.replace(`Round ${exam.round}`, '').trim()}
+                          </span>
+                        </div>
+                        
+                        {/* Status Label */}
+                        <div className="flex items-center space-x-1.5">
+                          {bestScore === null ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                              <span className="text-[10px] font-bold text-slate-400 tracking-widest">
+                                {t('dashboard.topik.mobile.statusUnopened', { defaultValue: '未启封' })}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={clsx(
+                                "w-1.5 h-1.5 rounded-full status-dot",
+                                isPassed ? "bg-emerald-400 text-emerald-400" : "bg-rose-400 text-rose-400"
+                              )}></span>
+                              <span className={clsx(
+                                "text-[10px] font-black tracking-widest",
+                                isPassed ? "text-emerald-500" : "text-rose-500"
+                              )}>
+                                {t('dashboard.topik.mobile.statusScore', { score: bestScore, defaultValue: '得 {{score}} 分' })}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <ChevronRight className="w-3 h-3 text-slate-300 stroke-[3px]" />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+             <div className="text-center py-10 opacity-50">
+               <ShieldAlert className="w-8 h-8 mx-auto text-slate-400 mb-2" />
+               <p className="text-sm font-bold text-slate-500">No exams match your criteria</p>
+             </div>
+          )}
+          
+          <p className="text-center text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase py-6">
+             {t('dashboard.topik.mobile.totalArchivedBelow', { count: filteredExams.length, defaultValue: `Viewing ${filteredExams.length} Archives` })}
+          </p>
+        </section>
+      </main>
     </div>
   );
 };

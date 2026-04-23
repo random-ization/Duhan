@@ -140,6 +140,15 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: [
       { find: '@', replacement: path.resolve(__dirname, './src') },
+      // Replace `@xmldom/xmldom` (pulled in by epubjs, ~26 kB gz) with a
+      // tiny shim that re-exports the browser's native DOMParser and
+      // XMLSerializer. epubjs prefers native when available and only
+      // falls back to xmldom if those globals are missing — which never
+      // happens in any browser we ship to. See src/shims/xmldom-browser.ts.
+      {
+        find: /^@xmldom\/xmldom$/,
+        replacement: path.resolve(__dirname, './src/shims/xmldom-browser.ts'),
+      },
       {
         find: /^@tiptap\/core$/,
         replacement: path.resolve(__dirname, './node_modules/@tiptap/core/src/index.ts'),
@@ -321,8 +330,12 @@ export default defineConfig(({ command }) => ({
           if (normalized.includes('/node_modules/dompurify/')) return 'vendor-editor';
           if (normalized.includes('/node_modules/html2canvas/')) return 'vendor-editor';
 
-          // Animation
-          if (normalized.includes('/node_modules/framer-motion/')) return 'vendor-motion';
+          // Animation: intentionally NOT manually chunked. Consumers use
+          // `m as motion` under a `<LazyMotion features={...}>` boundary
+          // (domAnimation on Landing, domMax inside AppLayout), so rollup
+          // can split framer-motion into per-consumer feature chunks. A
+          // blanket rule here would merge them back into a single ~40 kB
+          // gzip bundle that every pre-auth page had to preload.
 
           // NLP / typing helpers
           if (normalized.includes('/node_modules/es-hangul/')) return 'vendor-hangul';

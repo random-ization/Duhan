@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../ui';
 import { safeGetSessionStorageItem, safeSetSessionStorageItem } from '../../utils/browserStorage';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
 import { useGlobalModal } from '../../contexts/GlobalModalContext';
@@ -11,17 +9,35 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 const DISMISS_STORAGE_KEY = 'duhan-pwa-install-dismissed';
 
+const loadMobilePwaInstallPromptCard = () =>
+  import('./MobilePwaInstallPromptCard').then(module => ({
+    default: module.MobilePwaInstallPromptCard,
+  }));
+
+const LazyMobilePwaInstallPromptCard = lazy(loadMobilePwaInstallPromptCard);
+
 const isStandalone = () => {
-  if (typeof window === 'undefined') return false;
+  if (typeof globalThis.window === 'undefined') {
+    return false;
+  }
+
   const displayModeStandalone = matchesMediaQuery('(display-mode: standalone)');
   const nav = navigator as Navigator & { standalone?: boolean };
   return displayModeStandalone || nav.standalone === true;
 };
 
 const isIosSafari = () => {
-  if (typeof navigator === 'undefined') return false;
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
   const userAgent = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/.test(userAgent);
   const isWebKit = /WebKit/.test(userAgent);
@@ -36,16 +52,22 @@ export function MobilePwaInstallPrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [iosSafari, setIosSafari] = useState(false);
+  const [readyToRender, setReadyToRender] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof globalThis.window === 'undefined') {
+      return;
+    }
+
     setDismissed(safeGetSessionStorageItem(DISMISS_STORAGE_KEY) === '1');
     setInstalled(isStandalone());
     setIosSafari(isIosSafari());
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof globalThis.window === 'undefined') {
+      return;
+    }
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -59,24 +81,72 @@ export function MobilePwaInstallPrompt() {
       setDeferredPrompt(null);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    globalThis.window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    globalThis.window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      globalThis.window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      globalThis.window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
+  const canPromptInstall = deferredPrompt !== null;
+  const shouldShowIosGuide = iosSafari && !isStandalone();
+  const shouldShowPromptUi =
+    !installed &&
+    !dismissed &&
+    activeModal === null &&
+    (canPromptInstall || shouldShowIosGuide);
+
+  useEffect(() => {
+    if (!shouldShowPromptUi) {
+      setReadyToRender(false);
+      return;
+    }
+
+    const timerId = globalThis.window.setTimeout(() => {
+      setReadyToRender(true);
+    }, 3000);
+
+    return () => {
+      globalThis.window.clearTimeout(timerId);
+    };
+  }, [shouldShowPromptUi]);
+
+  useEffect(() => {
+    if (!shouldShowPromptUi || typeof globalThis.window === 'undefined') {
+      return;
+    }
+
+    const idleWindow = globalThis.window as IdleWindow;
+    if (!idleWindow.requestIdleCallback) {
+      void loadMobilePwaInstallPromptCard();
+      return;
+    }
+
+    const idleHandle = idleWindow.requestIdleCallback(() => {
+      void loadMobilePwaInstallPromptCard();
+    }, { timeout: 2000 });
+
+    return () => {
+      if (idleHandle !== undefined) {
+        idleWindow.cancelIdleCallback?.(idleHandle);
+      }
+    };
+  }, [shouldShowPromptUi]);
+
   const dismiss = () => {
     setDismissed(true);
-    if (typeof window !== 'undefined') {
+    if (typeof globalThis.window !== 'undefined') {
       safeSetSessionStorageItem(DISMISS_STORAGE_KEY, '1');
     }
   };
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      return;
+    }
+
     try {
       await deferredPrompt.prompt();
       await deferredPrompt.userChoice;
@@ -85,58 +155,33 @@ export function MobilePwaInstallPrompt() {
     }
   };
 
-  if (installed || dismissed || activeModal !== null) return null;
+  const description = useMemo(() => {
+    if (canPromptInstall) {
+      return t('pwa.install.androidHint', {
+        defaultValue: 'Install for faster launch and a full-screen mobile experience.',
+      });
+    }
 
-  const canPromptInstall = deferredPrompt !== null;
-  const shouldShowIosGuide = iosSafari && !isStandalone();
+    return t('pwa.install.iosHint', {
+      defaultValue: 'In Safari, tap Share and choose Add to Home Screen.',
+    });
+  }, [canPromptInstall, t]);
 
-  if (!canPromptInstall && !shouldShowIosGuide) return null;
+  if (!shouldShowPromptUi || !readyToRender) {
+    return null;
+  }
 
   return (
-    <div className="md:hidden fixed left-4 right-4 bottom-mobile-floating z-[55] pointer-events-none">
-      <div className="pointer-events-auto rounded-2xl border-2 border-foreground bg-card shadow-2xl p-3 flex items-start gap-3">
-        <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center shrink-0">
-          <Download size={18} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-foreground">
-            {t('pwa.install.title', { defaultValue: 'Install DuHan App' })}
-          </p>
-          {canPromptInstall ? (
-            <p className="mt-1 text-xs text-muted-foreground leading-5">
-              {t('pwa.install.androidHint', {
-                defaultValue: 'Install for faster launch and a full-screen mobile experience.',
-              })}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground leading-5">
-              {t('pwa.install.iosHint', {
-                defaultValue: 'In Safari, tap Share and choose Add to Home Screen.',
-              })}
-            </p>
-          )}
-          {canPromptInstall && (
-            <Button
-              type="button"
-              size="sm"
-              className="mt-2 h-8 rounded-lg text-xs px-3"
-              onClick={handleInstall}
-            >
-              {t('pwa.install.action', { defaultValue: 'Install now' })}
-            </Button>
-          )}
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={dismiss}
-          className="h-8 w-8 rounded-lg text-muted-foreground"
-          aria-label={t('common.close', { defaultValue: 'Close' })}
-        >
-          <X size={16} />
-        </Button>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <LazyMobilePwaInstallPromptCard
+        canPromptInstall={canPromptInstall}
+        title={t('pwa.install.title', { defaultValue: 'Install DuHan App' })}
+        description={description}
+        actionLabel={t('pwa.install.action', { defaultValue: 'Install now' })}
+        closeLabel={t('common.close', { defaultValue: 'Close' })}
+        onInstall={handleInstall}
+        onDismiss={dismiss}
+      />
+    </Suspense>
   );
 }

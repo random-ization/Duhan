@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, RefreshCw } from 'lucide-react';
-import { getLabels } from '../../../../utils/i18n';
+import { Info, ChevronRight } from 'lucide-react';
 import type { Language } from '../../../../types';
 import { Button } from '../../../../components/ui';
 
@@ -20,275 +19,234 @@ type Direction = 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
 
 type Mode = 'test' | 'review';
 
+type PairSelection = Readonly<{
+  leftId: string;
+  rightId: string;
+  pairNum: number;
+}>;
+
 type Props = Readonly<{
   language: Language;
-  items: Item[];
+  items: readonly Item[];
   initialDirection: Direction;
   answered?: Answer;
   mode?: Mode;
   onSubmit: (filled: string[], directionUsed: Direction) => void;
 }>;
 
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
-  return arr;
-};
+  return hash;
+}
 
-const FillSlot = ({
-  idx,
-  val,
-  isTarget,
-  isReview,
-  isCorrect,
-  answer,
-  language,
-  onClear,
-  onSelect,
-}: {
-  idx: number;
-  val: string;
-  isTarget: boolean;
-  isReview: boolean;
-  isCorrect: boolean | null;
-  answer: string;
-  language: Language;
-  onClear: (idx: number) => void;
-  onSelect: (idx: number) => void;
-}) => {
-  const labels = getLabels(language);
-  const label = val || labels.vocabTest?.unanswered || '—';
+function deterministicSort<T>(
+  items: readonly T[],
+  getKey: (item: T) => string,
+  seed: string
+): T[] {
+  return [...items].sort((left, right) => {
+    const leftKey = getKey(left);
+    const rightKey = getKey(right);
+    const leftHash = hashString(`${seed}:${leftKey}`);
+    const rightHash = hashString(`${seed}:${rightKey}`);
+    if (leftHash !== rightHash) {
+      return leftHash - rightHash;
+    }
+    return leftKey.localeCompare(rightKey);
+  });
+}
 
-  let className = 'w-full h-14 rounded-2xl border-2 px-4 text-left font-black transition-all';
-  if (isReview) {
-    className += isCorrect
-      ? ' bg-green-50 border-green-300 text-green-800'
-      : ' bg-red-50 border-red-300 text-red-800';
-  } else if (val) {
-    className += ' bg-muted border-border text-foreground hover:border-border';
-  } else if (isTarget) {
-    className += ' bg-blue-50 border-blue-300 text-blue-800';
-  } else {
-    className += ' bg-card border-border text-muted-foreground hover:border-border';
+function buildReviewPairs(answered: Answer | undefined, items: readonly Item[]): PairSelection[] {
+  if (!answered) {
+    return [];
   }
 
-  return (
-    <div className="w-full">
-      <Button
-        variant="ghost"
-        size="auto"
-        type="button"
-        disabled={isReview}
-        onClick={() => (val ? onClear(idx) : onSelect(idx))}
-        className={className}
-      >
-        {label}
-      </Button>
-      {isReview && !isCorrect ? (
-        <div className="mt-1 text-xs text-muted-foreground font-bold">
-          {labels.vocabTest?.answerLabel || 'Answer: '}
-          <span className="font-black text-foreground">{answer}</span>
-        </div>
-      ) : null}
-    </div>
-  );
-};
+  return items.flatMap((item, index) => {
+    const rightId = answered.filled[index];
+    if (!rightId) {
+      return [];
+    }
+
+    return [
+      {
+        leftId: item.wordId,
+        rightId,
+        pairNum: index + 1,
+      },
+    ];
+  });
+}
 
 export default function TestCardFill10({
-  language,
   items,
   initialDirection,
   answered,
   mode = 'test',
   onSubmit,
 }: Props) {
-  const labels = getLabels(language);
   const isReview = mode === 'review' && !!answered;
-  const [direction, setDirection] = useState<Direction>(
-    answered?.directionUsed || initialDirection
+  const direction = answered?.directionUsed || initialDirection;
+
+  const leftCol = useMemo(
+    () => items.map(item => ({ id: item.wordId, text: item.pair.korean })),
+    [items]
   );
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-  const derived = useMemo(() => {
-    const prompts = items.map(it =>
-      direction === 'KR_TO_NATIVE' ? it.pair.korean : it.pair.native
-    );
-    const answers = items.map(it =>
-      direction === 'KR_TO_NATIVE' ? it.pair.native : it.pair.korean
-    );
-    return { prompts, answers };
-  }, [direction, items]);
-
-  const [filled, setFilled] = useState<string[]>(() =>
-    answered?.filled?.length === items.length ? answered.filled : new Array(items.length).fill('')
+  const rightCol = useMemo(
+    () =>
+      deterministicSort(
+        items.map(item => ({ id: item.wordId, text: item.pair.native })),
+        item => item.id,
+        `${direction}:right-column`
+      ),
+    [direction, items]
   );
-  const [optionPool, setOptionPool] = useState<string[]>(() => {
-    const used =
-      answered?.filled?.length === items.length
-        ? answered.filled.filter(v => v.trim().length > 0)
-        : [];
-    return shuffleArray(derived.answers).filter(o => !used.includes(o));
-  });
+  const reviewPairs = useMemo(() => buildReviewPairs(answered, items), [answered, items]);
 
-  const isComplete = filled.every(v => v.trim().length > 0);
+  const [draftPairs, setDraftPairs] = useState<PairSelection[]>([]);
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [selectedRight, setSelectedRight] = useState<string | null>(null);
 
-  const reset = () => {
+  const pairs = isReview ? reviewPairs : draftPairs;
+
+  const handleKeyClick = (side: 'left' | 'right', id: string) => {
     if (isReview) return;
-    setFilled(new Array(items.length).fill(''));
-    setOptionPool(shuffleArray(derived.answers));
-    setActiveIndex(null);
+
+    const existingPair = pairs.find(pair => (side === 'left' ? pair.leftId === id : pair.rightId === id));
+    if (existingPair) {
+      setDraftPairs(prev => prev.filter(pair => pair.pairNum !== existingPair.pairNum));
+      return;
+    }
+
+    if (side === 'left') {
+      if (selectedRight) {
+        setDraftPairs(prev => [
+          ...prev,
+          { leftId: id, rightId: selectedRight, pairNum: prev.length + 1 },
+        ]);
+        setSelectedLeft(null);
+        setSelectedRight(null);
+        return;
+      }
+
+      setSelectedLeft(prev => (prev === id ? null : id));
+      return;
+    }
+
+    if (selectedLeft) {
+      setDraftPairs(prev => [
+        ...prev,
+        { leftId: selectedLeft, rightId: id, pairNum: prev.length + 1 },
+      ]);
+      setSelectedLeft(null);
+      setSelectedRight(null);
+      return;
+    }
+
+    setSelectedRight(prev => (prev === id ? null : id));
   };
 
-  const toggleDirection = () => {
-    if (isReview) return;
-    const nextDirection = direction === 'KR_TO_NATIVE' ? 'NATIVE_TO_KR' : 'KR_TO_NATIVE';
-    setDirection(nextDirection);
-    setFilled(new Array(items.length).fill(''));
-    setOptionPool(
-      shuffleArray(
-        items.map(it => (nextDirection === 'KR_TO_NATIVE' ? it.pair.native : it.pair.korean))
-      )
-    );
-    setActiveIndex(null);
+  const progress = pairs.length;
+  const isAllPaired = progress === items.length;
+
+  const handleSubmit = () => {
+    const results = leftCol.map(leftItem => pairs.find(pair => pair.leftId === leftItem.id)?.rightId || '');
+    onSubmit(results, direction);
   };
 
-  const takeOption = (opt: string) => {
-    if (isReview) return;
-    const targetIndex = activeIndex ?? filled.findIndex(v => v.trim().length === 0);
-    if (targetIndex < 0) return;
-    if (filled[targetIndex]) return;
-
-    setFilled(prev => {
-      const next = [...prev];
-      next[targetIndex] = opt;
-      return next;
-    });
-    setOptionPool(prev => prev.filter(o => o !== opt));
-    const nextEmpty = filled.findIndex((v, i) => i !== targetIndex && v.trim().length === 0);
-    setActiveIndex(nextEmpty >= 0 ? nextEmpty : null);
+  const getPairNum = (side: 'left' | 'right', id: string) => {
+    return pairs.find(pair => (side === 'left' ? pair.leftId === id : pair.rightId === id))?.pairNum;
   };
-
-  const clearSlot = (index: number) => {
-    if (isReview) return;
-    const current = filled[index];
-    if (!current) return;
-    setFilled(prev => {
-      const next = [...prev];
-      next[index] = '';
-      return next;
-    });
-    setOptionPool(prev => shuffleArray([...prev, current]));
-    setActiveIndex(index);
-  };
-
-  const submit = () => {
-    if (isReview || !isComplete) return;
-    onSubmit(filled, direction);
-  };
-
-  const switchKR = labels.vocabTest?.switchToKorean || 'Switch to Korean';
-  const switchNative = labels.vocabTest?.switchToNative || 'Switch to Native';
-  const switchLabel = direction === 'KR_TO_NATIVE' ? switchKR : switchNative;
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-xs font-black text-muted-foreground">
-          {labels.vocabTest?.pickFromList || 'Pick from the list below'}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={toggleDirection}
-            disabled={isReview}
-            className="px-3 py-2 rounded-xl bg-card border-2 border-border font-black text-sm text-muted-foreground disabled:opacity-50"
-          >
-            {switchLabel}
-          </Button>
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={reset}
-            disabled={isReview}
-            className="w-10 h-10 rounded-xl bg-muted hover:bg-muted flex items-center justify-center disabled:opacity-50"
-            aria-label={labels.vocabTest?.reset || 'Reset'}
-          >
-            <RefreshCw className="w-5 h-5 text-muted-foreground" />
-          </Button>
-        </div>
+    <div className="flex flex-col">
+      <div className="mb-6 text-center">
+        <p className="mb-1 text-[11px] font-black tracking-[0.2em] text-slate-500">十选一配对</p>
+        <p className="text-[10px] font-bold tracking-widest text-slate-400">
+          请将左侧韩语与右侧释义一一对应
+        </p>
       </div>
 
-      <div className="mt-4 bg-card rounded-3xl border-2 border-border overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_1px_1fr]">
-          <div className="p-6 sm:p-8 space-y-3">
-            {items.map((it, idx) => (
-              <FillSlot
-                key={`${it.wordId}-${it.pair.korean}-${idx}`}
-                idx={idx}
-                val={filled[idx]}
-                isTarget={activeIndex === idx}
-                isReview={isReview}
-                isCorrect={
-                  isReview ? filled[idx].trim() === (derived.answers[idx] || '').trim() : null
-                }
-                answer={derived.answers[idx] || ''}
-                language={language}
-                onClear={clearSlot}
-                onSelect={setActiveIndex}
-              />
-            ))}
-          </div>
+      <div className="relative grid grid-cols-2 gap-x-4 gap-y-3 pb-6">
+        <div className="pointer-events-none absolute bottom-6 left-1/2 top-0 -translate-x-[1px] border-l-2 border-dashed border-slate-200" />
 
-          <div className="hidden sm:block bg-muted" />
+        <div className="flex flex-col space-y-3">
+          {leftCol.map(item => {
+            const pairNum = getPairNum('left', item.id);
+            const isSelected = selectedLeft === item.id;
 
-          <div className="p-6 sm:p-8 space-y-3">
-            {derived.prompts.map((p, idx) => (
-              <div key={`prompt-${p}-${idx}`} className="h-14 flex items-center">
-                <div className="text-xl font-black text-foreground truncate">{p}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {isReview ? null : (
-        <>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {optionPool.map(opt => (
+            return (
               <Button
                 variant="ghost"
                 size="auto"
-                key={opt}
+                key={item.id}
                 type="button"
-                onClick={() => takeOption(opt)}
-                className="px-4 py-3 rounded-2xl bg-card border-2 border-border font-black text-foreground hover:border-border"
+                onClick={() => handleKeyClick('left', item.id)}
+                className={`vt-match-key w-full rounded-xl px-2 py-3.5 flex items-center justify-center transition-all ${isSelected ? 'selected' : ''} ${pairNum ? 'paired hover:bg-[#F1F5F9]' : 'hover:bg-gradient-to-b hover:from-white hover:to-[#F8F9FA]'}`}
               >
-                {opt}
+                <span className="text-[15px] font-black tracking-wide">{item.text}</span>
+                <div
+                  className={`absolute right-0 top-0 rounded-bl-lg bg-blue-500 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm transition-all duration-200 ${pairNum ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                >
+                  {pairNum || ''}
+                </div>
               </Button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          <div className="mt-6 flex justify-end">
-            <Button
-              variant="ghost"
-              size="auto"
-              type="button"
-              onClick={submit}
-              disabled={!isComplete}
-              className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-primary text-white font-black disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Check className="w-5 h-5" />
-              {labels.vocabTest?.confirm || 'Confirm'}
-            </Button>
-          </div>
-        </>
-      )}
+        <div className="flex flex-col space-y-3">
+          {rightCol.map(item => {
+            const pairNum = getPairNum('right', item.id);
+            const isSelected = selectedRight === item.id;
+
+            return (
+              <Button
+                variant="ghost"
+                size="auto"
+                key={item.id}
+                type="button"
+                onClick={() => handleKeyClick('right', item.id)}
+                className={`vt-match-key w-full rounded-xl px-2 py-3.5 flex items-center justify-center transition-all ${isSelected ? 'selected' : ''} ${pairNum ? 'paired hover:bg-[#F1F5F9]' : 'hover:bg-gradient-to-b hover:from-white hover:to-[#F8F9FA]'}`}
+              >
+                <span className="text-center text-[14px] font-bold tracking-wide text-slate-700">
+                  {item.text}
+                </span>
+                <div
+                  className={`absolute right-0 top-0 rounded-bl-lg bg-blue-500 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm transition-all duration-200 ${pairNum ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                >
+                  {pairNum || ''}
+                </div>
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-5">
+        <div className="flex items-center space-x-2 text-[11px] font-bold text-slate-400">
+          <Info className="h-3.5 w-3.5" />
+          <span>
+            已连线 <span className="font-black text-blue-600">{progress}</span>/{items.length}
+          </span>
+        </div>
+
+        {!isReview && (
+          <Button
+            variant="ghost"
+            size="auto"
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isAllPaired}
+            className={`disable-hover-state flex items-center space-x-1.5 rounded-xl px-6 py-3 text-[13px] font-black tracking-widest text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)] transition-all active:scale-95 ${isAllPaired ? 'bg-blue-600 hover:bg-blue-600 hover:text-white' : 'pointer-events-none bg-slate-900 opacity-40 hover:bg-slate-900'}`}
+          >
+            <span>下一题</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

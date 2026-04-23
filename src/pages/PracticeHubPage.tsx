@@ -8,7 +8,7 @@ import {
   Sparkles,
   Dumbbell,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';

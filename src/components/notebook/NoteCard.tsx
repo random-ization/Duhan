@@ -1,6 +1,6 @@
 import React from 'react';
 import { BookOpen, GraduationCap, XCircle, FileText } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sanitizeHtml } from '../../utils/sanitize';
 

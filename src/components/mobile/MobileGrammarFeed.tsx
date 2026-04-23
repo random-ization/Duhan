@@ -1,6 +1,6 @@
-import { Trophy, ChevronRight, Sparkles } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { GrammarPointData } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import ExquisiteProgressBar from './ExquisiteProgressBar';
@@ -58,9 +58,9 @@ export default function MobileGrammarFeed({
               case 'PARTICLE':
                 return 'text-violet-600 bg-violet-50/50 border-violet-100';
               case 'CONNECTIVE':
-                return 'text-amber-600 bg-amber-50/50 border-amber-100';
+                return 'TOPIK II';
               default:
-                return 'text-slate-500 bg-slate-50/50 border-slate-100';
+                return 'TOPIK II';
             }
           };
           const themeClass = getThemeColor(point.type);
@@ -73,67 +73,50 @@ export default function MobileGrammarFeed({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <button
-                type="button"
+              <div
                 onClick={() => onSelect(point)}
-                className="group relative w-full text-left bg-white rounded-[2rem] p-5 shadow-sm hover:shadow-md border border-slate-100 active:scale-[0.98] transition-all overflow-hidden outline-none"
+                className="card-paper rounded-[2rem] p-6 relative select-none w-full text-left"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-full border uppercase tracking-wider ${themeClass}`}
-                      >
-                        {point.type}
-                      </span>
-                      {point.level && (
-                        <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-                          {point.level}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 leading-tight truncate pr-2">
-                      {getLocalizedContent(point as never, 'title', language) || point.title}
-                    </h3>
-                  </div>
-
+                  <span className="bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-[6px] text-[9px] font-black tracking-widest uppercase shadow-[inset_0_1px_1px_rgba(255,255,255,1)]">
+                    {point.type} • {point.level || 'Lv.3'}
+                  </span>
+                  
                   <button
                     type="button"
                     onClick={e => {
                       e.stopPropagation();
                       onToggleStatus(point.id);
                     }}
-                    className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-50 ${
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center mastery-btn outline-none transition-colors ${
                       isMastered
-                        ? 'text-green-500 bg-green-50'
-                        : 'text-slate-300 hover:text-slate-400'
+                        ? 'border-emerald-600 text-emerald-100 bg-emerald-500 mastered'
+                        : 'border-slate-200 text-slate-300 bg-slate-50 hover:bg-slate-100'
                     }`}
                   >
-                    {isMastered ? (
-                      <Trophy className="w-6 h-6 fill-current" />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full border-2 border-slate-200" />
-                    )}
+                    <Check className="w-4 h-4" strokeWidth={3} />
                   </button>
                 </div>
 
-                <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4 pr-6 leading-relaxed">
+                <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-2 drop-shadow-sm pr-4">
+                  {getLocalizedContent(point as never, 'title', language) || point.title}
+                </h3>
+                <p className="text-[12px] font-bold text-slate-500 tracking-wide mb-6 leading-relaxed line-clamp-2">
                   {getLocalizedContent(point as never, 'summary', language) || point.summary}
                 </p>
 
-                <div className="flex items-center gap-3 mt-auto pt-1">
-                  <ExquisiteProgressBar
-                    progress={isMastered ? 100 : proficiency}
-                    className="flex-1"
-                    height={5}
-                  />
-                  <span className="text-[10px] font-black text-slate-400 w-8 text-right shrink-0">
-                    {isMastered ? '100' : Math.round(proficiency)}%
-                  </span>
+                <div className="flex items-center space-x-3">
+                    <div className="flex-1 h-1.5 bg-slate-200/60 rounded-full overflow-hidden shadow-inner">
+                        <div 
+                           className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all duration-500" 
+                           style={{ width: `${isMastered ? 100 : proficiency}%` }}
+                        ></div>
+                    </div>
+                    <span className={`text-[10px] font-black font-mono w-8 text-right shrink-0 ${isMastered ? 'text-emerald-500' : 'text-slate-400'}`}>
+                        {isMastered ? 100 : Math.round(proficiency)}%
+                    </span>
                 </div>
-
-                <ChevronRight className="absolute right-4 bottom-1/2 translate-y-[20%] w-4 h-4 text-slate-200 group-hover:text-indigo-300 transition-colors" />
-              </button>
+              </div>
             </motion.div>
           );
         })}

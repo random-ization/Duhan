@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
@@ -61,6 +61,33 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   });
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const returnToParam = searchParams.get('returnTo');
+  const defaultBackPath = useMemo(() => {
+    if (pathWithoutLang.startsWith('/podcasts')) {
+      return '/media?tab=podcasts';
+    }
+    if (pathWithoutLang.startsWith('/videos') || pathWithoutLang.startsWith('/video/')) {
+      return '/media?tab=videos';
+    }
+    if (pathWithoutLang.startsWith('/reading')) {
+      return '/media?tab=reading';
+    }
+    if (
+      pathWithoutLang.startsWith('/courses') ||
+      pathWithoutLang.startsWith('/course/') ||
+      pathWithoutLang.startsWith('/review') ||
+      pathWithoutLang.startsWith('/notebook') ||
+      pathWithoutLang.startsWith('/topik') ||
+      pathWithoutLang.startsWith('/typing') ||
+      pathWithoutLang.startsWith('/vocab-book') ||
+      pathWithoutLang.startsWith('/vocabbook')
+    ) {
+      return '/courses';
+    }
+    if (pathWithoutLang.startsWith('/profile')) {
+      return '/profile';
+    }
+    return '/dashboard';
+  }, [pathWithoutLang]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -279,14 +306,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
 
   const handleBack = () => {
     if (hasSafeReturnTo(returnToParam)) {
-      navigate(resolveSafeReturnTo(returnToParam, '/dashboard'));
+      navigate(resolveSafeReturnTo(returnToParam, defaultBackPath));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/dashboard');
+    navigate(defaultBackPath);
   };
 
   return (

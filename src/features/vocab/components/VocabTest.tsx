@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, X, List, CheckSquare, Keyboard, Grip } from 'lucide-react';
 import type { Language } from '../../../types';
 import { getLabels, Labels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
@@ -153,6 +153,7 @@ type RunningScreenProps = Readonly<{
   submitTest: () => void;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   onSetCardRef: (id: string, el: HTMLDivElement | null) => void;
+  onClose?: () => void;
 }>;
 
 type ResultScreenProps = Readonly<{
@@ -480,30 +481,73 @@ function RunningCard({
     <div
       ref={setRef}
       style={{ scrollSnapAlign: 'start' }}
-      className={`rounded-3xl border-2 p-6 sm:p-8 transition-all ${getCardClassName(isActive, isMissing)}`}
+      className="vt-responsive-card"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-black text-muted-foreground">
-            {getCardTypeText(card.type)}
+      {/* Mobile Premium Card */}
+      <div className="vt-mobile-card vt-card-paper w-full rounded-[2.5rem] p-7 flex flex-col relative overflow-hidden">
+        <div className="flex justify-between items-end mb-8 border-b border-slate-200 pb-5">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">
+              {labels.vocabTest?.cardLabel || 'Question'}
+            </p>
+            <h3 className="text-4xl font-black text-slate-900 leading-none tracking-tight">
+              {String(idx + 1).padStart(2, '0')}
+              <span className="text-xl text-slate-300">/{cardsCount}</span>
+            </h3>
           </div>
-          {card.type === 'FILL_10' && (
-            <div className="text-2xl font-black text-foreground mt-2">
-              {(labels.vocabTest?.fillPrompt || 'Complete the blanks') +
-                ` (${card.items.length}/10)`}
+          <div className="flex items-center space-x-1.5 bg-rose-50/80 text-rose-600 px-3 py-1.5 rounded-lg border border-rose-100 shadow-sm">
+            <List className="w-3 h-3" />
+            <span className="text-[11px] font-black uppercase tracking-widest">
+              {getCardTypeText(card.type)}
+            </span>
+          </div>
+        </div>
+
+        {renderCardInput()}
+
+        <div className="mt-6 pt-5 border-t border-slate-100 flex justify-between items-center">
+          <div
+            className={`text-[11px] font-black tracking-widest uppercase ${isComplete ? 'text-blue-500' : 'text-slate-400'}`}
+          >
+            {isComplete
+              ? labels.vocabTest?.answered || 'Answered'
+              : labels.vocabTest?.notAnswered || 'Pending'}
+          </div>
+          {isMissing && (
+            <div className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100 italic">
+              {labels.vocabTest?.notAnswered || 'Please answer this'}
             </div>
           )}
         </div>
-        {getStatusBadge()}
       </div>
 
-      {renderCardInput()}
-
-      <div className="mt-6 flex justify-between text-xs font-bold text-muted-foreground">
-        <div>
-          {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
+      {/* Desktop Original Card */}
+      <div
+        className={`vt-desktop-card rounded-3xl border-2 p-6 sm:p-8 transition-all ${getCardClassName(isActive, isMissing)}`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-black text-muted-foreground">
+              {getCardTypeText(card.type)}
+            </div>
+            {card.type === 'FILL_10' && (
+              <div className="text-2xl font-black text-foreground mt-2">
+                {(labels.vocabTest?.fillPrompt || 'Complete the blanks') +
+                  ` (${card.items.length}/10)`}
+              </div>
+            )}
+          </div>
+          {getStatusBadge()}
         </div>
-        <div className="truncate max-w-[60%]">{getBottomStatus()}</div>
+
+        {renderCardInput()}
+
+        <div className="mt-6 flex justify-between text-xs font-bold text-muted-foreground">
+          <div>
+            {labels.vocabTest?.cardLabel || 'Card'} {idx + 1}
+          </div>
+          <div className="truncate max-w-[60%]">{getBottomStatus()}</div>
+        </div>
       </div>
     </div>
   );
@@ -523,19 +567,13 @@ function RunningScreen({
   submitTest,
   scrollContainerRef,
   onSetCardRef,
+  onClose,
 }: RunningScreenProps) {
   const labels = getLabels(language);
-  const format = (template: string, vars: Record<string, string | number>) =>
-    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
   const active = cards[activeCardIndex];
 
-  const getCardClassName = (isActive: boolean, isMissing: boolean) => {
-    if (isActive) {
-      if (isMissing) return 'border-red-600 bg-red-50 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]';
-      return 'border-foreground bg-card shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]';
-    }
-    if (isMissing) return 'border-red-300 bg-red-50';
-    return 'border-border bg-card';
+  const getCardClassName = () => {
+    return 'vt-card-paper';
   };
 
   const getCardTypeText = (type: QuestionType) => {
@@ -546,15 +584,157 @@ function RunningScreen({
       return labels.vocabTest?.questionTypeMultipleChoice || 'Multiple choice';
     }
     if (type === 'FILL_10') {
-      return labels.vocabTest?.questionTypeFill || 'Fill';
+      return labels.vocabTest?.questionTypeFill || 'Match 10';
     }
     return labels.vocabTest?.questionTypeWritten || 'Written';
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6">
-        <div className="flex items-center justify-between pb-3">
+    <>
+      <style>{`
+        /* Desktop: Screen width >= 640px (sm in Tailwind) */
+        @media (min-width: 640px) {
+          .vt-mobile-card { display: none !important; }
+          .vt-desktop-card { display: block !important; }
+          .vt-desktop-only { display: flex !important; }
+          .vt-mobile-only { display: none !important; }
+          .vt-max-w-container { max-width: 56rem !important; } /* 4xl */
+          .vt-scroll-container { scroll-snap-type: none !important; }
+          .vt-inner-container { padding-bottom: 1.5rem !important; }
+          .vt-card-spacing { margin-top: 1.5rem; }
+        }
+
+        /* Mobile: Screen width < 640px */
+        @media (max-width: 639px) {
+          .vt-mobile-card { display: flex !important; }
+          .vt-desktop-card { display: none !important; }
+          .vt-desktop-only { display: none !important; }
+          .vt-mobile-only { display: flex !important; }
+          .vt-max-w-container { max-width: 420px !important; }
+          .vt-scroll-container { scroll-snap-type: y mandatory !important; }
+          .vt-inner-container { padding-bottom: 6rem !important; }
+          .vt-card-spacing { margin-top: 3rem; }
+          
+          .vt-mobile-bg {
+              background-color: #E6E7E9;
+              background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
+          }
+        }
+
+        .header-glass {
+            background: rgba(230, 231, 233, 0.85);
+            backdrop-filter: blur(24px) saturate(150%);
+            border-bottom: 1px solid rgba(255,255,255,0.4);
+        }
+
+        .vt-card-paper {
+            background: #FCFCFA;
+            box-shadow: 
+                0 16px 32px -12px rgba(0,0,0,0.08),
+                inset 0 1px 1px rgba(255,255,255,1),
+                inset 0 -2px 1px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.06);
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
+        }
+
+        .vt-test-option {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 0px #E2E8F0, 0 8px 16px rgba(0,0,0,0.04);
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .vt-test-option:active, .vt-test-option.selected {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0px #E2E8F0, 0 2px 4px rgba(0,0,0,0.04);
+            background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+            border-color: #3B82F6;
+        }
+        
+        .vt-inset-slot {
+            background: #F8F9FA;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), inset 0 1px 2px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,1);
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .vt-tactile-chip {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 3px 0px #CBD5E1, 0 4px 8px rgba(0,0,0,0.04);
+            transition: all 0.1s;
+            cursor: pointer;
+        }
+        .vt-tactile-chip:active, .vt-tactile-chip.selected {
+            transform: translateY(3px);
+            box-shadow: 0 0px 0px #CBD5E1, 0 1px 2px rgba(0,0,0,0.05);
+            background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+            border-color: #3B82F6;
+            color: #1D4ED8;
+            font-weight: 900;
+        }
+
+        .vt-match-key {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 0px #E2E8F0, 0 4px 8px rgba(0,0,0,0.04);
+            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .vt-match-key.selected {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0px #E2E8F0, 0 1px 2px rgba(0,0,0,0.05);
+            background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+            border-color: #3B82F6;
+            color: #1D4ED8;
+        }
+        .vt-match-key.paired {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0px #E2E8F0, inset 0 2px 4px rgba(0,0,0,0.04);
+            background: #F1F5F9;
+            border-color: #CBD5E1;
+            color: #64748B;
+        }
+      `}</style>
+
+      <div className="h-full flex flex-col vt-mobile-bg">
+        {/* Mobile Header (similar to the demo) */}
+        <header className="vt-mobile-only fixed top-0 left-0 right-0 px-5 pt-14 pb-4 header-glass z-50 flex items-center justify-between">
+            <Button 
+              variant="ghost"
+              size="auto"
+              className="w-10 h-10 rounded-[12px] bg-white/60 border border-slate-200 text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-transform hover:bg-white/60"
+              onClick={() => {
+                // Let the parent dictate close behavior. We just submit or close
+                if (submitAttempted || isAllAnswered) {
+                  submitTest();
+                } else if (onClose) {
+                  onClose();
+                }
+              }}
+            >
+                <X className="w-4 h-4" />
+            </Button>
+            <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                    {labels.vocabTest?.title || 'Vocabulary Test'}
+                </span>
+            </div>
+            <Button 
+                variant="ghost" 
+                size="auto" 
+                className="w-10 h-10 flex items-center justify-center text-slate-400 active:scale-95 transition-transform hover:bg-transparent"
+            >
+                <FileText className="w-4 h-4" />
+            </Button>
+        </header>
+
+        {/* Mobile Spacing for fixed header */}
+        <div className="vt-mobile-only h-28 shrink-0"></div>
+
+        {/* Desktop Header Container */}
+        <div className="vt-desktop-only hidden max-w-4xl mx-auto w-full px-4 sm:px-6 mb-3 items-center justify-between shrink-0 pt-4">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -582,15 +762,12 @@ function RunningScreen({
             {Math.max(cards.length, 1)}
           </div>
         </div>
-      </div>
 
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto scroll-smooth"
-        style={{ scrollSnapType: 'y mandatory' }}
-      >
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6">
-          <div className="space-y-6">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto scroll-smooth vt-scroll-container"
+        >
+          <div className="vt-max-w-container mx-auto w-full px-5 vt-inner-container vt-card-spacing space-y-6 sm:space-y-6">
             {cards.map((card, idx) => (
               <RunningCard
                 key={`${card.id}:${idx}`}
@@ -609,40 +786,52 @@ function RunningScreen({
                 onSetCardRef={onSetCardRef}
               />
             ))}
-          </div>
-        </div>
-      </div>
 
-      <div className="border-t border-border bg-card/80 backdrop-blur">
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-black text-muted-foreground">
-              {format(labels.vocabTest?.answeredCount || 'Answered {current}/{total}', {
-                current: answeredCardCount,
-                total: Math.max(cards.length, 1),
-              })}
+            {/* Mobile Submit Button */}
+            <div className="vt-mobile-only flex pt-4 pb-12">
+              <Button
+                variant="ghost"
+                size="auto"
+                type="button"
+                onClick={submitTest}
+                className={`w-full py-5 rounded-[1.5rem] text-white font-black tracking-widest text-lg shadow-[0_8px_24px_rgba(0,0,0,0.15)] active:scale-[0.98] transition-all ${
+                  isAllAnswered ? 'bg-[#1A1A1C]' : 'bg-rose-600'
+                }`}
+              >
+                {isAllAnswered ? (labels.vocabTest?.submitTest || '提交测验') : (labels.vocabTest?.unansweredWarning || '确认提交 (仍有未答题)')}
+              </Button>
             </div>
-            {submitAttempted && !isAllAnswered && (
-              <div className="text-xs font-bold text-red-600 mt-0.5">
-                {labels.vocabTest?.unansweredWarning ||
-                  'Some questions are unanswered. Jumped to the first one.'}
-              </div>
-            )}
           </div>
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={submitTest}
-            className={`px-5 py-3 rounded-2xl text-white font-black ${
-              isAllAnswered ? 'bg-primary' : 'bg-red-600 hover:bg-red-700'
-            }`}
-          >
-            {labels.vocabTest?.submitTest || 'Submit test'}
-          </Button>
+        </div>
+
+        {/* Desktop Footer Container */}
+        <div className="vt-desktop-only hidden border-t border-border bg-card/80 backdrop-blur shrink-0">
+          <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-black text-muted-foreground">
+                 Answered {answeredCardCount}/{Math.max(cards.length, 1)}
+              </div>
+              {submitAttempted && !isAllAnswered && (
+                <div className="text-xs font-bold text-red-600 mt-0.5">
+                  {labels.vocabTest?.unansweredWarning || 'Some questions are unanswered.'}
+                </div>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="auto"
+              type="button"
+              onClick={submitTest}
+              className={`px-5 py-3 rounded-2xl text-white font-black ${
+                isAllAnswered ? 'bg-primary' : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {labels.vocabTest?.submitTest || 'Submit test'}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -664,138 +853,204 @@ function SettingsScreen({
   const labels = getLabels(language);
   const format = (template: string, vars: Record<string, string | number>) =>
     template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
-  const getToggleClass = (key: QuestionType, disabled: boolean) => {
-    if (enabledTypes[key]) return 'bg-blue-600';
-    if (disabled) return 'bg-muted cursor-not-allowed';
-    return 'bg-muted';
+
+  const toggleType = (key: QuestionType) => {
+    if (key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice) return;
+    setEnabledTypes((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const getModeProps = (key: QuestionType) => {
+    const isSelected = enabledTypes[key];
+    const disabled = key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice;
+    
+    let baseClass = 'vt-mode-key rounded-[1.2rem] p-4 flex flex-col items-center text-center';
+    if (isSelected) baseClass += ' selected';
+    if (disabled) baseClass += ' opacity-50 cursor-not-allowed';
+
+    return {
+      className: baseClass,
+      onClick: () => {
+        if (!disabled) toggleType(key);
+      }
+    };
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <div className="text-sm font-bold text-muted-foreground">{scopeTitle}</div>
-          <div className="text-4xl font-black text-foreground mt-2">
-            {labels.vocabTest?.setupTitle || 'Set up your test'}
-          </div>
-        </div>
-        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shrink-0">
-          <FileText className="w-8 h-8 text-white" />
-        </div>
-      </div>
+    <>
+      <style>{`
+        .vt-card-paper {
+            background: #FCFCFA;
+            box-shadow: 
+                0 16px 32px -12px rgba(0,0,0,0.08),
+                inset 0 1px 1px rgba(255,255,255,1),
+                inset 0 -2px 1px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.06);
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
+        }
 
-      <div className="mt-10 space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-black text-foreground text-lg">
-              {labels.vocabTest?.questions || 'Questions'}
+        .vt-mode-key {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 0px #E2E8F0, 0 8px 16px rgba(0,0,0,0.04);
+            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            user-select: none;
+        }
+        
+        .vt-mode-key.selected {
+            transform: translateY(4px);
+            background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%);
+            border-color: #3B82F6;
+            box-shadow: 
+                0 0px 0px #E2E8F0,
+                0 2px 4px rgba(0,0,0,0.04),
+                inset 0 2px 6px rgba(59,130,246,0.15);
+        }
+        
+        .vt-mode-key.selected .vt-mode-icon-container {
+            background: #3B82F6;
+            color: #FFFFFF;
+            border-color: #2563EB;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+        .vt-mode-key.selected .vt-mode-title { color: #1D4ED8; }
+        .vt-mode-key.selected .vt-mode-desc { color: #3B82F6; opacity: 0.8; }
+
+        .vt-mode-key:active:not(.selected) {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0px #E2E8F0, 0 4px 8px rgba(0,0,0,0.04);
+        }
+      `}</style>
+      
+      <div className="px-5 pt-8 pb-24 max-w-[420px] mx-auto w-full">
+        <div className="vt-card-paper w-full rounded-[2.5rem] p-7 relative">
+          <div className="text-center mb-10">
+            <p className="text-[10px] font-black text-blue-600 bg-blue-50 inline-block px-3 py-1 rounded-full tracking-widest uppercase mb-3 border border-blue-100 shadow-sm">
+              {scopeTitle}
+            </p>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+              {labels.vocabTest?.setupTitle || 'Set up your test'}
+            </h3>
+            <p className="text-[11px] font-bold text-slate-400 tracking-widest mt-1.5 uppercase">
+              {maxQuestions} Words in queue
+            </p>
+          </div>
+
+          <div className="mb-10 bg-[#F8F9FA] rounded-[1.5rem] p-5 border border-slate-200/60 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
+            <div className="flex justify-between items-center mb-5 px-1">
+              <span className="text-[12px] font-black text-slate-700 tracking-widest">
+                {labels.vocabTest?.questions || 'Questions'}
+              </span>
+              <span className="text-lg font-black text-slate-900 bg-white px-3.5 py-1 rounded-[10px] border border-slate-200 shadow-sm">
+                {effectiveQuestionCount}
+              </span>
             </div>
-            <div className="text-muted-foreground text-sm">
-              {format(labels.vocabTest?.maxQuestions || 'Max {count}', { count: maxQuestions })}
+            
+            <div className="w-full h-2.5 bg-slate-200/80 rounded-full relative shadow-inner">
+              <div 
+                className="absolute left-0 top-0 bottom-0 bg-slate-800 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)] pointer-events-none"
+                style={{ width: `${(effectiveQuestionCount / Math.max(1, maxQuestions)) * 100}%` }}
+              ></div>
+              <div 
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white border border-slate-200 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-10 pointer-events-none transition-transform"
+                style={{ left: `${(effectiveQuestionCount / Math.max(1, maxQuestions)) * 100}%` }}
+              ></div>
+              <input 
+                type="range" 
+                min={1} 
+                max={Math.max(1, maxQuestions)} 
+                value={effectiveQuestionCount}
+                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+              />
             </div>
           </div>
-          <Input
-            type="number"
-            value={effectiveQuestionCount}
-            min={1}
-            max={Math.max(1, maxQuestions)}
-            onChange={e =>
-              setQuestionCount(
-                Math.min(Math.max(1, Number(e.target.value)), Math.max(1, maxQuestions))
-              )
-            }
-            className="w-24 !h-auto !py-3 text-center text-2xl font-black !bg-muted !border-2 !border-border !rounded-2xl !shadow-none"
-          />
-        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="font-black text-foreground text-lg">
-            {labels.vocabTest?.answers || 'Answers'}
-          </div>
-          <Select
-            value={answerLanguage}
-            onChange={e => setAnswerLanguage(e.target.value as AnswerLanguage)}
-            className="!h-auto !px-4 !py-3 !bg-muted !border-2 !border-border !rounded-2xl font-bold !shadow-none"
-          >
-            <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
-            <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
-            <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
-          </Select>
-        </div>
-
-        <div className="border-t border-border pt-6 space-y-5">
-          <div className="font-black text-foreground text-lg">
-            {labels.vocabTest?.questionTypes || 'Question types'}
-          </div>
-
-          {(
-            [
-              { key: 'TRUE_FALSE' },
-              { key: 'MULTIPLE_CHOICE' },
-              { key: 'FILL_10' },
-              { key: 'WRITTEN' },
-            ] as const
-          ).map(row => {
-            const disabled = row.key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice;
-            return (
-              <div key={row.key} className="flex items-center justify-between">
-                <div className="font-black text-foreground text-base">
-                  {row.key === 'TRUE_FALSE' &&
-                    (labels.vocabTest?.questionTypeTrueFalse || 'True / False')}
-                  {row.key === 'MULTIPLE_CHOICE' &&
-                    (labels.vocabTest?.questionTypeMultipleChoice || 'Multiple choice')}
-                  {row.key === 'FILL_10' && (labels.vocabTest?.questionTypeFill || 'Fill')}
-                  {row.key === 'WRITTEN' && (labels.vocabTest?.questionTypeWritten || 'Written')}
-                  {disabled && (
-                    <span className="ml-2 text-xs font-bold text-muted-foreground">
-                      {labels.vocabTest?.notEnoughWords || '(not enough words)'}
-                    </span>
-                  )}
+          <div className="mb-8">
+            <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] uppercase ml-1 mb-4 flex justify-between">
+              <span>{labels.vocabTest?.questionTypes || 'Modes'}</span>
+              {enabledTypeList.length === 0 && (
+                <span className="text-red-500 font-bold lowercase tracking-normal">({labels.vocabTest?.pickAtLeastOneType || 'pick 1'})</span>
+              )}
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3 pb-2">
+              
+              {/* Multiple Choice */}
+              <div {...getModeProps('MULTIPLE_CHOICE')}>
+                <div className="vt-mode-icon-container w-10 h-10 rounded-[10px] bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 mb-3 transition-colors">
+                  <List className="h-4 w-4" />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="auto"
-                  type="button"
-                  disabled={disabled}
-                  onClick={() =>
-                    setEnabledTypes((prev: EnabledTypes) => ({
-                      ...prev,
-                      [row.key]: !prev[row.key],
-                    }))
-                  }
-                  className={`w-12 h-7 rounded-full relative transition-all ${getToggleClass(row.key, disabled)}`}
-                >
-                  <span
-                    className={`absolute top-0.5 transition-all w-6 h-6 rounded-full bg-card shadow ${
-                      enabledTypes[row.key] ? 'left-5' : 'left-0.5'
-                    }`}
-                  />
-                </Button>
+                <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
+                  {labels.vocabTest?.questionTypeMultipleChoice || 'Multiple choice'}
+                </h4>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">
+                  {!canUseMultipleChoice ? '(not enough words)' : 'Multiple Choice'}
+                </p>
               </div>
-            );
-          })}
 
-          {enabledTypeList.length === 0 && (
-            <div className="text-sm font-bold text-red-600">
-              {labels.vocabTest?.pickAtLeastOneType || 'Pick at least one type.'}
+              {/* True/False */}
+              <div {...getModeProps('TRUE_FALSE')}>
+                <div className="vt-mode-icon-container w-10 h-10 rounded-[10px] bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 mb-3 transition-colors">
+                  <CheckSquare className="h-4 w-4" />
+                </div>
+                <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
+                  {labels.vocabTest?.questionTypeTrueFalse || 'True / False'}
+                </h4>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">True / False</p>
+              </div>
+
+              {/* Written */}
+              <div {...getModeProps('WRITTEN')}>
+                <div className="vt-mode-icon-container w-10 h-10 rounded-[10px] bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 mb-3 transition-colors">
+                  <Keyboard className="h-4 w-4" />
+                </div>
+                <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
+                  {labels.vocabTest?.questionTypeWritten || 'Written'}
+                </h4>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">Written</p>
+              </div>
+
+              {/* Fill 10 */}
+              <div {...getModeProps('FILL_10')}>
+                <div className="vt-mode-icon-container w-10 h-10 rounded-[10px] bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 mb-3 transition-colors">
+                  <Grip className="h-4 w-4" />
+                </div>
+                <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
+                  {labels.vocabTest?.questionTypeFill || 'Fill in 10'}
+                </h4>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">Fill in 10</p>
+              </div>
+
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="flex justify-end pt-2">
-          <Button
-            variant="ghost"
-            size="auto"
+          <div className="mb-8">
+             <div className="flex justify-between items-center bg-[#F8F9FA] rounded-[1.2rem] p-4 border border-slate-200 shadow-sm">
+                <span className="text-[12px] font-black text-slate-700 tracking-widest pl-1">{labels.vocabTest?.answers || 'Answers'}</span>
+                <Select
+                  value={answerLanguage}
+                  onChange={(e) => setAnswerLanguage(e.target.value as AnswerLanguage)}
+                  className="!h-9 !py-0 !text-[12px] !font-bold !bg-white !border !border-slate-200 !rounded-[8px] !shadow-none !w-auto"
+                >
+                  <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
+                  <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
+                  <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
+                </Select>
+             </div>
+          </div>
+
+          <button 
             type="button"
             onClick={startTest}
             disabled={isStartDisabled}
-            className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-slate-900 text-white font-black tracking-widest text-[14px] py-4 rounded-[1.2rem] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)] hover:bg-slate-800 active:scale-95 transition-all outline-none disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
           >
-            {labels.vocabTest?.startTest || 'Start test'}
-          </Button>
+            {labels.vocabTest?.startTest || 'START TEST'}
+          </button>
+
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1285,6 +1540,7 @@ export default function VocabTest({
             submitTest={submitTest}
             scrollContainerRef={scrollContainerRef}
             onSetCardRef={onSetCardRef}
+            onClose={onClose}
           />
         );
       case 'RESULT':

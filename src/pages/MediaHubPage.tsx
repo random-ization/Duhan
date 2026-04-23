@@ -1,12 +1,19 @@
+import { Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronRight, Headphones, MonitorPlay } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { MobileMediaPage } from '../components/mobile/MobileMediaPage';
+import { ContentSkeleton } from '../components/common';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Button } from '../components/ui';
 
 type SegmentTab = 'videos' | 'podcasts';
+
+const LazyMobileMediaPage = lazy(() =>
+  import('../components/mobile/MobileMediaPage').then(module => ({
+    default: module.MobileMediaPage,
+  }))
+);
 
 export default function MediaHubPage() {
   const [searchParams] = useSearchParams();
@@ -18,7 +25,11 @@ export default function MediaHubPage() {
   const podcastReturnTo = encodeURIComponent('/media?tab=podcasts');
 
   if (isMobile) {
-    return <MobileMediaPage />;
+    return (
+      <Suspense fallback={<ContentSkeleton />}>
+        <LazyMobileMediaPage />
+      </Suspense>
+    );
   }
 
   return (

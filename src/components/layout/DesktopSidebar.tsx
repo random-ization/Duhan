@@ -517,11 +517,10 @@ function useSidebarNavItems(
         ],
       },
       {
-        path: '/practice',
+        path: '/review',
         label: t('sidebar.practice', { defaultValue: 'Practice' }),
         icon: Dumbbell,
         activePrefixes: [
-          '/practice',
           '/dashboard?view=practice',
           '/review',
           '/vocab-book',
