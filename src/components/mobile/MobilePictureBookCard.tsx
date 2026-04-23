@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
+import { KT } from './ksoft/ksoft';
 
 interface MobilePictureBookCardProps {
   readonly title: string;
@@ -22,49 +23,114 @@ export const MobilePictureBookCard: React.FC<MobilePictureBookCardProps> = ({
 }) => {
   const normalizedCoverUrl = normalizePublicAssetUrl(coverUrl) || '';
   const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
-
   const showCoverImage = Boolean(normalizedCoverUrl) && failedCoverUrl !== normalizedCoverUrl;
 
   return (
     <motion.button
-      whileTap={{ scale: 0.95 }}
+      whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="flex flex-col gap-4 min-w-[160px] max-w-[160px] text-left group relative"
       aria-label={ariaLabel || title}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        minWidth: 150,
+        maxWidth: 150,
+        textAlign: 'left',
+        cursor: 'pointer',
+        border: 'none',
+        background: 'none',
+        padding: 0,
+        fontFamily: KT.font,
+      }}
     >
-      {/* Book Cover Container */}
-      <div className="relative aspect-[10/13] w-full rounded-[2rem] overflow-hidden border border-white/20 bg-muted shadow-2xl transition-all duration-300 group-hover:shadow-indigo-500/20 group-hover:-translate-y-2 rim-light grain-overlay">
+      {/* Cover */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '10/13',
+          borderRadius: 22,
+          overflow: 'hidden',
+          border: `1px solid ${KT.line}`,
+          background: KT.bg2,
+          boxShadow: KT.sh,
+        }}
+      >
         {showCoverImage ? (
           <img
             src={normalizedCoverUrl}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={() => setFailedCoverUrl(normalizedCoverUrl)}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
-            <BookOpen className="w-12 h-12 text-indigo-200/50" />
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background: `linear-gradient(135deg, ${KT.sky}50, ${KT.lilac}50)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <BookOpen size={36} style={{ color: KT.skyDeep, opacity: 0.5 }} />
           </div>
         )}
 
-        {/* Level Badge Overlay */}
-        <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-border/50 rounded-xl shadow-lg">
-          <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-            {level}
-          </span>
+        {/* Level badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            padding: '3px 8px',
+            background: `${KT.card}f0`,
+            backdropFilter: 'blur(8px)',
+            borderRadius: 8,
+            border: `1px solid ${KT.line}`,
+            fontSize: 10,
+            fontWeight: 700,
+            color: KT.crimson,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          {level}
         </div>
-
-        {/* Subtle Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      {/* Book Info */}
-      <div className="px-1 space-y-1">
-        <h4 className="text-sm font-black text-foreground leading-tight italic tracking-tight line-clamp-2 transition-colors group-hover:text-indigo-600">
+      {/* Info */}
+      <div style={{ paddingLeft: 2 }}>
+        <h4
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: KT.ink,
+            lineHeight: 1.3,
+            letterSpacing: -0.2,
+            marginBottom: 3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {title}
         </h4>
         {author && (
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 truncate">
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: KT.subLight,
+              letterSpacing: 0.5,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {author}
           </p>
         )}

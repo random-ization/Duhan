@@ -2,16 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import {
-  BookMarked,
-  Newspaper,
-  Sparkles,
-  ChevronRight,
-  X,
-  Library,
-  Upload,
-  Share2,
-} from 'lucide-react';
+import { BookMarked, Newspaper, ChevronRight, X, Library, Upload, Share2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { READING_BOOKS, NEWS, READING_LIBRARY } from '../../utils/convexRefs';
 import { MobilePictureBookCard } from './MobilePictureBookCard';
@@ -30,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
 import { notify } from '../../utils/notify';
 import { getLocalizedPath } from '../../hooks/useLocalizedNavigate';
+import { KT } from './ksoft/ksoft';
 
 interface MobileReadingDiscoveryViewProps {
   readonly active: boolean;
@@ -212,7 +204,14 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   if (!active) return null;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto no-scrollbar pb-mobile-nav px-6 pt-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div
+      className="absolute inset-0 overflow-y-auto no-scrollbar pb-mobile-nav px-6 pt-6 animate-in fade-in slide-in-from-right-4 duration-300"
+      style={{
+        background: KT.bg,
+        color: KT.ink,
+        fontFamily: KT.font,
+      }}
+    >
       {/* 1. Storybooks Section */}
       <section className="mb-10">
         <div className="flex items-center justify-between mb-6">
@@ -365,14 +364,25 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center">
-                              <BookMarked className="w-10 h-10 text-indigo-300" />
+                            <div
+                              className="w-full h-full flex items-center justify-center"
+                              style={{
+                                background: `linear-gradient(135deg, ${KT.sky} 0%, ${KT.lilac} 100%)`,
+                              }}
+                            >
+                              <BookMarked className="w-10 h-10" style={{ color: KT.indigo }} />
                             </div>
                           )}
                           {/* Level badge */}
                           {levelNum && (
-                            <div className="absolute top-2 left-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-lg px-2 py-0.5 shadow-sm border border-border/50">
-                              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                            <div
+                              className="absolute top-2 left-2 backdrop-blur-sm rounded-lg px-2 py-0.5 shadow-sm"
+                              style={{
+                                background: `${KT.card}F2`,
+                                border: `1px solid ${KT.line}`,
+                              }}
+                            >
+                              <span className="text-[10px] font-black" style={{ color: KT.indigo }}>
                                 Lv.{levelNum}
                               </span>
                             </div>
@@ -400,70 +410,6 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           </div>,
           document.body
         )}
-
-      {/* 2. Global Insights Bento Block */}
-      <section className="mb-10">
-        <div className="group relative overflow-hidden rounded-[3rem] border border-white/10 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 p-8 text-white shadow-2xl rim-light grain-overlay transition-all hover:scale-[1.01]">
-          <motion.div
-            animate={{
-              rotate: [0, 360],
-              scale: [1, 1.2, 1],
-              x: [0, 10, 0],
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-            className="absolute -right-20 -top-20 h-80 w-80 bg-white/10 rounded-full blur-[100px]"
-          />
-          <motion.div
-            animate={{
-              rotate: [-360, 0],
-              scale: [1, 1.1, 1],
-              y: [0, -20, 0],
-            }}
-            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-            className="absolute -left-20 -bottom-20 h-80 w-80 bg-indigo-400/20 rounded-full blur-[100px]"
-          />
-
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-100 backdrop-blur-md mb-6">
-              <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse" />
-              {t('readingDiscovery.mobile.globalInsights', { defaultValue: 'Global Insights' })}
-            </div>
-
-            <h2 className="text-3xl sm:text-4xl font-black leading-[1.05] italic tracking-tighter mb-4 text-balance drop-shadow-md">
-              {t('readingDiscovery.featured.newsTitle', { defaultValue: 'Daily Korean News Feed' })}
-            </h2>
-
-            <p className="text-[13px] font-semibold text-indigo-100/70 leading-relaxed max-w-[90%] mb-8">
-              {t('readingDiscovery.featured.newsDesc', {
-                defaultValue:
-                  'AI-curated news from trusted sources. Read, learn, and expand your vocabulary.',
-              })}
-            </p>
-
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-3">
-                {[1, 2, 3].map(i => (
-                  <div
-                    key={i}
-                    className="h-8 w-8 rounded-full border-2 border-indigo-700 bg-indigo-400 shadow-xl overflow-hidden ring-1 ring-white/10"
-                  />
-                ))}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-100/90 leading-none mb-1">
-                  {t('readingDiscovery.mobile.articlesToday', {
-                    defaultValue: '{{count}} Articles Today',
-                    count: news.length,
-                  })}
-                </span>
-                <div className="h-1 w-12 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white w-2/3 rounded-full shadow-[0_0_8px_white]" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="mb-10">
         <div className="mb-6 flex items-center justify-between gap-3">
@@ -701,7 +647,13 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                 transition={{ delay: index * 0.05 }}
                 className={index === 0 ? 'col-span-1' : ''}
               >
-                <MobileReadingItem item={item} language={language} navigate={navigate} t={t} />
+                <MobileReadingItem
+                  item={item}
+                  currentPath={currentPath}
+                  language={language}
+                  navigate={navigate}
+                  t={t}
+                />
               </motion.div>
             ))}
           </div>
@@ -714,11 +666,13 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
 // Helper component for News Card logic
 const MobileReadingItem = ({
   item,
+  currentPath,
   language,
   navigate,
   t,
 }: {
   item: FeedNewsItem;
+  currentPath: string;
   language: string;
   navigate: (path: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -738,7 +692,7 @@ const MobileReadingItem = ({
       wordCount={Math.max(5, Math.round((item.bodyText?.length || 0) / 95))}
       dateLabel={dateLabel}
       ariaLabel={'Open news article: ' + item.title}
-      onClick={() => navigate(buildReadingArticlePath(item._id, '/reading?tab=reading'))}
+      onClick={() => navigate(buildReadingArticlePath(item._id, currentPath))}
     />
   );
 };

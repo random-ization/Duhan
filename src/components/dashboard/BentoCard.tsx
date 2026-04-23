@@ -1,5 +1,7 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { appendReturnToPath } from '../../utils/navigation';
 
 interface BentoCardProps {
   children: React.ReactNode;
@@ -19,10 +21,14 @@ export const BentoCard: React.FC<BentoCardProps> = ({
   onClick,
 }) => {
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
 
   const handleClick = () => {
     if (onClick) onClick();
-    if (onClickPath) navigate(onClickPath);
+    if (onClickPath) {
+      const currentPath = `${location.pathname}${location.search}`;
+      navigate(appendReturnToPath(onClickPath, currentPath));
+    }
   };
 
   const isInteractive = Boolean(onClick || onClickPath);

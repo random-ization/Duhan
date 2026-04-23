@@ -25,7 +25,6 @@ import {
   persistVocabBookDictationSessionState,
 } from '../utils/vocabBookPracticeSession';
 import type { VocabBookItemDto } from '../../convex/vocab';
-import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 
 type DictationMode = 'HEAR_PRONUNCIATION' | 'HEAR_MEANING';
 
@@ -91,75 +90,90 @@ const DictationPlayerPanel = ({
   onStartPlayback: () => void;
   onNext: () => void;
 }) => (
-  <div className="space-y-5">
-    <div className="rounded-[28px] bg-card border-[3px] border-border shadow-[0_10px_35px_rgba(0,0,0,0.06)] p-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+  <div className="space-y-4">
+    <div className="rounded-[28px] bg-[linear-gradient(135deg,#5A7394_0%,#8B7299_100%)] p-6 text-white shadow-[0_20px_45px_rgba(31,27,23,0.25)]">
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute right-0 top-[-22px] font-serif text-[92px] leading-none text-white/10">
+          聽
+        </div>
+        <div className="relative">
+          <div className="inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black tracking-[0.12em]">
             {mode === 'HEAR_PRONUNCIATION'
               ? labels.vocab?.dictationHearPron || 'Hear pronunciation'
               : labels.vocab?.dictationHearMeaning || 'Hear meaning'}
-          </p>
-          <h1 className="text-3xl font-black text-foreground mt-1">
-            {labels.vocab?.dictationPlayerTitle || 'Dictation Player'}
-          </h1>
-          <p className="mt-2 text-muted-foreground font-bold">
-            {labels.vocab?.dictationPlayerSubtitle || 'Listen and write'}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-black text-muted-foreground tracking-wider uppercase">
+          </div>
+          <div className="mt-5 flex h-[52px] items-end justify-center gap-1">
+            {[0.25, 0.62, 0.8, 1, 0.92, 0.68, 0.4, 0.72, 0.95, 0.86, 0.7, 0.52, 0.34].map(
+              (height, idx) => (
+                <span
+                  key={`wave-${idx}`}
+                  className="w-[3px] rounded-full bg-white/90"
+                  style={{ height: `${Math.round(height * 50)}px`, opacity: 0.35 + height * 0.55 }}
+                />
+              )
+            )}
+          </div>
+          <div className="mt-4 text-center text-xs font-bold tracking-[0.12em] text-white/75">
             {statusText}
-          </p>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <Button
+    <div className="rounded-[22px] border border-[#E3D8C5] bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <button
           type="button"
-          variant="ghost"
-          size="auto"
           onClick={onPrev}
-          className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border inline-flex items-center gap-2"
+          className="grid h-10 w-10 place-items-center rounded-full border border-[#D6C8B2] bg-[#F9F3E6] text-[#1F1B17]"
+          aria-label={labels.common?.prev || 'Previous'}
         >
-          <ChevronLeft className="w-5 h-5" />
-          {labels.common?.prev || 'Previous'}
-        </Button>
+          <ChevronLeft className="h-5 w-5" />
+        </button>
 
         {playing ? (
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="auto"
             onClick={onStop}
-            className="px-5 py-3 rounded-2xl bg-rose-500 dark:bg-rose-400/80 text-primary-foreground font-black border-[3px] border-rose-400 dark:border-rose-300/35 inline-flex items-center gap-2"
+            className="grid h-14 w-14 place-items-center rounded-full bg-[#1F1B17] text-white shadow-[0_10px_24px_rgba(31,27,23,0.25)]"
+            aria-label={labels.vocab?.stop || 'Stop'}
           >
-            <Square className="w-5 h-5" />
-            {labels.vocab?.stop || 'Stop'}
-          </Button>
+            <Square className="h-5 w-5" />
+          </button>
         ) : (
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="auto"
             onClick={onStartPlayback}
-            className="px-5 py-3 rounded-2xl bg-primary text-primary-foreground font-black border-[3px] border-border inline-flex items-center gap-2"
+            className="grid h-14 w-14 place-items-center rounded-full bg-[#1F1B17] text-white shadow-[0_10px_24px_rgba(31,27,23,0.25)]"
+            aria-label={labels.vocab?.play || 'Play'}
           >
-            <Play className="w-5 h-5" />
-            {labels.vocab?.play || 'Play'}
-          </Button>
+            <Play className="h-6 w-6" />
+          </button>
         )}
 
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="auto"
           onClick={onNext}
-          className="px-4 py-3 rounded-2xl border-[3px] border-border font-black text-muted-foreground hover:border-border disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          className="grid h-10 w-10 place-items-center rounded-full border border-[#D6C8B2] bg-[#F9F3E6] text-[#1F1B17]"
+          aria-label={labels.common?.next || 'Next'}
         >
-          {labels.common?.next || 'Next'}
-          <ChevronRight className="w-5 h-5" />
-        </Button>
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {[
+          { key: '慢', label: labels.vocab?.playGap || 'Repeat gap' },
+          { key: '文', label: labels.vocab?.dictationPlayerTitle || 'Dictation' },
+          { key: '譯', label: labels.vocab?.dictationHearMeaning || 'Meaning' },
+        ].map(item => (
+          <div
+            key={item.key}
+            className="rounded-xl border border-[#E3D8C5] bg-[#F9F3E6] px-2 py-2 text-center"
+          >
+            <div className="font-serif text-[13px] font-semibold text-[#A23B2E]">{item.key}</div>
+            <div className="mt-1 text-[10px] font-bold text-[#8C8377]">{item.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   </div>
@@ -387,9 +401,7 @@ const DictationContent = ({
 };
 
 const DictationPageShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 dark:from-rose-400/8 dark:via-background dark:to-rose-300/8">
-    {children}
-  </div>
+  <div className="min-h-screen bg-[#F5EFE2] text-[#1F1B17]">{children}</div>
 );
 
 const DictationTopBar = ({
@@ -405,36 +417,38 @@ const DictationTopBar = ({
   onBack: () => void;
   onOpenSettings?: () => void;
 }) => (
-  <MobileImmersiveHeader
-    title={labels.vocab?.modeDictation || 'Dictation'}
-    subtitle={progressText || 'Listen, pause, and type what you hear.'}
-    eyebrow={labels.dashboard?.vocab?.title || 'My Vocab'}
-    onBack={onBack}
-    backLabel={labels.common?.back || 'Back'}
-    status={
-      <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
-        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-          Progress
+  <div className="sticky top-0 z-20 border-b border-[#E3D8C5] bg-[#F5EFE2]/95 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur">
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
+        aria-label={labels.common?.back || 'Back'}
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </button>
+      <div className="flex-1 text-center">
+        <div className="text-[11px] font-black tracking-[0.16em] text-[#8C8377]">
+          聽寫 · {progressText || `0/${total}`}
         </div>
-        <div className="text-base font-black text-foreground">{progressText || `0/${total}`}</div>
+        <div className="mt-0.5 text-sm font-black text-[#1F1B17]">
+          {labels.vocab?.modeDictation || 'Dictation'}
+        </div>
       </div>
-    }
-    actions={
-      onOpenSettings ? (
-        <Button
+      {onOpenSettings ? (
+        <button
           type="button"
-          variant="ghost"
-          size="auto"
           onClick={onOpenSettings}
-          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+          className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
           aria-label={labels.vocab?.settings || 'Settings'}
         >
-          <Settings2 className="w-4 h-4 text-foreground" />
-        </Button>
-      ) : undefined
-    }
-    className="sticky top-0 z-20 border-b-[3px] border-rose-100 dark:border-rose-300/20 bg-card/80"
-  />
+          <Settings2 className="h-4 w-4" />
+        </button>
+      ) : (
+        <span className="h-10 w-10" />
+      )}
+    </div>
+  </div>
 );
 
 const DictationSettingsDialog = ({

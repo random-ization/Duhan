@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { appendReturnToPath, resolveSafeReturnTo } from '../utils/navigation';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
@@ -265,6 +266,7 @@ const VocabBookPage: React.FC = () => {
   const { startUpgradeFlow } = useUpgradeFlow();
   const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
+  const returnToPath = resolveSafeReturnTo(searchParams.get('returnTo'), '/courses');
   const labels = getLabels(language);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<VocabBookCategory>('DUE');
@@ -708,10 +710,10 @@ const VocabBookPage: React.FC = () => {
               size="auto"
               onClick={() => {
                 if (isMobileListMode) {
-                  navigate('/vocab-book');
+                  navigate(appendReturnToPath('/vocab-book', searchParams.get('returnTo')));
                   return;
                 }
-                navigate('/practice');
+                navigate(returnToPath);
               }}
               className="p-2 rounded-xl bg-white border border-slate-200 hover:border-teal-400 transition-all shadow-sm"
             >

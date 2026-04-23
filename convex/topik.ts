@@ -69,12 +69,14 @@ export type TopikQuestionDto = {
 export type TopikQuestionLayout = 'DEFAULT' | 'IMAGE' | 'NEWS_HEADLINE' | 'INSERT_BOX';
 export type TopikExamType = 'READING' | 'LISTENING' | 'WRITING';
 export type TopikPaperType = 'A' | 'B';
+export type TopikExamLevel = 1 | 2;
 
 export type TopikExamDto = {
   id: string; // Legacy ID
   _id: string;
   title: string;
   round: number;
+  level: TopikExamLevel;
   type: TopikExamType;
   paperType?: TopikPaperType;
   timeLimit: number;
@@ -82,6 +84,7 @@ export type TopikExamDto = {
   description?: string;
   isPaid?: boolean;
   accessLevel?: 'FREE_SAMPLE' | 'PRO';
+  scheduledAt?: number;
   createdAt: number;
   questions: TopikQuestionDto[];
 };
@@ -96,6 +99,15 @@ const normalizeTopikExamType = (type: string): TopikExamType => {
 const normalizeTopikPaperType = (paperType?: string): TopikPaperType | undefined => {
   if (paperType === 'A' || paperType === 'B') return paperType;
   return undefined;
+};
+
+const inferTopikExamLevelFromTitle = (title: string): TopikExamLevel => {
+  return title.includes('TOPIK I') && !title.includes('TOPIK II') ? 1 : 2;
+};
+
+const normalizeTopikExamLevel = (level: number | undefined, title: string): TopikExamLevel => {
+  if (level === 1 || level === 2) return level;
+  return inferTopikExamLevelFromTitle(title);
 };
 
 const normalizeTopikQuestionLayout = (layout?: string): TopikQuestionLayout | undefined => {
@@ -118,6 +130,7 @@ const toTopikExamDto = async (
   _id: String(exam._id),
   title: exam.title,
   round: exam.round,
+  level: normalizeTopikExamLevel(exam.level, exam.title),
   type: normalizeTopikExamType(exam.type),
   paperType: normalizeTopikPaperType(exam.paperType),
   timeLimit: exam.timeLimit,
@@ -125,6 +138,7 @@ const toTopikExamDto = async (
   description: exam.description,
   isPaid: exam.isPaid,
   accessLevel: resolveExamAccessLevel(exam),
+  scheduledAt: exam.scheduledAt,
   createdAt: exam.createdAt ?? exam._creationTime,
   // Metadata query keeps payload small while satisfying frontend TopikExam shape.
   questions: [],
@@ -163,6 +177,21 @@ export const getExams = query({
 
     const exams = await examsQuery.take(limit);
     return Promise.all(exams.map(exam => toTopikExamDto(ctx, exam)));
+  },
+});
+
+export const getUpcoming = query({
+  args: {},
+  handler: async (ctx): Promise<TopikExamDto | null> => {
+    const now = Date.now();
+    const exam = await ctx.db
+      .query('topik_exams')
+      .withIndex('by_scheduledAt', q => q.gte('scheduledAt', now))
+      .order('asc')
+      .first();
+
+    if (!exam) return null;
+    return toTopikExamDto(ctx, exam);
   },
 });
 
@@ -550,6 +579,7 @@ export const saveExam = mutation({
     id: v.string(), // Legacy ID
     title: v.string(),
     round: v.number(),
+    level: v.optional(v.union(v.literal(1), v.literal(2))),
     type: v.string(),
     paperType: v.optional(v.string()),
     timeLimit: v.number(),
@@ -557,6 +587,7 @@ export const saveExam = mutation({
     description: v.optional(v.string()),
     isPaid: v.optional(v.boolean()),
     accessLevel: v.optional(v.string()),
+    scheduledAt: v.optional(v.number()),
     questions: v.array(
       v.object({
         id: v.number(),
@@ -579,6 +610,10 @@ export const saveExam = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const { id, questions, ...examData } = args;
+    const exam = await ctx.db
+      .query('topik_exams')
+      .withIndex('by_legacy_id', q => q.eq('legacyId', id))
+      .first();
     const accessLevel = (examData.accessLevel || '').trim().toUpperCase();
     const normalizedAccessLevel =
       accessLevel === 'FREE_SAMPLE' || accessLevel === 'PRO'
@@ -586,19 +621,19 @@ export const saveExam = mutation({
         : examData.isPaid
           ? 'PRO'
           : 'FREE_SAMPLE';
+    const normalizedScheduledAt =
+      typeof examData.scheduledAt === 'number' && Number.isFinite(examData.scheduledAt)
+        ? examData.scheduledAt
+        : exam?.scheduledAt;
     const normalizedExamData = {
       ...examData,
+      level: normalizeTopikExamLevel(examData.level ?? exam?.level, examData.title),
       type: normalizeTopikExamType(examData.type),
       paperType: normalizeTopikPaperType(examData.paperType),
       isPaid: normalizedAccessLevel === 'PRO',
       accessLevel: normalizedAccessLevel,
+      scheduledAt: normalizedScheduledAt,
     };
-
-    // Check if exam exists
-    const exam = await ctx.db
-      .query('topik_exams')
-      .withIndex('by_legacy_id', q => q.eq('legacyId', id))
-      .first();
 
     let examConvexId: Id<'topik_exams'>;
 

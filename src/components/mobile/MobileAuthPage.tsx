@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { Mail, Lock, User, ArrowRight, HelpCircle, Sparkles, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { LocalizedLink } from '../../components/LocalizedLink';
 import {
   getLocalizedPath,
@@ -15,6 +15,8 @@ import { Button } from '../ui';
 import { Input } from '../ui';
 import { trackEvent } from '../../utils/analytics';
 import { resolveAuthErrorMessage } from '../../utils/authErrors';
+import { KT } from './ksoft/ksoft';
+import { HanjaSeal } from './ksoft/ksoft';
 
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
@@ -23,10 +25,15 @@ export const MobileAuthPage: React.FC = () => {
   const { signIn } = useAuthActions();
   const { user, loading: authLoading } = useAuth();
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const currentLanguage = useCurrentLanguage();
 
-  const [isLogin, setIsLogin] = useState(true);
+  const isLogin = useMemo(() => {
+    return !location.pathname.endsWith('/register');
+  }, [location.pathname]);
+
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -40,12 +47,25 @@ export const MobileAuthPage: React.FC = () => {
   const postAuthRedirectPath = getLocalizedPath(redirectPath, currentLanguage);
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
+  const withRedirect = (basePath: string) => {
+    const redirect = searchParams.get('redirect');
+    if (!redirect) {
+      return basePath;
+    }
+    return `${basePath}?redirect=${encodeURIComponent(redirect)}`;
+  };
+
   useEffect(() => {
     if (!authLoading && user) {
       setLoading(false);
       navigate(redirectPath, { replace: true });
     }
   }, [authLoading, user, navigate, redirectPath]);
+
+  useEffect(() => {
+    setShowEmailForm(isLogin);
+    setError(null);
+  }, [isLogin]);
 
   const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number) => {
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
@@ -165,161 +185,190 @@ export const MobileAuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col">
-      <div className="flex-1 flex flex-col w-full max-w-md mx-auto bg-card sm:my-8 sm:rounded-[2rem] sm:border sm:shadow-2xl overflow-hidden">
-        {/* Header / Brand Area */}
-        <div className="bg-primary p-8 text-center relative overflow-hidden shrink-0">
+    <div
+      className="min-h-[100dvh] flex flex-col"
+      style={{
+        background: `linear-gradient(180deg, ${KT.pink}70 0%, ${KT.bg} 45%, ${KT.bg} 100%)`,
+        fontFamily: KT.font,
+      }}
+    >
+      <div
+        className="w-full max-w-md mx-auto flex-1 flex flex-col"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}
+      >
+        <div
+          className="flex-1"
+          style={{
+            padding: '40px 28px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <HanjaSeal c="韓" size={64} bg={KT.crimson} round={16} />
           <div
-            className="absolute inset-0 opacity-10"
             style={{
-              backgroundImage:
-                'repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 10px)',
+              fontFamily: KT.serif,
+              fontSize: 13,
+              color: KT.crimson,
+              letterSpacing: 5,
+              marginTop: 28,
+              fontWeight: 500,
             }}
-          ></div>
-
-          <div className="relative z-10 pt-4">
-            <div className="w-16 h-16 bg-background rounded-[1.25rem] mx-auto mb-4 shadow-xl shadow-black/10 flex items-center justify-center">
-              <img
-                src="/logo.png"
-                alt={t('common.alt.logo', { defaultValue: 'Duhan logo' })}
-                className="w-10 h-10 object-contain"
-              />
-            </div>
-            <h1 className="text-2xl font-black text-primary-foreground mb-1 tracking-tight">
-              {t('auth.brand')}
-            </h1>
-            <p className="text-primary-foreground/80 font-bold text-xs tracking-wider uppercase">
-              {t('auth.slogan')}
-            </p>
+          >
+            DUHAN · 讀韓
+          </div>
+          <h1
+            style={{
+              fontSize: 42,
+              fontWeight: 800,
+              color: KT.ink,
+              letterSpacing: -1.2,
+              lineHeight: 1.05,
+              marginTop: 10,
+            }}
+          >
+            한국어,
+            <br />
+            매일 한 걸음.
+          </h1>
+          <p
+            style={{
+              fontSize: 15,
+              color: KT.ink2,
+              marginTop: 16,
+              lineHeight: 1.5,
+              fontWeight: 500,
+            }}
+          >
+            FSRS 복습부터 TOPIK 대비까지
+            <br />
+            학습 친구들과 함께하는 한국어 여정.
+          </p>
+          <div style={{ marginTop: 'auto' }}>
+            {!showEmailForm && (
+              <Button
+                type="button"
+                size="auto"
+                className="w-full h-[56px] rounded-[18px] mt-8"
+                onClick={() => setShowEmailForm(true)}
+                disabled={loading}
+              >
+                <span style={{ fontSize: 15, fontWeight: 800 }}>
+                  {isLogin ? t('auth.loginButton') : t('auth.registerAction')}
+                </span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col p-6 sm:px-10 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          {/* Toggle Title */}
-          <h2 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
-            {isLogin ? t('auth.welcomeBack') : t('auth.createCharacter')}
-            <Sparkles className="w-4 h-4 text-amber-400 fill-current" />
-          </h2>
-
+        <div
+          style={{
+            background: KT.card,
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            border: `1px solid ${KT.line}`,
+            boxShadow: KT.shLg,
+            padding: '20px 22px calc(env(safe-area-inset-bottom) + 28px)',
+          }}
+        >
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-2 text-xs font-bold text-destructive">
+            <div
+              className="mb-4 p-3 rounded-xl border flex items-start gap-2 text-xs font-bold"
+              style={{ borderColor: '#C97A6E55', background: '#C97A6E1A', color: KT.crimson }}
+            >
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Field (Hidden on Login, Shown on Register) */}
-            {!isLogin && (
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          {showEmailForm && (
+            <form onSubmit={handleSubmit} className="space-y-3 mb-4">
+              {!isLogin && (
+                <div className="relative">
+                  <User
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                    style={{ color: KT.sub }}
+                  />
+                  <Input
+                    id="mobile-auth-name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder={t('auth.placeholderName')}
+                    className="w-full rounded-[14px] h-[52px] pl-11 pr-4 border"
+                    style={{ background: KT.bg2, borderColor: KT.line2, color: KT.ink }}
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+              <div className="relative">
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                  style={{ color: KT.sub }}
+                />
                 <Input
-                  id="mobile-auth-name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder={t('auth.placeholderName')}
-                  className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  required={!isLogin}
+                  id="mobile-auth-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder={t('auth.placeholderEmail')}
+                  className="w-full rounded-[14px] h-[52px] pl-11 pr-4 border"
+                  style={{ background: KT.bg2, borderColor: KT.line2, color: KT.ink }}
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  required
                 />
               </div>
-            )}
-
-            {/* Email */}
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                id="mobile-auth-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder={t('auth.placeholderEmail')}
-                className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
-                value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                id="mobile-auth-password"
-                name="password"
-                type="password"
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                placeholder={t('auth.placeholderPassword')}
-                className="w-full bg-accent/50 border-2 border-border/80 rounded-[14px] h-[52px] pl-12 pr-4 font-bold text-base text-foreground focus:outline-none focus:border-primary focus:bg-background transition-colors placeholder:text-muted-foreground placeholder:font-medium"
-                value={formData.password}
-                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Forgot Password */}
-            {isLogin && (
-              <div className="flex justify-end mt-1">
-                <LocalizedLink
-                  to="/forgot-password"
-                  aria-label={t('auth.forgotPassword')}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground opacity-80 transition-opacity hover:opacity-100"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>{t('auth.forgotPassword')}</span>
-                </LocalizedLink>
+              <div className="relative">
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                  style={{ color: KT.sub }}
+                />
+                <Input
+                  id="mobile-auth-password"
+                  name="password"
+                  type="password"
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  placeholder={t('auth.placeholderPassword')}
+                  className="w-full rounded-[14px] h-[52px] pl-11 pr-4 border"
+                  style={{ background: KT.bg2, borderColor: KT.line2, color: KT.ink }}
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
               </div>
-            )}
+              {isLogin && (
+                <div className="text-right">
+                  <LocalizedLink
+                    to="/forgot-password"
+                    aria-label={t('auth.forgotPassword')}
+                    className="text-xs font-semibold"
+                    style={{ color: KT.sub }}
+                  >
+                    {t('auth.forgotPassword')}
+                  </LocalizedLink>
+                </div>
+              )}
+              <Button
+                variant="default"
+                size="auto"
+                type="submit"
+                loading={loading}
+                loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
+                className="w-full h-[54px] rounded-[16px] flex items-center justify-center gap-2 mt-1"
+              >
+                <span className="text-[15px]">
+                  {isLogin ? t('auth.loginButton') : t('auth.signupButton')}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </form>
+          )}
 
-            {/* Submit */}
-            <Button
-              variant="default"
-              size="auto"
-              type="submit"
-              loading={loading}
-              loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
-              className="w-full h-[54px] rounded-[16px] flex items-center justify-center gap-2 mt-2"
-            >
-              <span className="text-[15px]">
-                {isLogin ? t('auth.loginButton') : t('auth.signupButton')}
-              </span>
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="h-px bg-border flex-1"></div>
-            <span className="text-[11px] font-black tracking-wider text-muted-foreground uppercase">
-              {t('auth.orContinue')}
-            </span>
-            <div className="h-px bg-border flex-1"></div>
-          </div>
-
-          {/* Socials */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              size="auto"
-              onClick={handleGoogleLogin}
-              type="button"
-              disabled={loading}
-              loading={loading}
-              loadingText={t('auth.social.google')}
-              loadingIconClassName="w-4 h-4"
-              className="flex items-center justify-center gap-2.5 h-[52px] rounded-[14px]"
-            >
-              <img
-                src="https://www.svgrepo.com/show/475656/google-color.svg"
-                className="w-[18px] h-[18px]"
-                alt={t('auth.social.google', { defaultValue: 'Google' })}
-              />
-              <span className="text-[14px] font-bold">{t('auth.social.google')}</span>
-            </Button>
+          <div className={showEmailForm ? 'mt-2' : ''}>
             <Button
               variant="outline"
               size="auto"
@@ -329,24 +378,49 @@ export const MobileAuthPage: React.FC = () => {
               loading={loading}
               loadingText={t('auth.social.kakao')}
               loadingIconClassName="w-4 h-4"
-              className="flex items-center justify-center gap-2.5 h-[52px] rounded-[14px]"
+              className="w-full flex items-center justify-center gap-2.5 h-[52px] rounded-[18px]"
+              style={{ background: KT.card, borderColor: KT.line2, color: KT.ink }}
             >
-              <span className="bg-[#FEE500] text-black/90 font-black text-[11px] w-[18px] h-[18px] rounded flex items-center justify-center">
+              <span
+                className="font-black text-[11px] w-[18px] h-[18px] rounded flex items-center justify-center"
+                style={{ background: '#FEE500', color: '#000' }}
+              >
                 K
               </span>
               <span className="text-[14px] font-bold">{t('auth.social.kakao')}</span>
             </Button>
+            <Button
+              variant="outline"
+              size="auto"
+              onClick={handleGoogleLogin}
+              type="button"
+              disabled={loading}
+              loading={loading}
+              loadingText={t('auth.social.google')}
+              loadingIconClassName="w-4 h-4"
+              className="w-full flex items-center justify-center gap-2.5 h-[52px] rounded-[18px] mt-2"
+              style={{ background: KT.card, borderColor: KT.line2, color: KT.ink }}
+            >
+              <img
+                src="https://www.svgrepo.com/show/475656/google-color.svg"
+                className="w-[18px] h-[18px]"
+                alt={t('auth.social.google', { defaultValue: 'Google' })}
+              />
+              <span className="text-[14px] font-bold">{t('auth.social.google')}</span>
+            </Button>
           </div>
 
-          {/* Toggle Mode */}
-          <div className="mt-8 text-center text-[13px] font-semibold text-muted-foreground">
-            {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
+          <div className="mt-5 text-center text-[13px] font-semibold" style={{ color: KT.sub }}>
+            {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}{' '}
             <Button
               variant="link"
               size="auto"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                navigate(withRedirect(isLogin ? '/register' : '/login'));
+              }}
               disabled={loading}
-              className="font-bold ml-1 h-auto p-0"
+              className="font-bold h-auto p-0 underline"
+              style={{ color: KT.ink }}
             >
               {isLogin ? t('auth.registerAction') : t('auth.loginAction')}
             </Button>

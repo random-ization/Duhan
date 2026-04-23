@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen } from 'lucide-react';
+import { KT } from './ksoft/ksoft';
 
 interface CoverPlaceholderProps {
   readonly title: string;
@@ -12,7 +13,7 @@ interface CoverPlaceholderProps {
 export default function CoverPlaceholder({
   title,
   level,
-  themeColor = '#6366f1', // Indigo-500 default
+  themeColor = KT.indigo,
   publisher,
   className = '',
 }: CoverPlaceholderProps) {
@@ -45,7 +46,7 @@ export default function CoverPlaceholder({
         </div>
 
         <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-80">
-          Lesson Series
+          STUDY SERIES
         </div>
 
         <div className="text-[10px] font-bold max-w-[90%] truncate opacity-90 mb-1">{title}</div>
@@ -67,7 +68,10 @@ export default function CoverPlaceholder({
       )}
 
       {/* Side spine simulation */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-black/10 shadow-sm" />
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 shadow-sm"
+        style={{ background: `${KT.ink}22` }}
+      />
     </div>
   );
 }

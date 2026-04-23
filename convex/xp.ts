@@ -2,7 +2,13 @@ import { internalMutation, query } from './_generated/server';
 import { v } from 'convex/values';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const XP_SOURCES = ['FSRS_REVIEW', 'TYPING_TEST', 'PODCAST', 'TOPIK_MOCK'] as const;
+const XP_SOURCES = [
+  'FSRS_REVIEW',
+  'TYPING_TEST',
+  'PODCAST',
+  'TOPIK_MOCK',
+  'DAILY_CHALLENGE',
+] as const;
 type XpSource = (typeof XP_SOURCES)[number];
 
 function isXpSource(source: string): source is XpSource {

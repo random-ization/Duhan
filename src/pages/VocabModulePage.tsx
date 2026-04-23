@@ -9,7 +9,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
@@ -307,6 +307,7 @@ export default function VocabModulePage() {
   // Force Rebuild Trigger: 2026-01-02
   const navigate = useLocalizedNavigate();
   const { instituteId } = useParams<{ instituteId: string }>();
+  const [searchParams] = useSearchParams();
   const { user, language } = useAuth();
   const { startUpgradeFlow } = useUpgradeFlow();
   const { selectedLevel } = useLearningSelection();
@@ -316,6 +317,11 @@ export default function VocabModulePage() {
   const { trackLearningEvent } = useLearningAnalytics();
   const isMobile = useIsMobile();
   const labels = getLabels(language);
+  const initialUnitFromQuery = Number(searchParams.get('unit'));
+  const initialSelectedUnitId: number | 'ALL' =
+    Number.isFinite(initialUnitFromQuery) && initialUnitFromQuery > 0
+      ? Math.floor(initialUnitFromQuery)
+      : 'ALL';
 
   useSyncInstituteSelection({
     instituteId,
@@ -327,7 +333,7 @@ export default function VocabModulePage() {
   const course = institutes?.find(i => i.id === instituteId);
 
   // State - Merged related states for better performance
-  const [selectedUnitId, setSelectedUnitId] = useState<number | 'ALL'>('ALL');
+  const [selectedUnitId, setSelectedUnitId] = useState<number | 'ALL'>(initialSelectedUnitId);
   const [viewState, setViewState] = useState({
     mode: 'flashcard' as ViewMode,
     cardIndex: 0,

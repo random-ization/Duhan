@@ -5,7 +5,6 @@ import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
-import { MobilePwaInstallPrompt } from '../mobile/MobilePwaInstallPrompt';
 import { useLayoutActions, useLayoutChromeState } from '../../contexts/LayoutContext';
 import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config';
 import { getPathWithoutLang } from '../../utils/pathname';
@@ -121,7 +120,6 @@ export default function AppLayout() {
           <div className="h-[var(--mobile-bottom-nav-offset)] md:h-0 flex-shrink-0" />
         )}
       </main>
-      {shouldShowMobileNav && <MobilePwaInstallPrompt />}
       {shouldShowMobileNav && <MobileBottomNav />}
     </div>
   );

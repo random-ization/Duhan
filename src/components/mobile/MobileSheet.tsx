@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Button } from '../ui';
 import { Sheet, SheetClose, SheetContent, SheetOverlay, SheetPortal, SheetTitle } from '../ui';
+import { KT } from './ksoft/ksoft';
 
 type MobileSheetHeight = 'half' | 'full' | 'auto';
 
@@ -34,7 +35,8 @@ export function MobileSheet({
       <SheetPortal>
         <SheetOverlay
           unstyled
-          className="md:hidden fixed inset-0 z-[80] bg-primary/35 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0 data-[state=closed]:pointer-events-none"
+          className="md:hidden fixed inset-0 z-[80] transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0 data-[state=closed]:pointer-events-none"
+          style={{ background: 'rgba(31,27,23,0.34)' }}
           aria-hidden={!isOpen}
         />
         <SheetContent
@@ -45,13 +47,22 @@ export function MobileSheet({
           className={`md:hidden fixed inset-x-0 bottom-0 z-[90] px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] transition-transform duration-300 ease-out data-[state=open]:translate-y-0 data-[state=closed]:translate-y-[105%]`}
         >
           <div
-            className={`bg-card border border-border rounded-[26px] overflow-hidden shadow-2xl flex flex-col ${heightClass}`}
+            className={`rounded-[26px] overflow-hidden flex flex-col ${heightClass}`}
+            style={{
+              background: KT.card,
+              border: `1px solid ${KT.line}`,
+              boxShadow: KT.shLg,
+            }}
           >
             {title ? (
-              <div className="bg-card border-b border-border px-3 py-3 flex items-center justify-between gap-2">
+              <div
+                className="px-3 py-3 flex items-center justify-between gap-2"
+                style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
+              >
                 <SheetTitle
                   id={titleId}
-                  className="text-[15px] font-black tracking-tight text-foreground"
+                  className="text-[15px] font-black tracking-tight"
+                  style={{ color: KT.ink }}
                 >
                   {title}
                 </SheetTitle>
@@ -60,7 +71,11 @@ export function MobileSheet({
                     type="button"
                     variant="outline"
                     size="auto"
-                    className="w-11 h-11 rounded-[14px] border border-border bg-muted/30 grid place-items-center select-none active:scale-95 transition-all"
+                    className="w-11 h-11 rounded-[14px] grid place-items-center select-none active:scale-95 transition-all"
+                    style={{
+                      border: `1px solid ${KT.line}`,
+                      background: KT.bg2,
+                    }}
                     aria-label={t('common.close', { defaultValue: 'Close' })}
                   >
                     <X size={18} />
@@ -68,8 +83,11 @@ export function MobileSheet({
                 </SheetClose>
               </div>
             ) : (
-              <div className="bg-card border-b border-border px-3 py-3 flex justify-center">
-                <div className="w-12 h-1.5 bg-muted rounded-full" />
+              <div
+                className="px-3 py-3 flex justify-center"
+                style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
+              >
+                <div className="w-12 h-1.5 rounded-full" style={{ background: KT.line2 }} />
               </div>
             )}
             <div className="flex-1 overflow-y-auto p-3">{children}</div>

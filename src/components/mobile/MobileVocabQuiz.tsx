@@ -1,7 +1,5 @@
 import React, { useEffect } from 'react';
 import { Settings, Check, X, ChevronRight, HelpCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui';
 import { Input } from '../ui';
 import type {
   PendingAdvanceReason,
@@ -10,6 +8,7 @@ import type {
   WritingState,
 } from '../../features/vocab/components/VocabQuiz';
 import type { Labels } from '../../utils/i18n';
+import { KT } from './ksoft/ksoft';
 
 interface MobileVocabQuizProps {
   readonly currentQuestion: QuizQuestion;
@@ -26,8 +25,6 @@ interface MobileVocabQuizProps {
   readonly pendingAdvance: boolean;
   readonly setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   readonly nextQuestionRef: React.RefObject<() => void>;
-
-  // Writing props
   readonly inputRef: React.RefObject<HTMLInputElement | null>;
   readonly writingInput: string;
   readonly setWritingInput: (value: string) => void;
@@ -49,27 +46,17 @@ const getPromptText = (question: QuizQuestion, isWriting: boolean, labels: Label
     : labels.dashboard?.quiz?.questionKorean || 'What is the Korean?';
 };
 
-const getOptionClass = (state: OptionState) => {
-  const base =
-    'relative w-full p-6 rounded-[1.8rem] border-2 font-black text-xl transition-all active:scale-[0.97] flex items-center justify-between shadow-sm overflow-hidden group';
+const getOptionColors = (state: OptionState): { bg: string; border: string; color: string } => {
   switch (state) {
     case 'correct':
-      return cn(
-        base,
-        'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400 shadow-emerald-200/50'
-      );
+      return { bg: 'rgba(61,175,130,0.12)', border: '#3DAF82', color: '#1A7A56' };
     case 'wrong':
-      return cn(
-        base,
-        'bg-rose-500/10 border-rose-500 text-rose-700 dark:text-rose-400 shadow-rose-200/50 animate-shake'
-      );
+      return { bg: 'rgba(162,59,46,0.1)', border: KT.crimson, color: KT.crimson };
     case 'selected':
-      return cn(base, 'bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-400');
+      return { bg: 'rgba(104,91,172,0.1)', border: '#6B5BAC', color: '#6B5BAC' };
+    case 'normal':
     default:
-      return cn(
-        base,
-        'bg-card border-border/40 text-muted-foreground hover:bg-muted/50 hover:border-border'
-      );
+      return { bg: KT.card, border: KT.line2, color: KT.ink };
   }
 };
 
@@ -96,17 +83,20 @@ const WritingAnswerArea: React.FC<{
       ? dashboardQuiz?.enterMeaning || 'Enter meaning...'
       : dashboardQuiz?.enterKorean || 'Enter Korean...';
 
+  const borderColor =
+    writingState === 'CORRECT' ? '#3DAF82' : writingState === 'WRONG' ? KT.crimson : KT.line2;
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div
-        className={cn(
-          'relative bg-card rounded-[2.5rem] border-2 p-6 transition-all shadow-xl',
-          writingState === 'CORRECT'
-            ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10'
-            : writingState === 'WRONG'
-              ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-500/10'
-              : 'border-border/40 focus-within:border-indigo-500 focus-within:shadow-indigo-500/10'
-        )}
+        style={{
+          background: KT.card,
+          borderRadius: 28,
+          border: `2px solid ${borderColor}`,
+          padding: 20,
+          transition: 'border-color 0.2s',
+          boxShadow: KT.sh,
+        }}
       >
         <Input
           ref={inputRef}
@@ -114,7 +104,18 @@ const WritingAnswerArea: React.FC<{
           value={writingInput}
           onChange={e => setWritingInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
-          className="w-full text-3xl font-black text-center bg-transparent outline-none text-foreground placeholder:text-muted-foreground italic tracking-tight"
+          style={{
+            width: '100%',
+            fontSize: 28,
+            fontWeight: 800,
+            textAlign: 'center',
+            background: 'transparent',
+            outline: 'none',
+            border: 'none',
+            color: KT.ink,
+            fontFamily: KT.font,
+            letterSpacing: -0.5,
+          }}
           placeholder={placeholder}
           disabled={writingState !== 'INPUT'}
           autoCapitalize="none"
@@ -123,36 +124,93 @@ const WritingAnswerArea: React.FC<{
       </div>
 
       {writingState === 'INPUT' && (
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
+          type="button"
           onClick={handleWritingSubmit}
           disabled={!writingInput.trim()}
-          className="w-full py-5 bg-black dark:bg-zinc-800 text-white font-black rounded-[2rem] shadow-2xl active:scale-95 transition-all disabled:opacity-30 disabled:active:scale-100 flex items-center justify-center gap-2"
+          style={{
+            width: '100%',
+            padding: '18px 0',
+            background: KT.ink,
+            color: KT.bg,
+            borderRadius: 20,
+            border: 'none',
+            fontSize: 15,
+            fontWeight: 800,
+            cursor: writingInput.trim() ? 'pointer' : 'not-allowed',
+            opacity: writingInput.trim() ? 1 : 0.35,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            fontFamily: KT.font,
+            boxShadow: KT.sh,
+          }}
         >
-          <span>{labels.dashboard?.quiz?.submit || 'Check Answer'}</span>
-          <ChevronRight size={20} />
-        </Button>
+          <span>{dashboardQuiz?.submit || 'Check Answer'}</span>
+          <ChevronRight size={18} />
+        </button>
       )}
 
-      <div className="min-h-[60px] flex items-center justify-center">
+      <div
+        style={{ minHeight: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
         {writingState === 'CORRECT' && (
-          <div className="flex items-center justify-center gap-3 text-emerald-600 dark:text-emerald-400 font-black text-xl animate-in zoom-in slide-in-from-top-4">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-              <Check size={24} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              color: '#1A7A56',
+              fontWeight: 800,
+              fontSize: 18,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'rgba(61,175,130,0.15)',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <Check size={20} />
             </div>
             <span>{dashboardQuiz?.correct || 'Correct!'}</span>
           </div>
         )}
         {writingState === 'WRONG' && (
-          <div className="text-center animate-in zoom-in slide-in-from-top-4">
-            <div className="flex items-center justify-center gap-2 text-rose-600 dark:text-rose-400 font-black text-xl mb-2">
-              <X size={24} /> <span>{dashboardQuiz?.incorrect || 'Oops!'}</span>
+          <div style={{ textAlign: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                color: KT.crimson,
+                fontWeight: 800,
+                fontSize: 18,
+                marginBottom: 8,
+              }}
+            >
+              <X size={20} />
+              <span>{dashboardQuiz?.incorrect || 'Oops!'}</span>
             </div>
-            <p className="text-muted-foreground text-xs font-black uppercase tracking-widest mb-1 opacity-70">
+            <p
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: KT.sub,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                marginBottom: 4,
+              }}
+            >
               {dashboardQuiz?.correctAnswer || 'Target answer:'}
             </p>
-            <p className="text-foreground font-black text-2xl italic tracking-tighter">
+            <p style={{ fontSize: 22, fontWeight: 800, color: KT.ink, letterSpacing: -0.5 }}>
               {currentQuestion.direction === 'KR_TO_NATIVE'
                 ? currentQuestion.targetWord.english
                 : currentQuestion.targetWord.korean}
@@ -170,33 +228,70 @@ const ChoiceAnswerArea: React.FC<{
   handleOptionClick: (index: number) => void;
   isLocked: boolean;
 }> = ({ currentQuestion, optionStates, handleOptionClick, isLocked }) => (
-  <div className="space-y-4">
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
     {currentQuestion.options?.map((option, idx) => {
       const state = optionStates[idx];
+      const colors = getOptionColors(state);
       const text = currentQuestion.direction === 'KR_TO_NATIVE' ? option.english : option.korean;
       return (
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
           key={`${option.id}-${idx}`}
+          type="button"
           onClick={() => handleOptionClick(idx)}
-          className={getOptionClass(state)}
           disabled={isLocked}
+          style={{
+            width: '100%',
+            padding: '18px 20px',
+            borderRadius: 20,
+            border: `2px solid ${colors.border}`,
+            background: colors.bg,
+            color: colors.color,
+            fontSize: 17,
+            fontWeight: 700,
+            cursor: isLocked ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontFamily: KT.font,
+            transition: 'all 0.15s',
+            textAlign: 'left',
+            boxShadow: state === 'normal' ? KT.shSm : 'none',
+          }}
         >
-          <span className="italic tracking-tight">{text}</span>
-          <div className="flex items-center gap-2">
+          <span style={{ flex: 1, minWidth: 0 }}>{text}</span>
+          <div style={{ marginLeft: 10, flexShrink: 0 }}>
             {state === 'correct' && (
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center scale-110 shadow-lg shadow-emerald-500/30">
-                <Check size={18} strokeWidth={4} />
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  background: '#3DAF82',
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                <Check size={16} strokeWidth={3} />
               </div>
             )}
             {state === 'wrong' && (
-              <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center scale-110 shadow-lg shadow-rose-500/30">
-                <X size={18} strokeWidth={4} />
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  background: KT.crimson,
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                <X size={16} strokeWidth={3} />
               </div>
             )}
           </div>
-        </Button>
+        </button>
       );
     })}
   </div>
@@ -207,36 +302,92 @@ const PendingAdvanceBar: React.FC<{
   setPendingAdvanceReason: (reason: PendingAdvanceReason) => void;
   nextQuestionRef: React.RefObject<() => void>;
 }> = ({ labels, setPendingAdvanceReason, nextQuestionRef }) => (
-  <div className="fixed bottom-0 left-0 right-0 p-6 bg-card border-t border-border/50 pb-safe shadow-[0_-20px_50px_rgba(0,0,0,0.1)] rounded-t-[3rem] animate-in slide-in-from-bottom-full duration-500 z-50">
-    <div className="flex items-center justify-between mb-4 px-2">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-          <HelpCircle size={20} />
+  <div
+    style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: '20px 22px',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)',
+      background: KT.card,
+      borderTop: `1px solid ${KT.line}`,
+      boxShadow: '0 -8px 32px rgba(31,27,23,0.08)',
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      zIndex: 50,
+      fontFamily: KT.font,
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        padding: '0 4px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'rgba(104,91,172,0.1)',
+            color: '#6B5BAC',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          <HelpCircle size={18} />
         </div>
         <div>
-          <p className="font-black text-foreground tracking-tight">
+          <p style={{ fontWeight: 800, color: KT.ink, fontSize: 14 }}>
             {labels.dashboard?.quiz?.reviewLater || 'Review logic active'}
           </p>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">
+          <p
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: KT.sub,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              marginTop: 2,
+            }}
+          >
             {labels.dashboard?.quiz?.reviewSoon || 'Scheduled for next cycle'}
           </p>
         </div>
       </div>
     </div>
-    <Button
-      variant="ghost"
-      size="auto"
+    <button
+      type="button"
       onClick={() => {
         setPendingAdvanceReason(null);
         nextQuestionRef.current?.();
       }}
-      className="w-full py-5 bg-black dark:bg-zinc-800 text-white font-black rounded-[2rem] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+      style={{
+        width: '100%',
+        padding: '18px 0',
+        background: KT.ink,
+        color: KT.bg,
+        borderRadius: 20,
+        border: 'none',
+        fontSize: 15,
+        fontWeight: 800,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        fontFamily: KT.font,
+        boxShadow: KT.sh,
+      }}
     >
-      <span className="text-lg italic tracking-tight">
-        {labels.common?.continue || 'Next Question'}
-      </span>
-      <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />
-    </Button>
+      <span>{labels.common?.continue || 'Next Question'}</span>
+      <ChevronRight size={20} />
+    </button>
   </div>
 );
 
@@ -261,11 +412,8 @@ export function MobileVocabQuiz({
   writingState,
   handleWritingSubmit,
 }: MobileVocabQuizProps) {
-  // Auto focus input on writing mode
   useEffect(() => {
     if (currentQuestion.type === 'WRITING' && writingState === 'INPUT') {
-      // specific to mobile, maybe we DON'T want auto focus to avoid keyboard popping up immediately?
-      // But usually yes.
       const timer = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timer);
     }
@@ -274,51 +422,143 @@ export function MobileVocabQuiz({
   const isWriting = currentQuestion.type === 'WRITING';
   const questionText = getQuestionText(currentQuestion);
   const promptText = getPromptText(currentQuestion, isWriting, labels);
+  const progress = ((questionIndex + 1) / totalQuestions) * 100;
 
   return (
-    <div className="flex flex-col h-full bg-muted">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: KT.bg2,
+        fontFamily: KT.font,
+      }}
+    >
       {/* Header / Progress */}
-      <div className="px-6 pt-8 pb-4 bg-card rounded-b-[2rem] border-b border-border/40 shadow-sm">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-70">
-            Progress {questionIndex + 1} / {totalQuestions}
+      <div
+        style={{
+          padding: '20px 22px 16px',
+          background: KT.card,
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+          borderBottom: `1px solid ${KT.line}`,
+          boxShadow: KT.shSm,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 10,
+            padding: '0 2px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: KT.sub,
+              letterSpacing: 1.5,
+              textTransform: 'uppercase',
+            }}
+          >
+            {questionIndex + 1} / {totalQuestions}
           </span>
           {!settingsLocked && (
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
+              type="button"
               onClick={() => setShowSettings(true)}
-              className="p-1.5 -mr-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: KT.sub,
+                padding: 4,
+              }}
             >
-              <Settings size={16} strokeWidth={3} />
-            </Button>
+              <Settings size={15} strokeWidth={2.5} />
+            </button>
           )}
         </div>
-        {/* Smooth Progress Bar */}
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        {/* Progress bar */}
+        <div
+          style={{
+            height: 5,
+            background: KT.bg2,
+            borderRadius: 3,
+            overflow: 'hidden',
+          }}
+        >
           <div
-            className="h-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all duration-700 ease-out rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-            style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
+            style={{
+              width: `${progress}%`,
+              height: '100%',
+              background: `linear-gradient(90deg, #3DAF82, #2A9E70)`,
+              borderRadius: 3,
+              transition: 'width 0.5s ease',
+            }}
           />
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 flex flex-col px-6 py-6 overflow-y-auto">
+      {/* Content */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '20px 22px',
+          overflowY: 'auto',
+        }}
+      >
         {/* Question Card */}
-        <div className="flex-1 flex flex-col items-center justify-center min-h-[180px] max-h-[260px] mb-8 relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/5 blur-[60px] rounded-full -z-10" />
-
-          <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.25em] mb-6 opacity-60">
+        <div
+          style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 160,
+            maxHeight: 240,
+            marginBottom: 28,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: KT.sub,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              marginBottom: 16,
+            }}
+          >
             {promptText}
           </p>
-          <h1 className="text-4xl sm:text-5xl font-black text-foreground text-center leading-tight italic tracking-tighter shadow-sm">
+          <h1
+            style={{
+              fontSize: 38,
+              fontWeight: 800,
+              color: KT.ink,
+              textAlign: 'center',
+              lineHeight: 1.2,
+              letterSpacing: -1,
+            }}
+          >
             {questionText}
           </h1>
         </div>
 
         {/* Answer Area */}
-        <div className="flex-1 pb-safe-offset">
+        <div
+          style={{
+            flex: 1,
+            paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)',
+          }}
+        >
           {isWriting ? (
             <WritingAnswerArea
               inputRef={inputRef}
@@ -340,18 +580,31 @@ export function MobileVocabQuiz({
 
           {/* I don't know button (Learn mode only) */}
           {isLearn && !isLocked && !isWriting && (
-            <Button
-              variant="ghost"
-              size="auto"
+            <button
+              type="button"
               onClick={handleDontKnow}
-              className="w-full mt-4 py-3 text-muted-foreground font-bold text-sm hover:text-muted-foreground flex items-center justify-center gap-2"
+              style={{
+                width: '100%',
+                marginTop: 12,
+                padding: '12px 0',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                color: KT.sub,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: KT.font,
+              }}
             >
-              <HelpCircle size={16} />
+              <HelpCircle size={15} />
               <span>{labels.dashboard?.quiz?.dontKnow || "I don't know"}</span>
-            </Button>
+            </button>
           )}
 
-          {/* Continue / Next Button (if Pending Advance) */}
           {pendingAdvance && (
             <PendingAdvanceBar
               labels={labels}
@@ -361,12 +614,6 @@ export function MobileVocabQuiz({
           )}
         </div>
       </div>
-
-      <style>{`
-          @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
-          .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-          .pb-safe-offset { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
-        `}</style>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import { logger } from '../../utils/logger';
 import { useActivityLogger } from '../../hooks/useActivityLogger';
 import { createLearningSessionId, useLearningAnalytics } from '../../hooks/useLearningAnalytics';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { appendReturnToPath, hasSafeReturnTo } from '../../utils/navigation';
 import { MobileExamSession } from '../mobile/topik/MobileExamSession';
 import { MobileExamReview } from '../mobile/topik/MobileExamReview';
 import { MobileExamCover } from '../mobile/topik/MobileExamCover';
@@ -54,15 +55,26 @@ const getPathWithoutLanguage = (pathname: string): string => {
   return pathname;
 };
 
-const routeForView = (view: TopikView, examId?: string): string | null => {
-  if (view === 'LIST') return '/topik';
-  if (view === 'HISTORY_LIST') return '/topik/history';
-  if (!examId) return null;
-  if (view === 'COVER') return `/topik/${examId}`;
-  if (view === 'EXAM') return `/topik/${examId}/exam`;
-  if (view === 'RESULT') return `/topik/${examId}/result`;
-  if (view === 'REVIEW') return `/topik/${examId}/review`;
-  return null;
+const routeForView = (
+  view: TopikView,
+  examId?: string,
+  returnTo?: string | null
+): string | null => {
+  let path: string | null = null;
+  if (view === 'LIST') path = '/topik';
+  if (view === 'HISTORY_LIST') path = '/topik/history';
+  if (!path && !examId) return null;
+  if (!path && view === 'COVER') path = `/topik/${examId}`;
+  if (!path && view === 'EXAM') path = `/topik/${examId}/exam`;
+  if (!path && view === 'RESULT') path = `/topik/${examId}/result`;
+  if (!path && view === 'REVIEW') path = `/topik/${examId}/review`;
+  if (!path) return null;
+  return appendReturnToPath(path, returnTo);
+};
+
+const getSafeReturnTo = (search: string): string | null => {
+  const raw = new URLSearchParams(search).get('returnTo');
+  return hasSafeReturnTo(raw) ? raw : null;
 };
 
 const ExitExamConfirmDialog = ({
@@ -355,15 +367,16 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const examSessionIdRef = useRef<string | null>(null);
   const pathWithoutLang = getPathWithoutLanguage(location.pathname);
   const isHistoryPath = pathWithoutLang === '/topik/history';
+  const returnToPath = getSafeReturnTo(location.search);
 
   // Custom handleSetView that also updates URL
   const handleSetView = useCallback(
     (newView: typeof view) => {
       setView(newView);
-      const route = routeForView(newView, currentExam?.id);
+      const route = routeForView(newView, currentExam?.id, returnToPath);
       if (route) navigate(route);
     },
-    [navigate, currentExam]
+    [navigate, currentExam, returnToPath]
   );
 
   const fetchQuestions = useCallback(
@@ -619,7 +632,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       setTimeLeft(exam.timeLimit * 60);
       // Navigate to cover page (sets both URL and internal state)
       setView('COVER');
-      navigate(`/topik/${exam.id}`);
+      navigate(appendReturnToPath(`/topik/${exam.id}`, returnToPath));
     } catch (error) {
       logger.error('Failed to load exam content:', error);
       notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam content.');
@@ -665,7 +678,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
             setCurrentExam(fullExam as TopikExam);
             setUserAnswers(attempt.userAnswers);
             setView('REVIEW');
-            navigate(`/topik/${exam.id}/review`);
+            navigate(appendReturnToPath(`/topik/${exam.id}/review`, returnToPath));
           } catch (error) {
             logger.error('Failed to load exam for review:', error);
             notify.error(labels.dashboard?.topik?.examLoadError || 'Failed to load exam.');
@@ -677,7 +690,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
       }
       setView('REVIEW');
     },
-    [exams, fetchQuestions, labels.dashboard?.topik?.examLoadError, navigate]
+    [exams, fetchQuestions, labels.dashboard?.topik?.examLoadError, navigate, returnToPath]
   );
 
   const resetExam = () => {

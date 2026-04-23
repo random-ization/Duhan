@@ -25,8 +25,23 @@ import {
   getQuestionConfig,
 } from './TopikConstants';
 import { QuestionRenderer } from './TopikQuestionRenderer';
+import { formatTopikLabel } from '../../utils/topik';
 
 const loadXlsx = async () => (await import('xlsx')).default ?? (await import('xlsx'));
+
+const padDatePart = (value: number): string => value.toString().padStart(2, '0');
+
+const formatDateTimeLocalValue = (timestamp: number | undefined): string => {
+  if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '';
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}T${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`;
+};
+
+const parseDateTimeLocalValue = (value: string): number | undefined => {
+  if (!value) return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+};
 
 type ExcelImportRow = {
   id?: string;
@@ -236,6 +251,7 @@ export const TopikManager: React.FC = () => {
 
     const newExam: TopikExam = {
       id: `exam-${Date.now()}`,
+      level: 2,
       type,
       title: `TOPIK II ${type === 'READING' ? 'Reading' : 'Listening'} - New`,
       description: '',
@@ -409,12 +425,14 @@ export const TopikManager: React.FC = () => {
         id: selectedExam.id,
         title: selectedExam.title,
         round: selectedExam.round,
+        level: selectedExam.level,
         type: selectedExam.type,
         paperType: selectedExam.paperType,
         timeLimit: selectedExam.timeLimit,
         audioUrl: selectedExam.audioUrl,
         description: selectedExam.description,
         isPaid: selectedExam.isPaid,
+        scheduledAt: selectedExam.scheduledAt,
         questions: selectedExam.questions.map(q => ({
           id: q.id,
           number: q.number,
@@ -670,7 +688,7 @@ export const TopikManager: React.FC = () => {
 
               <div className="flex justify-center items-center gap-3 mb-4">
                 <h1 className="text-4xl font-extrabold tracking-widest font-serif text-zinc-900">
-                  TOPIK Ⅱ
+                  {formatTopikLabel(currentExam.level)}
                 </h1>
                 <select
                   value={currentExam.paperType || 'B'}
@@ -703,6 +721,34 @@ export const TopikManager: React.FC = () => {
                 placeholder="Internal Exam Title"
                 aria-label="Internal Exam Title"
               />
+
+              <div className="mt-4 flex justify-center items-center gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm font-bold text-zinc-600">
+                  Level
+                  <select
+                    value={currentExam.level}
+                    onChange={e => updateExamField('level', e.target.value === '1' ? 1 : 2)}
+                    className="rounded-lg border-2 border-zinc-300 bg-white px-3 py-1.5 text-sm font-bold text-zinc-900 outline-none focus:border-zinc-900"
+                    aria-label="TOPIK level"
+                  >
+                    <option value="1">TOPIK I</option>
+                    <option value="2">TOPIK II</option>
+                  </select>
+                </label>
+
+                <label className="flex items-center gap-2 text-sm font-bold text-zinc-600">
+                  Scheduled
+                  <input
+                    type="datetime-local"
+                    value={formatDateTimeLocalValue(currentExam.scheduledAt)}
+                    onChange={e =>
+                      updateExamField('scheduledAt', parseDateTimeLocalValue(e.target.value))
+                    }
+                    className="rounded-lg border-2 border-zinc-300 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 outline-none focus:border-zinc-900"
+                    aria-label="Scheduled exam date"
+                  />
+                </label>
+              </div>
             </div>
 
             {/* Sections Loop */}

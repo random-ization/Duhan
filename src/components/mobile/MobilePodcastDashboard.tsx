@@ -1,16 +1,20 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
-import { Search, ArrowLeft, PlayCircle } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { NoArgs, qRef } from '../../utils/convexRefs';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { resolveSafeReturnTo } from '../../utils/navigation';
-import { buildPodcastChannelPath, buildPodcastSearchPath } from '../../utils/podcastRoutes';
+import {
+  buildPodcastChannelPath,
+  buildPodcastPlayerPath,
+  buildPodcastSearchPath,
+} from '../../utils/podcastRoutes';
 import { formatSafeDateLabel } from '../../utils/dateLabel';
-import { Button, Input } from '../ui';
 import { motion } from 'framer-motion';
+import { KT, SectionHead, PageShell } from './ksoft/ksoft';
 
 interface PodcastChannel {
   _id?: string;
@@ -51,7 +55,6 @@ export const MobilePodcastDashboard: React.FC = () => {
   }, [searchParams]);
   const currentPath = `${location.pathname}${location.search}`;
 
-  // Data Fetching
   type TrendingResult = {
     internal: (PodcastChannel & { _id: string })[];
     external: (PodcastChannel & { _id: string })[];
@@ -84,9 +87,7 @@ export const MobilePodcastDashboard: React.FC = () => {
   useEffect(() => {
     const isLoading = loadingTrending || loadingHistory || loadingSubscriptions;
     if (!isLoading) return;
-    const timer = globalThis.setTimeout(() => {
-      setShowLoadingIssue(true);
-    }, 7000);
+    const timer = globalThis.setTimeout(() => setShowLoadingIssue(true), 7000);
     return () => {
       globalThis.clearTimeout(timer);
     };
@@ -104,16 +105,13 @@ export const MobilePodcastDashboard: React.FC = () => {
   };
 
   const navigateToEpisode = (item: HistoryItem) => {
-    navigate(`/podcasts/player?returnTo=${encodeURIComponent(currentPath)}`, {
+    navigate(buildPodcastPlayerPath(currentPath), {
       state: {
         episode: {
           guid: item.episodeGuid,
           title: item.episodeTitle,
           audioUrl: item.episodeUrl,
-          channel: {
-            title: item.channelName,
-            artworkUrl: item.channelImage,
-          },
+          channel: { title: item.channelName, artworkUrl: item.channelImage },
         },
       },
     });
@@ -126,103 +124,240 @@ export const MobilePodcastDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border/40 bg-background px-6 pt-[calc(env(safe-area-inset-top)+12px)] pb-6 shadow-sm">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate(backPath)}
-            className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center active:scale-95 transition-all border border-border/20"
-            aria-label={t('common.back', { defaultValue: 'Back' })}
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" strokeWidth={3} />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-black text-foreground italic tracking-tighter leading-none">
-              {t('podcast.title', { defaultValue: 'Podcast' })}
-            </h1>
-          </div>
+    <PageShell>
+      {/* ── Header ─────────────────────────────────── */}
+      <div
+        style={{
+          padding: '14px 22px 18px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate(backPath)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 16,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: KT.sub,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: KT.font,
+          }}
+        >
+          ← {t('common.back', { defaultValue: 'Back' })}
+        </button>
+
+        <div
+          style={{
+            fontFamily: KT.serif,
+            fontSize: 13,
+            color: KT.crimson,
+            letterSpacing: 4,
+            marginBottom: 4,
+            fontWeight: 500,
+          }}
+        >
+          聲音 · PODCAST
         </div>
-        {/* Search */}
-        <div className="relative">
-          <Input
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            color: KT.ink,
+            letterSpacing: -0.6,
+            marginBottom: 4,
+          }}
+        >
+          {t('podcast.title', { defaultValue: '팟캐스트' })}
+        </div>
+
+        {/* search */}
+        <div style={{ position: 'relative', marginTop: 14 }}>
+          <span
+            style={{
+              position: 'absolute',
+              left: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 14,
+              color: KT.sub,
+              pointerEvents: 'none',
+            }}
+          >
+            🔍
+          </span>
+          <input
             type="text"
-            placeholder={t('podcast.searchPlaceholder')}
+            placeholder={t('podcast.searchPlaceholder', { defaultValue: '팟캐스트 검색…' })}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={event => {
-              if (event.key !== 'Enter') return;
-              event.preventDefault();
+            onKeyDown={e => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
               handleSearchSubmit();
             }}
-            className="w-full !h-12 !bg-muted/50 !rounded-2xl !py-3 !pl-11 !pr-4 text-sm font-bold focus-visible:!ring-2 focus-visible:!ring-primary/30 transition-all !border-border/20 !shadow-none"
+            style={{
+              width: '100%',
+              background: 'rgba(31,27,23,0.06)',
+              border: 'none',
+              borderRadius: 16,
+              padding: '12px 16px 12px 40px',
+              fontSize: 14,
+              fontFamily: KT.font,
+              fontWeight: 500,
+              color: KT.ink,
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={handleSearchSubmit}
-            disabled={!searchQuery.trim()}
-            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md p-0 text-muted-foreground disabled:opacity-50"
-            aria-label={t('search', { defaultValue: 'Search' })}
-          >
-            <Search className="w-4 h-4" />
-          </Button>
         </div>
-      </header>
+      </div>
 
+      {/* Load error */}
       {shouldShowLoadingIssue && (
-        <div className="px-5 py-2">
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-sm font-bold text-muted-foreground mb-3">
-              {t('podcast.loadError', {
-                defaultValue: 'Unable to load podcast data right now.',
-              })}
-            </p>
-            <Button
-              variant="ghost"
-              size="auto"
+        <div style={{ padding: '0 18px 12px' }}>
+          <div
+            style={{
+              background: KT.card,
+              borderRadius: 16,
+              boxShadow: KT.shSm,
+              padding: '14px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 13, color: KT.sub, marginBottom: 10, fontWeight: 600 }}>
+              {t('podcast.loadError', { defaultValue: 'Unable to load podcast data right now.' })}
+            </div>
+            <button
+              type="button"
               onClick={retryLoading}
-              className="h-11 px-4 rounded-xl border border-border bg-background font-bold"
+              style={{
+                padding: '9px 20px',
+                borderRadius: 12,
+                background: KT.bg2,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 700,
+                color: KT.ink,
+                fontFamily: KT.font,
+              }}
             >
               {t('common.retry', { defaultValue: 'Retry' })}
-            </Button>
+            </button>
           </div>
         </div>
       )}
 
-      {/* Continue Listening (2.0 Hero) */}
+      {/* ── Continue Listening hero ─────────────────── */}
       {latestHistory && (
-        <div className="px-6 py-4">
-          <Button
-            variant="ghost"
-            size="auto"
+        <div style={{ padding: '0 18px 20px' }}>
+          <button
+            type="button"
             onClick={() => navigateToEpisode(latestHistory)}
-            className="w-full bg-indigo-600 rounded-[2rem] p-6 !flex items-center gap-4 text-white text-left active:scale-[0.98] transition-all shadow-xl shadow-indigo-600/20 relative overflow-hidden group"
+            style={{
+              width: '100%',
+              background: `linear-gradient(135deg, ${KT.indigo} 0%, #3A5280 100%)`,
+              borderRadius: 24,
+              padding: '18px 18px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxShadow: '0 8px 24px rgba(47,63,104,0.28)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-[40px] rounded-full -mr-16 -mt-16" />
-
-            <div
-              className="w-16 h-16 bg-black/20 rounded-2xl shrink-0 bg-cover bg-center border border-white/20 shadow-lg relative z-10"
-              style={{ backgroundImage: `url(${latestHistory.channelImage || '/logo.png'})` }}
+            {/* Hanja watermark */}
+            <span
+              style={{
+                position: 'absolute',
+                right: 14,
+                top: 8,
+                fontFamily: KT.serif,
+                fontSize: 52,
+                color: 'rgba(255,255,255,0.07)',
+                lineHeight: 1,
+                pointerEvents: 'none',
+              }}
             >
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                <PlayCircle className="w-8 h-8 text-white fill-current" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0 relative z-10">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">
-                  {t('podcast.nowPlaying', { defaultValue: 'Resuming' })}
+              聽
+            </span>
+
+            {/* Channel art */}
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 16,
+                background: `url(${latestHistory.channelImage || '/logo.png'}) center/cover`,
+                flexShrink: 0,
+                border: '2px solid rgba(255,255,255,0.2)',
+              }}
+            />
+
+            <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 5,
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: '#4ade80',
+                    display: 'inline-block',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: 'rgba(255,255,255,0.7)',
+                    letterSpacing: 1.5,
+                    fontFamily: KT.font,
+                  }}
+                >
+                  {t('podcast.nowPlaying', { defaultValue: 'RESUMING' })}
                 </span>
               </div>
-              <h3 className="font-black text-lg italic tracking-tight leading-tight line-clamp-1 mb-2">
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: '#fff',
+                  lineHeight: 1.3,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  marginBottom: 8,
+                }}
+              >
                 {latestHistory.episodeTitle}
-              </h3>
-              <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
+              </div>
+              {/* progress bar */}
+              <div
+                style={{
+                  height: 3,
+                  background: 'rgba(255,255,255,0.2)',
+                  borderRadius: 999,
+                  overflow: 'hidden',
+                }}
+              >
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
@@ -232,194 +367,343 @@ export const MobilePodcastDashboard: React.FC = () => {
                         : '0%',
                   }}
                   transition={{ duration: 0.8, ease: 'easeOut' }}
-                  className="h-full bg-green-400 rounded-full"
+                  style={{ height: '100%', background: '#4ade80', borderRadius: 999 }}
                 />
               </div>
             </div>
-          </Button>
+          </button>
         </div>
       )}
 
-      {/* Subscriptions Row */}
-      {user && loadingSubscriptions && (
-        <section className="pt-2 pb-2">
-          <div className="px-5 mb-3 h-4 w-36 bg-muted rounded animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto px-5" style={{ scrollbarWidth: 'none' }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} className="min-w-[100px] animate-pulse">
-                <div className="w-16 h-16 mx-auto bg-muted rounded-xl mb-2" />
-                <div className="h-3 bg-muted rounded w-20 mx-auto" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
+      {/* ── Subscriptions ───────────────────────────── */}
       {user && !loadingSubscriptions && subscriptions.length > 0 && (
-        <section className="pt-2 pb-2">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="font-bold text-foreground text-sm">{t('podcast.mySubscriptions')}</h2>
-          </div>
+        <div style={{ paddingBottom: 20 }}>
+          <SectionHead
+            kanji="訂"
+            title={t('podcast.mySubscriptions', { defaultValue: '내 구독' })}
+          />
           <div
-            className="flex gap-3 overflow-x-auto px-5"
             style={{
+              display: 'flex',
+              gap: 12,
+              overflowX: 'auto',
+              padding: '4px 18px 4px',
               scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
             }}
           >
             {subscriptions.map(sub => (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={sub.id || sub._id}
+                type="button"
                 onClick={() => navigateToChannel(sub)}
-                className="min-w-[100px] text-center snap-start !flex !flex-col !items-center !whitespace-normal"
+                style={{
+                  flexShrink: 0,
+                  minWidth: 90,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  scrollSnapAlign: 'start',
+                }}
               >
                 <div
-                  className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-400/16 dark:to-indigo-500/20 rounded-xl mb-2 bg-cover bg-center"
                   style={{
-                    backgroundImage: `url(${sub.artworkUrl || sub.artwork || '/logo.png'})`,
+                    width: 64,
+                    height: 64,
+                    borderRadius: 18,
+                    background: `url(${sub.artworkUrl || sub.artwork || '/logo.png'}) center/cover, ${KT.lilac}`,
+                    boxShadow: KT.shSm,
                   }}
                 />
-                <span className="text-xs font-bold text-foreground line-clamp-1">{sub.title}</span>
-              </Button>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: KT.ink2,
+                    fontFamily: KT.font,
+                    maxWidth: 80,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {sub.title}
+                </span>
+              </button>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Trending Row */}
-      <section className="pt-4 pb-2">
-        <div className="flex items-center justify-between px-5 mb-3">
-          <h2 className="font-bold text-foreground text-sm">{t('podcast.trendingThisWeek')}</h2>
-          <div className="flex bg-muted p-0.5 rounded-md">
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={() => setTrendingTab('all')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                trendingTab === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground'
-              }`}
+      {/* ── Trending ────────────────────────────────── */}
+      <div style={{ paddingBottom: 20 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 22px',
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 16,
+                color: KT.crimson,
+                opacity: 0.85,
+                fontWeight: 500,
+              }}
             >
-              {t('podcast.filterOptions.all', { defaultValue: 'All' })}
-            </Button>
-            <Button
-              variant="ghost"
-              size="auto"
-              onClick={() => setTrendingTab('picks')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${
-                trendingTab === 'picks'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {t('podcast.filterOptions.picks', { defaultValue: 'Picks' })}
-            </Button>
+              熱
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.4, color: KT.ink }}>
+              {t('podcast.trendingThisWeek', { defaultValue: '이번 주 인기' })}
+            </span>
+          </div>
+          {/* tab toggle */}
+          <div
+            style={{
+              display: 'flex',
+              background: 'rgba(31,27,23,0.06)',
+              borderRadius: 10,
+              padding: 3,
+              gap: 2,
+            }}
+          >
+            {(['all', 'picks'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setTrendingTab(tab)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 7,
+                  background: trendingTab === tab ? KT.card : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: trendingTab === tab ? KT.ink : KT.sub,
+                  fontFamily: KT.font,
+                  boxShadow: trendingTab === tab ? KT.shSm : 'none',
+                }}
+              >
+                {tab === 'all'
+                  ? t('podcast.filterOptions.all', { defaultValue: 'All' })
+                  : t('podcast.filterOptions.picks', { defaultValue: 'Picks' })}
+              </button>
+            ))}
           </div>
         </div>
+
         {loadingTrending ? (
           <div
-            className="flex gap-3 overflow-x-auto px-5"
             style={{
-              scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              display: 'flex',
+              gap: 12,
+              padding: '0 18px',
+              overflowX: 'auto',
             }}
           >
             {[1, 2, 3].map(i => (
-              <div key={i} className="min-w-[120px] animate-pulse">
-                <div className="w-full aspect-square bg-muted rounded-lg mb-2" />
-                <div className="h-3 bg-muted rounded w-3/4 mb-1" />
-                <div className="h-2 bg-muted rounded w-1/2" />
+              <div
+                key={i}
+                style={{
+                  flexShrink: 0,
+                  width: 120,
+                  background: KT.card,
+                  borderRadius: 16,
+                  padding: 10,
+                  boxShadow: KT.shSm,
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1/1',
+                    background: KT.bg2,
+                    borderRadius: 10,
+                    marginBottom: 8,
+                  }}
+                />
+                <div style={{ height: 10, background: KT.bg2, borderRadius: 5, marginBottom: 5 }} />
+                <div style={{ height: 8, background: KT.bg2, borderRadius: 5, width: '60%' }} />
               </div>
             ))}
           </div>
         ) : trending.length === 0 ? (
-          <div className="px-5">
-            <div className="rounded-xl border border-border bg-card p-4 text-center text-sm font-bold text-muted-foreground">
-              {t('podcast.emptyTrending', {
-                defaultValue: 'No trending podcasts available right now.',
-              })}
-            </div>
+          <div
+            style={{
+              margin: '0 18px',
+              background: KT.card,
+              borderRadius: 16,
+              padding: '20px',
+              textAlign: 'center',
+              color: KT.sub,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {t('podcast.emptyTrending', {
+              defaultValue: 'No trending podcasts available right now.',
+            })}
           </div>
         ) : (
           <div
-            className="flex gap-3 overflow-x-auto px-5"
             style={{
+              display: 'flex',
+              gap: 12,
+              overflowX: 'auto',
+              padding: '4px 18px 8px',
               scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
             }}
           >
             {trending.map((pod, idx) => (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={pod.id || pod._id}
+                type="button"
                 onClick={() => navigateToChannel(pod)}
-                className="min-w-[120px] bg-card rounded-xl border border-border p-2.5 text-left snap-start relative active:scale-[0.98] transition-transform !block !whitespace-normal"
+                style={{
+                  flexShrink: 0,
+                  width: 120,
+                  background: KT.card,
+                  borderRadius: 18,
+                  padding: '10px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  position: 'relative',
+                  boxShadow: KT.sh,
+                  scrollSnapAlign: 'start',
+                }}
               >
-                <span className="absolute top-1.5 left-1.5 bg-indigo-600 dark:bg-indigo-400/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                {/* rank badge */}
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    left: 8,
+                    background: KT.indigo,
+                    color: '#fff',
+                    fontSize: 9,
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: 6,
+                    fontFamily: KT.font,
+                  }}
+                >
                   #{idx + 1}
                 </span>
                 <div
-                  className="w-full aspect-square bg-gradient-to-br from-rose-100 to-rose-200 dark:from-rose-400/16 dark:to-rose-500/20 rounded-lg mb-2 bg-cover bg-center"
                   style={{
-                    backgroundImage: `url(${pod.artworkUrl || pod.artwork || '/logo.png'})`,
+                    width: '100%',
+                    aspectRatio: '1/1',
+                    borderRadius: 12,
+                    background: `url(${pod.artworkUrl || pod.artwork || '/logo.png'}) center/cover, ${KT.pink}`,
+                    marginBottom: 8,
                   }}
                 />
-                <h4 className="font-bold text-xs text-foreground truncate">{pod.title}</h4>
-                <p className="text-[10px] text-muted-foreground font-medium truncate">
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: KT.ink,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontFamily: KT.font,
+                    marginBottom: 3,
+                  }}
+                >
+                  {pod.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: KT.sub,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontFamily: KT.font,
+                  }}
+                >
                   {pod.author}
-                </p>
-              </Button>
+                </div>
+              </button>
             ))}
           </div>
         )}
-      </section>
+      </div>
 
-      {/* History Section */}
+      {/* ── History ─────────────────────────────────── */}
       {history.length > 1 && (
-        <section className="pt-4 pb-6">
-          <div className="flex items-center justify-between px-5 mb-3">
-            <h2 className="font-bold text-foreground text-sm">{t('podcast.history')}</h2>
-          </div>
-          <div className="px-5 space-y-2">
+        <div style={{ paddingBottom: 24 }}>
+          <SectionHead kanji="歷" title={t('podcast.history', { defaultValue: '최근 기록' })} />
+          <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {history.slice(1, 4).map(item => (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={item.id}
+                type="button"
                 onClick={() => navigateToEpisode(item)}
-                className="w-full bg-card rounded-xl border border-border p-3 !flex items-center gap-3 text-left active:bg-muted transition-colors"
+                style={{
+                  width: '100%',
+                  background: KT.card,
+                  borderRadius: 18,
+                  boxShadow: KT.shSm,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
               >
                 <div
-                  className="w-10 h-10 bg-muted rounded-lg shrink-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${item.channelImage || '/logo.png'})` }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: `url(${item.channelImage || '/logo.png'}) center/cover, ${KT.mint}`,
+                    flexShrink: 0,
+                  }}
                 />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-foreground text-sm truncate">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginBottom: 3,
+                    }}
+                  >
                     {item.episodeTitle}
-                  </h4>
-                  <p className="text-[10px] text-muted-foreground font-medium">
+                  </div>
+                  <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600 }}>
                     {item.channelName} ·{' '}
                     {formatSafeDateLabel(
                       item.playedAt,
                       undefined,
                       t('common.recently', { defaultValue: 'Recently' })
                     )}
-                  </p>
+                  </div>
                 </div>
-                <PlayCircle className="w-6 h-6 text-muted-foreground" />
-              </Button>
+                <PlayCircle size={22} color={KT.sub} />
+              </button>
             ))}
           </div>
-        </section>
+        </div>
       )}
-    </div>
+    </PageShell>
   );
 };
 

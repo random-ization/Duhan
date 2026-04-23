@@ -1,8 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../common/BottomSheet';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui';
+import { KT } from './ksoft/ksoft';
 
 interface MobileQuestionNavProps {
   totalQuestions: number;
@@ -22,11 +21,9 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
   onOpenChange,
 }) => {
   const { t } = useTranslation();
-  // Generate question indices
   const questions = Array.from({ length: totalQuestions }, (_, i) => i);
+  const answeredCount = Object.keys(userAnswers).length;
 
-  // BottomSheet uses onClose which takes void, but onOpenChange takes boolean.
-  // We can bridge them.
   const handleClose = () => onOpenChange(false);
 
   return (
@@ -34,62 +31,124 @@ export const MobileQuestionNav: React.FC<MobileQuestionNavProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       height="half"
-      title={t('mobileQuestionNav.title', { defaultValue: 'Question Navigator' })}
+      title={t('mobileQuestionNav.title', { defaultValue: '문제 목록' })}
     >
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto pb-4">
-          <div className="grid grid-cols-5 gap-3">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          fontFamily: KT.font,
+        }}
+      >
+        {/* summary */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 16,
+            padding: '0 4px 16px',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: KT.ink }}>{answeredCount}</div>
+            <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600, marginTop: 2 }}>
+              {t('mobileQuestionNav.answered', { defaultValue: '답함' })}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: KT.sub }}>
+              {totalQuestions - answeredCount}
+            </div>
+            <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600, marginTop: 2 }}>
+              {t('mobileQuestionNav.unanswered', { defaultValue: '미답' })}
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              background: KT.line2,
+              overflow: 'hidden',
+              alignSelf: 'center',
+              marginTop: -10,
+            }}
+          >
+            <div
+              style={{
+                width: `${(answeredCount / totalQuestions) * 100}%`,
+                height: '100%',
+                background: KT.mintDeep,
+                borderRadius: 2,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* grid */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            paddingBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: 10,
+            }}
+          >
             {questions.map(index => {
               const isAnswered = userAnswers[index] !== undefined;
               const isCurrent = currentQuestionIndex === index;
 
               return (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
+                <button
                   key={index}
+                  type="button"
                   onClick={() => {
                     onSelectQuestion(index);
                     handleClose();
                   }}
-                  className={cn(
-                    'w-full aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all',
-                    isCurrent
-                      ? 'bg-primary text-white shadow-lg scale-110 z-10'
-                      : isAnswered
-                        ? 'bg-indigo-50 text-indigo-700 border-2 border-indigo-200'
-                        : 'bg-muted text-muted-foreground border border-border hover:bg-muted'
-                  )}
+                  style={{
+                    aspectRatio: '1/1',
+                    borderRadius: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    fontFamily: KT.font,
+                    transform: isCurrent ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'transform 0.15s',
+                    background: isCurrent ? KT.ink : isAnswered ? KT.mint : KT.card,
+                    color: isCurrent ? KT.bg : isAnswered ? KT.mintDeep : KT.sub,
+                    boxShadow: isCurrent ? '0 4px 12px rgba(31,27,23,0.2)' : KT.shSm,
+                  }}
                 >
-                  <span
-                    className={cn('text-sm font-bold', isCurrent ? 'text-white' : 'text-inherit')}
-                  >
-                    {index + 1}
-                  </span>
-                  {isAnswered && !isCurrent && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1" />
+                  {index + 1}
+                  {isCurrent && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: -3,
+                        right: -3,
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: KT.crimson,
+                        border: `1.5px solid ${KT.bg}`,
+                      }}
+                    />
                   )}
-                </Button>
+                </button>
               );
             })}
-          </div>
-        </div>
-
-        <div className="pt-4 border-t border-border bg-card">
-          <div className="flex items-center justify-between text-xs text-muted-foreground font-medium px-2">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary" />
-              <span>{t('mobileQuestionNav.current', { defaultValue: 'Current' })}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-indigo-100 border border-indigo-300" />
-              <span>{t('mobileQuestionNav.answered', { defaultValue: 'Answered' })}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-muted border border-border" />
-              <span>{t('mobileQuestionNav.todo', { defaultValue: 'To do' })}</span>
-            </div>
           </div>
         </div>
       </div>

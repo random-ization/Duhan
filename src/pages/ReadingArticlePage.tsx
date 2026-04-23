@@ -32,6 +32,7 @@ import {
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import {
   buildReadingArticleSessionStorageKey,
@@ -1740,8 +1741,12 @@ export default function ReadingArticlePage() {
   const { language } = useAuth();
   const uiLanguage = resolveReadingUiLanguage(language);
   const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/reading'),
-    [searchParams]
+    () =>
+      resolveSafeReturnTo(
+        searchParams.get('returnTo'),
+        isMobile ? buildMediaPath('reading') : '/reading'
+      ),
+    [isMobile, searchParams]
   );
   const sessionStorageKey = useMemo(
     () => buildReadingArticleSessionStorageKey(articleId),
@@ -1793,6 +1798,8 @@ export default function ReadingArticlePage() {
   const [savingWordKey, setSavingWordKey] = useState<string | null>(null);
   const [noteSyncError, setNoteSyncError] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [mobileParagraphProgress, setMobileParagraphProgress] = useState(1);
 
   const analyzeReadingArticle = useAction(AI.analyzeReadingArticle);
   const explainWordFallback = useAction(AI.explainWordFallback);
@@ -2231,6 +2238,14 @@ export default function ReadingArticlePage() {
     void runDictionaryLookup(activeWord);
   }, [activeWord, runDictionaryLookup]);
 
+  useEffect(() => {
+    if (!isMobile) return;
+    if (activeWord) return;
+    const fallbackWord = vocabulary[0]?.term;
+    if (!fallbackWord) return;
+    setActiveWord(fallbackWord);
+  }, [activeWord, isMobile, vocabulary]);
+
   const saveWordToReview = useCallback(
     async ({
       word,
@@ -2499,6 +2514,30 @@ export default function ReadingArticlePage() {
   }, [persistArticleSession]);
 
   useEffect(() => {
+    if (!isMobile) {
+      setMobileParagraphProgress(1);
+      return;
+    }
+    const container = contentRef.current;
+    if (!container) return;
+
+    const updateProgress = () => {
+      const totalParagraphs = Math.max(1, paragraphs.length);
+      const scrollableHeight = Math.max(1, container.scrollHeight - container.clientHeight);
+      const ratio = Math.max(0, Math.min(1, container.scrollTop / scrollableHeight));
+      const paragraphIndex = Math.min(
+        totalParagraphs,
+        Math.max(1, Math.round(ratio * (totalParagraphs - 1)) + 1)
+      );
+      setMobileParagraphProgress(paragraphIndex);
+    };
+
+    updateProgress();
+    container.addEventListener('scroll', updateProgress, { passive: true });
+    return () => container.removeEventListener('scroll', updateProgress);
+  }, [isMobile, paragraphs.length]);
+
+  useEffect(() => {
     persistArticleSession();
   }, [persistArticleSession]);
 
@@ -2604,6 +2643,206 @@ export default function ReadingArticlePage() {
   );
 
   const wordCount = Math.max(1, Math.round(cleanedBodyText.length / 2));
+  const mobilePrimaryEntry = dictionaryEntries[0] ?? null;
+  const mobileEntryMeaning = mobilePrimaryEntry ? getDictionaryMeaning(mobilePrimaryEntry) : '';
+  const mobileFallbackMeaning = dictionaryFallback?.meaning || '';
+  const mobileWordMeaning =
+    mobileEntryMeaning ||
+    mobileFallbackMeaning ||
+    t('readingArticle.vocabDefaultMeaning', { defaultValue: 'Reading vocabulary' });
+  const mobileWordPos = mobilePrimaryEntry?.pos || dictionaryFallback?.pos || 'NOUN';
+  const mobileWordSaveKey = (activeWord || '').trim().toLowerCase();
+  const mobileWordSaved = mobileWordSaveKey ? Boolean(savedWords[mobileWordSaveKey]) : false;
+
+  const handleMobileSaveWord = () => {
+    if (!activeWord.trim()) return;
+    if (mobilePrimaryEntry) {
+      void onSaveDictionaryEntry(mobilePrimaryEntry);
+      return;
+    }
+    if (dictionaryFallback) {
+      void onSaveDictionaryFallback();
+      return;
+    }
+    void saveWordToReview({
+      word: activeWord,
+      meaning: mobileWordMeaning,
+      partOfSpeech: mobileWordPos,
+      source: 'READING_MOBILE_QUICK_SAVE',
+    });
+  };
+
+  if (isMobile) {
+    return (
+      <div className="relative min-h-[100dvh] bg-[#F9F3E6] text-[#1F1B17]">
+        <header className="sticky top-0 z-40 border-b border-[#E3D8C5] bg-[#F9F3E6]/95 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(backPath)}
+              className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
+              aria-label={t('common.back', { defaultValue: 'Back' })}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="flex-1 text-center">
+              <div className="text-[11px] font-bold tracking-[0.16em] text-[#8C8377]">
+                {mobileParagraphProgress} / {Math.max(1, paragraphs.length)} · 讀
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={increaseFontSize}
+              className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
+              aria-label={t('readingArticle.controls.fontSize', { defaultValue: 'Font size' })}
+            >
+              <span className="text-sm font-black">Aa</span>
+            </button>
+          </div>
+        </header>
+
+        <div
+          ref={contentRef}
+          className="h-[calc(100dvh-72px-env(safe-area-inset-top))] overflow-y-auto px-6 pb-[calc(var(--mobile-safe-bottom)+130px)] pt-4"
+        >
+          <div className="font-serif text-[12px] font-semibold tracking-[0.26em] text-[#A23B2E]">
+            文 · ARTICLE
+          </div>
+          <h1 className="mt-1 text-[34px] font-black leading-tight tracking-[-0.03em] text-[#1F1B17]">
+            {resolvedArticle.title}
+          </h1>
+          <div className="mt-3 text-xs font-semibold text-[#8C8377]">
+            {sourceDisplayLabel} · {publishedDateLabel} · {wordCount}
+          </div>
+          {translationError ? (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+              {translationError}
+            </div>
+          ) : null}
+          {ttsError ? (
+            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+              {ttsError}
+            </div>
+          ) : null}
+
+          <div className="mt-6 leading-[2] text-[17px] text-[#2D2823]" style={{ fontSize }}>
+            <ReadingParagraphBlocks
+              t={t}
+              paragraphs={paragraphs}
+              translations={translations}
+              translationEnabled={translationEnabled}
+              translationLoading={translationLoading}
+              translationError={translationError}
+              draftNote={draftNote}
+              notes={notes}
+              getNoteVisualState={getNoteVisualState}
+              focusNote={focusNote}
+              setHoveredNoteId={setHoveredNoteId}
+            />
+          </div>
+
+          {activeWord.trim() ? (
+            <div className="mt-8 rounded-2xl border border-[#E3D8C5] bg-white px-4 py-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-serif text-[11px] font-semibold tracking-[0.22em] text-[#A23B2E]">
+                    {activeWord}
+                  </div>
+                  <div className="mt-1 text-[24px] font-black leading-none text-[#1F1B17]">
+                    {activeWord}
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-[#8C8377]">{mobileWordPos}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMobileSaveWord}
+                  className="rounded-full border border-[#1F1B17] px-3 py-1 text-xs font-black text-[#1F1B17]"
+                >
+                  {mobileWordSaved
+                    ? t('readingArticle.dictionary.saved', { defaultValue: 'Saved' })
+                    : '+ 단어장'}
+                </button>
+              </div>
+              <div className="mt-3 text-sm font-semibold leading-relaxed text-[#2D2823]">
+                {mobileWordMeaning}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <ReadingSelectionToolbar
+          t={t}
+          selectionToolbar={selectionToolbar}
+          noteColor={noteColor}
+          setNoteColor={setNoteColor}
+          onLookupSelection={onLookupSelection}
+          onSaveSelectionWord={onSaveSelectionWord}
+          startNoteFromSelection={startNoteFromSelection}
+          onClose={() => setSelectionToolbar(prev => ({ ...prev, visible: false }))}
+        />
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E3D8C5] bg-[#F9F3E6]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur">
+          <div className="mx-auto flex max-w-md items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void toggleSpeak();
+              }}
+              className="flex-1 rounded-xl bg-white px-3 py-3 text-xs font-black text-[#1F1B17] shadow-sm"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Volume2 size={14} />
+                듣기
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobilePanelOpen(true)}
+              className="flex-1 rounded-xl bg-white px-3 py-3 text-xs font-black text-[#1F1B17] shadow-sm"
+            >
+              <span className="inline-flex items-center gap-1">
+                <BookOpen size={14} />
+                노트
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={onToggleTranslation}
+              className={`flex-1 rounded-xl px-3 py-3 text-xs font-black shadow-sm ${
+                translationEnabled ? 'bg-[#1F1B17] text-[#F9F3E6]' : 'bg-white text-[#1F1B17]'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Languages size={14} />
+                번역
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={handleMobileSaveWord}
+              className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#1F1B17] shadow-sm"
+              aria-label={t('readingArticle.dictionary.save', { defaultValue: 'Save word' })}
+            >
+              {mobileWordSaved ? <Check size={14} /> : <Star size={14} />}
+            </button>
+          </div>
+        </div>
+
+        <Sheet open={mobilePanelOpen} onOpenChange={setMobilePanelOpen}>
+          <SheetPortal>
+            <SheetOverlay className="z-[60] bg-black/55 backdrop-blur-sm" />
+            <SheetContent className="fixed inset-x-0 bottom-0 z-[61] mt-10 h-[84dvh] rounded-t-3xl border-[#E3D8C5] bg-[#F9F3E6] px-4 py-5 shadow-2xl">
+              <SheetTitle className="sr-only">
+                {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
+              </SheetTitle>
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-[#D3C5AF]" />
+              <div className="h-full overflow-y-auto pb-8 pr-1">{readingSidebarContent}</div>
+            </SheetContent>
+          </SheetPortal>
+        </Sheet>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full min-h-full overflow-hidden border border-border bg-muted">

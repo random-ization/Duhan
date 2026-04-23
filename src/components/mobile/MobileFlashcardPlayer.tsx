@@ -1,12 +1,13 @@
 import { useAction } from 'convex/react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Bookmark, Check, RotateCw, Volume2, X } from 'lucide-react';
+import { Bookmark, Check, Volume2, X } from 'lucide-react';
 import type { TouchEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { aRef } from '../../utils/convexRefs';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
 import { Button } from '../ui';
+import { Chip, KT } from './ksoft/ksoft';
 
 interface MobileFlashcardPlayerProps {
   readonly words: ExtendedVocabItem[];
@@ -46,46 +47,54 @@ type PreviewCardState = {
 };
 
 type RatingButtonColor = 'again' | 'hard' | 'good' | 'easy';
+type SwipeDirection = 'left' | 'right';
 
-const NOISE_BACKGROUND =
-  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E\")";
-
-const tactileButtonStyles: Record<RatingButtonColor, { borderTop: string; badge: string }> = {
+const GRADE_BUTTON_STYLES: Record<
+  RatingButtonColor,
+  { readonly bg: string; readonly fg: string; readonly shadow: string }
+> = {
   again: {
-    borderTop: '2px solid #FDA4AF',
-    badge: 'bg-rose-50 text-rose-500 border border-rose-100/60',
+    bg: KT.pink,
+    fg: KT.pinkDeep,
+    shadow: '0 10px 24px -18px rgba(201,122,110,0.75)',
   },
   hard: {
-    borderTop: '2px solid #FCD34D',
-    badge: 'bg-amber-50 text-amber-600 border border-amber-100/60',
+    bg: KT.butter,
+    fg: KT.butterDeep,
+    shadow: '0 10px 24px -18px rgba(168,135,46,0.72)',
   },
   good: {
-    borderTop: '2px solid #93C5FD',
-    badge: 'bg-blue-50 text-blue-600 border border-blue-100/60',
+    bg: KT.mint,
+    fg: KT.mintDeep,
+    shadow: '0 10px 24px -18px rgba(91,132,114,0.72)',
   },
   easy: {
-    borderTop: '2px solid #86EFAC',
-    badge: 'bg-emerald-50 text-emerald-600 border border-emerald-100/60',
+    bg: KT.sky,
+    fg: KT.skyDeep,
+    shadow: '0 10px 24px -18px rgba(63,106,133,0.72)',
   },
 };
 
-const swipeHintStyles: Record<
-  NonNullable<'left' | 'right'>,
-  { container: string; icon: typeof X; title: string; description: string }
+const SWIPE_HINT_STYLES: Record<
+  SwipeDirection,
+  {
+    readonly bg: string;
+    readonly fg: string;
+    readonly border: string;
+    readonly icon: typeof X;
+  }
 > = {
   left: {
-    container:
-      'border-rose-200/80 bg-rose-50/92 text-rose-600 shadow-[0_16px_32px_-16px_rgba(244,63,94,0.55)]',
+    bg: `${KT.pink}D9`,
+    fg: KT.pinkDeep,
+    border: `1px solid ${KT.pinkDeep}22`,
     icon: X,
-    title: 'left',
-    description: 'mistake',
   },
   right: {
-    container:
-      'border-emerald-200/80 bg-emerald-50/92 text-emerald-600 shadow-[0_16px_32px_-16px_rgba(16,185,129,0.5)]',
+    bg: `${KT.mint}D9`,
+    fg: KT.mintDeep,
+    border: `1px solid ${KT.mintDeep}22`,
     icon: Check,
-    title: 'right',
-    description: 'correct',
   },
 };
 
@@ -151,6 +160,25 @@ const buildPreviewCardState = (
   };
 };
 
+const getPartOfSpeechLabel = (word: ExtendedVocabItem | undefined, fallback: string) => {
+  if (!word) return fallback;
+  if (typeof word.partOfSpeech === 'string' && word.partOfSpeech.trim()) {
+    return word.partOfSpeech;
+  }
+  if (typeof word.pos === 'string' && word.pos.trim()) {
+    return word.pos;
+  }
+  return fallback;
+};
+
+const getDecorativeSeal = (word: ExtendedVocabItem | undefined) => {
+  const hanja = word?.hanja?.trim();
+  if (hanja) {
+    return hanja.slice(0, 2);
+  }
+  return '詞';
+};
+
 export default function MobileFlashcardPlayer({
   words,
   currentIndex,
@@ -164,8 +192,11 @@ export default function MobileFlashcardPlayer({
   settings,
 }: MobileFlashcardPlayerProps) {
   const { t } = useTranslation();
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [swipeHint, setSwipeHint] = useState<'left' | 'right' | null>(null);
+  const [flipState, setFlipState] = useState<{ index: number | null; visible: boolean }>({
+    index: null,
+    visible: false,
+  });
+  const [swipeHint, setSwipeHint] = useState<SwipeDirection | null>(null);
   const [preview, setPreview] = useState<SchedulingPreview | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipeTriggeredRef = useRef(false);
@@ -178,7 +209,13 @@ export default function MobileFlashcardPlayer({
   const exampleSentence = currentWord?.exampleSentence || '';
   const exampleMeaning = currentWord?.exampleMeaning || currentWord?.exampleTranslation || '';
   const pronunciation = currentWord?.pronunciation || '';
+  const partOfSpeechLabel = getPartOfSpeechLabel(
+    currentWord,
+    t('vocab.word', { defaultValue: 'Word' })
+  );
+  const decorativeSeal = getDecorativeSeal(currentWord);
   const currentCardState = useMemo(() => buildPreviewCardState(currentWord), [currentWord]);
+  const isFlipped = flipState.visible && flipState.index === currentIndex;
 
   const getSchedulingPreview = useAction(
     aRef<{ currentCard?: PreviewCardState; now?: number }, SchedulingPreview>(
@@ -189,12 +226,7 @@ export default function MobileFlashcardPlayer({
   useEffect(() => {
     if (!settings.autoTTS || !korean) return;
     onSpeak(korean);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, settings.autoTTS]);
-
-  useEffect(() => {
-    setIsFlipped(false);
-  }, [currentIndex]);
+  }, [currentIndex, korean, onSpeak, settings.autoTTS]);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,8 +256,12 @@ export default function MobileFlashcardPlayer({
   if (!currentWord) {
     return (
       <div
-        className="flex h-full flex-col items-center justify-center px-6 text-center text-slate-500"
-        style={{ backgroundImage: NOISE_BACKGROUND }}
+        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        style={{
+          background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+          color: KT.sub,
+          fontFamily: KT.font,
+        }}
       >
         <p className="text-sm font-bold">
           {t('vocab.noWords', { defaultValue: 'No words available' })}
@@ -235,6 +271,7 @@ export default function MobileFlashcardPlayer({
   }
 
   const handleGrade = (quality: number) => {
+    setFlipState({ index: null, visible: false });
     onReview(currentWord, quality);
   };
 
@@ -242,7 +279,11 @@ export default function MobileFlashcardPlayer({
     if (swipeTriggeredRef.current) {
       return;
     }
-    setIsFlipped(previous => !previous);
+    setFlipState(previous =>
+      previous.visible && previous.index === currentIndex
+        ? { index: null, visible: false }
+        : { index: currentIndex, visible: true }
+    );
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -334,35 +375,98 @@ export default function MobileFlashcardPlayer({
           },
         ];
 
+  const rightHint = SWIPE_HINT_STYLES.right;
+  const leftHint = SWIPE_HINT_STYLES.left;
+  const RightHintIcon = rightHint.icon;
+  const LeftHintIcon = leftHint.icon;
+
   return (
     <div
-      className="flex h-full flex-col overflow-hidden text-slate-900"
+      className="flex h-full flex-col overflow-hidden"
       style={{
-        backgroundColor: '#E6E7E9',
-        backgroundImage: NOISE_BACKGROUND,
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
+        color: KT.ink,
+        fontFamily: KT.font,
         WebkitFontSmoothing: 'antialiased',
       }}
     >
-      <main className="relative mt-[-20px] flex flex-1 items-center justify-center px-5">
-        <div
-          className="pointer-events-none absolute aspect-[3/4] w-full max-w-[350px] rounded-[2.5rem] border border-black/3 bg-[#EBEBE9]"
-          style={{
-            boxShadow: '0 8px 16px -8px rgba(0,0,0,0.05)',
-            transform: 'translateY(30px) scale(0.88)',
-            zIndex: 5,
+      <main className="relative flex flex-1 items-center justify-center px-5 pb-4 pt-3">
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: swipeHint === 'left' ? 1 : 0,
+            x: swipeHint === 'left' ? -18 : -6,
+            scale: swipeHint === 'left' ? 1 : 0.94,
           }}
-        />
-        <div
-          className="pointer-events-none absolute aspect-[3/4] w-full max-w-[350px] rounded-[2.5rem] border border-black/4 bg-[#F3F3F1]"
+          transition={{ duration: 0.18 }}
           style={{
-            boxShadow: '0 16px 32px -12px rgba(0,0,0,0.1)',
-            transform: 'translateY(16px) scale(0.94)',
-            zIndex: 10,
+            position: 'absolute',
+            left: 6,
+            top: '50%',
+            zIndex: 30,
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 12px',
+            borderRadius: 18,
+            background: leftHint.bg,
+            color: leftHint.fg,
+            border: leftHint.border,
+            boxShadow: KT.shSm,
+            pointerEvents: 'none',
           }}
-        />
+        >
+          <LeftHintIcon size={16} />
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>
+              {t('vocab.swipeLeft', { defaultValue: 'Swipe Left' })}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700 }}>
+              {t('vocab.swipeMistakeHint', { defaultValue: 'Did not recall' })}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: swipeHint === 'right' ? 1 : 0,
+            x: swipeHint === 'right' ? 18 : 6,
+            scale: swipeHint === 'right' ? 1 : 0.94,
+          }}
+          transition={{ duration: 0.18 }}
+          style={{
+            position: 'absolute',
+            right: 6,
+            top: '50%',
+            zIndex: 30,
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 12px',
+            borderRadius: 18,
+            background: rightHint.bg,
+            color: rightHint.fg,
+            border: rightHint.border,
+            boxShadow: KT.shSm,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>
+              {t('vocab.swipeRight', { defaultValue: 'Swipe Right' })}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700 }}>
+              {t('vocab.swipeCorrectHint', { defaultValue: 'Recalled it' })}
+            </div>
+          </div>
+          <RightHintIcon size={16} />
+        </motion.div>
 
         <div
-          className="relative z-20 flex w-full max-w-[350px] items-center justify-center"
+          className="relative z-20 flex w-full max-w-[360px] items-center justify-center"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -370,65 +474,16 @@ export default function MobileFlashcardPlayer({
           style={{ perspective: '1000px' }}
         >
           <motion.div
-            initial={false}
-            animate={{
-              opacity: swipeHint === 'left' ? 1 : 0,
-              x: swipeHint === 'left' ? -18 : -8,
-              scale: swipeHint === 'left' ? 1 : 0.92,
-            }}
-            transition={{ duration: 0.18 }}
-            className={`pointer-events-none absolute left-[-4px] top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 ${
-              swipeHintStyles.left.container
-            }`}
-          >
-            <X className="h-4 w-4" />
-            <div className="text-left">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em]">
-                {t('vocab.swipeLeft', { defaultValue: 'Swipe Left' })}
-              </p>
-              <p className="mt-0.5 text-[11px] font-bold">
-                {t('vocab.swipeMistakeHint', { defaultValue: 'Did not recall' })}
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={false}
-            animate={{
-              opacity: swipeHint === 'right' ? 1 : 0,
-              x: swipeHint === 'right' ? 18 : 8,
-              scale: swipeHint === 'right' ? 1 : 0.92,
-            }}
-            transition={{ duration: 0.18 }}
-            className={`pointer-events-none absolute right-[-4px] top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 ${
-              swipeHintStyles.right.container
-            }`}
-          >
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em]">
-                {t('vocab.swipeRight', { defaultValue: 'Swipe Right' })}
-              </p>
-              <p className="mt-0.5 text-[11px] font-bold">
-                {t('vocab.swipeCorrectHint', { defaultValue: 'Recalled it' })}
-              </p>
-            </div>
-            <Check className="h-4 w-4" />
-          </motion.div>
-
-          <motion.div
             animate={{
               rotate: swipeHint === 'left' ? -2 : swipeHint === 'right' ? 2 : 0,
               x: swipeHint === 'left' ? -12 : swipeHint === 'right' ? 12 : 0,
             }}
             transition={{ duration: 0.28, type: 'spring', stiffness: 240, damping: 20 }}
-            className="relative flex min-h-[65vh] max-h-[70vh] w-full cursor-grab flex-col overflow-hidden rounded-[2.5rem] active:cursor-grabbing"
+            className="relative flex min-h-[66vh] max-h-[72vh] w-full cursor-grab flex-col overflow-hidden rounded-[2rem] active:cursor-grabbing"
             style={{
-              background: '#FCFCFA',
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E\")",
-              boxShadow:
-                '0 32px 64px -16px rgba(0,0,0,0.15), 0 4px 12px -4px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 1px rgba(0,0,0,0.03)',
-              border: '1px solid rgba(0,0,0,0.06)',
+              background: KT.card,
+              boxShadow: KT.shLg,
+              border: `1px solid ${KT.line}`,
             }}
             tabIndex={0}
             onClick={handleCardFlip}
@@ -439,10 +494,12 @@ export default function MobileFlashcardPlayer({
               }
               if (event.key === 'ArrowLeft') {
                 event.preventDefault();
+                setFlipState({ index: null, visible: false });
                 onPrev();
               }
               if (event.key === 'ArrowRight') {
                 event.preventDefault();
+                setFlipState({ index: null, visible: false });
                 onNext();
               }
             }}
@@ -451,149 +508,314 @@ export default function MobileFlashcardPlayer({
             aria-pressed={isFlipped}
           >
             <div
-              className="relative h-full w-full"
               style={{
+                position: 'relative',
+                height: '100%',
+                width: '100%',
                 transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
                 transformStyle: 'preserve-3d',
                 transition: 'transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
             >
               <div
-                className="absolute inset-0 flex h-full flex-col"
                 style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
                 }}
               >
-                <div className="flex items-start justify-between px-6 pb-2 pt-6">
-                  <div className="rounded-lg border border-blue-100 bg-blue-50/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 shadow-sm">
-                    {t('dashboard.review.title', { defaultValue: 'Review' })} • {scopeTitle}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 18,
+                    right: 22,
+                    fontFamily: KT.serif,
+                    fontSize: 52,
+                    color: KT.crimson,
+                    opacity: 0.14,
+                    fontWeight: 500,
+                    lineHeight: 1,
+                  }}
+                >
+                  {decorativeSeal}
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '22px 22px 0',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minWidth: 0 }}>
+                    <Chip tone="pink">{partOfSpeechLabel}</Chip>
+                    <Chip tone="muted">{scopeTitle}</Chip>
+                    {currentWord.hanja ? <Chip tone="butter">{currentWord.hanja}</Chip> : null}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="auto"
+
+                  <button
                     type="button"
                     onClick={event => {
                       event.stopPropagation();
                       onStar(currentWord.id);
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-400 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-500 active:scale-90"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: `1px solid ${KT.line}`,
+                      background: KT.bg,
+                      color: isStarred(currentWord.id) ? KT.crimson : KT.sub,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
                     aria-label={t('vocabBook.save', { defaultValue: 'Save word' })}
                   >
-                    <Bookmark
-                      className={`h-4 w-4 ${isStarred(currentWord.id) ? 'fill-rose-500 text-rose-500' : ''}`}
-                    />
-                  </Button>
+                    <Bookmark size={16} fill={isStarred(currentWord.id) ? KT.crimson : 'none'} />
+                  </button>
                 </div>
 
-                <div className="flex min-h-[160px] flex-1 flex-col items-center justify-center px-6 pb-10">
-                  {pronunciation ? (
-                    <p className="mb-3 font-mono text-[13px] font-bold tracking-widest text-slate-400">
-                      [{pronunciation}]
-                    </p>
-                  ) : null}
-                  <h2
-                    className="mb-8 text-center text-5xl font-black tracking-tight text-[#1A1A1C]"
-                    style={{ textShadow: '0 1px 1px rgba(255,255,255,0.9)' }}
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    padding: '18px 28px 18px',
+                  }}
+                >
+                  {(pronunciation || currentWord.hanja) && (
+                    <div
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 13,
+                        color: KT.crimson,
+                        letterSpacing: 2.5,
+                        marginBottom: 12,
+                        fontWeight: 500,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {pronunciation ? `[${pronunciation}]` : currentWord.hanja}
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      fontSize: heroText.length > 10 ? 42 : 54,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      letterSpacing: heroText.length > 10 ? -1.2 : -2,
+                      lineHeight: 1.05,
+                      textAlign: 'center',
+                      wordBreak: 'keep-all',
+                    }}
                   >
                     {heroText}
-                  </h2>
+                  </div>
 
-                  <Button
-                    variant="ghost"
-                    size="auto"
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: KT.sub,
+                      textAlign: 'center',
+                      marginTop: 16,
+                      lineHeight: 1.6,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {t('vocab.tapToReveal', { defaultValue: 'Tap to reveal' })}
+                  </div>
+                </div>
+
+                <div style={{ padding: '0 0 24px', display: 'flex', justifyContent: 'center' }}>
+                  <button
                     type="button"
                     onClick={event => {
                       event.stopPropagation();
                       onSpeak(korean || heroText);
                     }}
-                    className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_8px_16px_-4px_rgba(97,113,122,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-90"
-                    style={{ background: 'linear-gradient(to bottom, #7A8D9A, #61717A)' }}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      border: 'none',
+                      background: KT.bg2,
+                      color: KT.ink,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                    }}
                     aria-label={t('vocab.listenAgain', { defaultValue: 'Listen again' })}
                   >
-                    <Volume2 className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                <div className="pb-6 text-center">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-300">
-                    <RotateCw className="h-3.5 w-3.5" />
-                    {t('vocab.tapToReveal', { defaultValue: 'Tap to reveal' })}
-                  </span>
+                    <Volume2 size={18} />
+                  </button>
                 </div>
               </div>
 
               <div
-                className="absolute inset-0 flex h-full flex-col"
                 style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
                   transform: 'rotateY(180deg)',
                 }}
               >
-                <div className="flex items-start justify-between px-6 pb-2 pt-6">
-                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 shadow-sm">
-                    {t('vocab.cardBackMeaning', { defaultValue: 'Meaning & Example' })}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '22px 22px 0',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minWidth: 0 }}>
+                    <Chip tone="mint">
+                      {t('vocab.cardBackMeaning', { defaultValue: 'Meaning & Example' })}
+                    </Chip>
+                    {currentWord.hanja ? <Chip tone="butter">{currentWord.hanja}</Chip> : null}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="auto"
+
+                  <button
                     type="button"
                     onClick={event => {
                       event.stopPropagation();
                       onStar(currentWord.id);
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-400 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-500 active:scale-90"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: `1px solid ${KT.line}`,
+                      background: KT.bg,
+                      color: isStarred(currentWord.id) ? KT.crimson : KT.sub,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
                     aria-label={t('vocabBook.save', { defaultValue: 'Save word' })}
                   >
-                    <Bookmark
-                      className={`h-4 w-4 ${isStarred(currentWord.id) ? 'fill-rose-500 text-rose-500' : ''}`}
-                    />
-                  </Button>
+                    <Bookmark size={16} fill={isStarred(currentWord.id) ? KT.crimson : 'none'} />
+                  </button>
                 </div>
 
-                <div className="flex flex-1 flex-col justify-center px-6">
-                  <div className="mb-6 text-center">
-                    <p className="mb-1 font-mono text-[14px] font-black tracking-widest text-slate-400">
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    padding: '18px 24px 20px',
+                  }}
+                >
+                  <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                    <div
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 13,
+                        color: KT.crimson,
+                        letterSpacing: 2.5,
+                        marginBottom: 8,
+                        fontWeight: 500,
+                      }}
+                    >
                       {korean || heroText}
-                    </p>
-                    <h2 className="text-center text-3xl font-black leading-tight tracking-tight text-slate-800">
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 30,
+                        fontWeight: 800,
+                        color: KT.ink,
+                        lineHeight: 1.2,
+                        letterSpacing: -0.8,
+                      }}
+                    >
                       {detailText}
-                    </h2>
+                    </div>
                   </div>
 
-                  <div className="rounded-[1.2rem] border border-slate-200/60 bg-[#F8F9FA] p-5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
-                    <p className="mb-3 text-[15px] font-black leading-relaxed text-slate-800">
-                      {exampleSentence ? (
-                        exampleSentence
-                      ) : (
-                        <span className="text-slate-400">
+                  <div
+                    style={{
+                      background: KT.bg,
+                      borderRadius: 20,
+                      padding: 18,
+                      border: `1px solid ${KT.line}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        color: KT.sub,
+                        letterSpacing: 1,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {t('vocab.example', { defaultValue: 'Example' })}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        color: KT.ink,
+                        lineHeight: 1.6,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {exampleSentence || (
+                        <span style={{ color: KT.sub }}>
                           {t('vocab.noExample', { defaultValue: 'No example sentence' })}
                         </span>
                       )}
-                    </p>
+                    </div>
                     {exampleMeaning ? (
-                      <p className="text-[13px] font-medium tracking-wide text-slate-500">
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: KT.sub,
+                          lineHeight: 1.5,
+                          marginTop: 8,
+                        }}
+                      >
                         {exampleMeaning}
-                      </p>
+                      </div>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="flex justify-center pb-6">
-                  <Button
-                    variant="ghost"
-                    size="auto"
+                <div style={{ padding: '0 0 24px', display: 'flex', justifyContent: 'center' }}>
+                  <button
                     type="button"
                     onClick={event => {
                       event.stopPropagation();
                       onSpeak(korean || heroText);
                     }}
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-500 shadow-sm transition-transform active:scale-90"
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      border: 'none',
+                      background: KT.ink,
+                      color: KT.card,
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer',
+                    }}
                     aria-label={t('vocab.listenAgain', { defaultValue: 'Listen again' })}
                   >
-                    <Volume2 className="h-4 w-4" />
-                  </Button>
+                    <Volume2 size={18} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -601,57 +823,131 @@ export default function MobileFlashcardPlayer({
         </div>
       </main>
 
-      <footer className="z-40 shrink-0 bg-gradient-to-t from-[#E6E7E9] via-[#E6E7E9] to-transparent px-4 pb-8 pt-4">
-        <div className="mx-auto mb-3 flex max-w-[420px] items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-rose-200/70 bg-rose-50/80 px-3 py-2 text-rose-600 shadow-[0_10px_24px_-18px_rgba(244,63,94,0.55)]">
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em]">
-                {t('vocab.didNotRecall', { defaultValue: 'Missed' })}
-              </p>
-              <p className="truncate text-[11px] font-bold">
-                {t('vocab.didNotRecallHint', { defaultValue: 'Use Again / Hard' })}
-              </p>
+      <footer
+        style={{
+          padding: '0 18px calc(env(safe-area-inset-bottom) + 18px)',
+          background: `linear-gradient(180deg, rgba(245,239,229,0) 0%, ${KT.bg2} 30%, ${KT.bg2} 100%)`,
+        }}
+      >
+        <div style={{ maxWidth: 420, margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 12px',
+                borderRadius: 18,
+                background: `${KT.pink}B3`,
+                color: KT.pinkDeep,
+                border: `1px solid ${KT.pinkDeep}22`,
+              }}
+            >
+              <X size={16} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4 }}>
+                  {t('vocab.didNotRecall', { defaultValue: 'Missed' })}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>
+                  {t('vocab.didNotRecallHint', { defaultValue: 'Use Again / Hard' })}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                padding: '10px 12px',
+                borderRadius: 18,
+                background: `${KT.mint}B3`,
+                color: KT.mintDeep,
+                border: `1px solid ${KT.mintDeep}22`,
+              }}
+            >
+              <div style={{ minWidth: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.4 }}>
+                  {t('vocab.recalled', { defaultValue: 'Recalled' })}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700 }}>
+                  {t('vocab.recalledHint', { defaultValue: 'Use Good / Easy' })}
+                </div>
+              </div>
+              <Check size={16} />
             </div>
           </div>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 rounded-full border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-emerald-600 shadow-[0_10px_24px_-18px_rgba(16,185,129,0.5)]">
-            <div className="min-w-0 text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em]">
-                {t('vocab.recalled', { defaultValue: 'Recalled' })}
-              </p>
-              <p className="truncate text-[11px] font-bold">
-                {t('vocab.recalledHint', { defaultValue: 'Use Good / Easy' })}
-              </p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0" />
-          </div>
-        </div>
 
-        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-          {t('vocab.rateMemory', { defaultValue: 'Rate your recall' })}
-        </p>
+          {!isFlipped ? (
+            <button
+              type="button"
+              onClick={() => setFlipState({ index: currentIndex, visible: true })}
+              style={{
+                width: '100%',
+                padding: '16px 18px',
+                borderRadius: 18,
+                border: 'none',
+                background: KT.ink,
+                color: KT.card,
+                fontSize: 15,
+                fontWeight: 800,
+                fontFamily: KT.font,
+                letterSpacing: 0.3,
+                cursor: 'pointer',
+                boxShadow: '0 10px 24px -18px rgba(31,27,23,0.7)',
+              }}
+            >
+              {t('vocab.showMeaning', { defaultValue: 'Show answer' })}
+            </button>
+          ) : (
+            <>
+              <p
+                style={{
+                  marginBottom: 10,
+                  textAlign: 'center',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: KT.sub,
+                  letterSpacing: 1,
+                }}
+              >
+                {t('vocab.rateMemory', { defaultValue: 'Rate your recall' })}
+              </p>
 
-        <div
-          className={`mx-auto grid max-w-[420px] gap-2.5 ${
-            settings.ratingMode === 'PASS_FAIL' ? 'grid-cols-2' : 'grid-cols-4'
-          }`}
-        >
-          {ratingButtons.map(button => (
-            <TactileGradeButton
-              key={`${button.color}-${button.quality}`}
-              label={button.label}
-              previewLabel={button.previewLabel}
-              color={button.color}
-              onClick={() => handleGrade(button.quality)}
-            />
-          ))}
+              <div
+                className={
+                  settings.ratingMode === 'PASS_FAIL'
+                    ? 'grid grid-cols-2 gap-2.5'
+                    : 'grid grid-cols-4 gap-2.5'
+                }
+              >
+                {ratingButtons.map(button => (
+                  <GradeButton
+                    key={`${button.color}-${button.quality}`}
+                    label={button.label}
+                    previewLabel={button.previewLabel}
+                    color={button.color}
+                    onClick={() => handleGrade(button.quality)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </footer>
     </div>
   );
 }
 
-function TactileGradeButton({
+function GradeButton({
   label,
   previewLabel,
   color,
@@ -662,25 +958,45 @@ function TactileGradeButton({
   readonly color: RatingButtonColor;
   readonly onClick: () => void;
 }) {
+  const style = GRADE_BUTTON_STYLES[color];
+
   return (
     <Button
       variant="ghost"
       size="auto"
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center space-y-1.5 rounded-[1.2rem] py-3.5 transition-all duration-100"
+      className="flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-2 py-3 transition-transform duration-100 active:scale-[0.98]"
       style={{
-        background: 'linear-gradient(180deg, #FFFFFF 0%, #F4F4F5 100%)',
-        boxShadow: '0 4px 0px #D4D4D8, 0 8px 16px rgba(0,0,0,0.08), inset 0 1px 1px #FFFFFF',
-        border: '1px solid #E4E4E7',
-        ...('borderTop' in tactileButtonStyles[color]
-          ? { borderTop: tactileButtonStyles[color].borderTop }
-          : {}),
+        background: style.bg,
+        color: style.fg,
+        boxShadow: style.shadow,
+        border: 'none',
       }}
     >
-      <span className="text-[14px] font-black tracking-tight text-slate-800">{label}</span>
       <span
-        className={`rounded-[4px] px-1.5 text-[10px] font-black shadow-sm ${tactileButtonStyles[color].badge}`}
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          color: style.fg,
+          letterSpacing: -0.2,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          display: 'inline-block',
+          fontSize: 10,
+          fontWeight: 800,
+          color: style.fg,
+          background: 'rgba(255,255,255,0.55)',
+          padding: '2px 8px',
+          borderRadius: 999,
+          letterSpacing: 0.3,
+          minWidth: 36,
+          textAlign: 'center',
+        }}
       >
         {previewLabel}
       </span>

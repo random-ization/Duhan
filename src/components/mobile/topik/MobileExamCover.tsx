@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Play, Info, AlertCircle, Headphones, BookOpen } from 'lucide-react';
 import { Button } from '../../ui';
 import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
+import { formatTopikLabel } from '../../../utils/topik';
 
 interface MobileExamCoverProps {
   exam: TopikExam;
@@ -55,7 +56,7 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
 
         <MobileImmersiveHeader
-          title={`TOPIK II ${examTypeLabel}`}
+          title={`${formatTopikLabel(exam.level)} ${examTypeLabel}`}
           subtitle={t('dashboard.topik.mobile.cover.roundMock', {
             round: exam.round,
             defaultValue: 'Round {{round}} Past Exam',

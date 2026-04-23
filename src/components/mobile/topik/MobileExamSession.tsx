@@ -18,6 +18,7 @@ import { BottomSheet } from '../../common/BottomSheet';
 import { Button } from '../../ui';
 import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 import { normalizePublicAssetUrl } from '../../../utils/imageSrc';
+import { formatTopikLabel } from '../../../utils/topik';
 
 // --- Constants (Copied from ExamSession.tsx to ensure consistency) ---
 const TOPIK_READING_STRUCTURE: {
@@ -517,7 +518,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           total: exam.questions.length,
           defaultValue: 'Question {{current}} of {{total}}',
         })}
-        eyebrow={`TOPIK II ${examTypeLabel}`}
+        eyebrow={`${formatTopikLabel(exam.level)} ${examTypeLabel}`}
         onBack={onExit}
         backLabel={t('common.close', { defaultValue: 'Close' })}
         backIcon={<X className="h-4 w-4 text-foreground" />}

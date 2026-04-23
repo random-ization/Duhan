@@ -1,18 +1,15 @@
 import React, { Suspense, lazy } from 'react';
 import {
   ArrowLeft,
-  CheckCircle2,
-  Folder,
-  Search,
-  Plus,
   Loader2,
-  Play,
   Maximize2,
   Minimize2,
-  X,
   MoreVertical,
+  Play,
   Trash2,
+  X,
 } from 'lucide-react';
+import { useQuery } from 'convex/react';
 
 import {
   Button,
@@ -48,8 +45,10 @@ import {
   toPreviewHtml,
   toRichHtml,
 } from '../../pages/NotebookV2Page';
-import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
-import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { ANNOTATIONS, type RecentAnnotation } from '../../utils/convexRefs';
+import { buildReadingArticlePath } from '../../utils/readingRoutes';
+import { KT, Chip, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
 
 const OfficialTiptapEditor = lazy(() => import('../notebook/OfficialTiptapEditor'));
 
@@ -129,160 +128,538 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
   const handleBack = () => {
     const returnTo = searchParams.get('returnTo');
     if (hasSafeReturnTo(returnTo)) {
-      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
+    navigate('/courses');
+  };
+
+  const recentAnnotations = useQuery(ANNOTATIONS.getRecent, { limit: 6 });
+  const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
+  // Snapshot "now" once per mount so relative time labels stay stable across
+  // re-renders (avoids impure Date.now() calls during render).
+  const [renderTime] = React.useState(() => Date.now());
+
+  const handleOpenAnnotation = (ann: RecentAnnotation) => {
+    if (typeof window === 'undefined') return;
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (ann.scopeType === 'READING_ARTICLE' && ann.scopeId) {
+      const base = buildReadingArticlePath(ann.scopeId, currentPath);
+      navigate(`${base}&annotationId=${ann.id}`);
       return;
     }
-    navigate('/practice');
+    if (ann.scopeType === 'TOPIK_REVIEW' && ann.scopeId) {
+      const topikReviewPath = appendReturnToPath(
+        `/topik/${ann.scopeId}/review?annotationId=${ann.id}`,
+        currentPath
+      );
+      navigate(topikReviewPath);
+      return;
+    }
+    // Other scope types don't have a deep-link target yet.
+  };
+
+  const formatAnnotationTime = (ts: number) => {
+    const diff = renderTime - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t('relativeTime.justNow', { defaultValue: 'just now' });
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(ts).toLocaleDateString(dateLocale);
+  };
+
+  const annotationScopeLabel = (scopeType?: string) => {
+    switch (scopeType) {
+      case 'READING_ARTICLE':
+        return t('notes.v2.scope.reading', { defaultValue: 'Reading' });
+      case 'TOPIK_REVIEW':
+        return t('notes.v2.scope.topik', { defaultValue: 'TOPIK' });
+      case 'READING_BOOK':
+        return t('notes.v2.scope.book', { defaultValue: 'Book' });
+      case 'PODCAST':
+        return t('notes.v2.scope.podcast', { defaultValue: 'Podcast' });
+      case 'VIDEO':
+        return t('notes.v2.scope.video', { defaultValue: 'Video' });
+      default:
+        return t('notes.v2.scope.note', { defaultValue: 'Note' });
+    }
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav flex flex-col font-sans">
-      <MobileWorkspaceHeader
-        title={t('notes.v2.page.titleAllNotes', { defaultValue: 'Smart Notebook' })}
-        subtitle={t('notes.mobileSubtitle', {
-          defaultValue: 'Capture quotes, track mistakes, and keep your review queue moving.',
-        })}
-        eyebrow={t('nav.notebook', { defaultValue: 'Notebook' })}
-        onBack={handleBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={handleCreateNote}
-            className="grid h-11 w-11 place-items-center rounded-2xl bg-primary/10 text-primary shadow-sm hover:bg-primary/20"
-            aria-label={t('notes.v2.page.newNote', { defaultValue: 'Create note' })}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        }
+    <PageShell>
+      {/* ── Page header ────────────────────────────── */}
+      <div
+        style={{
+          padding: '14px 22px 20px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
       >
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ flex: 1 }}>
+            <button
+              type="button"
+              onClick={handleBack}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginBottom: 14,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: KT.sub,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: KT.font,
+              }}
+            >
+              ← {t('common.back', { defaultValue: 'Back' })}
+            </button>
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 13,
+                color: KT.crimson,
+                letterSpacing: 4,
+                marginBottom: 4,
+                fontWeight: 500,
+              }}
+            >
+              記錄 · NOTEBOOK
+            </div>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.6,
+              }}
+            >
+              {t('notes.v2.page.titleAllNotes', { defaultValue: '스마트 노트' })}
+            </div>
+            <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
+              {t('notes.mobileSubtitle', {
+                defaultValue: 'Capture quotes, track mistakes, and keep your review queue moving.',
+              })}
+            </div>
+          </div>
+
+          {/* new note button */}
+          <button
+            type="button"
+            onClick={handleCreateNote}
+            aria-label={t('notes.v2.page.newNote', { defaultValue: 'Create note' })}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 14,
+              background: KT.card,
+              border: `1px solid ${KT.line2}`,
+              boxShadow: KT.shSm,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              marginTop: 34,
+              fontFamily: KT.serif,
+              fontSize: 18,
+              color: KT.crimson,
+            }}
+          >
+            +
+          </button>
+        </div>
+
+        {/* search */}
+        <div style={{ position: 'relative', marginTop: 12 }}>
+          <span
+            style={{
+              position: 'absolute',
+              left: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 14,
+              color: KT.sub,
+              pointerEvents: 'none',
+            }}
+          >
+            🔍
+          </span>
+          <input
             id="mobile-notebook-search"
             name="notebookSearch"
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={t('notes.v2.page.searchPlaceholder', {
-              defaultValue: 'Search quote or note...',
+              defaultValue: 'Search quote or note…',
             })}
-            className="w-full bg-muted/60 border-transparent rounded-[1.2rem] py-3 pl-11 pr-4 text-sm font-medium focus:bg-background focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all shadow-inner"
+            style={{
+              width: '100%',
+              background: 'rgba(31,27,23,0.05)',
+              border: 'none',
+              borderRadius: 16,
+              padding: '12px 16px 12px 38px',
+              fontSize: 14,
+              fontFamily: KT.font,
+              fontWeight: 500,
+              color: KT.ink,
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
           />
         </div>
-      </MobileWorkspaceHeader>
+      </div>
 
-      <div className="px-5 py-6 space-y-8 flex-1">
+      {/* ── Main content ────────────────────────────── */}
+      <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Smart Review CTA */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-transform">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
-          <div className="relative z-10 flex flex-col gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle2 className="w-5 h-5 text-indigo-200" />
-                <span className="font-bold text-indigo-100">
-                  {t('notes.v2.page.todayReviewTitle', { defaultValue: 'Today’s Review Queue' })}
-                </span>
-              </div>
-              <p className="text-3xl font-black">
-                {pendingReviewCount}{' '}
-                <span className="text-lg font-medium text-indigo-200 opacity-80">
-                  {t('notes.v2.context.pendingReview', { defaultValue: 'Pending' })}
-                </span>
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => navigate('/review')}
-              className="w-full rounded-2xl h-12 font-black text-indigo-600 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all"
+        <div
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            background: `linear-gradient(135deg, ${KT.indigo} 0%, #5466A0 100%)`,
+            borderRadius: 24,
+            padding: '20px 20px 18px',
+            boxShadow: '0 8px 24px rgba(47,63,104,0.3)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: -20,
+              right: -20,
+              width: 100,
+              height: 100,
+              background: 'rgba(255,255,255,0.08)',
+              borderRadius: '50%',
+            }}
+          />
+          <div style={{ position: 'relative' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 12,
+              }}
             >
-              <Play className="w-5 h-5 fill-current" />
+              <HanjaSeal c="復" size={34} bg="rgba(255,255,255,0.18)" round={10} />
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.65)',
+                    letterSpacing: 1,
+                    marginBottom: 2,
+                  }}
+                >
+                  {t('notes.v2.page.todayReviewTitle', { defaultValue: "TODAY'S REVIEW" })}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                  {pendingReviewCount}{' '}
+                  <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.7 }}>
+                    {t('notes.v2.context.pendingReview', { defaultValue: 'cards pending' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/review')}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.95)',
+                border: 'none',
+                borderRadius: 14,
+                padding: '11px 0',
+                fontSize: 14,
+                fontWeight: 800,
+                color: KT.indigo,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontFamily: KT.font,
+              }}
+            >
+              <Play size={16} fill={KT.indigo} />
               {t('notes.v2.context.startSmartReview', { defaultValue: 'Start Smart Review' })}
-            </Button>
+            </button>
           </div>
         </div>
 
-        {/* Notebooks Carousel (My Notebooks) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-foreground">
-              {t('notes.picker.myNotebooks', { defaultValue: 'My Notebooks' })}
-            </h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-5 px-5 snap-x">
-            <Button
-              variant="outline"
+        {/* Notebooks Carousel */}
+        <div>
+          <SectionHead
+            kanji="冊"
+            title={t('notes.picker.myNotebooks', { defaultValue: 'My Notebooks' })}
+          />
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              overflowX: 'auto',
+              marginLeft: -18,
+              marginRight: -18,
+              padding: '4px 18px 12px',
+            }}
+          >
+            {/* All notebooks button */}
+            <button
+              type="button"
               onClick={() => {
                 setActiveNotebookId(null);
                 setSelectedPageId(null);
               }}
-              className={`snap-start shrink-0 w-[140px] h-24 flex flex-col items-start justify-between p-4 rounded-2xl border-2 transition-all ${
-                activeNotebookId === null
-                  ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                  : 'border-border bg-card text-muted-foreground'
-              }`}
+              style={{
+                flexShrink: 0,
+                width: 130,
+                height: 88,
+                background: KT.card,
+                borderRadius: 20,
+                padding: '14px',
+                boxShadow: activeNotebookId === null ? KT.sh : KT.shSm,
+                border:
+                  activeNotebookId === null ? `2px solid ${KT.crimson}30` : `1px solid ${KT.line}`,
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+              }}
             >
-              <div className="flex items-center justify-between w-full">
-                <Folder
-                  className={`w-6 h-6 ${activeNotebookId === null ? 'text-primary fill-primary/20' : 'text-muted-foreground'}`}
-                />
-                <span className="text-xs font-bold bg-muted px-2 py-0.5 rounded-md">
-                  {searchResult.items.length}
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <span
+                  style={{
+                    fontFamily: KT.serif,
+                    fontSize: 18,
+                    color: activeNotebookId === null ? KT.crimson : KT.sub,
+                  }}
+                >
+                  全
                 </span>
+                <Chip tone="muted">{searchResult.items.length}</Chip>
               </div>
-              <span className="font-bold truncate w-full text-left text-sm">
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  fontFamily: KT.font,
+                }}
+              >
                 {t('notes.tabs.all', { defaultValue: 'All' })}
               </span>
-            </Button>
-            {notebooksResult.notebooks.map(nb => (
-              <Button
-                key={nb.id}
-                variant="outline"
-                onClick={() => {
-                  setActiveNotebookId(nb.id);
-                  setSelectedPageId(null);
-                }}
-                className={`snap-start shrink-0 w-[140px] h-24 flex flex-col items-start justify-between p-4 rounded-2xl border-2 transition-all ${
-                  activeNotebookId === nb.id
-                    ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                    : 'border-border bg-card text-muted-foreground'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Folder
-                    className={`w-6 h-6 ${activeNotebookId === nb.id ? 'text-primary fill-primary/20' : 'text-muted-foreground'}`}
-                  />
-                  <span className="text-xs font-bold bg-muted px-2 py-0.5 rounded-md">
-                    {nb.noteCount}
+            </button>
+
+            {notebooksResult.notebooks.map((nb, i) => {
+              const isActive = activeNotebookId === nb.id;
+              const seals = ['冊', '記', '文', '誌', '箋'];
+              return (
+                <button
+                  key={nb.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveNotebookId(nb.id);
+                    setSelectedPageId(null);
+                  }}
+                  style={{
+                    flexShrink: 0,
+                    width: 130,
+                    height: 88,
+                    background: KT.card,
+                    borderRadius: 20,
+                    padding: '14px',
+                    boxShadow: isActive ? KT.sh : KT.shSm,
+                    border: isActive ? `2px solid ${KT.crimson}30` : `1px solid ${KT.line}`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <span
+                      style={{
+                        fontFamily: KT.serif,
+                        fontSize: 18,
+                        color: isActive ? KT.crimson : KT.sub,
+                      }}
+                    >
+                      {seals[i % seals.length]}
+                    </span>
+                    <Chip tone="muted">{nb.noteCount}</Chip>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      fontFamily: KT.font,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      width: '100%',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {nb.title}
                   </span>
-                </div>
-                <span className="font-bold truncate w-full text-left text-sm">{nb.title}</span>
-              </Button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Feed matching activeNotebookId */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-black text-foreground">
-            {activeNotebookId
-              ? notebooksResult.notebooks.find(n => n.id === activeNotebookId)?.title
-              : t('notes.v2.context.allNotes', { defaultValue: 'All Notes' })}
-          </h2>
+        {/* Recent highlights — annotations across reading/TOPIK/etc. */}
+        {hasRecentHighlights && (
+          <div>
+            <SectionHead
+              kanji="錄"
+              title={t('notes.v2.context.recentHighlights', {
+                defaultValue: 'Recent highlights',
+              })}
+            />
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                overflowX: 'auto',
+                marginLeft: -18,
+                marginRight: -18,
+                padding: '4px 18px 12px',
+              }}
+            >
+              {recentAnnotations!.map(ann => {
+                const quote = ann.quote || ann.text;
+                const scopeLabel = annotationScopeLabel(ann.scopeType);
+                const timeLabel = formatAnnotationTime(ann.updatedAt ?? ann.createdAt);
+                const accent = ann.color?.trim() || KT.crimson;
+                return (
+                  <button
+                    key={String(ann.id)}
+                    type="button"
+                    onClick={() => handleOpenAnnotation(ann)}
+                    style={{
+                      flexShrink: 0,
+                      width: 220,
+                      background: KT.card,
+                      borderRadius: 18,
+                      padding: '14px 14px 12px',
+                      boxShadow: KT.shSm,
+                      border: `1px solid ${KT.line}`,
+                      borderLeft: `3px solid ${accent}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: KT.font,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        width: '100%',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Chip tone="muted">{scopeLabel}</Chip>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: KT.sub,
+                          letterSpacing: 0.3,
+                        }}
+                      >
+                        {timeLabel}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: KT.ink,
+                        lineHeight: 1.4,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
+                      {quote}
+                    </div>
+                    {ann.note && ann.note.trim() && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 11,
+                          color: KT.sub,
+                          fontWeight: 500,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
+                        {ann.note}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Notes Feed */}
+        <div style={{ paddingBottom: 24 }}>
+          <SectionHead
+            kanji="記"
+            title={
+              activeNotebookId
+                ? (notebooksResult.notebooks.find(n => n.id === activeNotebookId)?.title ?? '')
+                : t('notes.v2.context.allNotes', { defaultValue: 'All Notes' })
+            }
+          />
 
           {searchResult.items.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center px-6 border-2 border-dashed border-border rounded-3xl bg-card">
-              <Folder className="w-12 h-12 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground font-medium">
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                background: KT.card,
+                borderRadius: 24,
+                boxShadow: KT.shSm,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: KT.serif,
+                  fontSize: 40,
+                  color: KT.sub,
+                  opacity: 0.25,
+                  marginBottom: 10,
+                }}
+              >
+                無
+              </div>
+              <div style={{ fontSize: 13, color: KT.sub, fontWeight: 600 }}>
                 {t('notes.v2.context.noNotebooksHint', { defaultValue: 'No notes here.' })}
-              </p>
+              </div>
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {searchResult.items.map(item => {
                 const cardType = toCardType(item, t);
                 const status = toStatusBadge(item.status || 'Inbox', t);
@@ -291,66 +668,133 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                 const noteHtml = toPreviewHtml(item.noteText || item.snippet);
 
                 return (
-                  <Button
+                  <button
                     key={item.id}
-                    variant="ghost"
+                    type="button"
                     onClick={() => {
                       setSelectedPageId(item.id);
                       setEditorExpanded(false);
                       handleEditorOpenChange(true);
                     }}
-                    className="h-auto w-full flex-col items-start p-5 bg-card rounded-3xl border border-border/60 shadow-sm active:scale-[0.98] transition-all !whitespace-normal"
+                    style={{
+                      width: '100%',
+                      background: KT.card,
+                      borderRadius: 20,
+                      boxShadow: KT.sh,
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      textAlign: 'left',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <div className="flex justify-between items-start w-full mb-3 gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{cardType.icon}</span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${cardType.badgeClass}`}
-                        >
-                          {cardType.label}
-                        </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        width: '100%',
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{cardType.icon}</span>
+                        <Chip tone="muted">{cardType.label}</Chip>
                       </div>
                       <span
-                        className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${status.className}`}
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: 999,
+                          background: KT.mint,
+                          color: KT.mintDeep,
+                          fontFamily: KT.font,
+                        }}
                       >
                         {status.label}
                       </span>
                     </div>
 
-                    <h3 className="text-[17px] leading-tight font-black text-foreground mb-2 text-left line-clamp-2 w-full">
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: KT.ink,
+                        marginBottom: 8,
+                        lineHeight: 1.35,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
                       {toPlainText(item.title) || item.title}
-                    </h3>
+                    </div>
 
                     {item.noteKind === 'quote_card' && quoteHtml ? (
                       <blockquote
-                        className={`w-full mb-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground line-clamp-3 ${QUOTE_CARD_RICH_CLASS} ${RICH_TEXT_CLASS}`}
+                        className={`${QUOTE_CARD_RICH_CLASS} ${RICH_TEXT_CLASS}`}
+                        style={{
+                          width: '100%',
+                          marginBottom: 10,
+                          borderRadius: 12,
+                          padding: '10px 12px',
+                          fontSize: 13,
+                          color: KT.ink2,
+                          background: KT.bg2,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                        }}
                         dangerouslySetInnerHTML={{ __html: quoteHtml }}
                       />
                     ) : null}
 
                     {noteHtml ? (
                       <div
-                        className={`w-full text-muted-foreground text-sm flex-grow line-clamp-2 text-left leading-relaxed ${RICH_TEXT_CLASS}`}
+                        className={RICH_TEXT_CLASS}
+                        style={{
+                          width: '100%',
+                          fontSize: 12,
+                          color: KT.sub,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
                         dangerouslySetInnerHTML={{
                           __html:
                             item.noteKind === 'quote_card' ? noteHtml : snippetHtml || noteHtml,
                         }}
                       />
                     ) : (
-                      <p className="w-full text-muted-foreground text-sm flex-grow text-left">
+                      <div style={{ fontSize: 12, color: KT.subLight }}>
                         {t('notes.v2.page.clickToViewAndEdit', {
-                          defaultValue: 'Click to view and edit content',
+                          defaultValue: 'Tap to view and edit content',
                         })}
-                      </p>
+                      </div>
                     )}
 
-                    <div className="flex gap-2 mt-4 pt-3 border-t border-border w-full flex-wrap items-center">
-                      <span className="text-[11px] font-bold text-muted-foreground uppercase">
-                        {formatTime(item.updatedAt, dateLocale)} ·{' '}
-                        {toSourceLabel(item.sourceModule, t)}
-                      </span>
+                    <div
+                      style={{
+                        marginTop: 12,
+                        paddingTop: 10,
+                        borderTop: `1px solid ${KT.line}`,
+                        width: '100%',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: KT.sub,
+                        fontFamily: KT.font,
+                      }}
+                    >
+                      {formatTime(item.updatedAt, dateLocale)} ·{' '}
+                      {toSourceLabel(item.sourceModule, t)}
                     </div>
-                  </Button>
+                  </button>
                 );
               })}
             </div>
@@ -358,7 +802,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
         </div>
       </div>
 
-      {/* Note Editor Drawer / Sheet */}
+      {/* ── Note Editor Sheet (keep Shadcn sheet for overlay behavior) ── */}
       <Sheet open={editorOpen} onOpenChange={handleEditorOpenChange}>
         <SheetPortal>
           <SheetOverlay className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" />
@@ -366,28 +810,67 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
             unstyled
             closeOnEscape={false}
             lockBodyScroll={false}
-            className={`fixed bottom-0 left-0 right-0 bg-card rounded-t-[2rem] z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-all duration-300 ${editorExpanded ? 'h-[95dvh]' : 'h-[85dvh]'}`}
+            className={`fixed bottom-0 left-0 right-0 rounded-t-[2rem] z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-all duration-300 ${editorExpanded ? 'h-[95dvh]' : 'h-[85dvh]'}`}
+            style={{ background: KT.card }}
           >
             <div className="flex flex-col h-full overflow-hidden relative pb-safe">
               {/* Drag indicator */}
               <div className="absolute top-0 left-0 right-0 h-8 flex items-center justify-center shrink-0">
-                <div className="w-12 h-1.5 bg-muted rounded-full" />
+                <div
+                  style={{
+                    width: 48,
+                    height: 6,
+                    background: KT.line2,
+                    borderRadius: 999,
+                  }}
+                />
               </div>
 
               {/* Editor Header */}
-              <div className="px-5 pt-8 pb-4 flex items-center justify-between border-b border-border shrink-0">
-                <div className="flex flex-col">
-                  <SheetTitle className="text-xl font-black text-foreground truncate max-w-[200px]">
+              <div
+                style={{
+                  padding: '32px 20px 16px',
+                  borderBottom: `1px solid ${KT.line}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <div>
+                  <SheetTitle
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      maxWidth: 200,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {title || t('notes.v2.page.editNote', { defaultValue: 'Edit Note' })}
                   </SheetTitle>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-1">
-                    {saveState === 'saving' && <Loader2 className="w-3 h-3 animate-spin" />}
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: KT.sub,
+                      letterSpacing: 0.5,
+                      marginTop: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontFamily: KT.font,
+                    }}
+                  >
+                    {saveState === 'saving' && <Loader2 size={10} className="animate-spin" />}
                     {saveState === 'saving'
-                      ? t('notes.v2.page.saveState.saving', { defaultValue: 'Saving...' })
+                      ? t('notes.v2.page.saveState.saving', { defaultValue: 'Saving…' })
                       : saveState === 'error'
                         ? t('notes.v2.page.saveState.error', { defaultValue: 'Save failed' })
                         : t('notes.v2.page.saveState.saved', { defaultValue: 'Saved' })}
-                  </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -451,7 +934,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                   <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
                     <p className="text-sm font-medium">
-                      {t('notes.v2.editor.loading', { defaultValue: 'Loading editor...' })}
+                      {t('notes.v2.editor.loading', { defaultValue: 'Loading editor…' })}
                     </p>
                   </div>
                 ) : (
@@ -498,7 +981,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                               value={editorDoc}
                               onChange={setEditorDoc}
                               placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
-                                defaultValue: 'Write your understanding...',
+                                defaultValue: 'Write your understanding…',
                               })}
                               preset="study"
                             />
@@ -517,7 +1000,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                           value={editorDoc}
                           onChange={setEditorDoc}
                           placeholder={t('notes.v2.page.editorPlaceholder', {
-                            defaultValue: 'Start writing your thoughts here...',
+                            defaultValue: 'Start writing your thoughts here…',
                           })}
                           preset="full"
                         />
@@ -530,6 +1013,6 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
           </SheetContent>
         </SheetPortal>
       </Sheet>
-    </div>
+    </PageShell>
   );
 };

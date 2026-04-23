@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   BookMarked,
   ChevronRight,
@@ -18,6 +19,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTopikExams } from '../hooks/useTopikExams';
 import { NOTE_PAGES, NoArgs, qRef, VOCAB } from '../utils/convexRefs';
+import { appendReturnToPath } from '../utils/navigation';
 
 type PracticeHubStat = {
   label: string;
@@ -54,8 +56,10 @@ const formatRelativeTime = (
 export default function PracticeHubPage() {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const currentPath = `${location.pathname}${location.search}`;
 
   const topikExams = useTopikExams();
   const reviewSummary = useQuery(VOCAB.getReviewSummary, user ? { savedByUserOnly: true } : 'skip');
@@ -269,7 +273,7 @@ export default function PracticeHubPage() {
               <Button
                 variant="ghost"
                 size="auto"
-                onClick={() => navigate('/topik')}
+                onClick={() => navigate(appendReturnToPath('/topik', currentPath))}
                 className="h-9 rounded-xl border border-border bg-card px-4 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm active:scale-95 transition-all"
               >
                 TOPIK
@@ -289,7 +293,7 @@ export default function PracticeHubPage() {
           {/* Redesigned Recommended Card */}
           <motion.button
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(recommendedPath)}
+            onClick={() => navigate(appendReturnToPath(recommendedPath, currentPath))}
             className="w-full relative overflow-hidden rounded-[2.5rem] border border-indigo-600/20 bg-indigo-600 p-8 text-left shadow-2xl shadow-indigo-200/50 dark:shadow-indigo-900/20 mb-10 flex flex-col items-start justify-between whitespace-normal"
           >
             {/* Decorative Orbs */}
@@ -351,7 +355,7 @@ export default function PracticeHubPage() {
             animate={!isMobile ? { opacity: 1, y: 0 } : false}
             transition={{ delay: 0.1 * idx }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(card.path)}
+            onClick={() => navigate(appendReturnToPath(card.path, currentPath))}
             className={cn(
               'group relative overflow-hidden rounded-[2.5rem] border border-border bg-card p-8 text-left transition-all duration-500 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-between',
               !isMobile && 'hover:flex-[1.25] h-full'

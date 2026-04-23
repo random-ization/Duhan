@@ -1,19 +1,20 @@
 import { Search, BookMarked } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { GrammarPointData } from '../../types';
 import { useTranslation } from 'react-i18next';
+import { GrammarPointData } from '../../types';
 import { getLocalizedContent } from '../../utils/languageUtils';
 import {
   sanitizeGrammarDisplayText,
   sanitizeGrammarMarkdown,
 } from '../../utils/grammarDisplaySanitizer';
-import MobileUnitChips from './MobileUnitChips';
-import MobileGrammarFeed from './MobileGrammarFeed';
-import MobileGrammarDetailSheet from './MobileGrammarDetailSheet';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { buildLearningPickerPath } from '../../utils/learningFlow';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import MobileUnitChips from './MobileUnitChips';
+import MobileGrammarFeed from './MobileGrammarFeed';
+import MobileGrammarDetailSheet from './MobileGrammarDetailSheet';
+import { KT, PageShell } from './ksoft/ksoft';
 
 interface MobileGrammarViewProps {
   readonly selectedUnit: number;
@@ -49,7 +50,7 @@ export default function MobileGrammarView({
   instituteId,
 }: MobileGrammarViewProps) {
   const { t, i18n } = useTranslation();
-  const language = (i18n.language || 'zh') as never;
+  const language = i18n.language || 'zh';
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const switchMaterialPath = buildLearningPickerPath('grammar');
@@ -60,31 +61,26 @@ export default function MobileGrammarView({
       navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
     navigate('/courses');
   };
 
-  // Filter grammar points based on search query
-  const filteredPoints = grammarPoints.filter(g => {
+  const filteredPoints = grammarPoints.filter(grammar => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     const title = sanitizeGrammarDisplayText(
-      getLocalizedContent(g as never, 'title', language) || g.title
+      getLocalizedContent(grammar, 'title', language) || grammar.title
     ).toLowerCase();
     const summary = sanitizeGrammarDisplayText(
-      getLocalizedContent(g as never, 'summary', language) || g.summary
+      getLocalizedContent(grammar, 'summary', language) || grammar.summary
     ).toLowerCase();
     const explanation = sanitizeGrammarMarkdown(
-      getLocalizedContent(g as never, 'explanation', language) || g.explanation
+      getLocalizedContent(grammar, 'explanation', language) || grammar.explanation
     ).toLowerCase();
     return title.includes(query) || summary.includes(query) || explanation.includes(query);
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-mobile-nav">
+    <PageShell>
       <MobileWorkspaceHeader
         title={t('nav.grammar', { defaultValue: 'Grammar Library' })}
         subtitle={t('grammar.mobileSubtitle', {
@@ -97,7 +93,13 @@ export default function MobileGrammarView({
           <button
             type="button"
             onClick={() => navigate(switchMaterialPath)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card text-slate-600 shadow-sm transition-all active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl transition-all active:scale-95"
+            style={{
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              color: KT.ink,
+              boxShadow: KT.shSm,
+            }}
             title={t('learningFlow.actions.switchMaterial', { defaultValue: 'Switch textbook' })}
             aria-label={t('learningFlow.actions.switchMaterial', {
               defaultValue: 'Switch textbook',
@@ -106,10 +108,13 @@ export default function MobileGrammarView({
             <BookMarked className="w-5 h-5" />
           </button>
         }
-        className="bg-white/80 border-slate-100"
+        className="border-transparent bg-transparent shadow-none"
       >
         <div className="relative group mb-3">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Search
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 transition-colors"
+            style={{ color: KT.sub }}
+          />
           <input
             id="mobile-grammar-search"
             name="grammarSearch"
@@ -117,7 +122,13 @@ export default function MobileGrammarView({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder={t('search', { defaultValue: 'Search patterns or usages...' })}
-            className="w-full h-12 bg-slate-100 border-transparent rounded-[1.25rem] pl-11 pr-4 text-sm font-bold text-slate-700 outline-none ring-2 ring-transparent focus:ring-indigo-500/10 focus:bg-white transition-all"
+            className="w-full h-12 rounded-[1.25rem] pl-11 pr-4 text-sm font-bold outline-none transition-all"
+            style={{
+              background: 'rgba(255,255,255,0.9)',
+              border: `1px solid ${KT.line}`,
+              color: KT.ink,
+              boxShadow: KT.shSm,
+            }}
           />
         </div>
 
@@ -128,8 +139,7 @@ export default function MobileGrammarView({
         />
       </MobileWorkspaceHeader>
 
-      {/* Feed Area */}
-      <main className="flex-1">
+      <main className="flex-1 pb-mobile-nav">
         <MobileGrammarFeed
           grammarPoints={filteredPoints}
           onSelect={onSelectGrammar}
@@ -138,13 +148,12 @@ export default function MobileGrammarView({
         />
       </main>
 
-      {/* Details (Overlay) */}
       <MobileGrammarDetailSheet
         grammar={selectedGrammar}
         onClose={() => onSelectGrammar(null)}
         onProficiencyUpdate={onProficiencyUpdate}
         instituteId={instituteId}
       />
-    </div>
+    </PageShell>
   );
 }

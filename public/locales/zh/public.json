@@ -891,7 +891,7 @@
     "placeholderPassword": "密码",
     "forgotPassword": "忘记密码?",
     "forgotPasswordDescription": "请输入邮箱，我们将向你发送密码重置链接。",
-    "loginButton": "开始游戏 (登录)",
+    "loginButton": "立即登录",
     "signupButton": "注册账户",
     "orContinue": "或通过以下方式继续",
     "noAccount": "还没有账号？",

@@ -19,6 +19,7 @@ import { trackEvent } from '../../utils/analytics';
 import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { getSubscriptionPageCopy } from '../../utils/subscriptionPageCopy';
 import { Button } from '../ui';
+import { KT } from './ksoft/ksoft';
 
 export const MobileSubscriptionPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -137,23 +138,33 @@ export const MobileSubscriptionPage: React.FC = () => {
 
   return (
     <div
-      className="relative min-h-[100dvh] bg-background flex flex-col pb-40 overflow-hidden"
+      className="relative min-h-[100dvh] flex flex-col pb-40 overflow-hidden"
       style={{
-        backgroundImage:
-          'radial-gradient(hsl(var(--border) / 0.62) 1px, transparent 1px), radial-gradient(hsl(var(--primary) / 0.08) 1px, transparent 1px)',
+        backgroundColor: KT.bg,
+        backgroundImage: `radial-gradient(${KT.line2} 1px, transparent 1px), radial-gradient(${KT.crimson}14 1px, transparent 1px)`,
         backgroundSize: '20px 20px, 40px 40px',
         backgroundPosition: '0 0, 10px 10px',
+        fontFamily: KT.font,
       }}
     >
-      <div className="pointer-events-none absolute -top-16 left-[-5rem] h-56 w-56 rounded-full bg-indigo-400/14 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 right-[-4rem] h-56 w-56 rounded-full bg-purple-400/12 blur-3xl" />
+      <div
+        className="pointer-events-none absolute -top-16 left-[-5rem] h-56 w-56 rounded-full blur-3xl"
+        style={{ background: `${KT.indigo}24` }}
+      />
+      <div
+        className="pointer-events-none absolute -bottom-20 right-[-4rem] h-56 w-56 rounded-full blur-3xl"
+        style={{ background: `${KT.pinkDeep}20` }}
+      />
       {/* Header */}
-      <header className="relative z-10 px-6 pt-6 pb-8 bg-card border-b">
+      <header
+        className="relative z-10 px-6 pt-6 pb-8"
+        style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
+      >
         <div className="flex justify-between items-center mb-6">
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(user ? '/profile' : '/')}
             className="p-2 -ml-2 text-muted-foreground hover:bg-secondary rounded-lg"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -166,13 +177,22 @@ export const MobileSubscriptionPage: React.FC = () => {
         </div>
 
         <div className="text-center">
-          <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary font-bold text-xs mb-4">
+          <span
+            className="inline-block py-1 px-3 rounded-full font-bold text-xs mb-4"
+            style={{ background: `${KT.crimson}18`, color: KT.crimson }}
+          >
             {pageCopy.heroBadge}
           </span>
-          <h1 className="text-3xl font-black text-foreground leading-tight mb-2 tracking-tight">
+          <h1
+            className="text-3xl font-black leading-tight mb-2 tracking-tight"
+            style={{ color: KT.ink }}
+          >
             {pageCopy.heroTitle}
           </h1>
-          <p className="text-muted-foreground font-medium text-sm leading-relaxed max-w-xs mx-auto">
+          <p
+            className="font-medium text-sm leading-relaxed max-w-xs mx-auto"
+            style={{ color: KT.sub }}
+          >
             {pageCopy.heroSubtitle}
           </p>
         </div>
@@ -265,7 +285,14 @@ export const MobileSubscriptionPage: React.FC = () => {
       </main>
 
       {/* 3. Sticky Pricing */}
-      <div className="fixed bottom-0 w-full bg-card border-t p-4 pb-safe z-50 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+      <div
+        className="fixed bottom-0 w-full p-4 pb-safe z-50 rounded-t-3xl"
+        style={{
+          background: KT.card,
+          borderTop: `1px solid ${KT.line}`,
+          boxShadow: KT.shLg,
+        }}
+      >
         <div className="flex bg-secondary p-1 rounded-2xl mb-4">
           <Button
             variant="ghost"

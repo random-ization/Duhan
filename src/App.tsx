@@ -10,6 +10,7 @@ import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { PostHogTracker } from './components/common/PostHogTracker';
 import { useUpdateLearningProgress } from './hooks/useUpdateLearningProgress';
+import { useDrainMutationQueueOnOnline } from './hooks/useOfflineMutation';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
 
@@ -32,6 +33,10 @@ function App() {
   const { user, language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
   const updateLearningProgress = useUpdateLearningProgress();
   const { selectedInstitute, selectedLevel } = useLearningSelection();
+
+  // Replay any FSRS / quiz / reading-heartbeat mutations that were queued
+  // offline — drains at mount and on every `online` event.
+  useDrainMutationQueueOnOnline();
 
   // Track learning progress when user changes institute/level
   useEffect(() => {
@@ -59,7 +64,7 @@ function App() {
     const connection = navWithConnection.connection;
     const pathname = globalThis.window.location.pathname;
     const inLearningArea =
-      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|practice|review|media|reading|vocab-book|topik|notebook|typing|dictionary)/.test(
+      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review|media|reading|vocab-book|topik|notebook|typing|dictionary)/.test(
         pathname
       );
 
@@ -78,7 +83,6 @@ function App() {
       void import('./pages/CoursesOverview');
       void import('./pages/CourseDashboard');
       void import('./pages/ModulePage');
-      void import('./pages/PracticeHubPage');
       void import('./pages/MediaHubPage');
     };
 

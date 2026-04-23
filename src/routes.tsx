@@ -35,7 +35,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
-const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
 const ReviewDashboardPage = lazy(() => import('./pages/ReviewDashboardPage'));
 const ReviewQuizPage = lazy(() => import('./pages/ReviewQuizPage'));
 const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
@@ -133,7 +132,9 @@ const LanguageAwareRoutes: React.FC = () => {
           element={withPageLoader(<LegalDocumentPage language={language} documentType="refund" />)}
         />
         <Route path="pricing" element={withPageLoader(<SubscriptionPage />)} />
+        <Route path="subscription" element={withPageLoader(<SubscriptionPage />)} />
         <Route path="pricing/details" element={withPageLoader(<PricingDetailsPage />)} />
+        <Route path="subscription/details" element={withPageLoader(<PricingDetailsPage />)} />
         <Route path="learn" element={withPageLoader(<LearnHubPage />)} />
         <Route path="learn/:guideSlug" element={withPageLoader(<LearnGuidePage />)} />
         <Route path="payment/success" element={withPageLoader(<PaymentSuccessPage />)} />
@@ -148,7 +149,7 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="dashboard/:moduleParam" element={<ModulePage />} />
             {/* Courses */}
             <Route path="courses" element={<CoursesOverview />} />
-            <Route path="practice" element={<PracticeHubPage />} />
+            <Route path="practice" element={<Navigate to={`/${language}/courses`} replace />} />
             <Route path="review" element={<ReviewDashboardPage />} />
             <Route path="review/quiz" element={<ReviewQuizPage />} />
             <Route path="media" element={<MediaHubPage />} />

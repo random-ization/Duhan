@@ -3,6 +3,8 @@ import { mutation, query } from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
 import { requireAdmin } from './utils';
 
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 // --- Queries ---
 
 export const listTexts = query({
@@ -220,28 +222,52 @@ export const getUserStats = query({
       return {
         totalTests: 0,
         averageWpm: 0,
+        averageAccuracy: 0,
         highestWpm: 0,
         totalTime: 0,
         recentWpm: [],
+        sessionsThisWeek: 0,
+        lastPracticeMode: null,
+        lastCategoryId: null,
+        latestAccuracy: null,
       };
     }
 
-    const totalTests = await ctx.db
-      .query('typing_records')
-      .withIndex('by_user', q => q.eq('userId', userRecord._id))
-      .collect()
-      .then(res => res.length);
+    const weekStart = Date.now() - ONE_WEEK_MS;
+
+    const [totalTests, recentWeeklyRecords] = await Promise.all([
+      ctx.db
+        .query('typing_records')
+        .withIndex('by_user', q => q.eq('userId', userRecord._id))
+        .collect()
+        .then(res => res.length),
+      ctx.db
+        .query('typing_records')
+        .withIndex('by_user_createdAt', q =>
+          q.eq('userId', userRecord._id).gte('createdAt', weekStart)
+        )
+        .collect(),
+    ]);
 
     const totalTime = records.reduce((acc, r) => acc + r.duration, 0);
     const highestWpm = Math.max(...records.map(r => r.wpm));
     const averageWpm = Math.round(records.reduce((acc, r) => acc + r.wpm, 0) / records.length);
+    const averageAccuracy = Math.round(
+      records.reduce((acc, r) => acc + r.accuracy, 0) / records.length
+    );
+    const latestRecord = records[0] ?? null;
 
     return {
       totalTests,
       averageWpm,
+      averageAccuracy,
       highestWpm,
       totalTime,
       recentWpm: records.slice(0, 10).map(r => ({ wpm: r.wpm, date: r.createdAt })),
+      sessionsThisWeek: recentWeeklyRecords.length,
+      lastPracticeMode: latestRecord?.practiceMode ?? null,
+      lastCategoryId: latestRecord?.categoryId ?? null,
+      latestAccuracy: latestRecord?.accuracy ?? null,
     };
   },
 });

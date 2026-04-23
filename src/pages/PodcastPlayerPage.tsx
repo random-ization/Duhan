@@ -4,8 +4,6 @@ import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'; 
 import { logInfo, logError } from '../utils/logger';
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
   Play,
   Pause,
   Repeat,
@@ -57,8 +55,9 @@ import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getEntitlementErrorData } from '../utils/entitlements';
 import { ENTITLEMENTS } from '../utils/convexRefs';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
-import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
 
 // Types
@@ -1568,8 +1567,9 @@ const PodcastPlayerPage: React.FC = () => {
   const copy = UI_COPY[uiLang];
   const translationLabel = useMemo(() => getLanguageLabel(language), [language]);
   const mockTranscript = useMemo(() => buildMockTranscript(copy), [copy]);
+  const isMobile = useIsMobile();
   const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/podcasts'),
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast')),
     [searchParams]
   );
 
@@ -1583,9 +1583,9 @@ const PodcastPlayerPage: React.FC = () => {
 
   useEffect(() => {
     if (!episode.audioUrl) {
-      navigate('/podcasts', { replace: true });
+      navigate(backPath, { replace: true });
     }
-  }, [episode, navigate]);
+  }, [backPath, episode, navigate]);
 
   // Refs
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -1627,7 +1627,6 @@ const PodcastPlayerPage: React.FC = () => {
 
   // Playlist State
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const [mobileInfoExpanded, setMobileInfoExpanded] = useState(false);
   const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const resumeCheckedRef = useRef<string | null>(null); // Track resume check to prevent override
@@ -1761,10 +1760,6 @@ const PodcastPlayerPage: React.FC = () => {
 
   useEffect(() => {
     setPlaybackUnlocked(false);
-  }, [episodeKey]);
-
-  useEffect(() => {
-    setMobileInfoExpanded(false);
   }, [episodeKey]);
 
   useEffect(() => {
@@ -2521,6 +2516,7 @@ const PodcastPlayerPage: React.FC = () => {
     if (newEpisode.guid) params.set('guid', newEpisode.guid);
     if (channel.title) params.set('channelTitle', channel.title);
     if (channel.artworkUrl) params.set('channelArtwork', channel.artworkUrl);
+    params.set('returnTo', backPath);
 
     // Navigate with both URL params and state (state for immediate use, params for refresh)
     navigate(`/podcasts/player?${params.toString()}`, {
@@ -2529,28 +2525,61 @@ const PodcastPlayerPage: React.FC = () => {
     });
   };
 
+  const activeTranscriptLine =
+    activeLineIndex >= 0
+      ? (transcript[activeLineIndex] ?? null)
+      : transcript.length > 0
+        ? transcript[0]
+        : null;
+  const subtitlePrimaryText = transcriptLoading
+    ? copy.generatingSmartSubtitle
+    : activeTranscriptLine?.text || copy.noSubtitleContent;
+  const subtitleSecondaryText = showTranslation
+    ? activeTranscriptLine?.translation || copy.noTranslation
+    : null;
+  const episodeBadgeNumber = (() => {
+    const match = episode.title.match(/(\d{1,3})/);
+    return match ? match[1] : '—';
+  })();
+
   return (
-    <div className="flex flex-col h-screen h-[100dvh] bg-muted text-foreground overflow-hidden font-sans">
-      <div className="md:hidden">
-        <MobileImmersiveHeader
-          title={episode.title}
-          subtitle={channel.title || episode.channelTitle}
-          onBack={() => navigate(backPath)}
-          backLabel={copy.back}
-          actions={
-            <Button
+    <div
+      className={`flex flex-col h-screen h-[100dvh] overflow-hidden font-sans ${
+        isMobile
+          ? 'bg-[linear-gradient(180deg,#5A7394_0%,#1F1B17_100%)] text-white'
+          : 'bg-muted text-foreground'
+      }`}
+    >
+      {isMobile ? (
+        <div className="px-5 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}>
+          <div className="flex items-center justify-between">
+            <button
               type="button"
-              variant="ghost"
-              size="auto"
+              onClick={() => navigate(backPath)}
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+              aria-label={copy.back}
+            >
+              <span className="text-lg leading-none">⌄</span>
+            </button>
+            <div className="text-center">
+              <div className="text-[10px] font-bold tracking-[0.2em] text-white/70">
+                지금 재생 중 · 今
+              </div>
+              <div className="mt-0.5 text-sm font-bold text-white/90 line-clamp-1 max-w-[56vw]">
+                {channel.title || episode.channelTitle}
+              </div>
+            </div>
+            <button
+              type="button"
               onClick={() => setShowPlaylist(true)}
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
               aria-label={copy.playlist}
             >
-              <ListMusic className="h-4 w-4" />
-            </Button>
-          }
-        />
-      </div>
+              <span className="text-lg leading-none">⋯</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Main Layout: Stack on Mobile, Split on Desktop */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
@@ -2620,17 +2649,179 @@ const PodcastPlayerPage: React.FC = () => {
         {/* Right Column: Transcript Stream */}
         <main
           ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth bg-muted/50 pb-[calc(var(--mobile-safe-bottom)+5.75rem)] md:pb-12 relative"
+          className={
+            isMobile
+              ? 'flex-1 overflow-y-auto overflow-x-hidden pb-[calc(var(--mobile-safe-bottom)+20px)]'
+              : 'flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-[calc(var(--mobile-safe-bottom)+5.75rem)] md:pb-12 relative bg-muted/50'
+          }
         >
-          {/* Auto-Scroll Floating Toggle */}
-          <div className="sticky top-3 right-0 z-20 flex justify-end px-3 md:px-4 pointer-events-none">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
-              onClick={() => setAutoScroll(!autoScroll)}
-              className={`
+          {isMobile ? (
+            <div className="px-5 pb-6">
+              <div className="relative overflow-hidden rounded-[1.8rem] border border-white/20 bg-[linear-gradient(135deg,rgba(197,122,110,0.9)_0%,rgba(247,232,184,0.72)_100%)] p-4 shadow-[0_28px_60px_rgba(0,0,0,0.32)]">
+                <div className="pointer-events-none absolute inset-0 opacity-20 [background:repeating-linear-gradient(45deg,transparent_0,transparent_14px,rgba(255,255,255,0.35)_14px,rgba(255,255,255,0.35)_15px)]" />
+                <div className="relative rounded-[1.3rem] border border-white/25 p-4">
+                  <div className="relative h-[250px] overflow-hidden rounded-[1rem] bg-[linear-gradient(140deg,rgba(31,27,23,0.2)_0%,rgba(31,27,23,0.45)_100%)]">
+                    <div className="absolute inset-0 [background:repeating-linear-gradient(45deg,transparent_0,transparent_12px,rgba(255,255,255,0.08)_12px,rgba(255,255,255,0.08)_13px)]" />
+                    <div className="absolute inset-[16px] rounded-2xl border border-white/30 p-4 text-white">
+                      <div className="font-serif text-base font-semibold tracking-[0.24em]">
+                        話 · HWA
+                      </div>
+                      <div className="mt-14">
+                        <div className="font-serif text-7xl font-semibold leading-[0.8] tracking-[-0.15em]">
+                          {episodeBadgeNumber}
+                        </div>
+                        <div className="mt-1 text-[10px] font-black tracking-[0.22em] text-white/80">
+                          EPISODE
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-1 pt-5">
+                <h1 className="line-clamp-2 text-[22px] font-black leading-tight tracking-[-0.02em] text-white">
+                  {episode.title}
+                </h1>
+                <p className="mt-1 text-xs font-semibold text-white/70">
+                  {channel.title || episode.channelTitle || 'Podcast'} ·{' '}
+                  {formatTime(Math.max(0, effectiveDuration))}
+                </p>
+              </div>
+
+              <div className="mt-4 rounded-[1.15rem] border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <div className="mb-2 text-[10px] font-black tracking-[0.16em] text-white/60">
+                  자막 · 이중 언어
+                </div>
+                <p className="text-[15px] font-semibold leading-relaxed text-white">
+                  {subtitlePrimaryText}
+                </p>
+                {subtitleSecondaryText ? (
+                  <p className="mt-2 text-sm leading-relaxed text-white/70">
+                    {subtitleSecondaryText}
+                  </p>
+                ) : null}
+                {showTranscriptLoader || isGeneratingTranscript ? (
+                  <p className="mt-2 text-xs font-semibold text-white/55">
+                    {copy.firstGenerationHint}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="mt-4">
+                <button
+                  type="button"
+                  className="relative h-5 w-full rounded-full bg-transparent"
+                  onClick={e => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pct = (e.clientX - rect.left) / rect.width;
+                    if (effectiveDuration > 0) {
+                      seekTo(Math.max(0, Math.min(1, pct)) * effectiveDuration);
+                    }
+                  }}
+                  aria-label={copy.seek}
+                >
+                  <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white/25" />
+                  <span
+                    className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </button>
+                <div className="mt-2 flex justify-between text-[10px] font-bold tracking-[0.08em] text-white/65">
+                  <span>{formatTime(safeCurrentTime)}</span>
+                  <span>-{formatTime(remainingTime)}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={changeSpeed}
+                  className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white"
+                  title={
+                    viewerAccess?.flags.mediaSpeedControl
+                      ? undefined
+                      : 'Upgrade to unlock playback speed control'
+                  }
+                >
+                  {speed}x
+                </button>
+                <button
+                  type="button"
+                  onClick={() => skip(-10)}
+                  className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+                  aria-label="Skip back 10 seconds"
+                >
+                  <SkipBack className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="grid h-[72px] w-[72px] place-items-center rounded-full bg-white text-[#1F1B17] shadow-[0_10px_28px_rgba(0,0,0,0.35)]"
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                >
+                  <PlayPauseIcon isPlaying={isPlaying} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => skip(10)}
+                  className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+                  aria-label="Skip forward 10 seconds"
+                >
+                  <SkipForward className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => skip(30)}
+                  className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white"
+                  aria-label="Skip forward 30 seconds"
+                >
+                  30s
+                </button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTranslation(current => !current)}
+                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                >
+                  字幕
+                </button>
+                <button
+                  type="button"
+                  onClick={changeSpeed}
+                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                >
+                  배속
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleLoop}
+                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                >
+                  구간반복
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleSubscription}
+                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                >
+                  단어장
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Auto-Scroll Floating Toggle */}
+              <div className="sticky top-3 right-0 z-20 flex justify-end px-3 md:px-4 pointer-events-none">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
+                  onClick={() => setAutoScroll(!autoScroll)}
+                  className={`
                                 pointer-events-auto flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-lg backdrop-blur-md border transition-all
                                 ${
                                   autoScroll
@@ -2638,242 +2829,168 @@ const PodcastPlayerPage: React.FC = () => {
                                     : 'bg-card/90 text-muted-foreground border-border hover:bg-muted'
                                 }
                             `}
-            >
-              <ListMusic className="w-4 h-4" />
-              <span className="hidden md:inline text-xs font-bold">
-                {autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
-              </span>
-            </Button>
-          </div>
-
-          <div className="max-w-3xl mx-auto p-3 md:p-8 lg:p-12 space-y-3 md:space-y-4">
-            <div className="md:hidden">
-              <Button
-                type="button"
-                variant="outline"
-                size="auto"
-                onClick={() => setMobileInfoExpanded(current => !current)}
-                className="w-full rounded-[1.75rem] border border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur-md !flex !items-center !justify-start !whitespace-normal"
-                aria-expanded={mobileInfoExpanded}
-                aria-label={mobileInfoExpanded ? copy.hideEpisodeTools : copy.showEpisodeTools}
-              >
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-muted shadow-sm">
-                  <img
-                    src={episodeArtwork}
-                    alt={copy.coverAlt}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 px-3 text-left">
-                  <p className="line-clamp-1 text-sm font-black leading-tight text-foreground">
-                    {episode.title}
-                  </p>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
-                    {channel.title || episode.channelTitle}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
-                  <span className="text-[11px] font-bold">
-                    {mobileInfoExpanded ? copy.hideEpisodeTools : copy.showEpisodeTools}
+                >
+                  <ListMusic className="w-4 h-4" />
+                  <span className="hidden md:inline text-xs font-bold">
+                    {autoScroll ? copy.autoScrollOn : copy.autoScrollOff}
                   </span>
-                  {mobileInfoExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </div>
-              </Button>
+                </Button>
+              </div>
 
-              {mobileInfoExpanded ? (
-                <div className="mt-3 rounded-[2rem] border border-border bg-card px-4 py-4 shadow-sm space-y-4">
-                  <div className="flex items-start gap-4">
-                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-[1.5rem] bg-muted shadow-sm">
-                      <img
-                        src={episodeArtwork}
-                        alt={copy.coverAlt}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <h1 className="text-lg font-black leading-tight text-foreground line-clamp-3">
-                        {episode.title}
-                      </h1>
-                      <p className="mt-2 text-sm font-semibold text-indigo-600 dark:text-indigo-300 line-clamp-2">
-                        {channel.title || episode.channelTitle}
-                      </p>
-                    </div>
-                  </div>
+              <div className="max-w-3xl mx-auto p-3 md:p-8 lg:p-12 space-y-3 md:space-y-4">
+                <TranscriptStreamBody
+                  showTranscriptLoader={showTranscriptLoader}
+                  isGeneratingTranscript={isGeneratingTranscript}
+                  transcriptError={transcriptError}
+                  transcriptLoading={transcriptLoading}
+                  transcript={transcript}
+                  activeLineIndex={activeLineIndex}
+                  currentTime={currentTime}
+                  showTranslation={showTranslation}
+                  copy={copy}
+                  onRetry={() => loadTranscriptChunked(true)}
+                  onSeek={seekTo}
+                  onAnalyze={analyze}
+                  formatTime={formatTime}
+                />
 
-                  <EpisodeUtilityControls
-                    mobile
-                    showTranslation={showTranslation}
-                    setShowTranslation={setShowTranslation}
-                    translationLabel={translationLabel}
-                    translationStatusLabel={translationStatusLabel}
-                    copy={copy}
-                    transcriptLoading={transcriptLoading}
-                    isGeneratingTranscript={isGeneratingTranscript}
-                    onRegenerate={() => setShowTranscriptResetConfirm(true)}
-                    onToggleSubscription={handleToggleSubscription}
-                    subscriptionPending={subscriptionPending}
-                    isSubscribed={isSubscribed}
-                    onShare={handleShareEpisode}
-                  />
-                </div>
-              ) : null}
-            </div>
-
-            <TranscriptStreamBody
-              showTranscriptLoader={showTranscriptLoader}
-              isGeneratingTranscript={isGeneratingTranscript}
-              transcriptError={transcriptError}
-              transcriptLoading={transcriptLoading}
-              transcript={transcript}
-              activeLineIndex={activeLineIndex}
-              currentTime={currentTime}
-              showTranslation={showTranslation}
-              copy={copy}
-              onRetry={() => loadTranscriptChunked(true)}
-              onSeek={seekTo}
-              onAnalyze={analyze}
-              formatTime={formatTime}
-            />
-
-            {/* Player Bar (Aligned with Transcript Width) */}
-            <div className="sticky bottom-mobile-safe z-30 pt-3 md:pt-6">
-              <div className="bg-card border border-border rounded-xl md:rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-3 md:px-6 py-2.5 md:py-3">
-                {/* Progress Slider */}
-                <div className="relative group mb-1 pt-1.5 md:pt-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full p-0 font-normal bg-transparent hover:bg-transparent"
-                    onClick={e => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const pct = (e.clientX - rect.left) / rect.width;
-                      if (effectiveDuration > 0) {
-                        seekTo(pct * effectiveDuration);
-                      }
-                    }}
-                  >
-                    <span className="sr-only">{copy.seek}</span>
-                  </Button>
-                  <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full relative"
-                      style={{ width: `${progressPercent}%` }}
-                    >
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-full shadow border-2 border-card scale-0 group-hover:scale-100 transition-transform" />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground font-medium mt-1 select-none">
-                    <span>{formatTime(safeCurrentTime)}</span>
-                    <span>-{formatTime(remainingTime)}</span>
-                  </div>
-                </div>
-
-                {/* Controls Row */}
-                <div className="flex items-center justify-between">
-                  {/* Left: Speed & Loop */}
-                  <div className="flex items-center gap-1.5 md:gap-2 flex-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={changeSpeed}
-                      className="text-[10px] font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-muted transition-colors w-8 h-auto disabled:opacity-60 disabled:cursor-pointer"
-                      title={
-                        viewerAccess?.flags.mediaSpeedControl
-                          ? undefined
-                          : 'Upgrade to unlock playback speed control'
-                      }
-                    >
-                      {speed}x
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleLoop}
-                      className={`flex items-center gap-1 px-1.5 md:px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
-                    >
-                      <Repeat className="w-3 h-3" />
-                      <span className="hidden sm:inline">{getAbLoopLabel()}</span>
-                    </Button>
-                  </div>
-
-                  {/* Center: Main Playback */}
-                  <div className="flex items-center gap-3 md:gap-4 flex-none">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => skip(-10)}
-                      className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
-                    >
-                      <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="icon"
-                      onClick={togglePlay}
-                      className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100 dark:hover:ring-indigo-300/35"
-                    >
-                      <PlayPauseIcon isPlaying={isPlaying} />
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => skip(10)}
-                      className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
-                    >
-                      <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
-                    </Button>
-                  </div>
-
-                  {/* Right: Tools / Volume */}
-                  <div className="flex items-center justify-end gap-2 md:gap-3 flex-1">
-                    <div className="hidden md:flex items-center gap-2 group w-20">
-                      <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      <Slider
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={volume}
-                        onChange={e => {
-                          const v = Number.parseFloat(e.target.value);
-                          setVolume(v);
-                          if (audioRef.current) audioRef.current.volume = v;
+                {/* Player Bar (Aligned with Transcript Width) */}
+                <div className="sticky bottom-mobile-safe z-30 pt-3 md:pt-6">
+                  <div className="bg-card border border-border rounded-xl md:rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)] px-3 md:px-6 py-2.5 md:py-3">
+                    {/* Progress Slider */}
+                    <div className="relative group mb-1 pt-1.5 md:pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -top-3 left-0 right-0 h-4 cursor-pointer z-10 w-full p-0 font-normal bg-transparent hover:bg-transparent"
+                        onClick={e => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const pct = (e.clientX - rect.left) / rect.width;
+                          if (effectiveDuration > 0) {
+                            seekTo(pct * effectiveDuration);
+                          }
                         }}
-                      />
+                      >
+                        <span className="sr-only">{copy.seek}</span>
+                      </Button>
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full relative"
+                          style={{ width: `${progressPercent}%` }}
+                        >
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-indigo-600 dark:bg-indigo-500 rounded-full shadow border-2 border-card scale-0 group-hover:scale-100 transition-transform" />
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground font-medium mt-1 select-none">
+                        <span>{formatTime(safeCurrentTime)}</span>
+                        <span>-{formatTime(remainingTime)}</span>
+                      </div>
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+
+                    {/* Controls Row */}
+                    <div className="flex items-center justify-between">
+                      {/* Left: Speed & Loop */}
+                      <div className="flex items-center gap-1.5 md:gap-2 flex-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={changeSpeed}
+                          className="text-[10px] font-bold text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-300 px-1.5 py-0.5 rounded hover:bg-muted transition-colors w-8 h-auto disabled:opacity-60 disabled:cursor-pointer"
+                          title={
+                            viewerAccess?.flags.mediaSpeedControl
+                              ? undefined
+                              : 'Upgrade to unlock playback speed control'
+                          }
+                        >
+                          {speed}x
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleLoop}
+                          className={`flex items-center gap-1 px-1.5 md:px-2 py-1 rounded-full text-[10px] font-bold transition-all ${getAbLoopClassName()}`}
+                        >
+                          <Repeat className="w-3 h-3" />
+                          <span className="hidden sm:inline">{getAbLoopLabel()}</span>
+                        </Button>
+                      </div>
+
+                      {/* Center: Main Playback */}
+                      <div className="flex items-center gap-3 md:gap-4 flex-none">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => setShowPlaylist(true)}
-                          aria-label={copy.playlist}
-                          className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15' : 'text-muted-foreground hover:text-muted-foreground'}`}
+                          onClick={() => skip(-10)}
+                          className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
                         >
-                          <ListMusic className="w-4 h-4" />
+                          <SkipBack className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipPortal>
-                        <TooltipContent side="top">{copy.playlist}</TooltipContent>
-                      </TooltipPortal>
-                    </Tooltip>
+
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="icon"
+                          onClick={togglePlay}
+                          className="w-10 h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:scale-105 transition-all active:scale-95 ring-2 ring-transparent hover:ring-indigo-100 dark:hover:ring-indigo-300/35"
+                        >
+                          <PlayPauseIcon isPlaying={isPlaying} />
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => skip(10)}
+                          className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground hover:text-muted-foreground transition-colors hover:scale-110"
+                        >
+                          <SkipForward className="w-5 h-5 md:w-6 md:h-6" strokeWidth={1.5} />
+                        </Button>
+                      </div>
+
+                      {/* Right: Tools / Volume */}
+                      <div className="flex items-center justify-end gap-2 md:gap-3 flex-1">
+                        <div className="hidden md:flex items-center gap-2 group w-20">
+                          <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Slider
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={volume}
+                            onChange={e => {
+                              const v = Number.parseFloat(e.target.value);
+                              setVolume(v);
+                              if (audioRef.current) audioRef.current.volume = v;
+                            }}
+                          />
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowPlaylist(true)}
+                              aria-label={copy.playlist}
+                              className={`p-1.5 rounded-lg transition-colors ${showPlaylist ? 'text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15' : 'text-muted-foreground hover:text-muted-foreground'}`}
+                            >
+                              <ListMusic className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipPortal>
+                            <TooltipContent side="top">{copy.playlist}</TooltipContent>
+                          </TooltipPortal>
+                        </Tooltip>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </main>
       </div>
 

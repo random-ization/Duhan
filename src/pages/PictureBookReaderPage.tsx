@@ -15,9 +15,11 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { READING_BOOKS, AI } from '../utils/convexRefs';
 import type { PictureBook, PictureBookPage } from '../types';
 import { cn } from '../lib/utils';
+import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { getSafeImageSrc, normalizePublicAssetUrl } from '../utils/imageSrc';
 import {
@@ -143,9 +145,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const { t } = useTranslation('public');
   const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
   const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), '/reading'),
-    [searchParams]
+    () =>
+      resolveSafeReturnTo(
+        searchParams.get('returnTo'),
+        isMobile ? buildMediaPath('reading') : '/reading'
+      ),
+    [isMobile, searchParams]
   );
   const sessionStorageKey = useMemo(() => buildPictureBookReaderSessionStorageKey(slug), [slug]);
   const persistedState = useMemo(

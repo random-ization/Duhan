@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { appendReturnToPath } from '../../utils/navigation';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
 import { Input } from '../ui';
@@ -49,7 +50,7 @@ export function GlobalCommandPalette() {
         id: 'practice',
         label: t('nav.practice', { defaultValue: 'Practice' }),
         description: t('practiceHub.subtitle', { defaultValue: 'TOPIK, typing and vocab drills' }),
-        path: '/practice',
+        path: '/review',
         keywords: ['topik', 'typing', 'vocab'],
       },
       {
@@ -135,7 +136,8 @@ export function GlobalCommandPalette() {
 
   const navigateToItem = (item: CommandItem) => {
     setOpenPath(null);
-    navigate(item.path);
+    const currentPathWithSearch = `${location.pathname}${location.search}`;
+    navigate(appendReturnToPath(item.path, currentPathWithSearch));
   };
 
   useEffect(() => {

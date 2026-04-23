@@ -262,7 +262,11 @@ const SidebarFooter = ({
           }}
         >
           <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-            {isDarkMode ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+            {isDarkMode ? (
+              <Moon size={16} aria-hidden="true" />
+            ) : (
+              <Sun size={16} aria-hidden="true" />
+            )}
           </span>
         </Button>
       </HoverTooltip>
@@ -285,9 +289,7 @@ const SidebarFooter = ({
           aria-label={
             pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
           }
-          title={
-            pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
-          }
+          title={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
           className={`rounded-lg py-2 text-[14px] font-medium transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
             collapsed ? 'h-11 w-11 rounded-xl p-0' : 'flex-1 px-3'
           }`}
@@ -517,17 +519,10 @@ function useSidebarNavItems(
         ],
       },
       {
-        path: '/practice',
+        path: '/review',
         label: t('sidebar.practice', { defaultValue: 'Practice' }),
         icon: Dumbbell,
-        activePrefixes: [
-          '/practice',
-          '/dashboard?view=practice',
-          '/review',
-          '/vocab-book',
-          '/notebook',
-          '/typing',
-        ],
+        activePrefixes: ['/review', '/vocab-book', '/notebook', '/typing'],
       },
       {
         path: '/topik',

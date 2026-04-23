@@ -112,7 +112,7 @@ export default function ReviewDashboardPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/practice')}
+              onClick={() => navigate('/courses')}
               className="rounded-full hover:bg-muted"
             >
               <ArrowLeft className="w-5 h-5" />

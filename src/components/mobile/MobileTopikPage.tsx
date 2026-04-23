@@ -1,27 +1,36 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  History,
-  BookOpen,
-  Headphones,
-  PenLine,
-  Clock,
-  HelpCircle,
-  PlayCircle,
-  RotateCcw,
-  Archive,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Clock, HelpCircle, PlayCircle, RotateCcw } from 'lucide-react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { qRef } from '../../utils/convexRefs';
+import { qRef, TOPIK } from '../../utils/convexRefs';
 import { ExamAttempt, TopikExam } from '../../types';
-import { clsx } from 'clsx';
-import { Button } from '../ui';
-import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
-import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
+import { formatTopikLabel } from '../../utils/topik';
+import { KT, Chip, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
+
+type FilterType = 'ALL' | 'READING' | 'LISTENING' | 'WRITING';
+const ONE_DAY_MS = 86400000;
+
+// exam type → K-Soft palette
+const TYPE_STYLE: Record<
+  FilterType,
+  {
+    bg: string;
+    fg: string;
+    hanja: string;
+    label: string;
+    chipTone: 'sky' | 'lilac' | 'pink' | 'muted';
+  }
+> = {
+  ALL: { bg: KT.bg2, fg: KT.sub, hanja: '全', label: 'All', chipTone: 'muted' },
+  READING: { bg: KT.sky, fg: KT.skyDeep, hanja: '讀', label: 'Read', chipTone: 'sky' },
+  LISTENING: { bg: KT.lilac, fg: KT.lilacDeep, hanja: '聽', label: 'Listen', chipTone: 'lilac' },
+  WRITING: { bg: KT.pink, fg: KT.pinkDeep, hanja: '述', label: 'Write', chipTone: 'pink' },
+};
 
 interface MobileTopikPageProps {
   onSelectExam: (examId: string) => void;
@@ -34,7 +43,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [filterType, setFilterType] = useState<'ALL' | 'READING' | 'LISTENING' | 'WRITING'>(() => {
+  const [filterType, setFilterType] = useState<FilterType>(() => {
     if (globalThis.window === undefined) return 'ALL';
     const saved = safeGetLocalStorageItem(filterStorageKey);
     if (saved === 'READING' || saved === 'LISTENING' || saved === 'WRITING') return saved;
@@ -51,16 +60,15 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
     user ? {} : 'skip'
   );
   const examHistory = examAttempts ?? [];
+  const upcomingExam = useQuery(TOPIK.getUpcoming, {});
+  const [now] = useState(() => Date.now());
 
-  const upcomingExam = useMemo(() => {
-    if (topikExams.length === 0) return null;
-    return [...topikExams].sort((a, b) => b.round - a.round)[0];
-  }, [topikExams]);
-
-  // Filter exams
   const filteredExams = topikExams.filter(exam => filterType === 'ALL' || exam.type === filterType);
+  const daysUntilUpcomingExam =
+    typeof upcomingExam?.scheduledAt === 'number'
+      ? Math.max(0, Math.ceil((upcomingExam.scheduledAt - now) / ONE_DAY_MS))
+      : null;
 
-  // Calculate stats
   const totalAttempts = examHistory.length;
   const avgScore =
     totalAttempts > 0
@@ -77,7 +85,6 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   }).length;
   const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
 
-  // Get best score for an exam
   const getBestScore = (examId: string) => {
     const attempts = examHistory.filter(a => a.examId === examId);
     if (attempts.length === 0) return null;
@@ -92,240 +99,387 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
   const handleBack = () => {
     const returnTo = searchParams.get('returnTo');
     if (hasSafeReturnTo(returnTo)) {
-      navigate(resolveSafeReturnTo(returnTo, '/practice'));
+      navigate(resolveSafeReturnTo(returnTo, '/courses'));
       return;
     }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/practice');
+    navigate('/courses');
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background pb-mobile-nav">
-      <MobileWorkspaceHeader
-        title={t('dashboard.topik.examCenter')}
-        subtitle={t('topik.mobileSubtitle', {
-          defaultValue: 'Choose a mock exam, track your scores, and keep your timing sharp.',
-        })}
-        eyebrow={t('nav.topik', { defaultValue: 'TOPIK' })}
-        onBack={handleBack}
-        backLabel={t('common.back', { defaultValue: 'Back' })}
-        actions={
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate('/topik/history')}
-            className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
-            aria-label={t('dashboard.topik.history', { defaultValue: 'History' })}
-          >
-            <History className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        }
+    <PageShell>
+      {/* ── Header ─────────────────────────────────── */}
+      <div
+        style={{
+          padding: '14px 22px 20px',
+          paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        }}
       >
-        <div className="rounded-xl bg-primary p-3 text-primary-foreground flex items-center gap-3">
-          <div className="rounded bg-primary-foreground/20 px-2.5 py-1 text-sm font-extrabold text-primary-foreground">
-            {upcomingExam
-              ? t('dashboard.topik.mobile.roundBadge', {
-                  round: upcomingExam.round,
-                  defaultValue: 'R{{round}}',
-                })
-              : t('dashboard.topik.mobile.roundBadgeFallback', { defaultValue: 'TOPIK' })}
-          </div>
-          <div className="text-xs">
-            <div className="font-medium text-primary-foreground/75">
-              {t('dashboard.topik.nextExam')}
+        {/* back */}
+        <button
+          type="button"
+          onClick={handleBack}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 16,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: KT.sub,
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: KT.font,
+          }}
+        >
+          ← {t('common.back', { defaultValue: 'Back' })}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 13,
+                color: KT.crimson,
+                letterSpacing: 4,
+                marginBottom: 4,
+                fontWeight: 500,
+              }}
+            >
+              試驗 · TOPIK
             </div>
-            <div className="font-bold">
-              {upcomingExam?.title ||
-                t('dashboard.topik.mobile.nextExamNameFallback', {
-                  defaultValue: 'TOPIK II',
-                })}
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: KT.ink,
+                letterSpacing: -0.6,
+              }}
+            >
+              {t('dashboard.topik.examCenter', { defaultValue: '모의고사' })}
+            </div>
+            <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
+              {t('topik.mobileSubtitle', {
+                defaultValue: 'Choose a mock exam and keep your timing sharp.',
+              })}
             </div>
           </div>
-        </div>
-      </MobileWorkspaceHeader>
 
-      {/* Filter Tabs */}
-      <div className="px-4 sm:px-5 py-3 flex gap-2 bg-card border-b border-border overflow-x-auto no-scrollbar">
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('ALL')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0',
-            filterType === 'ALL'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {t('dashboard.topik.all')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('READING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'READING'
-              ? 'bg-blue-600 text-white dark:bg-blue-400/30 dark:text-blue-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <BookOpen className="w-3 h-3" /> {t('dashboard.topik.reading')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('LISTENING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'LISTENING'
-              ? 'bg-violet-600 text-white dark:bg-violet-400/30 dark:text-violet-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <Headphones className="w-3 h-3" /> {t('dashboard.topik.listening')}
-        </Button>
-        <Button
-          variant="ghost"
-          size="auto"
-          onClick={() => setFilterType('WRITING')}
-          className={clsx(
-            'px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0',
-            filterType === 'WRITING'
-              ? 'bg-rose-600 text-white dark:bg-rose-400/30 dark:text-rose-100'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          <PenLine className="w-3 h-3" /> {t('dashboard.topik.writing')}
-        </Button>
-      </div>
-
-      {/* Stats Row */}
-      <div className="px-4 sm:px-5 py-3 grid grid-cols-3 gap-2">
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.avgScore')}
-          </div>
-          <div className="text-lg font-extrabold text-foreground">{avgScore}</div>
-        </div>
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.passRate')}
-          </div>
-          <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-300">
-            {passRate}%
-          </div>
-        </div>
-        <div className="min-w-0 bg-card rounded-lg border border-border p-3 text-center">
-          <div className="text-[11px] leading-tight text-muted-foreground font-medium line-clamp-2 min-h-[2rem]">
-            {t('dashboard.topik.total')}
-          </div>
-          <div className="text-lg font-extrabold text-foreground">{filteredExams.length}</div>
-        </div>
-      </div>
-
-      {/* Exam List (Compact Rows) */}
-      <div className="px-4 sm:px-5 space-y-2 pb-4">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
-          {t('dashboard.topik.availableExams')}
+          {/* history button */}
+          <button
+            type="button"
+            onClick={() =>
+              navigate(appendReturnToPath('/topik/history', searchParams.get('returnTo')))
+            }
+            aria-label={t('dashboard.topik.history', { defaultValue: 'History' })}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 14,
+              background: KT.card,
+              border: `1px solid ${KT.line2}`,
+              boxShadow: KT.shSm,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontFamily: KT.serif,
+              fontSize: 16,
+              color: KT.crimson,
+            }}
+          >
+            歷
+          </button>
         </div>
 
-        {filteredExams.length === 0 && (
-          <div className="text-center py-10">
-            <Archive className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground font-medium">{t('topikLobby.noExams')}</p>
+        {/* upcoming exam banner */}
+        {upcomingExam && (
+          <div
+            style={{
+              marginTop: 16,
+              borderRadius: 16,
+              background: `linear-gradient(135deg, ${KT.indigo} 0%, #4A5A8A 100%)`,
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+            }}
+          >
+            <HanjaSeal c="試" size={40} bg="rgba(255,255,255,0.15)" round={10} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'rgba(255,255,255,0.65)',
+                  letterSpacing: 1,
+                  marginBottom: 3,
+                }}
+              >
+                {t('dashboard.topik.nextExam', { defaultValue: 'UPCOMING' })} ·{' '}
+                {formatTopikLabel(upcomingExam.level)}
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: '#fff',
+                  lineHeight: 1.3,
+                }}
+              >
+                {upcomingExam.title}
+              </div>
+            </div>
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.18)',
+                borderRadius: 8,
+                padding: '5px 10px',
+                fontSize: 12,
+                fontWeight: 800,
+                color: '#fff',
+                flexShrink: 0,
+                fontFamily: KT.font,
+              }}
+            >
+              {daysUntilUpcomingExam === null
+                ? `R${upcomingExam.round}`
+                : `D-${daysUntilUpcomingExam}`}
+            </div>
           </div>
         )}
+      </div>
 
-        {filteredExams.map(exam => {
-          const bestScore = getBestScore(exam.id);
-          const isReading = exam.type === 'READING';
-          const isWriting = exam.type === 'WRITING';
-          const isListening = exam.type === 'LISTENING';
-
-          return (
-            <Button
-              variant="ghost"
-              size="auto"
-              key={exam.id}
-              onClick={() => onSelectExam(exam.id)}
-              className="w-full bg-card rounded-xl border border-border p-3 flex items-center gap-3 text-left active:bg-muted transition-colors"
+      {/* ── Stats Row ───────────────────────────────── */}
+      <div
+        style={{
+          padding: '0 18px 12px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 10,
+        }}
+      >
+        {[
+          {
+            k: '均',
+            label: t('dashboard.topik.avgScore', { defaultValue: '평균 점수' }),
+            value: `${avgScore}`,
+            color: KT.ink,
+          },
+          {
+            k: '率',
+            label: t('dashboard.topik.passRate', { defaultValue: '합격률' }),
+            value: `${passRate}%`,
+            color: KT.mintDeep,
+          },
+          {
+            k: '數',
+            label: t('dashboard.topik.total', { defaultValue: '총 시험' }),
+            value: `${filteredExams.length}`,
+            color: KT.ink,
+          },
+        ].map(s => (
+          <div
+            key={s.k}
+            style={{
+              background: KT.card,
+              borderRadius: 16,
+              boxShadow: KT.shSm,
+              padding: '14px 10px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: KT.serif,
+                fontSize: 14,
+                color: KT.crimson,
+                opacity: 0.8,
+                marginBottom: 4,
+              }}
             >
-              {/* Round Badge */}
-              <div
-                className={clsx(
-                  'w-10 h-10 rounded-lg flex items-center justify-center font-extrabold text-sm',
-                  isReading
-                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-400/14 dark:text-blue-200'
-                    : isWriting
-                      ? 'bg-rose-100 text-rose-600 dark:bg-rose-400/14 dark:text-rose-200'
-                      : 'bg-violet-100 text-violet-600 dark:bg-violet-400/14 dark:text-violet-200'
-                )}
-              >
-                {exam.round}
-              </div>
+              {s.k}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
+            <div
+              style={{
+                fontSize: 9,
+                color: KT.sub,
+                fontWeight: 600,
+                marginTop: 2,
+                fontFamily: KT.font,
+              }}
+            >
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-foreground text-sm line-clamp-2">{exam.title}</h3>
-                  <span
-                    className={clsx(
-                      'text-[9px] font-bold px-1 py-0.5 rounded',
-                      isReading
-                        ? 'bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200'
-                        : isWriting
-                          ? 'bg-rose-50 text-rose-600 dark:bg-rose-400/12 dark:text-rose-200'
-                          : 'bg-violet-50 text-violet-600 dark:bg-violet-400/12 dark:text-violet-200'
-                    )}
-                  >
-                    {isReading
-                      ? t('dashboard.topik.mobile.typeReadingShort', { defaultValue: 'READ' })
-                      : isListening
-                        ? t('dashboard.topik.mobile.typeListeningShort', { defaultValue: 'LIST' })
-                        : t('dashboard.topik.mobile.typeWritingShort', { defaultValue: 'WRITE' })}
-                  </span>
-                </div>
-                <div className="text-[10px] text-muted-foreground font-medium mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="flex items-center gap-0.5">
-                    <Clock className="w-3 h-3" />
-                    {t('dashboard.topik.mobile.minuteShort', {
-                      minutes: exam.timeLimit,
-                      defaultValue: '{{minutes}}m',
-                    })}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    <HelpCircle className="w-3 h-3" />
-                    {t('dashboard.topik.mobile.questionCountShort', {
-                      count: exam.questions?.length || 50,
-                      defaultValue: '{{count}}Q',
-                    })}
-                  </span>
-                  {bestScore !== null && (
-                    <span className="font-bold text-emerald-600 dark:text-emerald-300">
-                      {t('dashboard.topik.mobile.bestScore', {
-                        score: bestScore,
-                        defaultValue: '{{score}}%',
-                      })}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Icon */}
-              {bestScore !== null ? (
-                <RotateCcw className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <PlayCircle className="w-7 h-7 text-primary dark:text-primary-foreground" />
-              )}
-            </Button>
+      {/* ── Filter Tabs ─────────────────────────────── */}
+      <div
+        style={{
+          padding: '0 18px 14px',
+          display: 'flex',
+          gap: 8,
+          overflowX: 'auto',
+        }}
+      >
+        {(['ALL', 'READING', 'LISTENING', 'WRITING'] as FilterType[]).map(ft => {
+          const ts = TYPE_STYLE[ft];
+          const isActive = filterType === ft;
+          return (
+            <button
+              key={ft}
+              type="button"
+              onClick={() => setFilterType(ft)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '7px 14px',
+                borderRadius: 999,
+                background: isActive ? ts.bg : 'rgba(31,27,23,0.05)',
+                color: isActive ? ts.fg : KT.sub,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 800,
+                fontFamily: KT.font,
+                letterSpacing: 0.4,
+                flexShrink: 0,
+                transition: 'background 0.15s',
+              }}
+            >
+              <span style={{ fontFamily: KT.serif, fontSize: 13, fontWeight: 500 }}>
+                {ts.hanja}
+              </span>
+              {ts.label}
+            </button>
           );
         })}
       </div>
-    </div>
+
+      {/* ── Exam List ───────────────────────────────── */}
+      <div style={{ padding: '0 18px 24px' }}>
+        <SectionHead
+          kanji="錄"
+          title={t('dashboard.topik.availableExams', { defaultValue: '시험 목록' })}
+        />
+
+        {filteredExams.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: KT.sub }}>
+            <div style={{ fontFamily: KT.serif, fontSize: 32, marginBottom: 8, opacity: 0.3 }}>
+              無
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('topikLobby.noExams', { defaultValue: '시험이 없습니다' })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filteredExams.map(exam => {
+            const bestScore = getBestScore(exam.id);
+            const examType = (exam.type as FilterType) || 'READING';
+            const ts = TYPE_STYLE[examType] ?? TYPE_STYLE.READING;
+
+            return (
+              <button
+                key={exam.id}
+                type="button"
+                onClick={() => onSelectExam(exam.id)}
+                style={{
+                  width: '100%',
+                  background: KT.card,
+                  borderRadius: 20,
+                  boxShadow: KT.sh,
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  textAlign: 'left',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {/* Hanja type badge */}
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    background: ts.bg,
+                    color: ts.fg,
+                    fontFamily: KT.serif,
+                    fontSize: 20,
+                    fontWeight: 500,
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {ts.hanja}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: KT.ink,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '70%',
+                        display: 'block',
+                      }}
+                    >
+                      {exam.title}
+                    </span>
+                    <Chip tone={ts.chipTone}>{ts.label}</Chip>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      fontSize: 10,
+                      color: KT.sub,
+                      fontWeight: 600,
+                      fontFamily: KT.font,
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Clock size={10} />
+                      {exam.timeLimit}m
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <HelpCircle size={10} />
+                      {exam.questions?.length || 50}Q
+                    </span>
+                    {bestScore !== null && (
+                      <span style={{ color: KT.mintDeep, fontWeight: 800 }}>최고 {bestScore}%</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action */}
+                {bestScore !== null ? (
+                  <RotateCcw size={18} color={KT.sub} />
+                ) : (
+                  <PlayCircle size={26} color={KT.crimson} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </PageShell>
   );
 };
 

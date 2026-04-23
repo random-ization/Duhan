@@ -8,10 +8,6 @@
     "learn": "课程路径"
   },
   "media": {
-    "videoLeadTitle": "学习适合您水平的微课",
-    "videoLeadSubtitle": "根据难度筛选，收藏并学习最重要的知识片段。",
-    "podcastLeadTitle": "记录您的每一次进步点亮听力之光",
-    "podcastLeadSubtitle": "继续未播完的内容，订阅您最喜欢的频道。",
     "videoCountLabel": "{{count}} 节课程"
   },
   "podcast": {

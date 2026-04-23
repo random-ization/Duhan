@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { KT } from './ksoft/ksoft';
 
 interface ExquisiteProgressBarProps {
   readonly progress: number; // 0 to 100
@@ -20,18 +21,23 @@ export default function ExquisiteProgressBar({
   return (
     <div className={`relative w-full ${className}`} style={{ height }}>
       {/* Track Background */}
-      <div className="absolute inset-0 rounded-full bg-slate-200/50 dark:bg-slate-800/40 backdrop-blur-[1px]" />
+      <div
+        className="absolute inset-0 rounded-full backdrop-blur-[1px]"
+        style={{ background: `${KT.line2}88` }}
+      />
 
       {/* Progress Fill */}
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${percentage}%` }}
         transition={{ duration: 1, ease: 'easeOut' }}
-        className={`absolute inset-y-0 left-0 rounded-full overflow-visible transition-all duration-300 ${
-          isCompleted
-            ? 'bg-gradient-to-r from-emerald-400 to-green-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-            : 'bg-gradient-to-r from-indigo-400 via-blue-500 to-sky-400'
-        }`}
+        className="absolute inset-y-0 left-0 rounded-full overflow-visible transition-all duration-300"
+        style={{
+          background: isCompleted
+            ? `linear-gradient(90deg, ${KT.mintDeep} 0%, ${KT.jade} 100%)`
+            : `linear-gradient(90deg, ${KT.indigo} 0%, ${KT.skyDeep} 100%)`,
+          boxShadow: isCompleted ? `0 0 12px ${KT.mintDeep}66` : undefined,
+        }}
       >
         {/* Leading Glow Point */}
         {showGlow && percentage > 5 && (
@@ -45,9 +51,8 @@ export default function ExquisiteProgressBar({
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className={`absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full blur-[2px] ${
-              isCompleted ? 'bg-white' : 'bg-blue-200'
-            }`}
+            className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full blur-[2px]"
+            style={{ background: isCompleted ? KT.card : KT.sky }}
           />
         )}
       </motion.div>

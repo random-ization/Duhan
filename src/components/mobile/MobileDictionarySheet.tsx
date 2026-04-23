@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { BottomSheet } from '../common/BottomSheet';
 import { useTTS } from '../../hooks/useTTS';
 import { getLocalizedContent } from '../../utils/languageUtils';
-import { Button } from '../ui';
+import { KT } from './ksoft/ksoft';
 
-// Define types locally or import if shared (mocking for speed/self-containment)
 interface GrammarMatch {
   id: string;
   title: string;
@@ -47,7 +46,6 @@ export function MobileDictionarySheet({
   const { speak } = useTTS();
   const language = (i18n.language || 'zh') as never;
 
-  // Safety check for grammarMatches being undefined
   const safeGrammarMatches = useMemo(() => grammarMatches || [], [grammarMatches]);
 
   const handleSpeak = () => {
@@ -56,67 +54,165 @@ export function MobileDictionarySheet({
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} height="auto">
-      <div className="pb-8 space-y-6">
-        {/* Header Section: Word & Audio */}
-        <div className="flex items-start justify-between">
+      <div
+        style={{
+          paddingBottom: 28,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 18,
+          fontFamily: KT.font,
+        }}
+      >
+        {/* Header: Word & Audio */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-4xl font-black text-foreground tracking-tight">{word}</h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <h2
+                style={{
+                  fontSize: 38,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  letterSpacing: -1,
+                }}
+              >
+                {word}
+              </h2>
               {pronunciation && (
-                <span className="text-muted-foreground font-medium text-lg">[{pronunciation}]</span>
+                <span style={{ fontSize: 16, color: KT.sub, fontWeight: 500 }}>
+                  [{pronunciation}]
+                </span>
               )}
             </div>
             {lemma && lemma !== word && (
-              <div className="text-sm font-bold text-muted-foreground mt-1 flex items-center gap-1">
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: KT.sub,
+                  marginTop: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
                 <ArrowRight size={12} />
                 {t('mobileDictionarySheet.dictionaryForm', {
                   defaultValue: 'Dictionary form',
-                })}
-                : <span className="text-muted-foreground">{lemma}</span>
+                })}: <span style={{ color: KT.ink2 }}>{lemma}</span>
               </div>
             )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
             type="button"
             onClick={handleSpeak}
-            className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-foreground active:scale-95 transition-transform active:bg-muted"
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: '50%',
+              background: KT.bg2,
+              border: `1px solid ${KT.line}`,
+              color: KT.ink,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
           >
-            <Volume2 className="fill-current w-6 h-6" />
-          </Button>
+            <Volume2 size={22} fill="currentColor" />
+          </button>
         </div>
 
-        {/* Meaning Section */}
-        <div className="bg-muted rounded-2xl p-5 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <Book size={16} className="text-indigo-500" />
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        {/* Meaning */}
+        <div
+          style={{
+            background: KT.bg2,
+            borderRadius: 18,
+            padding: '16px 18px',
+            border: `1px solid ${KT.line}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <Book size={14} style={{ color: KT.crimson }} />
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: KT.sub,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+              }}
+            >
               {t('mobileDictionarySheet.definition', { defaultValue: 'Definition' })}
             </span>
           </div>
-          <p className="text-lg font-medium text-muted-foreground leading-relaxed">{meaning}</p>
+          <p style={{ fontSize: 16, fontWeight: 500, color: KT.ink2, lineHeight: 1.6 }}>
+            {meaning}
+          </p>
         </div>
 
-        {/* Grammar Section (If available) */}
+        {/* Related Grammar */}
         {safeGrammarMatches.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider pl-1">
+          <div>
+            <h3
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: KT.sub,
+                letterSpacing: 1.5,
+                textTransform: 'uppercase',
+                marginBottom: 10,
+                paddingLeft: 2,
+              }}
+            >
               {t('mobileDictionarySheet.relatedGrammar', { defaultValue: 'Related Grammar' })}
             </h3>
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {safeGrammarMatches.map(g => (
-                <div key={g.id} className="bg-card border border-border rounded-xl p-4 shadow-sm">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-foreground">
+                <div
+                  key={g.id}
+                  style={{
+                    background: KT.card,
+                    border: `1px solid ${KT.line}`,
+                    borderRadius: 14,
+                    padding: '12px 14px',
+                    boxShadow: KT.shSm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: 5,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: KT.ink, fontSize: 14 }}>
                       {getLocalizedContent(g as never, 'title', language) || g.title}
                     </span>
-                    <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background: KT.bg2,
+                        color: KT.sub,
+                        padding: '2px 8px',
+                        borderRadius: 8,
+                        flexShrink: 0,
+                        marginLeft: 8,
+                      }}
+                    >
                       {g.level}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-snug">
+                  <p style={{ fontSize: 13, color: KT.sub, lineHeight: 1.5 }}>
                     {getLocalizedContent(g as never, 'summary', language) || g.summary}
                   </p>
                 </div>
@@ -125,18 +221,33 @@ export function MobileDictionarySheet({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="pt-2">
-          <Button
-            variant="ghost"
-            size="auto"
+        {/* Save button */}
+        <div style={{ paddingTop: 4 }}>
+          <button
             type="button"
             onClick={onSave}
-            className="w-full h-14 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white rounded-[20px] font-bold text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            style={{
+              width: '100%',
+              height: 54,
+              background: KT.ink,
+              color: KT.bg,
+              borderRadius: 18,
+              border: 'none',
+              fontSize: 15,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              fontFamily: KT.font,
+              boxShadow: KT.sh,
+              letterSpacing: 0.3,
+            }}
           >
-            <Plus strokeWidth={3} size={20} />
+            <Plus size={18} strokeWidth={3} />
             {t('mobileDictionarySheet.saveToNotebook', { defaultValue: 'Save to Vocab' })}
-          </Button>
+          </button>
         </div>
       </div>
     </BottomSheet>
