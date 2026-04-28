@@ -732,8 +732,6 @@ export const MobileDashboard: React.FC<{
     (listeningsCompleted > 0 ? 1 : 0) +
     (examsCompleted > 0 ? 1 : 0);
   const step = Math.min(doneCount, path.length);
-  const done = path.slice(0, step);
-  const next = path[step] ?? null;
   const totalMin = path.reduce((s, x) => s + x.mins, 0);
   const streakDoneDays = Math.min(7, Math.max(0, streak % 7 || (streak > 0 ? 7 : 0)));
 
@@ -1316,202 +1314,250 @@ export const MobileDashboard: React.FC<{
       )}
 
       {/* TODAY'S PATH hero */}
-      <div style={{ padding: '0 18px', marginTop: -4 }}>
+      <div style={{ marginTop: 8 }}>
         <div
           style={{
-            background: KT.card,
-            borderRadius: 28,
-            boxShadow: KT.sh,
-            overflow: 'hidden',
+            padding: '0 18px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 14,
           }}
         >
-          <div
-            style={{
-              padding: '16px 20px 14px',
-              borderBottom: `1px solid ${KT.line}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <HanjaSeal c="道" size={28} bg={KT.crimson} round={6} />
-              <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: KT.ink,
-                    letterSpacing: -0.2,
-                  }}
-                >
-                  {copy.pathTitle}
-                </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: KT.sub,
-                    fontWeight: 600,
-                    letterSpacing: 0.5,
-                    marginTop: 1,
-                  }}
-                >
-                  {copy.pathSub} · {copy.minsShort(totalMin)}
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {path.map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i === step ? 18 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    background: i < step ? KT.mintDeep : i === step ? KT.ink : KT.line2,
-                    transition: 'all .3s',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {done.map(p => (
-            <div
-              key={p.key}
-              style={{
-                padding: '12px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                borderBottom: `1px solid ${KT.line}`,
-                opacity: 0.55,
-              }}
-            >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <HanjaSeal c="道" size={28} bg={KT.crimson} round={6} />
+            <div>
               <div
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  background: KT.mint,
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: KT.mintDeep,
                   fontSize: 14,
                   fontWeight: 800,
+                  color: KT.ink,
+                  letterSpacing: -0.2,
                 }}
               >
-                ✓
+                {copy.pathTitle}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: KT.sub,
+                  fontWeight: 600,
+                  letterSpacing: 0.5,
+                  marginTop: 1,
+                }}
+              >
+                {copy.pathSub} · {copy.minsShort(totalMin)}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {path.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === step ? 18 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: i < step ? KT.mintDeep : i === step ? KT.ink : KT.line2,
+                  transition: 'all .3s',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Carousel Container */}
+        <div
+          className="hide-scroll"
+          style={{
+            display: 'flex',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            overscrollBehaviorX: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            padding: '0 18px 24px',
+            scrollPaddingLeft: 18,
+            gap: 16,
+          }}
+        >
+          <style>{`
+            .hide-scroll::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+
+          {path.map((p, i) => {
+            const isDone = i < step;
+            const isCurrent = i === step;
+            const isFuture = i > step;
+
+            return (
+              <div
+                key={p.key}
+                style={{
+                  // 85% of viewport width max 340px, so next card peeks in
+                  minWidth: 'min(calc(100vw - 64px), 340px)',
+                  scrollSnapAlign: 'start',
+                  background: KT.card,
+                  borderRadius: 28,
+                  boxShadow: isDone ? 'none' : KT.sh,
+                  border: isDone ? `1px solid ${KT.line}` : 'none',
+                  overflow: 'hidden',
+                  opacity: isDone ? 0.6 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: KT.ink,
-                    textDecoration: 'line-through',
-                    textDecorationColor: KT.subLight,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    padding: '20px 20px',
+                    background: `linear-gradient(180deg, ${KT[p.tone as keyof typeof KT]}30 0%, ${KT.card} 70%)`,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
-                  {p.title}
-                </div>
-                <div style={{ fontSize: 11, color: KT.sub, marginTop: 1 }}>
-                  {p.kind} · {copy.minsShort(p.mins)} {copy.minsDone}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {next && (
-            <div
-              style={{
-                padding: '20px 20px 22px',
-                background: `linear-gradient(180deg, ${KT[next.tone as keyof typeof KT]}30 0%, ${KT.card} 70%)`,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 14,
-                  alignItems: 'flex-start',
-                  marginBottom: 16,
-                }}
-              >
-                <HanjaSeal
-                  c={next.kanji}
-                  size={52}
-                  bg={KT[`${next.tone}Deep` as keyof typeof KT] as string}
-                  round={12}
-                />
-                <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                    <Chip tone={next.tone}>
-                      {next.kind.toUpperCase()} · {next.en}
-                    </Chip>
-                    <span style={{ fontSize: 10, color: KT.sub, fontWeight: 700 }}>
-                      ≈ {copy.minsShort(next.mins)}
-                    </span>
-                  </div>
                   <div
                     style={{
-                      fontSize: 19,
-                      fontWeight: 800,
-                      color: KT.ink,
-                      lineHeight: 1.25,
-                      letterSpacing: -0.4,
+                      display: 'flex',
+                      gap: 14,
+                      alignItems: 'flex-start',
+                      marginBottom: 16,
+                      flex: 1,
                     }}
                   >
-                    {next.title}
+                    <HanjaSeal
+                      c={isDone ? '✓' : p.kanji}
+                      size={52}
+                      bg={isDone ? KT.mint : (KT[`${p.tone}Deep` as keyof typeof KT] as string)}
+                      round={12}
+                    />
+                    <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
+                      <div
+                        style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}
+                      >
+                        <Chip tone={isDone ? 'mint' : p.tone}>
+                          {isDone
+                            ? language.startsWith('zh')
+                              ? '完成 · DONE'
+                              : 'DONE'
+                            : `${p.kind.toUpperCase()} · ${p.en}`}
+                        </Chip>
+                        <span style={{ fontSize: 10, color: KT.sub, fontWeight: 700 }}>
+                          ≈ {copy.minsShort(p.mins)}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 19,
+                          fontWeight: 800,
+                          color: KT.ink,
+                          lineHeight: 1.25,
+                          letterSpacing: -0.4,
+                          textDecoration: isDone ? 'line-through' : 'none',
+                          textDecorationColor: KT.subLight,
+                        }}
+                      >
+                        {p.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: KT.sub, marginTop: 4 }}>{p.sub}</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: KT.sub, marginTop: 4 }}>{next.sub}</div>
+
+                  {/* Actions Area */}
+                  {!isDone ? (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={p.onStart}
+                        style={{
+                          width: '100%',
+                          padding: 16,
+                          borderRadius: 18,
+                          border: isFuture ? `1px solid ${KT.line}` : 'none',
+                          background: isCurrent ? KT.ink : KT.bg2,
+                          color: isCurrent ? KT.bg : KT.ink,
+                          fontSize: 15,
+                          fontWeight: 800,
+                          letterSpacing: 0.3,
+                          cursor: 'pointer',
+                          fontFamily: KT.font,
+                          boxShadow: isCurrent ? '0 4px 14px rgba(31,27,23,0.22)' : 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          marginTop: 'auto',
+                        }}
+                      >
+                        <span>
+                          {isCurrent
+                            ? copy.pathStart
+                            : language.startsWith('zh')
+                              ? '即将开始'
+                              : 'Up Next'}
+                        </span>
+                        <span style={{ fontFamily: KT.serif, opacity: 0.7, fontSize: 13 }}>
+                          {isCurrent
+                            ? language.startsWith('zh')
+                              ? '始'
+                              : '>'
+                            : language.startsWith('zh')
+                              ? '待'
+                              : '·'}
+                        </span>
+                        <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
+                      </button>
+
+                      {isCurrent && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            marginTop: 10,
+                            padding: '0 4px',
+                          }}
+                        >
+                          <button type="button" style={btnSub()}>
+                            {copy.pathSkip}
+                          </button>
+                          <button type="button" style={btnSub()}>
+                            {copy.pathLater}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        padding: 14,
+                        borderRadius: 18,
+                        background: KT.bg2,
+                        color: KT.sub,
+                        fontSize: 14,
+                        fontWeight: 800,
+                        letterSpacing: 0.3,
+                        fontFamily: KT.font,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        marginTop: 'auto',
+                      }}
+                    >
+                      <span style={{ opacity: 0.8 }}>
+                        {language.startsWith('zh') ? '已完成目标' : 'Goal Completed'}
+                      </span>
+                      <span style={{ marginLeft: 'auto', fontSize: 16, color: KT.mintDeep }}>
+                        ✓
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={next.onStart}
-                style={{
-                  width: '100%',
-                  padding: 16,
-                  borderRadius: 18,
-                  border: 'none',
-                  background: KT.ink,
-                  color: KT.bg,
-                  fontSize: 15,
-                  fontWeight: 800,
-                  letterSpacing: 0.3,
-                  cursor: 'pointer',
-                  fontFamily: KT.font,
-                  boxShadow: '0 4px 14px rgba(31,27,23,0.22)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <span>{copy.pathStart}</span>
-                <span style={{ fontFamily: KT.serif, opacity: 0.7, fontSize: 13 }}>始</span>
-                <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
-              </button>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: 10,
-                  padding: '0 4px',
-                }}
-              >
-                <button type="button" style={btnSub()}>
-                  {copy.pathSkip}
-                </button>
-                <button type="button" style={btnSub()}>
-                  {copy.pathLater}
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       </div>
 
