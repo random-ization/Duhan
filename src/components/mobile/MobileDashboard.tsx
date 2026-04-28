@@ -1237,7 +1237,7 @@ export const MobileDashboard: React.FC<{
       </div>
 
       {/* Resume card — one prominent "next best action" from recommendations engine. */}
-      {nextBestAction && (
+      {nextBestAction && nextBestAction.kind !== 'review_due_vocab' && (
         <div style={{ padding: '0 18px 14px' }}>
           <button
             type="button"
