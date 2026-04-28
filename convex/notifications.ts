@@ -36,7 +36,11 @@ export type NotificationKind =
   | 'exam_countdown'
   | 'partner_milestone'
   | 'achievement_unlocked'
-  | 'friend_activity';
+  | 'friend_activity'
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'group_invite'
+  | 'group_accepted';
 
 export type NotificationDto = {
   id: Id<'notifications'>;
@@ -54,7 +58,11 @@ const KIND_VALIDATOR = v.union(
   v.literal('exam_countdown'),
   v.literal('partner_milestone'),
   v.literal('achievement_unlocked'),
-  v.literal('friend_activity')
+  v.literal('friend_activity'),
+  v.literal('friend_request'),
+  v.literal('friend_accepted'),
+  v.literal('group_invite'),
+  v.literal('group_accepted')
 );
 
 type NotificationMetadata = Record<string, unknown>;

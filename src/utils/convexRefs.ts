@@ -890,6 +890,24 @@ export const NEWS = {
 };
 
 import type { CommunityActivityDto } from '../../convex/community';
+import type {
+  FriendSearchItemDto,
+  FriendShareLinkDto,
+  FriendSummaryDto,
+  SendByCodeResult,
+  FriendProfileDto,
+  FriendRequestDto,
+  SendRequestResult,
+  RespondRequestResult,
+} from '../../convex/friends';
+import type {
+  StudyGroupDto,
+  StudyGroupDetailDto,
+  StudyGroupInviteDto,
+  GroupLeaderboardEntry,
+  GroupActivityDto,
+} from '../../convex/groups';
+import type { LeagueMetaDto, LeagueEntryDto } from '../../convex/league';
 export const COMMUNITY = {
   getRecentFriendActivity: qRef<{ limit?: number }, CommunityActivityDto[]>(
     'community:getRecentFriendActivity'
@@ -901,6 +919,59 @@ export const COMMUNITY = {
     { activityId: Id<'learning_events'> },
     { liked: boolean; likeCount: number }
   >('community:unlikeActivity'),
+};
+
+export const FRIENDS = {
+  getMyShareLink: qRef<NoArgs, FriendShareLinkDto>('friends:getMyShareLink'),
+  getMyFriendSummary: qRef<NoArgs, FriendSummaryDto>('friends:getMyFriendSummary'),
+  searchUsers: qRef<{ query: string; limit?: number }, FriendSearchItemDto[]>(
+    'friends:searchUsers'
+  ),
+  sendRequestByCode: mRef<{ code: string }, SendByCodeResult>('friends:sendRequestByCode'),
+  regenerateMyFriendCode: mRef<NoArgs, FriendShareLinkDto>('friends:regenerateMyFriendCode'),
+  listFriends: qRef<NoArgs, FriendProfileDto[]>('friends:listFriends'),
+  listIncomingRequests: qRef<NoArgs, FriendRequestDto[]>('friends:listIncomingRequests'),
+  listOutgoingRequests: qRef<NoArgs, FriendRequestDto[]>('friends:listOutgoingRequests'),
+  sendRequest: mRef<{ targetUserId: Id<'users'> }, SendRequestResult>('friends:sendRequest'),
+  respondRequest: mRef<
+    { targetUserId: Id<'users'>; action: 'accept' | 'decline' },
+    RespondRequestResult
+  >('friends:respondRequest'),
+  cancelRequest: mRef<{ targetUserId: Id<'users'> }, { ok: boolean }>('friends:cancelRequest'),
+  removeFriend: mRef<{ targetUserId: Id<'users'> }, { ok: boolean }>('friends:removeFriend'),
+};
+
+export const GROUPS = {
+  listMine: qRef<NoArgs, StudyGroupDto[]>('groups:listMine'),
+  getDetail: qRef<{ groupId: Id<'study_groups'> }, StudyGroupDetailDto | null>('groups:getDetail'),
+  listIncomingInvites: qRef<NoArgs, StudyGroupInviteDto[]>('groups:listIncomingInvites'),
+  getWeeklyLeaderboard: qRef<{ groupId: Id<'study_groups'> }, GroupLeaderboardEntry[]>(
+    'groups:getWeeklyLeaderboard'
+  ),
+  getRecentActivity: qRef<{ groupId: Id<'study_groups'>; limit?: number }, GroupActivityDto[]>(
+    'groups:getRecentActivity'
+  ),
+  create: mRef<{ name: string; description?: string }, { groupId: Id<'study_groups'> }>(
+    'groups:create'
+  ),
+  invite: mRef<
+    { groupId: Id<'study_groups'>; targetUserId: Id<'users'> },
+    {
+      inviteId: Id<'study_group_invites'> | null;
+      status: 'sent' | 'already_member' | 'already_invited';
+    }
+  >('groups:invite'),
+  respondInvite: mRef<
+    { inviteId: Id<'study_group_invites'>; action: 'accept' | 'decline' },
+    { status: 'accepted' | 'declined' | 'not_found' | 'group_full' }
+  >('groups:respondInvite'),
+  leave: mRef<{ groupId: Id<'study_groups'> }, { ok: boolean }>('groups:leave'),
+};
+
+export const LEAGUE = {
+  getMyLeagueMeta: qRef<NoArgs, LeagueMetaDto | null>('league:getMyLeagueMeta'),
+  getMyLeagueBoard: qRef<{ limit?: number }, LeagueEntryDto[]>('league:getMyLeagueBoard'),
+  bootstrapMyMembership: mRef<NoArgs, { created: boolean }>('league:bootstrapMyMembership'),
 };
 
 import type { DailyChallengeClaimResult, DailyChallengeDto } from '../../convex/dailyChallenges';
@@ -933,14 +1004,14 @@ export type RecentAnnotation = {
 import type { NextBestAction } from '../../convex/recommendations';
 import type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
 import type { NotificationDto } from '../../convex/notifications';
-import type { LeaderboardEntry, MyRankResult } from '../../convex/leaderboard';
+import type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
 import type { PartnershipDto, ActivePartnershipDto } from '../../convex/partnerships';
 import type { SearchAllResult } from '../../convex/search';
 
 export type { NextBestAction, NextBestActionKind } from '../../convex/recommendations';
 export type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
 export type { NotificationDto, NotificationKind } from '../../convex/notifications';
-export type { LeaderboardEntry, MyRankResult } from '../../convex/leaderboard';
+export type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
 export type {
   PartnershipDto,
   ActivePartnershipDto,
@@ -948,6 +1019,24 @@ export type {
   PartnerProfileLite,
 } from '../../convex/partnerships';
 export type { SearchAllResult, SearchHit, SearchBucketKind } from '../../convex/search';
+export type {
+  FriendShareLinkDto,
+  FriendSearchItemDto,
+  FriendSummaryDto,
+  FriendProfileDto,
+  FriendRequestDto,
+  SendRequestResult,
+  RespondRequestResult,
+} from '../../convex/friends';
+export type {
+  StudyGroupDto,
+  StudyGroupDetailDto,
+  StudyGroupInviteDto,
+  StudyGroupMemberDto,
+  GroupLeaderboardEntry,
+  GroupActivityDto,
+} from '../../convex/groups';
+export type { LeagueMetaDto, LeagueEntryDto, LeagueTier } from '../../convex/league';
 
 export const RECOMMENDATIONS = {
   getNextBestAction: qRef<{ localHour?: number }, NextBestAction | null>(
@@ -976,6 +1065,7 @@ export const NOTIFICATIONS = {
 export const LEADERBOARD = {
   getWeeklyTop: qRef<{ limit?: number }, LeaderboardEntry[]>('leaderboard:getWeeklyTop'),
   getMyRank: qRef<NoArgs, MyRankResult>('leaderboard:getMyRank'),
+  getWeeklyOverview: qRef<NoArgs, WeeklyOverview>('leaderboard:getWeeklyOverview'),
 };
 
 export const SEARCH = {

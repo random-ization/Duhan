@@ -213,6 +213,10 @@ export const PageShell: React.FC<{
       color: KT.ink,
       fontFamily: KT.font,
       WebkitFontSmoothing: 'antialiased',
+      width: '100%',
+      maxWidth: '100vw',
+      overflowX: 'hidden',
+      position: 'relative',
     }}
   >
     {children}

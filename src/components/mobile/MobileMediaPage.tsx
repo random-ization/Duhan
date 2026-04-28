@@ -278,8 +278,8 @@ const VideoTab: React.FC<{
 
   return (
     <div
-      className="absolute inset-0 overflow-y-auto no-scrollbar px-[18px] pb-mobile-nav pt-4 animate-in fade-in slide-in-from-right-4 duration-300"
-      style={{ touchAction: 'pan-y' }}
+      className="h-full overflow-y-auto no-scrollbar px-[18px] pb-mobile-nav pt-4 animate-in fade-in slide-in-from-right-4 duration-300"
+      style={{ touchAction: 'pan-y', maxWidth: '100%', overflowX: 'hidden' }}
     >
       <div style={{ marginBottom: 14 }}>
         <div
@@ -737,8 +737,8 @@ const PodcastTab: React.FC<{
 
   return (
     <div
-      className="absolute inset-0 overflow-y-auto no-scrollbar px-[18px] pb-mobile-nav pt-4 animate-in fade-in slide-in-from-left-4 duration-300"
-      style={{ touchAction: 'pan-y' }}
+      className="h-full overflow-y-auto no-scrollbar px-[18px] pb-mobile-nav pt-4 animate-in fade-in slide-in-from-left-4 duration-300"
+      style={{ touchAction: 'pan-y', maxWidth: '100%', overflowX: 'hidden' }}
     >
       <div
         style={{
@@ -1356,6 +1356,9 @@ export const MobileMediaPage: React.FC = () => {
         background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
         color: KT.ink,
         fontFamily: KT.font,
+        width: '100%',
+        maxWidth: '100vw',
+        overflowX: 'hidden',
       }}
     >
       <header
@@ -1431,7 +1434,7 @@ export const MobileMediaPage: React.FC = () => {
       </div>
 
       {/* Content Container */}
-      <main className="flex-1 overflow-hidden relative z-0 w-full">
+      <main className="flex-1 min-h-0 overflow-hidden relative z-0 w-full">
         <PodcastTab active={activeTab === 'podcast'} user={user} language={language} />
         <VideoTab active={activeTab === 'video'} language={language} />
         {activeTab === 'reading' ? <MobileReadingDiscoveryView active /> : null}

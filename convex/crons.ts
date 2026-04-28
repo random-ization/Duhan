@@ -28,6 +28,10 @@ const sendExamCountdownMutation = makeFunctionReference<'mutation', EmptyArgs, u
   'notifications:sendExamCountdown'
 ) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
 
+const leagueSettleIfNeededMutation = makeFunctionReference<'mutation', EmptyArgs, unknown>(
+  'league:settleIfNeeded'
+) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
+
 const crons = cronJobs();
 
 // Low-frequency baseline polling:
@@ -75,6 +79,15 @@ crons.interval(
   'notifications_send_exam_countdown_daily',
   { minutes: 1440 },
   sendExamCountdownMutation,
+  {}
+);
+
+// League settlement (community v2): no-op except on the boundary day where
+// the previous ISO week hasn't been settled yet.
+crons.interval(
+  'league_settle_if_needed_daily',
+  { minutes: 1440 },
+  leagueSettleIfNeededMutation,
   {}
 );
 

@@ -23,12 +23,20 @@ type LearnTabKey = 'mine' | 'grammar' | 'vocabulary' | 'typing' | 'topik';
 type LearnTone = 'pink' | 'mint' | 'butter' | 'lilac';
 type LearnAction = { kind: 'module'; module: LearningFlowModule } | { kind: 'path'; path: string };
 type LearnTab = { key: LearnTabKey; label: string; action?: LearnAction };
+type VocabModeKey = 'flashcard' | 'test' | 'learn' | 'match';
 type LearnTool = {
   k: string;
   l: string;
   s: string;
   tone: LearnTone;
   action: LearnAction;
+};
+type VocabModeCard = {
+  key: VocabModeKey;
+  k: string;
+  l: string;
+  s: string;
+  tone: LearnTone;
 };
 type TypingStats = {
   totalTests: number;
@@ -62,6 +70,9 @@ type LearnCopy = {
   completed: string;
   toolsTitle: string;
   tools: LearnTool[];
+  vocabModesTitle: string;
+  vocabModes: VocabModeCard[];
+  vocabNoWords: string;
   unitLabel: string;
   levelBadge: string;
   defaultCourseTitle: string;
@@ -127,6 +138,46 @@ const buildLearnTools = (labels: {
   },
 ];
 
+const buildVocabModeCards = (labels: {
+  flashcard: string;
+  flashcardSub: string;
+  test: string;
+  testSub: string;
+  learn: string;
+  learnSub: string;
+  match: string;
+  matchSub: string;
+}): VocabModeCard[] => [
+  {
+    key: 'flashcard',
+    k: '閃',
+    l: labels.flashcard,
+    s: labels.flashcardSub,
+    tone: 'pink',
+  },
+  {
+    key: 'test',
+    k: '試',
+    l: labels.test,
+    s: labels.testSub,
+    tone: 'butter',
+  },
+  {
+    key: 'learn',
+    k: '學',
+    l: labels.learn,
+    s: labels.learnSub,
+    tone: 'mint',
+  },
+  {
+    key: 'match',
+    k: '配',
+    l: labels.match,
+    s: labels.matchSub,
+    tone: 'lilac',
+  },
+];
+
 const getCopy = (language: string): LearnCopy => {
   if (language.startsWith('zh')) {
     return {
@@ -158,6 +209,18 @@ const getCopy = (language: string): LearnCopy => {
         pronunciation: '发音练习',
         pronunciationSub: '跟读与辨音',
       }),
+      vocabModesTitle: '单词学习模式',
+      vocabModes: buildVocabModeCards({
+        flashcard: '闪卡',
+        flashcardSub: '翻卡记忆与 FSRS 复习',
+        test: '考试',
+        testSub: '限时测验与错题反馈',
+        learn: '学习',
+        learnSub: '选择、拼写和分批掌握',
+        match: '拼图',
+        matchSub: '配对游戏强化反应',
+      }),
+      vocabNoWords: '该单元暂无词汇',
       unitLabel: '单元',
       levelBadge: '级',
       defaultCourseTitle: 'TOPIK II 综合课程',
@@ -195,6 +258,18 @@ const getCopy = (language: string): LearnCopy => {
         pronunciation: 'Phát âm',
         pronunciationSub: 'Nghe mẫu và nhắc lại',
       }),
+      vocabModesTitle: 'Chế độ từ vựng',
+      vocabModes: buildVocabModeCards({
+        flashcard: 'Flashcard',
+        flashcardSub: 'Ôn nhớ với FSRS',
+        test: 'Kiểm tra',
+        testSub: 'Làm bài và xem lỗi sai',
+        learn: 'Học',
+        learnSub: 'Học theo từng nhóm nhỏ',
+        match: 'Ghép cặp',
+        matchSub: 'Luyện phản xạ qua trò chơi',
+      }),
+      vocabNoWords: 'Bài này chưa có từ vựng',
       unitLabel: 'Bài',
       levelBadge: 'Cấp',
       defaultCourseTitle: 'TOPIK II Tổng hợp',
@@ -232,6 +307,18 @@ const getCopy = (language: string): LearnCopy => {
         pronunciation: 'Дуудлага',
         pronunciationSub: 'Сонсоод даган хэлэх',
       }),
+      vocabModesTitle: 'Үгийн сангийн горим',
+      vocabModes: buildVocabModeCards({
+        flashcard: 'Карт',
+        flashcardSub: 'FSRS давтлага',
+        test: 'Шалгалт',
+        testSub: 'Алдаа шалгах сорил',
+        learn: 'Сурах',
+        learnSub: 'Бага багаар эзэмших',
+        match: 'Тааруулах',
+        matchSub: 'Тоглоомоор бататгах',
+      }),
+      vocabNoWords: 'Энэ нэгжид үг алга',
       unitLabel: 'Хичээл',
       levelBadge: 'Түв',
       defaultCourseTitle: 'TOPIK II Нэгтгэл',
@@ -268,6 +355,18 @@ const getCopy = (language: string): LearnCopy => {
       pronunciation: 'Pronunciation',
       pronunciationSub: 'Shadow native audio',
     }),
+    vocabModesTitle: 'Word study modes',
+    vocabModes: buildVocabModeCards({
+      flashcard: 'Flashcard',
+      flashcardSub: 'Flip cards with FSRS review',
+      test: 'Test',
+      testSub: 'Timed quiz with mistake feedback',
+      learn: 'Learn',
+      learnSub: 'Master words in focused batches',
+      match: 'Match',
+      matchSub: 'Pair words through a quick puzzle',
+    }),
+    vocabNoWords: 'No words in this unit yet',
     unitLabel: 'Unit',
     levelBadge: 'Lv',
     defaultCourseTitle: 'TOPIK II Grammar',
@@ -304,6 +403,16 @@ const BEAD_TONES: Array<'mint' | 'butter' | 'pink' | 'lilac' | 'sky'> = [
 ];
 
 const UNIT_HANJA = ['挨', '時', '若', '過', '傳', '新', '望', '道', '會', '旅'];
+
+const buildCourseVocabModePath = (
+  courseId: string,
+  mode: VocabModeKey,
+  unitNumber?: number
+): string => {
+  const params = new URLSearchParams({ mode });
+  if (typeof unitNumber === 'number') params.set('unit', String(unitNumber));
+  return `/course/${courseId}/vocab?${params.toString()}`;
+};
 
 const MobileCoursesOverview: React.FC = () => {
   const navigate = useLocalizedNavigate();
@@ -529,14 +638,15 @@ const MobileCoursesOverview: React.FC = () => {
       const level = resolveInstituteDefaultLevel(currentCourse);
       setSelectedInstitute(currentCourse.id);
       setSelectedLevel(level);
-      setRecentMaterial('vocabulary', {
+      const recentModule: LearningFlowModule = activeTab === 'grammar' ? 'grammar' : 'vocabulary';
+      setRecentMaterial(recentModule, {
         instituteId: currentCourse.id,
         level,
         unit: unitNumber,
         updatedAt: Date.now(),
       });
 
-      if (currentCourse.id === PRIORITY_COURSE_ID) {
+      if (currentCourse.id === PRIORITY_COURSE_ID && activeTab !== 'vocabulary') {
         navigate(`/course/${currentCourse.id}/grammar?focusUnit=${unitNumber}`);
         return;
       }
@@ -605,6 +715,36 @@ const MobileCoursesOverview: React.FC = () => {
           : `${copy.defaultCourseMeta} · ${copy.levelBadge} ${courseLevel}`;
   const showUnitJourney =
     activeTab === 'mine' || activeTab === 'grammar' || activeTab === 'vocabulary';
+  const showLearningTools = activeTab === 'mine' || activeTab === 'vocabulary';
+  const vocabModesDisabled = courseWords !== undefined && courseWords.length === 0;
+
+  const handleVocabModeOpen = useCallback(
+    (mode: VocabModeKey) => {
+      if (!currentCourse || vocabModesDisabled) return;
+
+      const level = resolveInstituteDefaultLevel(currentCourse);
+      setSelectedInstitute(currentCourse.id);
+      setSelectedLevel(level);
+      setRecentMaterial('vocabulary', {
+        instituteId: currentCourse.id,
+        level,
+        updatedAt: Date.now(),
+      });
+
+      const currentPath = `${location.pathname}${location.search}`;
+      navigate(appendReturnToPath(buildCourseVocabModePath(currentCourse.id, mode), currentPath));
+    },
+    [
+      currentCourse,
+      location.pathname,
+      location.search,
+      navigate,
+      setRecentMaterial,
+      setSelectedInstitute,
+      setSelectedLevel,
+      vocabModesDisabled,
+    ]
+  );
 
   return (
     <PageShell>
@@ -920,55 +1060,115 @@ const MobileCoursesOverview: React.FC = () => {
       )}
 
       {/* Learning tools grid */}
-      <div style={{ padding: '0 18px 28px' }}>
-        <SectionHead kanji="具" title={copy.toolsTitle} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {copy.tools.map((m, i) => {
-            const deepKey = `${m.tone}Deep` as keyof typeof KT;
-            const bg = (KT[deepKey] as string) || KT.ink;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => openLearnAction(m.action)}
-                style={{
-                  background: KT.card,
-                  padding: 16,
-                  borderRadius: 28,
-                  boxShadow: KT.sh,
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontFamily: KT.font,
-                }}
-              >
-                <HanjaSeal c={m.k} size={34} bg={bg} round={8} />
-                <div
+      {showLearningTools && (
+        <div style={{ padding: '0 18px 28px' }}>
+          <SectionHead kanji="具" title={copy.toolsTitle} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {copy.tools.map((m, i) => {
+              const deepKey = `${m.tone}Deep` as const;
+              const bg = KT[deepKey] || KT.ink;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => openLearnAction(m.action)}
                   style={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: KT.ink,
-                    marginTop: 12,
-                    letterSpacing: -0.2,
+                    background: KT.card,
+                    padding: 16,
+                    borderRadius: 28,
+                    boxShadow: KT.sh,
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: KT.font,
                   }}
                 >
-                  {m.l}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: KT.sub,
-                    marginTop: 2,
-                    fontWeight: 600,
-                  }}
-                >
-                  {m.s}
-                </div>
-              </button>
-            );
-          })}
+                  <HanjaSeal c={m.k} size={34} bg={bg} round={8} />
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      marginTop: 12,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {m.l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: KT.sub,
+                      marginTop: 2,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {m.s}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'vocabulary' && (
+        <div style={{ padding: '0 18px 28px' }}>
+          <SectionHead kanji="詞" title={copy.vocabModesTitle} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {copy.vocabModes.map(mode => {
+              const deepKey = `${mode.tone}Deep` as const;
+              const bg = KT[deepKey] || KT.ink;
+              return (
+                <button
+                  key={mode.key}
+                  type="button"
+                  disabled={vocabModesDisabled}
+                  onClick={() => handleVocabModeOpen(mode.key)}
+                  style={{
+                    background: KT.card,
+                    padding: 16,
+                    borderRadius: 28,
+                    boxShadow: KT.sh,
+                    border: `1px solid ${KT.line}`,
+                    cursor: vocabModesDisabled ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    fontFamily: KT.font,
+                    opacity: vocabModesDisabled ? 0.55 : 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <HanjaSeal c={mode.k} size={34} bg={bg} round={8} />
+                    <Chip tone={mode.tone}>{mode.key.toUpperCase()}</Chip>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      marginTop: 12,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {mode.l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: KT.sub,
+                      marginTop: 3,
+                      fontWeight: 600,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {vocabModesDisabled ? copy.vocabNoWords : mode.s}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {!user && (
         <div

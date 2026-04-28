@@ -589,7 +589,7 @@ export default function MobileGrammarDetailSheet({
   const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const dragStartY = useRef<number>(0);
   const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -624,6 +624,7 @@ export default function MobileGrammarDetailSheet({
     setPracticeSentence('');
     setAiFeedback(null);
     setShowConfetti(false);
+    setIsExpanded(true);
   }, [grammar?.id]);
 
   const handleCheck = async () => {
@@ -750,7 +751,7 @@ export default function MobileGrammarDetailSheet({
         <SheetContent
           unstyled
           closeOnEscape={false}
-          lockBodyScroll={false}
+          lockBodyScroll
           className={`fixed bottom-0 left-0 right-0 z-[61] flex flex-col overflow-hidden transition-[height] duration-300 ease-out ${
             isExpanded ? 'h-[92dvh]' : 'h-[56dvh]'
           }`}

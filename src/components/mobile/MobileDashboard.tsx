@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Id } from '../../../convex/_generated/dataModel';
 import type { CommunityActivityDto } from '../../../convex/community';
 import type { DailyChallengeDto } from '../../../convex/dailyChallenges';
+import type { FriendSearchItemDto } from '../../../convex/friends';
 import type { PartnershipDto } from '../../../convex/partnerships';
 import type { GrammarItemDto } from '../../../convex/grammars';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
@@ -13,6 +14,7 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import {
   COMMUNITY,
   DAILY_CHALLENGES,
+  FRIENDS,
   GRAMMARS,
   LEADERBOARD,
   NEWS,
@@ -20,7 +22,6 @@ import {
   PARTNERSHIPS,
   qRef,
   RECOMMENDATIONS,
-  VOCAB,
   type NextBestAction,
 } from '../../utils/convexRefs';
 import { buildMediaPath } from '../../utils/mediaRoutes';
@@ -89,7 +90,6 @@ type Copy = {
   minsShort: (n: number) => string;
   minsDone: string;
   achievementsTitle: string;
-  dailyPhraseTitle: string;
   communityTitle: string;
   communityAction: string;
   challengeBadge: string;
@@ -130,9 +130,8 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       minsShort: n => `${n}分`,
       minsDone: '完成',
       achievementsTitle: '今日成就',
-      dailyPhraseTitle: '今日片语',
       communityTitle: '学习伙伴',
-      communityAction: '社区',
+      communityAction: '全部',
       challengeBadge: '今日挑战',
       challengeTitle: '背完 10 个春天单词',
       challengeSub: '127 人参与中 · 你排名 24',
@@ -169,9 +168,8 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       minsShort: n => `${n} phút`,
       minsDone: 'hoàn thành',
       achievementsTitle: 'Thành tựu hôm nay',
-      dailyPhraseTitle: 'Câu nói hôm nay',
       communityTitle: 'Bạn học',
-      communityAction: 'Cộng đồng',
+      communityAction: 'Tất cả',
       challengeBadge: 'Thử thách hôm nay',
       challengeTitle: 'Nhớ 10 từ mùa xuân',
       challengeSub: '127 người đang tham gia · Bạn xếp 24',
@@ -208,9 +206,8 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       minsShort: n => `${n} мин`,
       minsDone: 'дууссан',
       achievementsTitle: 'Өнөөдрийн амжилт',
-      dailyPhraseTitle: 'Өнөөдрийн хэллэг',
       communityTitle: 'Сургалтын найзууд',
-      communityAction: 'Нийгэмлэг',
+      communityAction: 'Бүгд',
       challengeBadge: 'Өнөөдрийн сорилт',
       challengeTitle: '10 хаврын үг цээжлэх',
       challengeSub: '127 хүн оролцож байна · чиний зэрэг 24',
@@ -246,9 +243,8 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
     minsShort: n => `${n} min`,
     minsDone: 'done',
     achievementsTitle: "Today's wins",
-    dailyPhraseTitle: 'Phrase of the day',
     communityTitle: 'Study friends',
-    communityAction: 'Community',
+    communityAction: 'All',
     challengeBadge: "Today's challenge",
     challengeTitle: 'Memorize 10 spring words',
     challengeSub: '127 joined · You rank #24',
@@ -585,7 +581,6 @@ export const MobileDashboard: React.FC<{
     COMMUNITY.getRecentFriendActivity,
     user ? { limit: 3 } : 'skip'
   );
-  const dailyPhrase = useQuery(VOCAB.getDailyPhrase, { language });
   const dailyChallenge = useQuery(DAILY_CHALLENGES.getTodayChallenge, { language });
   // Freeze localHour for the lifetime of the component so re-renders
   // don't re-issue the recommendation query every minute.
@@ -594,9 +589,16 @@ export const MobileDashboard: React.FC<{
   const myRank = useQuery(LEADERBOARD.getMyRank, user ? {} : 'skip');
   const activePartnership = useQuery(PARTNERSHIPS.getActivePartnership, user ? {} : 'skip');
   const pendingPartnerships = useQuery(PARTNERSHIPS.listPending, user ? {} : 'skip');
+  const [friendSearchInput, setFriendSearchInput] = React.useState('');
+  const [friendSearchQuery, setFriendSearchQuery] = React.useState('');
+  const friendSearchResults = useQuery(
+    FRIENDS.searchUsers,
+    user && friendSearchQuery.length >= 2 ? { query: friendSearchQuery, limit: 6 } : 'skip'
+  );
   const likeCommunityActivity = useMutation(COMMUNITY.likeActivity);
   const unlikeCommunityActivity = useMutation(COMMUNITY.unlikeActivity);
   const claimDailyChallenge = useMutation(DAILY_CHALLENGES.claimReward);
+  const sendRequestByCodeMutation = useMutation(FRIENDS.sendRequestByCode);
   const invitePartnerMutation = useMutation(PARTNERSHIPS.invitePartner);
   const acceptPartnershipMutation = useMutation(PARTNERSHIPS.acceptPartnership);
   const declinePartnershipMutation = useMutation(PARTNERSHIPS.declinePartnership);
@@ -610,11 +612,21 @@ export const MobileDashboard: React.FC<{
   const [partnershipActionPending, setPartnershipActionPending] = React.useState<
     Record<string, boolean>
   >({});
+  const [friendSearchBusy, setFriendSearchBusy] = React.useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user?.id) return;
     void ensureUserFeed({ newsLimit: 3, articleLimit: 3 }).catch(() => undefined);
   }, [ensureUserFeed, user?.id]);
+
+  useEffect(() => {
+    const timeoutId = globalThis.setTimeout(() => {
+      setFriendSearchQuery(friendSearchInput.trim());
+    }, 250);
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [friendSearchInput]);
 
   const stats = userStats ?? EMPTY_LEARNER_STATS;
   const dueReviews = Math.max(
@@ -883,6 +895,124 @@ export const MobileDashboard: React.FC<{
       // Same as above — stale state; rely on reactive invalidation.
     } finally {
       setPartnershipActionPending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const friendLinkButtonCopy = {
+    addFriend: language.startsWith('zh')
+      ? '添加好友'
+      : language.startsWith('vi')
+        ? 'Thêm bạn'
+        : language.startsWith('mn')
+          ? 'Найз нэмэх'
+          : 'Add friend',
+    failed: language.startsWith('zh')
+      ? '操作失败，请稍后再试'
+      : language.startsWith('vi')
+        ? 'Thao tác thất bại, hãy thử lại'
+        : language.startsWith('mn')
+          ? 'Амжилтгүй боллоо, дахин оролдоно уу'
+          : 'Action failed. Please try again.',
+    codeLabel: language.startsWith('zh')
+      ? '好友码'
+      : language.startsWith('vi')
+        ? 'Mã bạn bè'
+        : language.startsWith('mn')
+          ? 'Найзын код'
+          : 'Friend code',
+    searchPlaceholder: language.startsWith('zh')
+      ? '输入昵称或好友码'
+      : language.startsWith('vi')
+        ? 'Nhập tên hoặc mã bạn bè'
+        : language.startsWith('mn')
+          ? 'Нэр эсвэл найзын код оруулна уу'
+          : 'Search by nickname or friend code',
+    searchHint: language.startsWith('zh')
+      ? '输入 2 个以上字符开始搜索'
+      : language.startsWith('vi')
+        ? 'Nhập ít nhất 2 ký tự để tìm kiếm'
+        : language.startsWith('mn')
+          ? 'Хайхын тулд 2+ тэмдэгт оруулна уу'
+          : 'Type at least 2 characters to search',
+    searchEmpty: language.startsWith('zh')
+      ? '未找到匹配用户'
+      : language.startsWith('vi')
+        ? 'Không tìm thấy người dùng phù hợp'
+        : language.startsWith('mn')
+          ? 'Тохирох хэрэглэгч олдсонгүй'
+          : 'No matching users found',
+    searchAdd: language.startsWith('zh')
+      ? '加好友'
+      : language.startsWith('vi')
+        ? 'Kết bạn'
+        : language.startsWith('mn')
+          ? 'Найз болгох'
+          : 'Add',
+    searchSent: language.startsWith('zh')
+      ? '已发送'
+      : language.startsWith('vi')
+        ? 'Đã gửi'
+        : language.startsWith('mn')
+          ? 'Илгээгдсэн'
+          : 'Sent',
+    searchAlready: language.startsWith('zh')
+      ? '已是好友'
+      : language.startsWith('vi')
+        ? 'Đã là bạn'
+        : language.startsWith('mn')
+          ? 'Аль хэдийн найз'
+          : 'Friends',
+    requestSentToast: language.startsWith('zh')
+      ? '好友请求已发送'
+      : language.startsWith('vi')
+        ? 'Đã gửi lời mời kết bạn'
+        : language.startsWith('mn')
+          ? 'Найзын хүсэлт илгээгдлээ'
+          : 'Friend request sent',
+  };
+
+  const handleAddFriendFromSearch = async (item: FriendSearchItemDto) => {
+    const key = String(item.userId);
+    if (friendSearchBusy[key]) return;
+    setFriendSearchBusy(prev => ({ ...prev, [key]: true }));
+    try {
+      const result = await sendRequestByCodeMutation({ code: item.friendCode });
+      if (result.status === 'sent') {
+        notify.success(friendLinkButtonCopy.requestSentToast);
+        return;
+      }
+      if (result.status === 'already_friends') {
+        notify.info(friendLinkButtonCopy.searchAlready);
+        return;
+      }
+      notify.info(friendLinkButtonCopy.searchSent);
+    } catch (error) {
+      const code = getConvexErrorCode(error);
+      if (code === 'SELF_ADD_NOT_ALLOWED') {
+        notify.error(
+          language.startsWith('zh')
+            ? '不能添加自己为好友'
+            : language.startsWith('vi')
+              ? 'Bạn không thể tự thêm chính mình'
+              : language.startsWith('mn')
+                ? 'Өөрийгөө найзаар нэмэх боломжгүй'
+                : 'You cannot add yourself'
+        );
+      } else if (code === 'INVALID_CODE' || code === 'TARGET_NOT_FOUND') {
+        notify.error(
+          language.startsWith('zh')
+            ? '好友码无效'
+            : language.startsWith('vi')
+              ? 'Mã bạn bè không hợp lệ'
+              : language.startsWith('mn')
+                ? 'Найзын код буруу байна'
+                : 'Invalid friend code'
+        );
+      } else {
+        notify.error(friendLinkButtonCopy.failed);
+      }
+    } finally {
+      setFriendSearchBusy(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -1911,68 +2041,212 @@ export const MobileDashboard: React.FC<{
         </div>
       )}
 
-      {dailyPhrase && (
-        <div style={{ padding: '20px 18px 0' }}>
-          <SectionHead kanji="日" title={copy.dailyPhraseTitle} />
+      <div style={{ padding: '24px 18px 20px' }}>
+        <SectionHead
+          kanji="會"
+          title={copy.communityTitle}
+          action={copy.communityAction}
+          onAction={() => navigate('/community')}
+        />
+        {user && (
           <div
             style={{
-              background: `linear-gradient(135deg, ${KT.butter}60 0%, ${KT.card} 70%)`,
-              borderRadius: 24,
-              padding: '18px 20px',
-              border: `1px solid ${KT.line}`,
-              boxShadow: KT.shSm,
-              position: 'relative',
-              overflow: 'hidden',
+              marginBottom: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
             }}
           >
-            <div
+            <button
+              type="button"
+              onClick={() => navigate('/community')}
               style={{
-                position: 'absolute',
-                right: 12,
-                top: 8,
-                fontFamily: KT.serif,
-                fontSize: 56,
-                color: 'rgba(162,59,46,0.08)',
-                lineHeight: 1,
-                pointerEvents: 'none',
+                height: 30,
+                borderRadius: 15,
+                border: `1px solid ${KT.line2}`,
+                padding: '0 12px',
+                background: KT.card,
+                color: KT.crimson,
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
               }}
             >
-              語
+              {friendLinkButtonCopy.addFriend}
+            </button>
+          </div>
+        )}
+        {user && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                value={friendSearchInput}
+                onChange={event => {
+                  setFriendSearchInput(event.target.value);
+                }}
+                placeholder={friendLinkButtonCopy.searchPlaceholder}
+                style={{
+                  flex: 1,
+                  height: 34,
+                  borderRadius: 12,
+                  border: `1px solid ${KT.line}`,
+                  background: KT.card,
+                  color: KT.ink,
+                  padding: '0 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  outline: 'none',
+                }}
+              />
             </div>
-            <div style={{ position: 'relative' }}>
+            {friendSearchInput.trim().length > 0 && friendSearchInput.trim().length < 2 && (
+              <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: KT.sub }}>
+                {friendLinkButtonCopy.searchHint}
+              </div>
+            )}
+            {friendSearchQuery.length >= 2 && (
               <div
                 style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: KT.ink,
-                  letterSpacing: -0.5,
-                  lineHeight: 1.2,
-                  marginBottom: 4,
+                  marginTop: 8,
+                  border: `1px solid ${KT.line}`,
+                  borderRadius: 14,
+                  background: KT.card,
+                  overflow: 'hidden',
                 }}
               >
-                {dailyPhrase.korean}
+                {friendSearchResults === undefined ? (
+                  <div
+                    style={{ padding: '10px 12px', fontSize: 12, color: KT.sub, fontWeight: 600 }}
+                  >
+                    {language.startsWith('zh')
+                      ? '搜索中...'
+                      : language.startsWith('vi')
+                        ? 'Đang tìm...'
+                        : language.startsWith('mn')
+                          ? 'Хайж байна...'
+                          : 'Searching...'}
+                  </div>
+                ) : friendSearchResults.length === 0 ? (
+                  <div
+                    style={{ padding: '10px 12px', fontSize: 12, color: KT.sub, fontWeight: 600 }}
+                  >
+                    {friendLinkButtonCopy.searchEmpty}
+                  </div>
+                ) : (
+                  friendSearchResults.map((item, index) => {
+                    const key = String(item.userId);
+                    const busy = !!friendSearchBusy[key];
+                    const disabled = busy || item.relation !== 'none';
+                    const buttonLabel =
+                      item.relation === 'already_friends'
+                        ? friendLinkButtonCopy.searchAlready
+                        : item.relation === 'already_requested'
+                          ? friendLinkButtonCopy.searchSent
+                          : friendLinkButtonCopy.searchAdd;
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 12px',
+                          borderBottom:
+                            index < friendSearchResults.length - 1
+                              ? `1px solid ${KT.line}`
+                              : 'none',
+                        }}
+                      >
+                        {item.avatarUrl ? (
+                          <img
+                            src={item.avatarUrl}
+                            alt={item.name}
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 10,
+                              objectFit: 'cover',
+                              border: `1px solid ${KT.line}`,
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: 10,
+                              background: `${KT.crimson}22`,
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: KT.crimson,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(item.name || '?').slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: KT.ink,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.name}
+                          </div>
+                          <div
+                            style={{ fontSize: 10, fontWeight: 700, color: KT.sub, marginTop: 1 }}
+                          >
+                            {friendLinkButtonCopy.codeLabel}: {item.friendCode}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            if (disabled) return;
+                            void handleAddFriendFromSearch(item);
+                          }}
+                          style={{
+                            height: 28,
+                            borderRadius: 14,
+                            border: `1px solid ${disabled ? KT.line : KT.line2}`,
+                            background: item.relation === 'none' ? 'transparent' : `${KT.butter}7A`,
+                            color: item.relation === 'none' ? KT.crimson : '#7A5F1F',
+                            padding: '0 10px',
+                            fontSize: 11,
+                            fontWeight: 800,
+                            cursor: disabled ? 'default' : 'pointer',
+                            opacity: busy ? 0.65 : 1,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy
+                            ? language.startsWith('zh')
+                              ? '发送中...'
+                              : language.startsWith('vi')
+                                ? 'Đang gửi...'
+                                : language.startsWith('mn')
+                                  ? 'Илгээж байна...'
+                                  : 'Sending...'
+                            : buttonLabel}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              {dailyPhrase.romanization && (
-                <div style={{ fontSize: 12, color: KT.sub, fontWeight: 600, marginBottom: 8 }}>
-                  [{dailyPhrase.romanization}]
-                </div>
-              )}
-              <div style={{ fontSize: 14, color: KT.ink2, fontWeight: 600, lineHeight: 1.5 }}>
-                {language.startsWith('zh')
-                  ? dailyPhrase.translationZh || dailyPhrase.translation
-                  : language.startsWith('vi')
-                    ? dailyPhrase.translationVi || dailyPhrase.translation
-                    : language.startsWith('mn')
-                      ? dailyPhrase.translationMn || dailyPhrase.translation
-                      : dailyPhrase.translation}
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-      )}
-
-      <div style={{ padding: '24px 18px 20px' }}>
-        <SectionHead kanji="會" title={copy.communityTitle} />
+        )}
         <div
           style={{
             background: KT.card,

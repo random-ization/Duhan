@@ -41,6 +41,25 @@ export type MyRankResult = {
   neighbours: LeaderboardEntry[];
 };
 
+export type WeeklyOverview = {
+  weekIdentifier: string;
+  weekEndsAt: number;
+  totalRanked: number;
+  myRank: number | null;
+  promotionCutoffRank: number;
+  leagueTierKey: 'gold';
+  leagueSeal: string;
+};
+
+const getCurrentIsoWeekEndsAt = (): number => {
+  const now = new Date();
+  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const isoDay = todayUtc.getUTCDay() || 7;
+  todayUtc.setUTCDate(todayUtc.getUTCDate() + (7 - isoDay));
+  todayUtc.setUTCHours(23, 59, 59, 999);
+  return todayUtc.getTime();
+};
+
 async function scanRankedStats(ctx: QueryCtx, weekIdentifier: string) {
   return ctx.db
     .query('user_xp_stats')
@@ -137,6 +156,26 @@ export const getMyRank = query({
       totalRanked: rows.length,
       myEntry,
       neighbours,
+    };
+  },
+});
+
+export const getWeeklyOverview = query({
+  args: {},
+  handler: async (ctx): Promise<WeeklyOverview> => {
+    const weekIdentifier = getCurrentWeekIdentifier();
+    const viewerId = await getOptionalAuthUserId(ctx);
+    const rows = await scanRankedStats(ctx, weekIdentifier);
+    const myIndex = viewerId ? rows.findIndex(row => row.userId === viewerId) : -1;
+
+    return {
+      weekIdentifier,
+      weekEndsAt: getCurrentIsoWeekEndsAt(),
+      totalRanked: rows.length,
+      myRank: myIndex >= 0 ? myIndex + 1 : null,
+      promotionCutoffRank: 10,
+      leagueTierKey: 'gold',
+      leagueSeal: '盟',
     };
   },
 });

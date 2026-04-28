@@ -15,10 +15,10 @@ import { TopikExam, Language } from '../../../types';
 import { MobileQuestionRenderer } from './MobileQuestionRenderer';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { BottomSheet } from '../../common/BottomSheet';
-import { Button } from '../../ui';
 import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
 import { normalizePublicAssetUrl } from '../../../utils/imageSrc';
 import { formatTopikLabel } from '../../../utils/topik';
+import { Chip, KT } from '../ksoft/ksoft';
 
 // --- Constants (Copied from ExamSession.tsx to ensure consistency) ---
 const TOPIK_READING_STRUCTURE: {
@@ -257,33 +257,50 @@ const ListeningAudioPanel: React.FC<ListeningAudioPanelProps> = ({
 }) => (
   <div
     className={clsx(
-      'w-[calc(100%-2rem)] max-w-md bg-primary dark:bg-primary/80 text-primary-foreground p-3 rounded-2xl shadow-lg mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
-      audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]',
-      audioError ? 'shadow-red-500/20' : 'shadow-primary/25'
+      'w-[calc(100%-2rem)] max-w-md mb-3 flex items-center gap-3 transition-transform duration-300 pointer-events-auto',
+      audioPlayerOpen ? 'translate-y-0' : 'translate-y-[150%]'
     )}
+    style={{
+      background: KT.ink,
+      color: KT.card,
+      padding: 12,
+      borderRadius: 22,
+      boxShadow: KT.shLg,
+      border: '1px solid rgba(255,255,255,0.1)',
+      fontFamily: KT.font,
+    }}
   >
-    <Button
-      variant="ghost"
-      size="auto"
+    <button
+      type="button"
       onClick={onToggleAudio}
       disabled={audioError}
-      className={clsx(
-        'w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform',
-        audioError
-          ? 'bg-red-500 dark:bg-red-400/75 opacity-50 cursor-not-allowed'
-          : 'bg-indigo-500 dark:bg-indigo-400/75'
-      )}
+      className="shrink-0 active:scale-95 transition-transform"
+      style={{
+        width: 42,
+        height: 42,
+        borderRadius: 999,
+        border: 'none',
+        display: 'grid',
+        placeItems: 'center',
+        background: audioError ? KT.crimson : KT.butter,
+        color: audioError ? KT.card : KT.ink,
+        opacity: audioError ? 0.55 : 1,
+        cursor: audioError ? 'not-allowed' : 'pointer',
+      }}
     >
       {audioError ? (
-        <X className="w-4 h-4 text-white" />
+        <X className="w-4 h-4" />
       ) : isPlaying ? (
-        <Pause className="w-4 h-4 fill-white ml-0.5" />
+        <Pause className="w-4 h-4 fill-current ml-0.5" />
       ) : (
-        <Play className="w-4 h-4 fill-white ml-0.5" />
+        <Play className="w-4 h-4 fill-current ml-0.5" />
       )}
-    </Button>
+    </button>
     <div className="flex-1 min-w-0">
-      <div className="text-[10px] text-muted-foreground font-bold uppercase mb-1">
+      <div
+        className="text-[10px] font-bold uppercase mb-1"
+        style={{ color: 'rgba(255,255,255,0.55)', letterSpacing: 1.2 }}
+      >
         {audioError
           ? t('dashboard.topik.mobile.session.audioError', { defaultValue: 'Audio Error' })
           : t('dashboard.topik.mobile.session.listeningAudio', {
@@ -291,17 +308,23 @@ const ListeningAudioPanel: React.FC<ListeningAudioPanelProps> = ({
             })}
       </div>
       {audioError ? (
-        <div className="text-xs text-red-300 dark:text-red-200 truncate">
+        <div className="text-xs truncate" style={{ color: KT.pink }}>
           {t('dashboard.topik.mobile.session.audioLoadFailed', {
             defaultValue: 'Failed to load audio file',
           })}
         </div>
       ) : (
-        <div className="h-1 bg-muted rounded-full overflow-hidden flex gap-0.5">
+        <div
+          className="h-1 rounded-full overflow-hidden flex gap-0.5"
+          style={{ background: 'rgba(255,255,255,0.14)' }}
+        >
           {isPlaying && (
-            <div className="h-full bg-indigo-400 dark:bg-indigo-300/85 w-full animate-[pulse_1s_ease-in-out_infinite]" />
+            <div
+              className="h-full w-full animate-[pulse_1s_ease-in-out_infinite]"
+              style={{ background: KT.butter }}
+            />
           )}
-          {!isPlaying && <div className="h-full bg-muted w-full" />}
+          {!isPlaying && <div className="h-full w-full" style={{ background: KT.line2 }} />}
         </div>
       )}
     </div>
@@ -327,46 +350,74 @@ const SessionNavigationBar: React.FC<SessionNavigationBarProps> = ({
 }) => {
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
   return (
-    <div className="w-full bg-card/90 backdrop-blur-md border-t border-border p-3 pb-mobile-safe flex gap-3 shadow-lg pointer-events-auto">
-      <Button
-        variant="ghost"
-        size="auto"
+    <div
+      className="w-full backdrop-blur-md p-3 pb-mobile-safe flex gap-3 pointer-events-auto"
+      style={{
+        background: `${KT.card}ee`,
+        borderTop: `1px solid ${KT.line}`,
+        boxShadow: '0 -12px 34px rgba(31,27,23,0.08)',
+        fontFamily: KT.font,
+      }}
+    >
+      <button
+        type="button"
         onClick={onPrev}
         disabled={currentQuestionIndex === 0}
-        className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground active:bg-muted transition-colors disabled:opacity-30 disabled:active:bg-muted"
+        className="w-14 h-14 flex items-center justify-center transition-colors disabled:opacity-30"
+        style={{
+          border: `1px solid ${KT.line}`,
+          borderRadius: 18,
+          background: KT.bg2,
+          color: KT.sub,
+        }}
       >
         <ChevronLeft className="w-6 h-6" />
-      </Button>
+      </button>
 
       <div className="flex-1 flex flex-col justify-center px-2">
-        <div className="bg-muted h-1.5 rounded-full overflow-hidden">
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: KT.bg2 }}>
           <div
-            className="bg-indigo-500 dark:bg-indigo-300/75 h-full transition-all duration-300"
-            style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
+            className="h-full transition-all duration-300"
+            style={{
+              width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`,
+              background: KT.crimson,
+            }}
           />
         </div>
       </div>
 
       {isLastQuestion ? (
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
+          type="button"
           onClick={onSubmit}
-          className="w-auto px-6 h-14 rounded-2xl bg-green-600 dark:bg-green-500/75 text-white font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          style={{
+            border: 'none',
+            borderRadius: 18,
+            background: KT.jade,
+            color: KT.card,
+            boxShadow: KT.sh,
+          }}
         >
           <span>{t('dashboard.topik.mobile.session.finish', { defaultValue: 'Finish' })}</span>
           <CheckCircle2 className="w-5 h-5" />
-        </Button>
+        </button>
       ) : (
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
+          type="button"
           onClick={onNext}
-          className="w-auto px-6 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-400/75 text-white font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-auto px-6 h-14 font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          style={{
+            border: 'none',
+            borderRadius: 18,
+            background: KT.ink,
+            color: KT.card,
+            boxShadow: KT.sh,
+          }}
         >
           <span>{t('dashboard.topik.mobile.session.next', { defaultValue: 'Next' })}</span>
           <ChevronRight className="w-5 h-5" />
-        </Button>
+        </button>
       )}
     </div>
   );
@@ -460,7 +511,16 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
   const answeredCount = Object.keys(userAnswers).length;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-muted overflow-hidden relative">
+    <div
+      className="flex flex-col h-[100dvh] overflow-hidden relative"
+      style={{
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+        color: KT.ink,
+        fontFamily: KT.font,
+        width: '100%',
+        maxWidth: '100vw',
+      }}
+    >
       <BottomSheet
         isOpen={gridOpen}
         onClose={() => setGridOpen(false)}
@@ -470,8 +530,11 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         })}
       >
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
-            <p className="text-xs font-semibold text-muted-foreground">
+          <div
+            className="rounded-2xl px-4 py-3"
+            style={{ border: `1px solid ${KT.line}`, background: KT.bg2 }}
+          >
+            <p className="text-xs font-semibold" style={{ color: KT.sub }}>
               {t('dashboard.topik.mobile.session.answeredCount', {
                 current: answeredCount,
                 total: exam.questions.length,
@@ -485,26 +548,23 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
               const answered = userAnswers[idx] !== undefined;
               const active = idx === currentQuestionIndex;
               return (
-                <Button
-                  variant="ghost"
-                  size="auto"
+                <button
                   type="button"
                   key={`${question.id}-${idx}`}
                   onClick={() => {
                     setCurrentQuestionIndex(idx);
                     setGridOpen(false);
                   }}
-                  className={clsx(
-                    'h-11 rounded-xl text-sm font-black border transition-colors',
-                    active
-                      ? 'bg-indigo-600 dark:bg-indigo-400/75 text-white border-indigo-600'
-                      : answered
-                        ? 'bg-emerald-50 dark:bg-emerald-500/12 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-300/25'
-                        : 'bg-card text-muted-foreground border-border'
-                  )}
+                  className="h-11 rounded-xl text-sm font-black border transition-colors"
+                  style={{
+                    background: active ? KT.ink : answered ? KT.mint : KT.card,
+                    borderColor: active ? KT.ink : answered ? KT.mintDeep : KT.line,
+                    color: active ? KT.card : answered ? KT.jade : KT.sub,
+                    fontFamily: KT.font,
+                  }}
                 >
                   {question.number || idx + 1}
-                </Button>
+                </button>
               );
             })}
           </div>
@@ -524,29 +584,34 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         backIcon={<X className="h-4 w-4 text-foreground" />}
         status={
           <div
-            className={clsx(
-              'flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-black shadow-sm',
-              timeLeft < 300
-                ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-300/20 dark:bg-red-400/10 dark:text-red-200'
-                : 'border-border bg-card text-foreground'
-            )}
+            className="flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-sm font-black shadow-sm"
+            style={{
+              borderColor: timeLeft < 300 ? KT.pinkDeep : KT.line,
+              background: timeLeft < 300 ? KT.pink : KT.card,
+              color: timeLeft < 300 ? KT.crimson : KT.ink,
+            }}
           >
             <Clock className="h-3.5 w-3.5" />
             <span>{formatDuration(timeLeft)}</span>
           </div>
         }
         actions={
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
+            type="button"
             onClick={() => setGridOpen(true)}
-            className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm dark:border-indigo-300/20 dark:bg-indigo-400/14 dark:text-indigo-200"
+            className="rounded-2xl border px-3 py-2 text-xs font-bold shadow-sm"
+            style={{
+              borderColor: KT.line,
+              background: KT.card,
+              color: KT.ink,
+              fontFamily: KT.font,
+            }}
           >
             <span className="text-sm">
               {currentQuestionIndex + 1}/{exam.questions.length}
             </span>
             <Grid3x3 className="ml-2 h-4 w-4" />
-          </Button>
+          </button>
         }
       />
 
@@ -554,18 +619,25 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
       <div className="flex-1 relative flex flex-col overflow-hidden">
         {/* Split View: Top Passage Pane */}
         {isPassageView && (
-          <div className="h-[40%] bg-amber-50 dark:bg-amber-400/10 border-b-2 border-amber-100 dark:border-amber-300/20 flex flex-col shadow-sm relative z-20">
-            <div className="px-4 py-2 border-b border-amber-100/50 dark:border-amber-300/20 flex justify-between items-center bg-amber-50/90 dark:bg-amber-400/10 backdrop-blur-sm sticky top-0 z-20">
-              <span className="bg-amber-100 dark:bg-amber-400/16 text-amber-800 dark:text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-300/25">
+          <div
+            className="h-[40%] flex flex-col shadow-sm relative z-20"
+            style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
+          >
+            <div
+              className="px-4 py-2 flex justify-between items-center backdrop-blur-sm sticky top-0 z-20"
+              style={{ borderBottom: `1px solid ${KT.line}`, background: `${KT.card}ee` }}
+            >
+              <Chip tone="butter">
                 {t('dashboard.topik.mobile.session.passageFor', {
                   start: section?.range[0] ?? 1,
                   end: section?.range[1] ?? 1,
                   defaultValue: 'Passage for Q{{start}}-{{end}}',
                 })}
-              </span>
+              </Chip>
             </div>
             <div
-              className="p-5 font-serif text-muted-foreground leading-8 overflow-y-auto overscroll-contain pb-8 text-base whitespace-pre-line break-keep text-justify"
+              className="p-5 font-serif leading-8 overflow-y-auto overscroll-contain pb-8 text-base whitespace-pre-line break-keep text-justify"
+              style={{ color: KT.ink2 }}
               dangerouslySetInnerHTML={{ __html: sanitize(sharedPassage || '') }}
             />
           </div>
@@ -573,10 +645,8 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
 
         {/* Question Pane */}
         <div
-          className={clsx(
-            'flex-1 bg-muted overflow-y-auto w-full',
-            isPassageView ? 'h-[60%]' : 'h-full'
-          )}
+          className={clsx('flex-1 overflow-y-auto w-full', isPassageView ? 'h-[60%]' : 'h-full')}
+          style={{ background: KT.bg }}
         >
           <div className="p-4 md:p-6 pb-32 max-w-2xl mx-auto w-full min-h-full">
             {currentQuestion && (

@@ -9,6 +9,7 @@ import { ConfirmDialogProvider } from './ConfirmDialogContext';
 import { NotebookPickerProvider } from './NotebookPickerContext';
 import { ConvexBoundAuthProvider } from './ConvexBoundAuthProvider';
 import { LearningProgressTracker } from './LearningProgressTracker';
+import { LearningProvider } from './LearningContext';
 import { getConvexUrl } from '../utils/convexConfig';
 
 /**
@@ -73,11 +74,13 @@ const AuthedAppProviders: React.FC<{ children: React.ReactNode }> = ({ children 
             <NotebookPickerProvider>
               <ConfirmDialogProvider>
                 <LayoutProvider>
-                  {/* Side-effect-only; syncs selected institute/level to the
-                      backend on change. Must sit inside ConvexBoundAuthProvider
-                      so `useMutation` can resolve the Convex client. */}
-                  <LearningProgressTracker />
-                  {children}
+                  <LearningProvider>
+                    {/* Side-effect-only; syncs selected institute/level to the
+                        backend on change. Must sit inside ConvexBoundAuthProvider
+                        so `useMutation` can resolve the Convex client. */}
+                    <LearningProgressTracker />
+                    {children}
+                  </LearningProvider>
                 </LayoutProvider>
               </ConfirmDialogProvider>
             </NotebookPickerProvider>

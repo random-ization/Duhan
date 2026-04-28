@@ -67,6 +67,7 @@ export interface ExtendedVocabItem extends VocabularyItem {
 
 type ViewMode = 'flashcard' | 'match';
 type TabId = ViewMode | 'learn' | 'test';
+type VocabModeParam = TabId;
 type SessionMode = 'FLASHCARD' | 'LEARN' | 'TEST';
 type LevelConfig = { level: number; units: number };
 type ViewState = {
@@ -125,6 +126,16 @@ type ResumeCandidate = {
 };
 
 const fallbackString = (value: string | undefined, fallback: string): string => value ?? fallback;
+
+const isVocabModeParam = (value: string | null): value is VocabModeParam =>
+  value === 'flashcard' || value === 'test' || value === 'learn' || value === 'match';
+
+const toSessionMode = (mode: VocabModeParam): SessionMode | null => {
+  if (mode === 'flashcard') return 'FLASHCARD';
+  if (mode === 'learn') return 'LEARN';
+  if (mode === 'test') return 'TEST';
+  return null;
+};
 
 const getReviewDeckArgs = (instituteId: string | undefined) =>
   instituteId ? { courseId: instituteId } : ('skip' as const);
@@ -320,6 +331,8 @@ function VocabModulePage() {
   const isMobile = useIsMobile();
   const labels = getLabels(language);
   const initialUnitFromQuery = Number(searchParams.get('unit'));
+  const rawModeParam = searchParams.get('mode');
+  const requestedMode: VocabModeParam | null = isVocabModeParam(rawModeParam) ? rawModeParam : null;
   const initialSelectedUnitId: number | 'ALL' =
     Number.isFinite(initialUnitFromQuery) && initialUnitFromQuery > 0
       ? Math.floor(initialUnitFromQuery)
@@ -337,7 +350,7 @@ function VocabModulePage() {
   // State - Merged related states for better performance
   const [selectedUnitId, setSelectedUnitId] = useState<number | 'ALL'>(initialSelectedUnitId);
   const [viewState, setViewState] = useState({
-    mode: 'flashcard' as ViewMode,
+    mode: (requestedMode === 'match' ? 'match' : 'flashcard') as ViewMode,
     cardIndex: 0,
     isFlipped: false,
     flashcardComplete: false,
@@ -374,6 +387,7 @@ function VocabModulePage() {
   const latestLearnSnapshotRef = useRef<LearningSessionSnapshot | null>(null);
   const latestFlashcardSnapshotRef = useRef<FlashcardSessionSnapshot | null>(null);
   const latestTestSnapshotRef = useRef<VocabTestSessionSnapshot | null>(null);
+  const autoOpenedModeRef = useRef<string | null>(null);
 
   const selectedSessionUnitId = normalizeUnitForSession(selectedUnitId);
 
@@ -941,6 +955,30 @@ function VocabModulePage() {
     ]
   );
 
+  useEffect(() => {
+    if (!requestedMode || isMobile) return;
+
+    const autoOpenKey = `${selectedSessionUnitId}:${requestedMode}`;
+    if (autoOpenedModeRef.current === autoOpenKey) return;
+    autoOpenedModeRef.current = autoOpenKey;
+
+    if (requestedMode === 'match') {
+      const timeoutId = globalThis.window.setTimeout(() => {
+        setLearnOpen(false);
+        setTestOpen(false);
+        setViewState(prev => ({ ...prev, mode: 'match' }));
+      }, 0);
+      return () => globalThis.window.clearTimeout(timeoutId);
+    }
+
+    const sessionMode = toSessionMode(requestedMode);
+    if (!sessionMode) return;
+    const timeoutId = globalThis.window.setTimeout(() => {
+      void requestOpenSessionMode(sessionMode);
+    }, 0);
+    return () => globalThis.window.clearTimeout(timeoutId);
+  }, [isMobile, requestedMode, requestOpenSessionMode, selectedSessionUnitId]);
+
   const requestUnitSwitch = useCallback(
     (nextUnit: number | 'ALL') => {
       if (nextUnit === selectedUnitId) {
@@ -1152,6 +1190,7 @@ function VocabModulePage() {
         instituteId={instituteId || ''}
         language={language}
         userId={user?.id}
+        initialMode={requestedMode ?? undefined}
         onRequestTestMode={requestFreshVocabTestAttempt}
       />
     );

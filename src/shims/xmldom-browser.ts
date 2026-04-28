@@ -22,8 +22,7 @@ export const XMLSerializer: typeof globalThis.XMLSerializer = globalThis.XMLSeri
 // `DOMImplementation` isn't a browser global — it's accessed via
 // `document.implementation`. epubjs doesn't import it, but some
 // transitive deep-import might, so we provide a matching shape.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const DOMImplementation: any =
+export const DOMImplementation: unknown =
   typeof document !== 'undefined' ? document.implementation : undefined;
 
 export default {

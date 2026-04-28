@@ -27,6 +27,7 @@ import {
   loadPictureBookReaderSessionState,
   persistPictureBookReaderSessionState,
 } from '../utils/readingSession';
+import { KT } from '../components/mobile/ksoft/ksoft';
 
 type BookPageQuery = {
   book: PictureBook;
@@ -790,25 +791,47 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   };
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1820px] flex-col overflow-hidden px-1 py-1 sm:px-3 lg:px-4">
+    <div
+      className="mx-auto flex h-full min-h-0 w-full max-w-[1820px] flex-col overflow-hidden px-1 py-1 sm:px-3 lg:px-4"
+      style={
+        isMobile
+          ? {
+              background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+              fontFamily: KT.font,
+            }
+          : undefined
+      }
+    >
       {/* ─── MOBILE LAYOUT (hidden on lg+) ─── */}
-      <div className="flex lg:hidden flex-col h-full min-h-0 overflow-hidden rounded-[2rem] border border-[#dbe5f2] bg-white relative">
+      <div
+        className="flex lg:hidden flex-col h-full min-h-0 overflow-hidden relative"
+        style={{ background: KT.bg, color: KT.ink }}
+      >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-3 border-b border-slate-100">
+        <div
+          className="shrink-0 flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-3 border-b"
+          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.92)' }}
+        >
           <Button
             type="button"
             variant="outline"
             size="icon"
             onClick={() => navigate(backPath)}
-            className="h-10 w-10 shrink-0 rounded-full border-slate-200"
+            className="h-10 w-10 shrink-0 rounded-2xl"
+            style={{ borderColor: KT.line, background: KT.card, boxShadow: KT.shSm }}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0 text-right flex-1">
-            <div className="truncate text-[10px] font-black uppercase tracking-widest text-slate-500">
-              {t('nav.reading', { defaultValue: 'Reading' })}
+            <div
+              className="truncate text-[10px] font-black uppercase tracking-widest"
+              style={{ color: KT.crimson, fontFamily: KT.serif }}
+            >
+              讀 · READING
             </div>
-            <div className="truncate text-sm font-black text-slate-800">{displayBook.title}</div>
+            <div className="truncate text-sm font-black" style={{ color: KT.ink }}>
+              {displayBook.title}
+            </div>
           </div>
           <Button
             type="button"
@@ -817,10 +840,12 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             onClick={handleToggleTranslation}
             className={cn(
               'h-10 w-10 shrink-0 rounded-full transition-all border border-slate-100',
-              showTranslations
-                ? 'bg-primary/10 text-primary border-primary/20'
-                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+              showTranslations ? 'text-[#1F1B17]' : 'text-[#8C8377]'
             )}
+            style={{
+              background: showTranslations ? KT.butter : KT.card,
+              borderColor: showTranslations ? KT.butterDeep : KT.line,
+            }}
           >
             {isTranslating ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -831,7 +856,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         </div>
 
         {/* Image — fills all remaining space */}
-        <div className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center bg-white">
+        <div
+          className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center"
+          style={{ background: KT.card }}
+        >
           {currentPage && getSafeImageSrc(currentPage.imageUrl) ? (
             <img
               src={getSafeImageSrc(currentPage.imageUrl)!}
@@ -843,11 +871,17 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               className="max-h-full max-w-full object-contain"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-slate-50">
-              <BookOpen className="h-16 w-16 text-slate-200" />
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{ background: KT.bg2 }}
+            >
+              <BookOpen className="h-16 w-16" color={KT.subLight} />
             </div>
           )}
-          <div className="absolute bottom-3 right-3 rounded-full bg-black/30 px-3 py-1 text-xs font-black text-white backdrop-blur-sm">
+          <div
+            className="absolute bottom-3 right-3 rounded-full px-3 py-1 text-xs font-black backdrop-blur-sm"
+            style={{ background: 'rgba(255,255,255,0.86)', color: KT.ink }}
+          >
             {renderedPageData.pageIndex + 1} / {renderedPageData.pageCount}
           </div>
         </div>
@@ -855,7 +889,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         {/* Subtitle scroll area */}
         <div
           ref={subtitleScrollRef}
-          className="shrink-0 max-h-[30dvh] overflow-y-auto border-t border-slate-100 bg-white px-4 py-2 space-y-1"
+          className="shrink-0 max-h-[30dvh] overflow-y-auto border-t px-4 py-2 space-y-1"
+          style={{ borderColor: KT.line, background: KT.bg }}
         >
           {currentSentences.length > 0 ? (
             currentSentences.map((sentence, idx) => {
@@ -867,14 +902,20 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                   ref={isActive ? activeSentenceBtnRef : undefined}
                   onClick={() => void playSentence(sentence.sentenceIndex, true)}
                   className={cn(
-                    'w-full rounded-xl px-3 py-2.5 text-left text-base leading-snug font-semibold transition-colors active:scale-[0.98]',
-                    isActive ? 'bg-[#f6e78b] text-slate-900' : 'text-slate-700'
+                    'w-full rounded-xl px-3 py-2.5 text-left text-base leading-snug font-semibold transition-colors active:scale-[0.98]'
                   )}
+                  style={{
+                    background: isActive ? KT.butter : 'transparent',
+                    color: isActive ? KT.ink : KT.ink2,
+                  }}
                 >
                   <div className="flex flex-col">
                     <div className={cn(showTranslations && 'mb-0.5')}>{sentence.text}</div>
                     {showTranslations && translatedPages[renderedPageData.pageIndex]?.[idx] && (
-                      <div className="text-sm font-medium text-slate-500/80 leading-tight italic">
+                      <div
+                        className="text-sm font-medium leading-tight italic"
+                        style={{ color: KT.sub }}
+                      >
                         {translatedPages[renderedPageData.pageIndex][idx]}
                       </div>
                     )}
@@ -883,7 +924,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               );
             })
           ) : (
-            <p className="py-4 text-center text-sm text-slate-400 font-semibold">
+            <p className="py-4 text-center text-sm font-semibold" style={{ color: KT.sub }}>
               {t('pictureBookReader.currentSentenceEmpty', {
                 defaultValue: 'Tap a sentence to start playback.',
               })}
@@ -892,14 +933,18 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         </div>
 
         {/* Bottom controls */}
-        <div className="shrink-0 flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <div
+          className="shrink-0 flex items-center justify-between gap-2 border-t px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]"
+          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.94)' }}
+        >
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
             disabled={!renderedPageData.hasPreviousPage}
-            className="rounded-full border-slate-200 px-4"
+            className="rounded-full px-4"
+            style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
             {t('pictureBookReader.prev', { defaultValue: 'Prev' })}
@@ -911,6 +956,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             onClick={() => void handleTogglePlay()}
             disabled={currentSentences.length === 0}
             className="rounded-full px-5"
+            style={{
+              background: isPlaying ? KT.ink : KT.card,
+              color: isPlaying ? KT.card : KT.ink,
+              borderColor: KT.line,
+            }}
           >
             {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
             {isPlaying
@@ -923,7 +973,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             size="sm"
             onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
             disabled={!renderedPageData.hasNextPage}
-            className="rounded-full border-slate-200 px-4"
+            className="rounded-full px-4"
+            style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
           >
             {t('pictureBookReader.next', { defaultValue: 'Next' })}
             <ChevronRight className="ml-1 h-4 w-4" />

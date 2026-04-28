@@ -17,6 +17,8 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
+import { KT, PageShell } from '../components/mobile/ksoft/ksoft';
+import { KsoftImmersiveHeader } from '../components/mobile/ksoft/KsoftMobilePrimitives';
 
 type SavedWordRow = {
   id: string;
@@ -415,6 +417,38 @@ const ModulePage: React.FC = () => {
     t,
     handleBack,
   });
+
+  if (
+    isMobile &&
+    (currentModule === LearningModuleType.READING || currentModule === LearningModuleType.LISTENING)
+  ) {
+    const seal = currentModule === LearningModuleType.READING ? '讀' : '聽';
+    const eyebrow =
+      currentModule === LearningModuleType.READING ? '讀 · READING' : '聽 · LISTENING';
+    return (
+      <PageShell>
+        <KsoftImmersiveHeader
+          eyebrow={eyebrow}
+          title={moduleLabel}
+          subtitle={instituteName}
+          seal={seal}
+          onBack={handleBack}
+        />
+        <div
+          style={{
+            margin: '0 16px 112px',
+            overflow: 'hidden',
+            borderRadius: 26,
+            border: `1px solid ${KT.line}`,
+            background: KT.card,
+            boxShadow: KT.sh,
+          }}
+        >
+          {moduleContent}
+        </div>
+      </PageShell>
+    );
+  }
 
   if (isReadingModule) {
     return <div className="p-0">{moduleContent}</div>;

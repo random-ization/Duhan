@@ -49,6 +49,8 @@ const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const TypingPage = lazy(() => import('./pages/TypingPage'));
 const DictionarySearchPage = lazy(() => import('./pages/DictionarySearchPage'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
+const CommunityAddPage = lazy(() => import('./pages/CommunityAddPage'));
 
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
 const VocabBookImmersivePage = lazy(() => import('./pages/VocabBookImmersivePage'));
@@ -192,18 +194,18 @@ const LanguageAwareRoutes: React.FC = () => {
             {/* Typing Practice */}
             <Route path="typing" element={<TypingPage />} />
             <Route path="dictionary/search" element={<DictionarySearchPage />} />
+            <Route path="community" element={<CommunityPage />} />
+            <Route path="community/add" element={<CommunityAddPage />} />
           </Route>
         </Route>
         {/* === Admin routes (standalone pages, Admin permission required) === */}
         <Route
-          element={
-            withPageLoader(
-              <ProtectedRoute
-                requireAdmin={true}
-                redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`}
-              />
-            )
-          }
+          element={withPageLoader(
+            <ProtectedRoute
+              requireAdmin={true}
+              redirectTo={`/${lang || DEFAULT_LANGUAGE}/admin/login`}
+            />
+          )}
         >
           <Route path="admin" element={withPageLoader(<AdminPage />)} />
           <Route path="admin/:tab" element={withPageLoader(<AdminPage />)} />

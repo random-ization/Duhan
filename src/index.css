@@ -25,6 +25,8 @@
 @source './components/ProtectedRoute.tsx';
 @source './components/common/**/*.{ts,tsx}';
 @source './components/ui/**/*.{ts,tsx}';
+@source './components/mobile/MobileAuthPage.tsx';
+@source './components/mobile/ksoft/**/*.{ts,tsx}';
 
 /* Public (pre-auth) pages */
 @source './pages/Landing.tsx';
@@ -172,11 +174,43 @@
 @layer base {
   html {
     overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    background: #fbf8f3;
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground;
+    width: 100%;
+    max-width: 100%;
     min-height: 100dvh;
     overflow-x: hidden;
+    background: #fbf8f3;
+    overscroll-behavior: none;
+  }
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    background: #fbf8f3;
+  }
+
+  @media (max-width: 767px) {
+    html,
+    body,
+    #root {
+      width: 100vw;
+      max-width: 100vw;
+      min-height: 100svh;
+      overflow-x: hidden;
+      background: #fbf8f3;
+    }
+
+    body {
+      position: relative;
+      overscroll-behavior-x: none;
+    }
   }
 }
 

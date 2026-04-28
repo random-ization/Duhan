@@ -29,7 +29,7 @@ export interface EpubLibraryBook {
     title: string;
     href: string;
     level: number;
-    children?: any[];
+    children?: EpubLibraryTocItem[];
   }>;
   tags?: string[];
   submittedAt?: number;
@@ -45,6 +45,13 @@ export interface EpubLibraryBook {
   canRead?: boolean;
   isOwner?: boolean;
   canShare?: boolean;
+}
+
+export interface EpubLibraryTocItem {
+  title: string;
+  href: string;
+  level: number;
+  children?: EpubLibraryTocItem[];
 }
 
 export interface EpubLibraryChapter {

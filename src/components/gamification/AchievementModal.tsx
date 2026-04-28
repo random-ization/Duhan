@@ -17,9 +17,7 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
-function getFirstPendingBadge(
-  pendingBadges: PendingBadge[] | undefined
-): PendingBadge | null {
+function getFirstPendingBadge(pendingBadges: PendingBadge[] | undefined): PendingBadge | null {
   if (!pendingBadges || pendingBadges.length === 0) {
     return null;
   }
@@ -42,16 +40,19 @@ export function AchievementModal() {
       return;
     }
 
-    const idleHandle = idleWindow.requestIdleCallback(() => {
-      void loadAchievementModalDialog();
-    }, { timeout: 1200 });
+    const idleHandle = idleWindow.requestIdleCallback(
+      () => {
+        void loadAchievementModalDialog();
+      },
+      { timeout: 1200 }
+    );
 
     return () => {
       if (idleHandle !== undefined) {
         idleWindow.cancelIdleCallback?.(idleHandle);
       }
     };
-  }, [badge?._id]);
+  }, [badge]);
 
   if (!badge) {
     return null;

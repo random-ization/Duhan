@@ -6,8 +6,21 @@ import { useTranslation } from 'react-i18next';
 import { aRef, SEARCH, type SearchAllResult } from '../utils/convexRefs';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { cleanDictionaryText } from '../utils/dictionaryMeaning';
 import { resolveSafeReturnTo } from '../utils/navigation';
+import {
+  Card as KsoftCard,
+  Chip,
+  KT,
+  PageShell,
+  SectionHead,
+} from '../components/mobile/ksoft/ksoft';
+import {
+  KsoftEmptyState,
+  KsoftImmersiveHeader,
+  KsoftListRow,
+} from '../components/mobile/ksoft/KsoftMobilePrimitives';
 import {
   Button,
   Dialog,
@@ -73,6 +86,7 @@ export default function DictionarySearchPage() {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const { language } = useAuth();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const scope: SearchScope = searchParams.get('scope') === 'all' ? 'all' : 'dictionary';
   const returnTo = useMemo(() => {
@@ -252,6 +266,223 @@ export default function DictionarySearchPage() {
   const hasGlobalResults = globalTotalCount > 0;
   const showGlobalEmpty =
     scope === 'all' && !globalSearchLoading && initialQuery.length >= 2 && !hasGlobalResults;
+
+  if (isMobile) {
+    return (
+      <PageShell>
+        <KsoftImmersiveHeader
+          eyebrow={scope === 'all' ? '搜 · SEARCH' : '典 · DICTIONARY'}
+          title={
+            scope === 'all'
+              ? t('common.search', { defaultValue: 'Search' })
+              : t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })
+          }
+          subtitle={
+            scope === 'all'
+              ? t('search.globalPlaceholder', {
+                  defaultValue: 'Search grammar, books, podcasts, notes...',
+                })
+              : t('dashboard.dictionary.placeholder', {
+                  defaultValue: 'Search Korean word...',
+                })
+          }
+          seal={scope === 'all' ? '搜' : '典'}
+          onBack={() => navigate(returnTo)}
+        />
+        <main style={{ padding: '4px 20px 112px', display: 'grid', gap: 18 }}>
+          <form onSubmit={onSubmit} style={{ position: 'relative' }}>
+            <Search
+              size={17}
+              style={{
+                position: 'absolute',
+                left: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: KT.sub,
+              }}
+            />
+            <Input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={
+                scope === 'all'
+                  ? t('search.globalPlaceholder', {
+                      defaultValue: 'Search grammar, books, podcasts, notes...',
+                    })
+                  : t('dashboard.dictionary.placeholder', {
+                      defaultValue: 'Search Korean word...',
+                    })
+              }
+              className="h-12 pl-10 pr-20"
+              style={{
+                borderRadius: 18,
+                borderColor: KT.line2,
+                background: KT.card,
+                boxShadow: KT.shSm,
+                color: KT.ink,
+                fontWeight: 800,
+              }}
+            />
+            <button
+              type="submit"
+              disabled={isSearching || !query.trim()}
+              style={{
+                position: 'absolute',
+                right: 6,
+                top: 6,
+                height: 36,
+                border: 'none',
+                borderRadius: 14,
+                background: KT.ink,
+                color: KT.card,
+                padding: '0 14px',
+                fontSize: 12,
+                fontWeight: 900,
+                fontFamily: KT.font,
+                opacity: isSearching || !query.trim() ? 0.45 : 1,
+              }}
+            >
+              {t('search', { defaultValue: 'Search' })}
+            </button>
+          </form>
+
+          {isSearching ? (
+            <KsoftCard pad={18}>
+              <div style={{ color: KT.sub, fontSize: 13, fontWeight: 800 }}>
+                {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
+              </div>
+            </KsoftCard>
+          ) : error ? (
+            <KsoftEmptyState title={error} />
+          ) : scope === 'dictionary' && result && result.entries.length > 0 ? (
+            <section style={{ display: 'grid', gap: 10 }}>
+              <SectionHead
+                kanji="詞"
+                title={t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
+              />
+              {result.entries.map(entry => (
+                <KsoftListRow
+                  key={entry.targetCode}
+                  seal="詞"
+                  title={entry.word}
+                  subtitle={getMeaning(entry)}
+                  meta={[entry.pronunciation, entry.pos].filter(Boolean).join(' · ')}
+                  onClick={() => void handleOpenDetail(entry)}
+                />
+              ))}
+            </section>
+          ) : scope === 'dictionary' && result && result.entries.length === 0 ? (
+            <KsoftEmptyState
+              title={t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
+            />
+          ) : showGlobalEmpty ? (
+            <KsoftEmptyState
+              title={t('search.noResults', { defaultValue: 'No matching results' })}
+            />
+          ) : scope === 'all' && hasGlobalResults && globalSearchResult ? (
+            <div style={{ display: 'grid', gap: 18 }}>
+              {GLOBAL_BUCKET_ORDER.map(bucket => {
+                const bucketHits = globalSearchResult.buckets[bucket];
+                if (!bucketHits || bucketHits.length === 0) return null;
+                return (
+                  <section key={bucket} style={{ display: 'grid', gap: 10 }}>
+                    <SectionHead title={getGlobalBucketLabel(bucket, t)} />
+                    {bucketHits.map(hit => (
+                      <KsoftListRow
+                        key={`${bucket}-${hit.id}`}
+                        seal={
+                          bucket === 'grammar'
+                            ? '文'
+                            : bucket === 'book'
+                              ? '讀'
+                              : bucket === 'podcast'
+                                ? '聲'
+                                : '記'
+                        }
+                        title={hit.title}
+                        subtitle={hit.subtitle}
+                        onClick={() => navigate(hit.linkPath)}
+                      />
+                    ))}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <KsoftEmptyState title={t('search.startTyping', { defaultValue: '开始输入关键字' })} />
+          )}
+        </main>
+
+        <Dialog open={scope === 'dictionary' ? detailOpen : false} onOpenChange={setDetailOpen}>
+          <DialogContent
+            className="w-[min(92vw,520px)] max-h-[82vh] overflow-hidden p-0"
+            style={{ borderRadius: 24, background: KT.card, borderColor: KT.line }}
+          >
+            <div style={{ padding: 20, borderBottom: `1px solid ${KT.line}` }}>
+              <DialogHeader>
+                <DialogTitle style={{ color: KT.ink, fontSize: 28, fontWeight: 900 }}>
+                  {detailEntry?.word ||
+                    t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
+                </DialogTitle>
+                <DialogDescription style={{ color: KT.sub, fontWeight: 700 }}>
+                  {[detailEntry?.pronunciation, detailEntry?.pos, detailEntry?.wordGrade]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div style={{ padding: 20, maxHeight: 'calc(82vh - 110px)', overflowY: 'auto' }}>
+              {detailLoading ? (
+                <div style={{ color: KT.sub, fontWeight: 800 }}>
+                  {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
+                </div>
+              ) : detailError ? (
+                <KsoftEmptyState title={detailError} />
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {detailSenses.map((sense, idx) => (
+                    <KsoftCard
+                      key={`${detailEntry?.targetCode || 'detail'}-${sense.order}-${idx}`}
+                      pad={16}
+                      tone="bg2"
+                    >
+                      <Chip tone="muted">
+                        {t('dashboard.dictionary.sense', { defaultValue: 'Sense' })}{' '}
+                        {sense.order || idx + 1}
+                      </Chip>
+                      {sense.translation?.word ? (
+                        <div
+                          style={{ marginTop: 10, color: KT.ink, fontSize: 16, fontWeight: 900 }}
+                        >
+                          {sense.translation.word}
+                        </div>
+                      ) : null}
+                      <div
+                        style={{
+                          marginTop: 8,
+                          color: KT.ink2,
+                          fontSize: 14,
+                          lineHeight: 1.6,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {cleanDictionaryText(
+                          sense.translation?.definition ||
+                            sense.definition ||
+                            sense.translation?.word ||
+                            ''
+                        )}
+                      </div>
+                    </KsoftCard>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </PageShell>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] bg-background pb-safe">

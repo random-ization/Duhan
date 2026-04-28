@@ -59,6 +59,7 @@ import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
+import { KT } from '../components/mobile/ksoft/ksoft';
 
 // Types
 interface TranscriptLine {
@@ -1065,6 +1066,19 @@ function shouldUseTranscriptCdn() {
   return hostname !== 'localhost' && hostname !== '127.0.0.1';
 }
 
+function shouldUseDirectTranscriptGeneration() {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname.toLowerCase();
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  );
+}
+
 // Mock transcript for fallback
 const MOCK_TRANSCRIPT_BASE: Omit<TranscriptLine, 'translation'>[] = [
   {
@@ -1594,6 +1608,8 @@ const PodcastPlayerPage: React.FC = () => {
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [volume, setVolume] = useState(1);
@@ -1646,6 +1662,18 @@ const PodcastPlayerPage: React.FC = () => {
       },
       { success: boolean; requestId?: string; error?: string }
     >('ai:requestTranscript')
+  );
+  const generateTranscript = useAction(
+    aRef<
+      {
+        audioUrl: string;
+        episodeId: string;
+        language?: string;
+        storageId?: string;
+        storageIds?: string[];
+      },
+      { success: boolean; data?: { segments?: TranscriptLine[] }; error?: string }
+    >('ai:generateTranscript')
   );
   const getTranscript = useAction(
     aRef<
@@ -2041,14 +2069,28 @@ const PodcastPlayerPage: React.FC = () => {
         const transcriptAudioUrl = await resolveTranscriptAudioUrl(episode.audioUrl, episodeId);
         validateTranscriptAudioUrl(transcriptAudioUrl, copy);
 
-        const kickoff = await requestTranscript({
-          audioUrl: transcriptAudioUrl,
-          episodeId,
-        });
-        const kickoffError = getTranscriptKickoffError(kickoff);
-        if (kickoffError) throw new Error(kickoffError);
+        let readySegments: TranscriptLine[] | null = null;
+        if (shouldUseDirectTranscriptGeneration()) {
+          const direct = await generateTranscript({
+            audioUrl: transcriptAudioUrl,
+            episodeId,
+            ...(targetLanguage ? { language: targetLanguage } : {}),
+          });
+          if (!direct.success) {
+            throw new Error(direct.error || 'Failed to generate transcript');
+          }
+          readySegments = direct.data?.segments ?? null;
+        } else {
+          const kickoff = await requestTranscript({
+            audioUrl: transcriptAudioUrl,
+            episodeId,
+            ...(targetLanguage ? { language: targetLanguage } : {}),
+          });
+          const kickoffError = getTranscriptKickoffError(kickoff);
+          if (kickoffError) throw new Error(kickoffError);
+          readySegments = await waitForTranscriptReady(episodeId);
+        }
 
-        const readySegments = await waitForTranscriptReady(episodeId);
         if (readySegments && readySegments.length > 0) {
           applyLoadedTranscript({
             segments: readySegments,
@@ -2097,6 +2139,7 @@ const PodcastPlayerPage: React.FC = () => {
       copy,
       convexAuthLoading,
       episode.audioUrl,
+      generateTranscript,
       isAuthenticated,
       requestTranscript,
       getTranscript,
@@ -2130,8 +2173,9 @@ const PodcastPlayerPage: React.FC = () => {
   // 1. Initial Load & Analytics & Playlist
   useEffect(() => {
     let isMounted = true;
+    const episodeKey = getEpisodeKey();
+    if (!episodeKey) return;
 
-    // Load Playlist (Episodes from same channel)
     if (channel.feedUrl) {
       const fetchPlaylist = async () => {
         try {
@@ -2152,7 +2196,6 @@ const PodcastPlayerPage: React.FC = () => {
       fetchPlaylist();
     }
 
-    // Track View
     if (episode?.audioUrl) {
       trackView({
         guid: episodeKey,
@@ -2179,12 +2222,32 @@ const PodcastPlayerPage: React.FC = () => {
       }
     }
 
-    // Cleanup: prevent updates after unmount
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [episode.audioUrl]);
+  }, [
+    episode.audioUrl,
+    episode.duration,
+    episode.title,
+    episode.pubDate,
+    episode.channelTitle,
+    episode.channelArtwork,
+    channel.feedUrl,
+    channel.itunesId,
+    channel.id,
+    channel.title,
+    channel.author,
+    channel.artworkUrl,
+    channel.artwork,
+    episodeKey,
+    historyBase,
+    effectiveDuration,
+    currentTime,
+    recordHistory,
+    trackView,
+    getEpisodes,
+    getEpisodeKey,
+  ]);
 
   // 1.5 Resume Playback Logic
   useEffect(() => {
@@ -2228,20 +2291,19 @@ const PodcastPlayerPage: React.FC = () => {
   }, [resumeTime, effectiveDuration, isLoading]);
 
   // 1.7 Save Progress Periodically
-  // 1.7 Save Progress Periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isPlaying && currentTime > 5 && historyBase.episodeUrl) {
+      if (isPlaying && currentTimeRef.current > 5 && historyBase.episodeUrl) {
         const resolvedDuration = effectiveDuration || undefined;
         recordHistory({
           ...historyBase,
-          progress: Math.floor(currentTime),
+          progress: Math.floor(currentTimeRef.current),
           duration: resolvedDuration,
         }).catch(() => {});
       }
-    }, 10000); // Save every 10 seconds
+    }, 10000);
     return () => clearInterval(interval);
-  }, [isPlaying, currentTime, historyBase, recordHistory, effectiveDuration]);
+  }, [isPlaying, historyBase, recordHistory, effectiveDuration]);
 
   // 3. Auto-Scroll Logic
   const activeLineIndex = useMemo(() => {
@@ -2266,7 +2328,7 @@ const PodcastPlayerPage: React.FC = () => {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [activeLineIndex, autoScroll]);
+  }, [activeLineIndex, autoScroll, currentTime]);
   // --- Handlers ---
 
   const handleTimeUpdate = () => {
@@ -2531,9 +2593,12 @@ const PodcastPlayerPage: React.FC = () => {
       : transcript.length > 0
         ? transcript[0]
         : null;
-  const subtitlePrimaryText = transcriptLoading
-    ? copy.generatingSmartSubtitle
-    : activeTranscriptLine?.text || copy.noSubtitleContent;
+  const subtitlePrimaryText =
+    activeTranscriptLine?.text ||
+    transcriptError ||
+    (transcriptLoading || isGeneratingTranscript
+      ? copy.generatingSmartSubtitle
+      : copy.noSubtitleContent);
   const subtitleSecondaryText = showTranslation
     ? activeTranscriptLine?.translation || copy.noTranslation
     : null;
@@ -2545,10 +2610,21 @@ const PodcastPlayerPage: React.FC = () => {
   return (
     <div
       className={`flex flex-col h-screen h-[100dvh] overflow-hidden font-sans ${
-        isMobile
-          ? 'bg-[linear-gradient(180deg,#5A7394_0%,#1F1B17_100%)] text-white'
-          : 'bg-muted text-foreground'
+        isMobile ? 'text-[#1F1B17]' : 'bg-muted text-foreground'
       }`}
+      style={
+        isMobile
+          ? {
+              background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+              fontFamily: KT.font,
+              width: '100%',
+              maxWidth: '100vw',
+              minHeight: '100dvh',
+              overflowX: 'hidden',
+              backgroundColor: KT.bg,
+            }
+          : undefined
+      }
     >
       {isMobile ? (
         <div className="px-5 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}>
@@ -2556,23 +2632,43 @@ const PodcastPlayerPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(backPath)}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+              className="grid h-11 w-11 place-items-center border"
+              style={{
+                borderRadius: 16,
+                borderColor: KT.line,
+                background: KT.card,
+                boxShadow: KT.shSm,
+                color: KT.ink,
+              }}
               aria-label={copy.back}
             >
-              <span className="text-lg leading-none">⌄</span>
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="text-center">
-              <div className="text-[10px] font-bold tracking-[0.2em] text-white/70">
-                지금 재생 중 · 今
+              <div
+                className="text-[10px] font-bold tracking-[0.2em]"
+                style={{ color: KT.crimson, fontFamily: KT.serif }}
+              >
+                聲 · PODCAST
               </div>
-              <div className="mt-0.5 text-sm font-bold text-white/90 line-clamp-1 max-w-[56vw]">
+              <div
+                className="mt-0.5 text-sm font-bold line-clamp-1 max-w-[56vw]"
+                style={{ color: KT.ink }}
+              >
                 {channel.title || episode.channelTitle}
               </div>
             </div>
             <button
               type="button"
               onClick={() => setShowPlaylist(true)}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+              className="grid h-11 w-11 place-items-center border"
+              style={{
+                borderRadius: 16,
+                borderColor: KT.line,
+                background: KT.card,
+                boxShadow: KT.shSm,
+                color: KT.ink,
+              }}
               aria-label={copy.playlist}
             >
               <span className="text-lg leading-none">⋯</span>
@@ -2654,55 +2750,87 @@ const PodcastPlayerPage: React.FC = () => {
               ? 'flex-1 overflow-y-auto overflow-x-hidden pb-[calc(var(--mobile-safe-bottom)+20px)]'
               : 'flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-[calc(var(--mobile-safe-bottom)+5.75rem)] md:pb-12 relative bg-muted/50'
           }
+          style={isMobile ? { background: KT.bg, minHeight: 0 } : undefined}
         >
           {isMobile ? (
             <div className="px-5 pb-6">
-              <div className="relative overflow-hidden rounded-[1.8rem] border border-white/20 bg-[linear-gradient(135deg,rgba(197,122,110,0.9)_0%,rgba(247,232,184,0.72)_100%)] p-4 shadow-[0_28px_60px_rgba(0,0,0,0.32)]">
-                <div className="pointer-events-none absolute inset-0 opacity-20 [background:repeating-linear-gradient(45deg,transparent_0,transparent_14px,rgba(255,255,255,0.35)_14px,rgba(255,255,255,0.35)_15px)]" />
-                <div className="relative rounded-[1.3rem] border border-white/25 p-4">
-                  <div className="relative h-[250px] overflow-hidden rounded-[1rem] bg-[linear-gradient(140deg,rgba(31,27,23,0.2)_0%,rgba(31,27,23,0.45)_100%)]">
-                    <div className="absolute inset-0 [background:repeating-linear-gradient(45deg,transparent_0,transparent_12px,rgba(255,255,255,0.08)_12px,rgba(255,255,255,0.08)_13px)]" />
-                    <div className="absolute inset-[16px] rounded-2xl border border-white/30 p-4 text-white">
-                      <div className="font-serif text-base font-semibold tracking-[0.24em]">
-                        話 · HWA
-                      </div>
-                      <div className="mt-14">
-                        <div className="font-serif text-7xl font-semibold leading-[0.8] tracking-[-0.15em]">
-                          {episodeBadgeNumber}
-                        </div>
-                        <div className="mt-1 text-[10px] font-black tracking-[0.22em] text-white/80">
-                          EPISODE
-                        </div>
-                      </div>
-                    </div>
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  borderRadius: 28,
+                  border: `1px solid ${KT.line}`,
+                  background: `linear-gradient(135deg, ${KT.indigo} 0%, ${KT.crimson} 100%)`,
+                  boxShadow: KT.shLg,
+                  padding: 18,
+                }}
+              >
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-25"
+                  style={{
+                    background:
+                      'repeating-linear-gradient(45deg, transparent 0, transparent 13px, rgba(255,255,255,0.22) 13px, rgba(255,255,255,0.22) 14px)',
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute right-5 top-4 font-serif text-[96px] font-black leading-none"
+                  style={{ color: 'rgba(255,255,255,0.12)' }}
+                >
+                  聲
+                </div>
+                <div className="relative flex items-center gap-4">
+                  <div
+                    className="h-24 w-24 shrink-0 overflow-hidden"
+                    style={{
+                      borderRadius: 22,
+                      border: '1px solid rgba(255,255,255,0.34)',
+                      background: 'rgba(255,255,255,0.18)',
+                      boxShadow: '0 18px 30px rgba(31,27,23,0.18)',
+                    }}
+                  >
+                    <img
+                      src={episodeArtwork}
+                      alt={copy.coverAlt}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className="inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black tracking-[0.12em]"
+                      style={{ background: 'rgba(31,27,23,0.78)', color: KT.card }}
+                    >
+                      EP {episodeBadgeNumber} · PLAYING
+                    </span>
+                    <h1 className="mt-3 line-clamp-3 text-[21px] font-black leading-tight text-white">
+                      {episode.title}
+                    </h1>
+                    <p className="mt-2 line-clamp-1 text-xs font-semibold text-white/78">
+                      {channel.title || episode.channelTitle || 'Podcast'} ·{' '}
+                      {formatTime(Math.max(0, effectiveDuration))}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="px-1 pt-5">
-                <h1 className="line-clamp-2 text-[22px] font-black leading-tight tracking-[-0.02em] text-white">
-                  {episode.title}
-                </h1>
-                <p className="mt-1 text-xs font-semibold text-white/70">
-                  {channel.title || episode.channelTitle || 'Podcast'} ·{' '}
-                  {formatTime(Math.max(0, effectiveDuration))}
-                </p>
-              </div>
-
-              <div className="mt-4 rounded-[1.15rem] border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <div className="mb-2 text-[10px] font-black tracking-[0.16em] text-white/60">
+              <div
+                className="mt-4 rounded-[1.15rem] border p-4 backdrop-blur"
+                style={{ borderColor: KT.line, background: KT.card, boxShadow: KT.shSm }}
+              >
+                <div
+                  className="mb-2 text-[10px] font-black tracking-[0.16em]"
+                  style={{ color: KT.crimson }}
+                >
                   자막 · 이중 언어
                 </div>
-                <p className="text-[15px] font-semibold leading-relaxed text-white">
+                <p className="text-[15px] font-semibold leading-relaxed" style={{ color: KT.ink }}>
                   {subtitlePrimaryText}
                 </p>
                 {subtitleSecondaryText ? (
-                  <p className="mt-2 text-sm leading-relaxed text-white/70">
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: KT.sub }}>
                     {subtitleSecondaryText}
                   </p>
                 ) : null}
                 {showTranscriptLoader || isGeneratingTranscript ? (
-                  <p className="mt-2 text-xs font-semibold text-white/55">
+                  <p className="mt-2 text-xs font-semibold" style={{ color: KT.subLight }}>
                     {copy.firstGenerationHint}
                   </p>
                 ) : null}
@@ -2721,13 +2849,19 @@ const PodcastPlayerPage: React.FC = () => {
                   }}
                   aria-label={copy.seek}
                 >
-                  <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white/25" />
                   <span
-                    className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-white"
-                    style={{ width: `${progressPercent}%` }}
+                    className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+                    style={{ background: KT.line2 }}
+                  />
+                  <span
+                    className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+                    style={{ width: `${progressPercent}%`, background: KT.crimson }}
                   />
                 </button>
-                <div className="mt-2 flex justify-between text-[10px] font-bold tracking-[0.08em] text-white/65">
+                <div
+                  className="mt-2 flex justify-between text-[10px] font-bold tracking-[0.08em]"
+                  style={{ color: KT.sub }}
+                >
                   <span>{formatTime(safeCurrentTime)}</span>
                   <span>-{formatTime(remainingTime)}</span>
                 </div>
@@ -2737,7 +2871,8 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={changeSpeed}
-                  className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white"
+                  className="grid h-11 w-11 place-items-center rounded-full border text-xs font-black"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                   title={
                     viewerAccess?.flags.mediaSpeedControl
                       ? undefined
@@ -2749,7 +2884,8 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => skip(-10)}
-                  className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+                  className="grid h-12 w-12 place-items-center rounded-full border"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                   aria-label="Skip back 10 seconds"
                 >
                   <SkipBack className="h-5 w-5" />
@@ -2757,7 +2893,8 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={togglePlay}
-                  className="grid h-[72px] w-[72px] place-items-center rounded-full bg-white text-[#1F1B17] shadow-[0_10px_28px_rgba(0,0,0,0.35)]"
+                  className="grid h-[72px] w-[72px] place-items-center rounded-full"
+                  style={{ background: KT.ink, color: KT.card, boxShadow: KT.shLg }}
                   aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
                   <PlayPauseIcon isPlaying={isPlaying} />
@@ -2765,7 +2902,8 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => skip(10)}
-                  className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-white/10 text-white"
+                  className="grid h-12 w-12 place-items-center rounded-full border"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                   aria-label="Skip forward 10 seconds"
                 >
                   <SkipForward className="h-5 w-5" />
@@ -2773,7 +2911,8 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => skip(30)}
-                  className="grid h-11 w-11 place-items-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white"
+                  className="grid h-11 w-11 place-items-center rounded-full border text-xs font-black"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                   aria-label="Skip forward 30 seconds"
                 >
                   30s
@@ -2784,28 +2923,32 @@ const PodcastPlayerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowTranslation(current => !current)}
-                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                  className="rounded-xl border px-2 py-2 text-[11px] font-bold"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                 >
                   字幕
                 </button>
                 <button
                   type="button"
                   onClick={changeSpeed}
-                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                  className="rounded-xl border px-2 py-2 text-[11px] font-bold"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                 >
                   배속
                 </button>
                 <button
                   type="button"
                   onClick={toggleLoop}
-                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                  className="rounded-xl border px-2 py-2 text-[11px] font-bold"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                 >
                   구간반복
                 </button>
                 <button
                   type="button"
                   onClick={handleToggleSubscription}
-                  className="rounded-xl border border-white/20 bg-white/10 px-2 py-2 text-[11px] font-bold text-white"
+                  className="rounded-xl border px-2 py-2 text-[11px] font-bold"
+                  style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
                 >
                   단어장
                 </button>

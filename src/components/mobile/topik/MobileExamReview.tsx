@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { TopikExam, Language } from '../../../types';
+import { TopikExam, Language, TopikQuestion } from '../../../types';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,7 @@ import { Button } from '../../ui';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 import { useNotebookPicker } from '../../../contexts/NotebookPickerContext';
 import { MobileImmersiveHeader } from '../MobileImmersiveHeader';
+import { KT } from '../ksoft/ksoft';
 
 interface MobileExamReviewProps {
   exam: TopikExam;
@@ -71,20 +72,20 @@ const buildTopikAnalysisNoteText = (aiAnalysis: AIAnalysis, t: TranslateFn) => {
 
 const ReviewResultBanner: React.FC<{ isCorrect: boolean; t: TranslateFn }> = ({ isCorrect, t }) => (
   <div
-    className={clsx(
-      'mb-6 rounded-2xl p-4 flex items-center gap-3 border shadow-sm',
-      isCorrect
-        ? 'bg-emerald-50 dark:bg-emerald-500/12 border-emerald-100 dark:border-emerald-300/25 text-emerald-800 dark:text-emerald-200'
-        : 'bg-red-50 dark:bg-red-500/12 border-red-100 dark:border-red-300/25 text-red-800 dark:text-red-200'
-    )}
+    className="mb-6 rounded-2xl p-4 flex items-center gap-3 border shadow-sm"
+    style={{
+      background: isCorrect ? KT.mint : KT.pink,
+      borderColor: isCorrect ? KT.mintDeep : KT.pinkDeep,
+      color: isCorrect ? KT.jade : KT.crimson,
+      fontFamily: KT.font,
+    }}
   >
     <div
-      className={clsx(
-        'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
-        isCorrect
-          ? 'bg-emerald-100 dark:bg-emerald-500/16 text-emerald-600 dark:text-emerald-300'
-          : 'bg-red-100 dark:bg-red-500/16 text-red-500 dark:text-red-300'
-      )}
+      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+      style={{
+        background: KT.card,
+        color: isCorrect ? KT.jade : KT.crimson,
+      }}
     >
       {isCorrect ? <Check className="w-6 h-6" /> : <X className="w-6 h-6" />}
     </div>
@@ -201,7 +202,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     setShowSaveToast(false);
   }, [currentQuestionIndex]);
 
-  const handleAIAnalysis = async (question: any) => {
+  const handleAIAnalysis = async (question: TopikQuestion) => {
     if (aiLoading || aiAnalysis) return;
 
     setAiLoading(true);
@@ -243,7 +244,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     }
   };
 
-  const handleSaveToNotebook = async (question: any) => {
+  const handleSaveToNotebook = async (question: TopikQuestion) => {
     if (!aiAnalysis || isSaving || isSaved) return;
 
     setIsSaving(true);
@@ -402,7 +403,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   // --- RENDERERS ---
 
   const renderOverview = () => (
-    <div className="flex flex-col h-full bg-muted">
+    <div
+      className="flex flex-col h-full"
+      style={{
+        background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+        color: KT.ink,
+        fontFamily: KT.font,
+      }}
+    >
       <MobileImmersiveHeader
         title={exam.title}
         subtitle={t('dashboard.topik.mobile.review.mode', { defaultValue: 'Review Mode' })}
@@ -425,40 +433,53 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
       <div className="flex-1 overflow-y-auto pb-mobile-safe">
         {/* Score Card */}
         <div className="p-6">
-          <div className="bg-card rounded-3xl shadow-lg border border-border overflow-hidden relative p-8 text-center flex flex-col items-center">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400/75 dark:to-purple-400/75"></div>
+          <div
+            className="rounded-3xl overflow-hidden relative p-8 text-center flex flex-col items-center"
+            style={{ background: KT.card, border: `1px solid ${KT.line}`, boxShadow: KT.shLg }}
+          >
+            <div
+              className="absolute top-0 left-0 w-full h-2"
+              style={{ background: `linear-gradient(90deg, ${KT.crimson}, ${KT.butterDeep})` }}
+            />
 
-            <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-2">
+            <span
+              className="text-xs font-bold tracking-widest uppercase mb-2"
+              style={{ color: KT.sub }}
+            >
               {t('dashboard.topik.mobile.review.totalScore', { defaultValue: 'Total Score' })}
             </span>
             <div className="flex items-baseline gap-2 mb-6">
               <span
-                className={clsx(
-                  'text-6xl font-black tracking-tighter',
-                  stats.percentage >= 60
-                    ? 'text-emerald-600 dark:text-emerald-300'
-                    : 'text-muted-foreground'
-                )}
+                className="text-6xl font-black tracking-tighter"
+                style={{ color: stats.percentage >= 60 ? KT.jade : KT.ink }}
               >
                 {stats.score}
               </span>
-              <span className="text-xl font-bold text-muted-foreground">/ {stats.totalScore}</span>
+              <span className="text-xl font-bold" style={{ color: KT.sub }}>
+                / {stats.totalScore}
+              </span>
             </div>
 
             <div className="w-full grid grid-cols-2 gap-4">
-              <div className="bg-emerald-50 dark:bg-emerald-500/14 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-300/25 flex flex-col items-center">
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-300">
+              <div
+                className="rounded-2xl p-4 border flex flex-col items-center"
+                style={{ background: KT.mint, borderColor: KT.mintDeep }}
+              >
+                <div className="text-2xl font-black" style={{ color: KT.jade }}>
                   {stats.correctCount}
                 </div>
-                <div className="text-[10px] font-bold text-emerald-800/60 dark:text-emerald-200/80 uppercase mt-1">
+                <div className="text-[10px] font-bold uppercase mt-1" style={{ color: KT.jade }}>
                   {t('dashboard.topik.mobile.review.correct', { defaultValue: 'Correct' })}
                 </div>
               </div>
-              <div className="bg-red-50 dark:bg-red-500/14 rounded-2xl p-4 border border-red-100 dark:border-red-300/25 flex flex-col items-center">
-                <div className="text-2xl font-black text-red-500 dark:text-red-300">
+              <div
+                className="rounded-2xl p-4 border flex flex-col items-center"
+                style={{ background: KT.pink, borderColor: KT.pinkDeep }}
+              >
+                <div className="text-2xl font-black" style={{ color: KT.crimson }}>
                   {stats.mistakeCount}
                 </div>
-                <div className="text-[10px] font-bold text-red-800/60 dark:text-red-200/80 uppercase mt-1">
+                <div className="text-[10px] font-bold uppercase mt-1" style={{ color: KT.crimson }}>
                   {t('dashboard.topik.mobile.review.mistakes', { defaultValue: 'Mistakes' })}
                 </div>
               </div>
@@ -475,7 +496,8 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               setCurrentQuestionIndex(0);
               setViewMode('DETAIL');
             }}
-            className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all text-sm"
+            className="flex-1 rounded-xl py-3.5 font-bold active:scale-95 transition-all text-sm"
+            style={{ background: KT.ink, color: KT.card, boxShadow: KT.sh }}
           >
             {t('dashboard.topik.mobile.review.reviewAll', { defaultValue: 'Review All' })}
           </Button>
@@ -485,7 +507,8 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             size="auto"
             onClick={handleReviewWrong}
             disabled={stats.mistakeCount === 0}
-            className="flex-1 bg-card border border-border text-muted-foreground rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+            className="flex-1 border rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+            style={{ background: KT.card, borderColor: KT.line, color: KT.sub }}
           >
             {t('dashboard.topik.mobile.review.reviewMistakes', {
               count: stats.mistakeCount,
@@ -497,7 +520,8 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               variant="ghost"
               size="auto"
               onClick={onReset}
-              className="bg-muted text-muted-foreground rounded-xl p-3.5 flex items-center justify-center"
+              className="rounded-xl p-3.5 flex items-center justify-center"
+              style={{ background: KT.bg2, color: KT.sub }}
             >
               <RotateCcw className="w-5 h-5" />
             </Button>
@@ -506,7 +530,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
         {/* Question Grid */}
         <div className="px-6 pb-20">
-          <h3 className="font-bold text-muted-foreground mb-4 flex items-center gap-2 text-sm">
+          <h3 className="font-bold mb-4 flex items-center gap-2 text-sm" style={{ color: KT.sub }}>
             <Grid3x3 className="w-4 h-4" />
             {t('dashboard.topik.mobile.review.questionMap', { defaultValue: 'Question Map' })}
           </h3>
@@ -753,7 +777,14 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     };
 
     return (
-      <div className="flex flex-col h-full bg-muted relative">
+      <div
+        className="flex flex-col h-full relative"
+        style={{
+          background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+          color: KT.ink,
+          fontFamily: KT.font,
+        }}
+      >
         <MobileImmersiveHeader
           title={t('dashboard.topik.mobile.review.detailTitle', {
             defaultValue: 'Question Review',
@@ -775,7 +806,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
           onBack={() => setViewMode('OVERVIEW')}
           backLabel={t('dashboard.topik.mobile.review.back', { defaultValue: 'Back' })}
           status={
-            <span className="rounded-2xl border border-border bg-card px-3 py-2 text-xs font-black text-foreground shadow-sm">
+            <span
+              className="rounded-2xl border px-3 py-2 text-xs font-black shadow-sm"
+              style={{ background: KT.card, borderColor: KT.line, color: KT.ink }}
+            >
               Q{exam.questions[currentQuestionIndex].number || currentQuestionIndex + 1}
             </span>
           }
@@ -784,9 +818,10 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               variant="ghost"
               size="auto"
               onClick={() => setViewMode('OVERVIEW')}
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card shadow-sm active:scale-95"
+              className="grid h-11 w-11 place-items-center rounded-2xl border shadow-sm active:scale-95"
+              style={{ background: KT.card, borderColor: KT.line }}
             >
-              <List className="w-4 h-4 text-foreground" />
+              <List className="w-4 h-4" style={{ color: KT.ink }} />
             </Button>
           }
           className="sticky top-0 z-20"
@@ -800,14 +835,26 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
 
             {/* Explanation */}
             {localizedExplanation && (
-              <div className="bg-indigo-50/50 dark:bg-indigo-500/12 rounded-3xl p-6 border border-indigo-100 dark:border-indigo-300/20 mb-8">
-                <h3 className="font-bold text-indigo-900 dark:text-indigo-200 mb-2 flex items-center gap-2 text-sm">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/18 flex items-center justify-center">
+              <div
+                className="rounded-3xl p-6 border mb-8"
+                style={{ background: KT.card, borderColor: KT.line, boxShadow: KT.shSm }}
+              >
+                <h3
+                  className="font-bold mb-2 flex items-center gap-2 text-sm"
+                  style={{ color: KT.ink }}
+                >
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ background: KT.butter }}
+                  >
                     💡
                   </span>
                   {t('dashboard.topik.mobile.review.explanation', { defaultValue: 'Explanation' })}
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed font-serif whitespace-pre-wrap">
+                <p
+                  className="text-sm leading-relaxed font-serif whitespace-pre-wrap"
+                  style={{ color: KT.ink2 }}
+                >
                   {localizedExplanation}
                 </p>
               </div>
@@ -824,7 +871,11 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
                   loadingText={t('dashboard.topik.mobile.review.aiThinking', {
                     defaultValue: 'Thinking...',
                   })}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400/75 dark:to-purple-400/75 text-white rounded-xl shadow-md dark:shadow-indigo-950/25 active:scale-[0.98] transition-transform font-bold"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-white rounded-xl shadow-md active:scale-[0.98] transition-transform font-bold"
+                  style={{
+                    background: `linear-gradient(135deg, ${KT.ink}, ${KT.indigo})`,
+                    color: KT.card,
+                  }}
                 >
                   <Sparkles className="w-5 h-5" />
                   {t('dashboard.topik.mobile.review.aiTitle', { defaultValue: 'AI Analysis' })}
@@ -832,17 +883,23 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               )}
 
               {aiError && (
-                <div className="mt-3 p-4 bg-red-50 dark:bg-red-500/12 border border-red-200 dark:border-red-300/25 rounded-xl text-red-700 dark:text-red-200 text-sm flex items-center gap-2">
+                <div
+                  className="mt-3 p-4 border rounded-xl text-sm flex items-center gap-2"
+                  style={{ background: KT.pink, borderColor: KT.pinkDeep, color: KT.crimson }}
+                >
                   <X className="w-4 h-4" /> {aiError}
                 </div>
               )}
 
               {aiAnalysis && (
-                <div className="mt-4 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-500/12 dark:to-purple-500/12 border border-indigo-100 dark:border-indigo-300/20 rounded-2xl shadow-sm relative">
+                <div
+                  className="mt-4 p-5 border rounded-2xl shadow-sm relative"
+                  style={{ background: KT.card, borderColor: KT.line }}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
-                      <span className="font-bold text-indigo-700 dark:text-indigo-200">
+                      <Sparkles className="w-5 h-5" style={{ color: KT.crimson }} />
+                      <span className="font-bold" style={{ color: KT.ink }}>
                         {t('dashboard.topik.mobile.review.aiTitle', {
                           defaultValue: 'AI Analysis',
                         })}
@@ -946,13 +1003,21 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         </div>
 
         {/* Bottom Nav */}
-        <div className="bg-card border-t border-border px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-mobile-safe shadow-nav-up">
+        <div
+          className="px-4 py-3 flex gap-3 shrink-0 absolute bottom-0 left-0 right-0 z-30 pb-mobile-safe"
+          style={{
+            background: `${KT.card}ee`,
+            borderTop: `1px solid ${KT.line}`,
+            boxShadow: '0 -12px 34px rgba(31,27,23,0.08)',
+          }}
+        >
           <Button
             variant="ghost"
             size="auto"
             onClick={handlePrev}
             disabled={currentFilterIndex === 0}
-            className="flex-1 py-3 rounded-xl bg-muted text-muted-foreground font-bold disabled:opacity-30 active:bg-muted transition-colors flex items-center justify-center gap-2 text-sm"
+            className="flex-1 py-3 rounded-xl font-bold disabled:opacity-30 transition-colors flex items-center justify-center gap-2 text-sm"
+            style={{ background: KT.bg2, color: KT.sub }}
           >
             <ChevronLeft className="w-4 h-4" />
             {t('dashboard.topik.mobile.review.prev', { defaultValue: 'Prev' })}
@@ -963,7 +1028,8 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
             size="auto"
             onClick={handleNext}
             disabled={currentFilterIndex === questionsToShow.length - 1}
-            className="flex-[2] py-3 rounded-xl bg-primary text-primary-foreground font-bold disabled:opacity-30 shadow-lg shadow-primary/25 dark:shadow-primary/15 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 text-sm"
+            className="flex-[2] py-3 rounded-xl font-bold disabled:opacity-30 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 text-sm"
+            style={{ background: KT.ink, color: KT.card, boxShadow: KT.sh }}
           >
             {t('dashboard.topik.mobile.review.next', { defaultValue: 'Next' })}
             <ChevronRight className="w-4 h-4" />

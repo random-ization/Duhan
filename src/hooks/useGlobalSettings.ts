@@ -4,7 +4,6 @@ import {
   DEFAULT_GLOBAL_USER_SETTINGS,
   type GlobalUserSettings,
   type GlobalUserSettingsUpdate,
-  type StoredGlobalUserSettings,
 } from '../types/globalUserSettings';
 
 export function useGlobalSettings() {

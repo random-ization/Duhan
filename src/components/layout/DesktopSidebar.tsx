@@ -510,6 +510,7 @@ function useSidebarNavItems(
         icon: GraduationCap,
         activePrefixes: [
           '/dashboard',
+          '/community',
           '/courses',
           '/course/',
           '/reading',

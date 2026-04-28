@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, X, List, CheckSquare, Keyboard, Grip } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  X,
+  List,
+  CheckSquare,
+  Keyboard,
+  Grip,
+} from 'lucide-react';
 import type { Language } from '../../../types';
 import { getLabels, Labels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
@@ -7,7 +16,7 @@ import TestCardTrueFalse from './test/TestCardTrueFalse';
 import TestCardMultipleChoice from './test/TestCardMultipleChoice';
 import TestCardFill10 from './test/TestCardFill10';
 import TestCardWritten from './test/TestCardWritten';
-import { Button, Input, Select } from '../../../components/ui';
+import { Button, Select } from '../../../components/ui';
 
 type WordInScope = {
   id: string;
@@ -478,11 +487,7 @@ function RunningCard({
   };
 
   return (
-    <div
-      ref={setRef}
-      style={{ scrollSnapAlign: 'start' }}
-      className="vt-responsive-card"
-    >
+    <div ref={setRef} style={{ scrollSnapAlign: 'start' }} className="vt-responsive-card">
       {/* Mobile Premium Card */}
       <div className="vt-mobile-card vt-card-paper w-full rounded-[2.5rem] p-7 flex flex-col relative overflow-hidden">
         <div className="flex justify-between items-end mb-8 border-b border-slate-200 pb-5">
@@ -701,33 +706,33 @@ function RunningScreen({
       <div className="h-full flex flex-col vt-mobile-bg">
         {/* Mobile Header (similar to the demo) */}
         <header className="vt-mobile-only fixed top-0 left-0 right-0 px-5 pt-14 pb-4 header-glass z-50 flex items-center justify-between">
-            <Button 
-              variant="ghost"
-              size="auto"
-              className="w-10 h-10 rounded-[12px] bg-white/60 border border-slate-200 text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-transform hover:bg-white/60"
-              onClick={() => {
-                // Let the parent dictate close behavior. We just submit or close
-                if (submitAttempted || isAllAnswered) {
-                  submitTest();
-                } else if (onClose) {
-                  onClose();
-                }
-              }}
-            >
-                <X className="w-4 h-4" />
-            </Button>
-            <div className="flex flex-col items-center">
-                <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
-                    {labels.vocabTest?.title || 'Vocabulary Test'}
-                </span>
-            </div>
-            <Button 
-                variant="ghost" 
-                size="auto" 
-                className="w-10 h-10 flex items-center justify-center text-slate-400 active:scale-95 transition-transform hover:bg-transparent"
-            >
-                <FileText className="w-4 h-4" />
-            </Button>
+          <Button
+            variant="ghost"
+            size="auto"
+            className="w-10 h-10 rounded-[12px] bg-white/60 border border-slate-200 text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-transform hover:bg-white/60"
+            onClick={() => {
+              // Let the parent dictate close behavior. We just submit or close
+              if (submitAttempted || isAllAnswered) {
+                submitTest();
+              } else if (onClose) {
+                onClose();
+              }
+            }}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+              {labels.vocabTest?.title || 'Vocabulary Test'}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="auto"
+            className="w-10 h-10 flex items-center justify-center text-slate-400 active:scale-95 transition-transform hover:bg-transparent"
+          >
+            <FileText className="w-4 h-4" />
+          </Button>
         </header>
 
         {/* Mobile Spacing for fixed header */}
@@ -798,7 +803,9 @@ function RunningScreen({
                   isAllAnswered ? 'bg-[#1A1A1C]' : 'bg-rose-600'
                 }`}
               >
-                {isAllAnswered ? (labels.vocabTest?.submitTest || '提交测验') : (labels.vocabTest?.unansweredWarning || '确认提交 (仍有未答题)')}
+                {isAllAnswered
+                  ? labels.vocabTest?.submitTest || '提交测验'
+                  : labels.vocabTest?.unansweredWarning || '确认提交 (仍有未答题)'}
               </Button>
             </div>
           </div>
@@ -809,7 +816,7 @@ function RunningScreen({
           <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-black text-muted-foreground">
-                 Answered {answeredCardCount}/{Math.max(cards.length, 1)}
+                Answered {answeredCardCount}/{Math.max(cards.length, 1)}
               </div>
               {submitAttempted && !isAllAnswered && (
                 <div className="text-xs font-bold text-red-600 mt-0.5">
@@ -851,18 +858,16 @@ function SettingsScreen({
   isStartDisabled,
 }: TestSettingsProps) {
   const labels = getLabels(language);
-  const format = (template: string, vars: Record<string, string | number>) =>
-    template.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
 
   const toggleType = (key: QuestionType) => {
     if (key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice) return;
-    setEnabledTypes((prev) => ({ ...prev, [key]: !prev[key] }));
+    setEnabledTypes(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const getModeProps = (key: QuestionType) => {
     const isSelected = enabledTypes[key];
     const disabled = key === 'MULTIPLE_CHOICE' && !canUseMultipleChoice;
-    
+
     let baseClass = 'vt-mode-key rounded-[1.2rem] p-4 flex flex-col items-center text-center';
     if (isSelected) baseClass += ' selected';
     if (disabled) baseClass += ' opacity-50 cursor-not-allowed';
@@ -871,7 +876,7 @@ function SettingsScreen({
       className: baseClass,
       onClick: () => {
         if (!disabled) toggleType(key);
-      }
+      },
     };
   };
 
@@ -920,7 +925,7 @@ function SettingsScreen({
             box-shadow: 0 2px 0px #E2E8F0, 0 4px 8px rgba(0,0,0,0.04);
         }
       `}</style>
-      
+
       <div className="px-5 pt-8 pb-24 max-w-[420px] mx-auto w-full">
         <div className="vt-card-paper w-full rounded-[2.5rem] p-7 relative">
           <div className="text-center mb-10">
@@ -944,22 +949,22 @@ function SettingsScreen({
                 {effectiveQuestionCount}
               </span>
             </div>
-            
+
             <div className="w-full h-2.5 bg-slate-200/80 rounded-full relative shadow-inner">
-              <div 
+              <div
                 className="absolute left-0 top-0 bottom-0 bg-slate-800 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)] pointer-events-none"
                 style={{ width: `${(effectiveQuestionCount / Math.max(1, maxQuestions)) * 100}%` }}
               ></div>
-              <div 
+              <div
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-white border border-slate-200 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-10 pointer-events-none transition-transform"
                 style={{ left: `${(effectiveQuestionCount / Math.max(1, maxQuestions)) * 100}%` }}
               ></div>
-              <input 
-                type="range" 
-                min={1} 
-                max={Math.max(1, maxQuestions)} 
+              <input
+                type="range"
+                min={1}
+                max={Math.max(1, maxQuestions)}
                 value={effectiveQuestionCount}
-                onChange={(e) => setQuestionCount(Number(e.target.value))}
+                onChange={e => setQuestionCount(Number(e.target.value))}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
               />
             </div>
@@ -969,12 +974,13 @@ function SettingsScreen({
             <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] uppercase ml-1 mb-4 flex justify-between">
               <span>{labels.vocabTest?.questionTypes || 'Modes'}</span>
               {enabledTypeList.length === 0 && (
-                <span className="text-red-500 font-bold lowercase tracking-normal">({labels.vocabTest?.pickAtLeastOneType || 'pick 1'})</span>
+                <span className="text-red-500 font-bold lowercase tracking-normal">
+                  ({labels.vocabTest?.pickAtLeastOneType || 'pick 1'})
+                </span>
               )}
             </p>
-            
+
             <div className="grid grid-cols-2 gap-3 pb-2">
-              
               {/* Multiple Choice */}
               <div {...getModeProps('MULTIPLE_CHOICE')}>
                 <div className="vt-mode-icon-container w-10 h-10 rounded-[10px] bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 mb-3 transition-colors">
@@ -996,7 +1002,9 @@ function SettingsScreen({
                 <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
                   {labels.vocabTest?.questionTypeTrueFalse || 'True / False'}
                 </h4>
-                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">True / False</p>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">
+                  True / False
+                </p>
               </div>
 
               {/* Written */}
@@ -1007,7 +1015,9 @@ function SettingsScreen({
                 <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
                   {labels.vocabTest?.questionTypeWritten || 'Written'}
                 </h4>
-                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">Written</p>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">
+                  Written
+                </p>
               </div>
 
               {/* Fill 10 */}
@@ -1018,28 +1028,31 @@ function SettingsScreen({
                 <h4 className="vt-mode-title text-[13px] font-black text-slate-800 tracking-wide mb-1">
                   {labels.vocabTest?.questionTypeFill || 'Fill in 10'}
                 </h4>
-                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">Fill in 10</p>
+                <p className="vt-mode-desc text-[9px] font-bold text-slate-400 tracking-wider">
+                  Fill in 10
+                </p>
               </div>
-
             </div>
           </div>
 
           <div className="mb-8">
-             <div className="flex justify-between items-center bg-[#F8F9FA] rounded-[1.2rem] p-4 border border-slate-200 shadow-sm">
-                <span className="text-[12px] font-black text-slate-700 tracking-widest pl-1">{labels.vocabTest?.answers || 'Answers'}</span>
-                <Select
-                  value={answerLanguage}
-                  onChange={(e) => setAnswerLanguage(e.target.value as AnswerLanguage)}
-                  className="!h-9 !py-0 !text-[12px] !font-bold !bg-white !border !border-slate-200 !rounded-[8px] !shadow-none !w-auto"
-                >
-                  <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
-                  <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
-                  <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
-                </Select>
-             </div>
+            <div className="flex justify-between items-center bg-[#F8F9FA] rounded-[1.2rem] p-4 border border-slate-200 shadow-sm">
+              <span className="text-[12px] font-black text-slate-700 tracking-widest pl-1">
+                {labels.vocabTest?.answers || 'Answers'}
+              </span>
+              <Select
+                value={answerLanguage}
+                onChange={e => setAnswerLanguage(e.target.value as AnswerLanguage)}
+                className="!h-9 !py-0 !text-[12px] !font-bold !bg-white !border !border-slate-200 !rounded-[8px] !shadow-none !w-auto"
+              >
+                <option value="KOREAN">{labels.vocabTest?.answerLanguageKorean || 'Korean'}</option>
+                <option value="NATIVE">{nativeLabelFromLanguage(language)}</option>
+                <option value="BOTH">{labels.vocabTest?.answerLanguageBoth || 'Both'}</option>
+              </Select>
+            </div>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={startTest}
             disabled={isStartDisabled}
@@ -1047,7 +1060,6 @@ function SettingsScreen({
           >
             {labels.vocabTest?.startTest || 'START TEST'}
           </button>
-
         </div>
       </div>
     </>

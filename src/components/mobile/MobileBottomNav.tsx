@@ -104,7 +104,11 @@ export function MobileBottomNav() {
 
   const isTabActive = (tab: Tab) => {
     if (tab.key === 'dashboard') {
-      return pathWithoutLang.startsWith('/dashboard') || pathWithoutLang.startsWith('/dictionary/');
+      return (
+        pathWithoutLang.startsWith('/dashboard') ||
+        pathWithoutLang.startsWith('/dictionary/') ||
+        pathWithoutLang.startsWith('/community')
+      );
     }
     if (tab.key === 'learn') {
       return (

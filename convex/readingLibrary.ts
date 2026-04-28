@@ -183,7 +183,7 @@ export const listReadingLibraryBooks = query({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    
+
     // Use the appropriate index based on whether we're filtering by status
     if (args.status) {
       // Use by_owner index for status filtering
@@ -196,7 +196,7 @@ export const listReadingLibraryBooks = query({
         .collect();
       // Sort by updatedAt in memory
       books.sort((a, b) => b.updatedAt - a.updatedAt);
-      
+
       return books.map(book =>
         toClientBook(book, {
           isOwner: true,
@@ -212,7 +212,7 @@ export const listReadingLibraryBooks = query({
         .withIndex('by_owner_updatedAt', q => q.eq('ownerUserId', userId))
         .order('desc')
         .collect();
-      
+
       return books.map(book =>
         toClientBook(book, {
           isOwner: true,
@@ -222,6 +222,49 @@ export const listReadingLibraryBooks = query({
         })
       );
     }
+  },
+});
+
+export const getMyUploads = query({
+  args: {
+    status: v.optional(readingLibraryStatusValidator),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    const status = args.status;
+    if (status) {
+      const books = await ctx.db
+        .query('reading_library_books')
+        .withIndex('by_owner', q => q.eq('ownerUserId', userId).eq('status', status))
+        .collect();
+
+      books.sort((a, b) => b.updatedAt - a.updatedAt);
+
+      return books.map(book =>
+        toClientBook(book, {
+          isOwner: true,
+          canRead: book.chapterCount > 0,
+          canSubmitForReview: false,
+          canShare: canBookBeShared(book),
+        })
+      );
+    }
+
+    const books = await ctx.db
+      .query('reading_library_books')
+      .withIndex('by_owner_updatedAt', q => q.eq('ownerUserId', userId))
+      .order('desc')
+      .collect();
+
+    return books.map(book =>
+      toClientBook(book, {
+        isOwner: true,
+        canRead: book.chapterCount > 0,
+        canSubmitForReview: false,
+        canShare: canBookBeShared(book),
+      })
+    );
   },
 });
 

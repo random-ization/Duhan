@@ -42,256 +42,37 @@ import {
 import { formatReadingPublishedDate, getReadingSourceLabel } from '../utils/readingMetadata';
 import AnnotationToolbar from '../features/annotation-kit/components/AnnotationToolbar';
 import { useScopedAnnotations } from '../features/annotation-kit/hooks/useScopedAnnotations';
-import type { AnnotationSelectionKind } from '../features/annotation-kit/types';
+
 import { classifySelectionKind } from '../features/annotation-kit/utils/selection';
+import { STOPWORDS, TERM_GLOSSARY } from './reading/constants';
+import {
+  difficultyLabel,
+  difficultyClass,
+  toParagraphs,
+  summarizeArticle,
+} from './reading/helpers';
+import { ReadingTranslationResult, DictionaryFallbackResult } from './reading/types';
+import type {
+  NewsArticle,
+  PanelTab,
+  NoteVisualState,
+  VocabularyItem,
+  GrammarItem,
+  DictionaryEntry,
+  DictionarySearchResult,
+  ReadingAiResult,
+  NoteColor,
+  ReaderNote,
+  NoteAnchor,
+  DraftNote,
+  SelectionToolbarState,
+} from './reading/types';
+
 import {
   ContextualCountBadge,
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
-
-type NewsArticle = {
-  _id: string;
-  sourceKey: string;
-  sourceUrl: string;
-  title: string;
-  summary?: string;
-  bodyText: string;
-  publishedAt: number;
-  difficultyLevel: 'L1' | 'L2' | 'L3';
-  difficultyScore: number;
-  paragraphTranslations?: Partial<Record<'zh' | 'en' | 'vi' | 'mn', string[]>>;
-};
-
-type PanelTab = 'ai' | 'notes';
-type NoteVisualState = 'default' | 'selected' | 'hovered';
-
-type VocabularyItem = {
-  term: string;
-  meaning: string;
-  level: string;
-};
-
-type GrammarItem = {
-  pattern: string;
-  explanation: string;
-  example: string;
-};
-
-type DictionaryEntry = {
-  targetCode: string;
-  word: string;
-  pronunciation?: string;
-  pos?: string;
-  senses: Array<{
-    order: number;
-    definition: string;
-    translation?: { lang: string; word: string; definition: string };
-  }>;
-};
-
-type DictionarySearchResult = {
-  total: number;
-  start: number;
-  num: number;
-  entries: DictionaryEntry[];
-};
-
-type ReadingAiResult = {
-  summary: string;
-  vocabulary: VocabularyItem[];
-  grammar: GrammarItem[];
-};
-
-type ReadingTranslationResult = {
-  translations: string[];
-};
-
-type DictionaryFallbackResult = {
-  word: string;
-  pos: string;
-  meaning: string;
-  example: string;
-  note: string;
-};
-
-type NoteColor = 'yellow' | 'green' | 'blue' | 'pink';
-
-type ReaderNote = {
-  id: string;
-  quote: string;
-  comment: string;
-  color: NoteColor;
-  createdAt: number;
-  anchor: NoteAnchor;
-};
-
-type NoteAnchor = {
-  paragraphIndex: number;
-  start: number;
-  end: number;
-};
-
-type DraftNote = {
-  quote: string;
-  color: NoteColor;
-  comment: string;
-  anchor: NoteAnchor;
-};
-
-type SelectionToolbarState = {
-  visible: boolean;
-  x: number;
-  y: number;
-  text: string;
-  anchor: NoteAnchor | null;
-  selectionKind: AnnotationSelectionKind;
-};
-
-const STOPWORDS = new Set([
-  '그리고',
-  '하지만',
-  '그러나',
-  '또한',
-  '이것은',
-  '그것은',
-  '대한',
-  '에서',
-  '이다',
-  '있다',
-  '했다',
-  '하는',
-  '으로',
-  '위해',
-  '이번',
-  '지난',
-  '현재',
-  '관련',
-  '기자',
-  '보도',
-  '대한민국',
-]);
-
-const TERM_GLOSSARY: Record<
-  string,
-  { meaning: Record<'zh' | 'en' | 'vi' | 'mn', string>; level: string }
-> = {
-  기준금리: {
-    meaning: {
-      zh: '\u57fa\u51c6\u5229\u7387',
-      en: 'base interest rate',
-      vi: 'lãi suất cơ bản',
-      mn: 'суурь хүү',
-    },
-    level: 'TOPIK 4',
-  },
-  동결: {
-    meaning: {
-      zh: '\u51bb\u7ed3，\u7ef4\u6301\u4e0d\u53d8',
-      en: 'freeze, keep unchanged',
-      vi: 'đóng băng, giữ nguyên',
-      mn: 'хэвээр барих',
-    },
-    level: 'TOPIK 3',
-  },
-  동결하다: {
-    meaning: {
-      zh: '\u51bb\u7ed3，\u7ef4\u6301\u4e0d\u53d8',
-      en: 'freeze, keep unchanged',
-      vi: 'đóng băng, giữ nguyên',
-      mn: 'хэвээр барих',
-    },
-    level: 'TOPIK 3',
-  },
-  가계부채: {
-    meaning: {
-      zh: '\u5bb6\u5ead\u503a\u52a1',
-      en: 'household debt',
-      vi: 'nợ hộ gia đình',
-      mn: 'өрхийн өр',
-    },
-    level: 'TOPIK 4',
-  },
-  물가: {
-    meaning: { zh: '\u7269\u4ef7', en: 'prices', vi: 'giá cả', mn: 'үнийн түвшин' },
-    level: 'TOPIK 3',
-  },
-  상승률: {
-    meaning: { zh: '\u4e0a\u6da8\u7387', en: 'growth rate', vi: 'tỷ lệ tăng', mn: 'өсөлтийн хувь' },
-    level: 'TOPIK 4',
-  },
-  가능성: {
-    meaning: { zh: '\u53ef\u80fd\u6027', en: 'possibility', vi: 'khả năng', mn: 'боломж' },
-    level: 'TOPIK 3',
-  },
-  배제: {
-    meaning: { zh: '\u6392\u9664', en: 'exclude', vi: 'loại trừ', mn: 'үгүйсгэх' },
-    level: 'TOPIK 5',
-  },
-  충돌: {
-    meaning: { zh: '\u51b2\u7a81', en: 'conflict', vi: 'xung đột', mn: 'мөргөлдөөн' },
-    level: 'TOPIK 4',
-  },
-};
-
-function difficultyLabel(
-  level: 'L1' | 'L2' | 'L3',
-  t: (key: string, options?: Record<string, unknown>) => string
-) {
-  if (level === 'L1') return t('readingArticle.difficulty.l1', { defaultValue: 'A2 Beginner' });
-  if (level === 'L2') return t('readingArticle.difficulty.l2', { defaultValue: 'B1 Intermediate' });
-  return t('readingArticle.difficulty.l3', { defaultValue: 'C1 Advanced' });
-}
-
-function difficultyClass(level: 'L1' | 'L2' | 'L3') {
-  if (level === 'L1')
-    return 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300';
-  if (level === 'L2')
-    return 'border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300';
-  return 'border-indigo-100 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300';
-}
-
-function toParagraphs(text: string) {
-  const normalized = text.replace(/\r\n/g, '\n').trim();
-  const byBreak = normalized
-    .split(/\n{2,}/)
-    .map(item => item.trim())
-    .filter(Boolean);
-  if (byBreak.length > 1) return byBreak;
-
-  const sentences = normalized.split(/(?<=[.!?。！？])\s+/).filter(Boolean);
-  if (sentences.length <= 2) return [normalized];
-
-  const blocks: string[] = [];
-  for (let i = 0; i < sentences.length; i += 3) {
-    blocks.push(sentences.slice(i, i + 3).join(' '));
-  }
-  return blocks;
-}
-
-function summarizeArticle(
-  title: string,
-  summary: string | undefined,
-  bodyText: string,
-  language: 'zh' | 'en' | 'vi' | 'mn'
-) {
-  if (summary && summary.trim().length > 40) {
-    return `${title}. ${summary.trim()}`;
-  }
-  const sentences = bodyText
-    .split(/[.!?。！？]\s*/)
-    .filter(Boolean)
-    .slice(0, 2);
-  if (sentences.length === 0) {
-    if (language === 'en')
-      return `${title}. This article focuses on social and economic trends in Korea.`;
-    if (language === 'vi')
-      return `${title}. Bài viết tập trung vào các xu hướng xã hội và kinh tế tại Hàn Quốc.`;
-    if (language === 'mn')
-      return `${title}. Энэхүү нийтлэл нь Солонгосын нийгэм, эдийн засгийн чиг хандлагад төвлөрнө.`;
-    return `${title}。\u672c\u6587\u805a\u7126\u97e9\u56fd\u793e\u4f1a\u4e0e\u7ecf\u6d4e\u52a8\u6001。`;
-  }
-  return `${title}. ${sentences.join('. ')}.`;
-}
+import { KT } from '../components/mobile/ksoft/ksoft';
 
 function extractVocabulary(
   bodyText: string,
@@ -2674,26 +2455,53 @@ export default function ReadingArticlePage() {
 
   if (isMobile) {
     return (
-      <div className="relative min-h-[100dvh] bg-[#F9F3E6] text-[#1F1B17]">
-        <header className="sticky top-0 z-40 border-b border-[#E3D8C5] bg-[#F9F3E6]/95 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur">
+      <div
+        className="relative min-h-[100dvh]"
+        style={{
+          background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
+          color: KT.ink,
+          fontFamily: KT.font,
+        }}
+      >
+        <header
+          className="sticky top-0 z-40 border-b px-5 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur"
+          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.94)' }}
+        >
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate(backPath)}
-              className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
+              className="grid h-10 w-10 place-items-center"
+              style={{
+                borderRadius: 16,
+                border: `1px solid ${KT.line}`,
+                background: KT.card,
+                boxShadow: KT.shSm,
+                color: KT.ink,
+              }}
               aria-label={t('common.back', { defaultValue: 'Back' })}
             >
               <ChevronLeft size={18} />
             </button>
             <div className="flex-1 text-center">
-              <div className="text-[11px] font-bold tracking-[0.16em] text-[#8C8377]">
+              <div
+                className="text-[11px] font-bold tracking-[0.16em]"
+                style={{ color: KT.crimson, fontFamily: KT.serif }}
+              >
                 {mobileParagraphProgress} / {Math.max(1, paragraphs.length)} · 讀
               </div>
             </div>
             <button
               type="button"
               onClick={increaseFontSize}
-              className="grid h-10 w-10 place-items-center rounded-full bg-black/5 text-[#1F1B17]"
+              className="grid h-10 w-10 place-items-center"
+              style={{
+                borderRadius: 16,
+                border: `1px solid ${KT.line}`,
+                background: KT.card,
+                boxShadow: KT.shSm,
+                color: KT.ink,
+              }}
               aria-label={t('readingArticle.controls.fontSize', { defaultValue: 'Font size' })}
             >
               <span className="text-sm font-black">Aa</span>
@@ -2705,13 +2513,16 @@ export default function ReadingArticlePage() {
           ref={contentRef}
           className="h-[calc(100dvh-72px-env(safe-area-inset-top))] overflow-y-auto px-6 pb-[calc(var(--mobile-safe-bottom)+130px)] pt-4"
         >
-          <div className="font-serif text-[12px] font-semibold tracking-[0.26em] text-[#A23B2E]">
+          <div
+            className="font-serif text-[12px] font-semibold tracking-[0.26em]"
+            style={{ color: KT.crimson }}
+          >
             文 · ARTICLE
           </div>
-          <h1 className="mt-1 text-[34px] font-black leading-tight tracking-[-0.03em] text-[#1F1B17]">
+          <h1 className="mt-1 text-[34px] font-black leading-tight" style={{ color: KT.ink }}>
             {resolvedArticle.title}
           </h1>
-          <div className="mt-3 text-xs font-semibold text-[#8C8377]">
+          <div className="mt-3 text-xs font-semibold" style={{ color: KT.sub }}>
             {sourceDisplayLabel} · {publishedDateLabel} · {wordCount}
           </div>
           {translationError ? (
@@ -2725,7 +2536,7 @@ export default function ReadingArticlePage() {
             </div>
           ) : null}
 
-          <div className="mt-6 leading-[2] text-[17px] text-[#2D2823]" style={{ fontSize }}>
+          <div className="mt-6 leading-[2] text-[17px]" style={{ fontSize, color: KT.ink2 }}>
             <ReadingParagraphBlocks
               t={t}
               paragraphs={paragraphs}
@@ -2742,28 +2553,43 @@ export default function ReadingArticlePage() {
           </div>
 
           {activeWord.trim() ? (
-            <div className="mt-8 rounded-2xl border border-[#E3D8C5] bg-white px-4 py-4 shadow-sm">
+            <div
+              className="mt-8 rounded-2xl border px-4 py-4 shadow-sm"
+              style={{ borderColor: KT.line, background: KT.card }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-serif text-[11px] font-semibold tracking-[0.22em] text-[#A23B2E]">
+                  <div
+                    className="font-serif text-[11px] font-semibold tracking-[0.22em]"
+                    style={{ color: KT.crimson }}
+                  >
                     {activeWord}
                   </div>
-                  <div className="mt-1 text-[24px] font-black leading-none text-[#1F1B17]">
+                  <div
+                    className="mt-1 text-[24px] font-black leading-none"
+                    style={{ color: KT.ink }}
+                  >
                     {activeWord}
                   </div>
-                  <div className="mt-1 text-xs font-semibold text-[#8C8377]">{mobileWordPos}</div>
+                  <div className="mt-1 text-xs font-semibold" style={{ color: KT.sub }}>
+                    {mobileWordPos}
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleMobileSaveWord}
-                  className="rounded-full border border-[#1F1B17] px-3 py-1 text-xs font-black text-[#1F1B17]"
+                  className="rounded-full border px-3 py-1 text-xs font-black"
+                  style={{ borderColor: KT.ink, color: KT.ink }}
                 >
                   {mobileWordSaved
                     ? t('readingArticle.dictionary.saved', { defaultValue: 'Saved' })
                     : '+ 단어장'}
                 </button>
               </div>
-              <div className="mt-3 text-sm font-semibold leading-relaxed text-[#2D2823]">
+              <div
+                className="mt-3 text-sm font-semibold leading-relaxed"
+                style={{ color: KT.ink2 }}
+              >
                 {mobileWordMeaning}
               </div>
             </div>
@@ -2781,14 +2607,18 @@ export default function ReadingArticlePage() {
           onClose={() => setSelectionToolbar(prev => ({ ...prev, visible: false }))}
         />
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E3D8C5] bg-[#F9F3E6]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur">
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 border-t px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur"
+          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.94)' }}
+        >
           <div className="mx-auto flex max-w-md items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 void toggleSpeak();
               }}
-              className="flex-1 rounded-xl bg-white px-3 py-3 text-xs font-black text-[#1F1B17] shadow-sm"
+              className="flex-1 rounded-xl px-3 py-3 text-xs font-black shadow-sm"
+              style={{ background: KT.card, color: KT.ink }}
             >
               <span className="inline-flex items-center gap-1">
                 <Volume2 size={14} />
@@ -2798,7 +2628,8 @@ export default function ReadingArticlePage() {
             <button
               type="button"
               onClick={() => setMobilePanelOpen(true)}
-              className="flex-1 rounded-xl bg-white px-3 py-3 text-xs font-black text-[#1F1B17] shadow-sm"
+              className="flex-1 rounded-xl px-3 py-3 text-xs font-black shadow-sm"
+              style={{ background: KT.card, color: KT.ink }}
             >
               <span className="inline-flex items-center gap-1">
                 <BookOpen size={14} />
@@ -2808,9 +2639,11 @@ export default function ReadingArticlePage() {
             <button
               type="button"
               onClick={onToggleTranslation}
-              className={`flex-1 rounded-xl px-3 py-3 text-xs font-black shadow-sm ${
-                translationEnabled ? 'bg-[#1F1B17] text-[#F9F3E6]' : 'bg-white text-[#1F1B17]'
-              }`}
+              className="flex-1 rounded-xl px-3 py-3 text-xs font-black shadow-sm"
+              style={{
+                background: translationEnabled ? KT.ink : KT.card,
+                color: translationEnabled ? KT.card : KT.ink,
+              }}
             >
               <span className="inline-flex items-center gap-1">
                 <Languages size={14} />
@@ -2820,7 +2653,8 @@ export default function ReadingArticlePage() {
             <button
               type="button"
               onClick={handleMobileSaveWord}
-              className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#1F1B17] shadow-sm"
+              className="grid h-10 w-10 place-items-center rounded-xl shadow-sm"
+              style={{ background: KT.card, color: KT.ink }}
               aria-label={t('readingArticle.dictionary.save', { defaultValue: 'Save word' })}
             >
               {mobileWordSaved ? <Check size={14} /> : <Star size={14} />}
@@ -2831,7 +2665,10 @@ export default function ReadingArticlePage() {
         <Sheet open={mobilePanelOpen} onOpenChange={setMobilePanelOpen}>
           <SheetPortal>
             <SheetOverlay className="z-[60] bg-black/55 backdrop-blur-sm" />
-            <SheetContent className="fixed inset-x-0 bottom-0 z-[61] mt-10 h-[84dvh] rounded-t-3xl border-[#E3D8C5] bg-[#F9F3E6] px-4 py-5 shadow-2xl">
+            <SheetContent
+              className="fixed inset-x-0 bottom-0 z-[61] mt-10 h-[84dvh] rounded-t-3xl px-4 py-5 shadow-2xl"
+              style={{ borderColor: KT.line, background: KT.bg }}
+            >
               <SheetTitle className="sr-only">
                 {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
               </SheetTitle>

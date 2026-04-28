@@ -390,19 +390,25 @@ export const MobileProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <main className="px-5 pb-12">
+        <main className="px-5 pb-mobile-nav">
           <AnimatePresence mode="wait">
             <motion.div
               key={legacyTab}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
-              style={{
-                background: KT.card,
-                padding: 24,
-                borderRadius: 28,
-                boxShadow: KT.sh,
-              }}
+              style={
+                legacyTab === 'settings'
+                  ? {
+                      minHeight: 'calc(100dvh - 128px)',
+                    }
+                  : {
+                      background: KT.card,
+                      padding: 24,
+                      borderRadius: 28,
+                      boxShadow: KT.sh,
+                    }
+              }
             >
               {legacyTab === 'info' && (
                 <ProfileInfoTab

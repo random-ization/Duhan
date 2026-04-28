@@ -106,6 +106,16 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitleDefault: 'Practice',
     mobilePageMode: 'hub',
   }),
+  community: segments => ({
+    hasFooter: false,
+    hasHeader: false,
+    hasBottomNav: segments[1] !== 'add',
+    headerType: segments[1] === 'add' ? 'detail' : 'section',
+    headerAction: 'none',
+    headerTitle: 'community.title',
+    headerTitleDefault: 'Community',
+    mobilePageMode: segments[1] === 'add' ? 'workspace' : 'hub',
+  }),
   media: () => ({
     hasFooter: false,
     hasHeader: false,

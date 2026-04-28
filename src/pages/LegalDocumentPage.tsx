@@ -40,7 +40,6 @@ const LegalDocumentPage: React.FC<LegalDocumentPageProps> = ({ language, documen
 
   useEffect(() => {
     const controller = new AbortController();
-    setDoc(undefined);
     callPublicConvexQuery<{ type: typeof documentType }, LegalDocumentResult>(
       'legal:getDocument',
       { type: documentType },

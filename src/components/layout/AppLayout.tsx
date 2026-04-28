@@ -68,13 +68,30 @@ export default function AppLayout() {
           backgroundSize: '24px 24px',
         }
       : undefined;
+  const mobileShellStyle = isMobileViewport
+    ? {
+        background: '#FBF8F3',
+        width: '100%',
+        maxWidth: '100vw',
+        overflowX: 'hidden' as const,
+      }
+    : undefined;
+  const mainStyle = isMobileViewport
+    ? {
+        ...mobileShellStyle,
+        ...mainBackgroundStyle,
+      }
+    : mainBackgroundStyle;
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans">
+    <div
+      className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans"
+      style={mobileShellStyle}
+    >
       {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
       <main
         className={`flex-1 h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
-        style={mainBackgroundStyle}
+        style={mainStyle}
       >
         <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
         <GlobalModalContainer />
@@ -86,6 +103,7 @@ export default function AppLayout() {
         <div
           data-mobile-page-mode={routeUiConfig.mobilePageMode}
           className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
+          style={mobileShellStyle}
         >
           {allowRouteMotion ? (
             <LayoutGroup id="app-route-layout">
@@ -93,6 +111,7 @@ export default function AppLayout() {
                 <motion.div
                   key={location.pathname}
                   className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
+                  style={mobileShellStyle}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
@@ -108,6 +127,7 @@ export default function AppLayout() {
             <div
               key={location.pathname}
               className={`${routeContentClass} ${shouldUseDesktopMaxWidth ? 'max-w-[1400px] mx-auto' : ''}`}
+              style={mobileShellStyle}
             >
               <Suspense fallback={<ContentSkeleton />}>
                 <Outlet />

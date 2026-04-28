@@ -2,11 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import { BookMarked, Newspaper, ChevronRight, X, Library, Upload, Share2 } from 'lucide-react';
+import { BookOpen, BookMarked, Newspaper, ChevronRight, X, Share2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { READING_BOOKS, NEWS, READING_LIBRARY } from '../../utils/convexRefs';
 import { MobilePictureBookCard } from './MobilePictureBookCard';
-import { MobileNewsCard } from './MobileNewsCard';
 import { EpubUpload } from '../reading/EpubUpload';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import {
@@ -21,7 +20,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
 import { notify } from '../../utils/notify';
 import { getLocalizedPath } from '../../hooks/useLocalizedNavigate';
-import { KT } from './ksoft/ksoft';
+import { Card, Chip, HanjaSeal, KT, SectionHead } from './ksoft/ksoft';
+import type { EpubLibraryBook } from '../../types/readingLibrary';
 
 interface MobileReadingDiscoveryViewProps {
   readonly active: boolean;
@@ -53,12 +53,74 @@ type FeedData = {
 
 const MOBILE_NEWS_LIMIT = 3;
 
+type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
+
 function getLocaleForReading(language: string) {
   if (language === 'zh') return 'zh-CN';
   if (language === 'vi') return 'vi-VN';
   if (language === 'mn') return 'mn-MN';
   return 'en-US';
 }
+
+const clampStyle = (lines: number): React.CSSProperties => ({
+  overflow: 'hidden',
+  display: '-webkit-box',
+  WebkitLineClamp: lines,
+  WebkitBoxOrient: 'vertical',
+});
+
+const KsoftEmpty: React.FC<{
+  readonly kanji: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly actionLabel?: string;
+  readonly onAction?: () => void;
+}> = ({ kanji, title, description, actionLabel, onAction }) => (
+  <Card pad={18}>
+    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+      <HanjaSeal c={kanji} size={46} bg={KT.bg2} color={KT.sub} round={16} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ color: KT.ink, fontSize: 16, fontWeight: 900 }}>{title}</div>
+        {description ? (
+          <div style={{ marginTop: 4, color: KT.sub, fontSize: 12, lineHeight: 1.55 }}>
+            {description}
+          </div>
+        ) : null}
+        {actionLabel && onAction ? (
+          <button
+            type="button"
+            onClick={onAction}
+            style={{
+              marginTop: 12,
+              border: `1px solid ${KT.line}`,
+              background: KT.card,
+              color: KT.crimson,
+              borderRadius: 999,
+              padding: '8px 14px',
+              fontSize: 12,
+              fontWeight: 900,
+              fontFamily: KT.font,
+            }}
+          >
+            {actionLabel}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  </Card>
+);
+
+const SkeletonCard: React.FC<{ readonly height?: number }> = ({ height = 156 }) => (
+  <div
+    style={{
+      height,
+      borderRadius: 28,
+      background: `linear-gradient(90deg, ${KT.card} 0%, ${KT.bg2} 52%, ${KT.card} 100%)`,
+      border: `1px solid ${KT.line}`,
+      boxShadow: KT.shSm,
+    }}
+  />
+);
 
 export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProps> = ({
   active,
@@ -80,15 +142,11 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const pictureBooks = useQuery(READING_BOOKS.listPublishedBooks, {}) as
     | MobilePictureBook[]
     | undefined;
-  const myUploads = useQuery(READING_LIBRARY.getMyUploads, user?.id ? {} : 'skip') as
-    | Array<any>
-    | undefined;
-  const newsFeed = useQuery(
-    NEWS.getUserFeed,
-    !user?.id || feedReadyUserId === user.id
-      ? { newsLimit: MOBILE_NEWS_LIMIT, articleLimit: 8 }
-      : 'skip'
-  ) as FeedData | undefined;
+  const myUploads = useQuery(READING_LIBRARY.getMyUploads, user?.id ? {} : 'skip');
+  const newsFeed = useQuery(NEWS.getUserFeed, {
+    newsLimit: MOBILE_NEWS_LIMIT,
+    articleLimit: 8,
+  }) as FeedData | undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -113,8 +171,8 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   const booksLoading = pictureBooks === undefined;
   const epubLoading = Boolean(user?.id) && myUploads === undefined;
   const newsLoading =
-    !feedInitError && (!user?.id || feedReadyUserId === user.id) && newsFeed === undefined;
-  const showNewsError = Boolean(user?.id) && feedInitError;
+    newsFeed === undefined || (typeof user?.id === 'string' && feedReadyUserId !== user.id);
+  const showNewsError = Boolean(user?.id) && feedInitError && newsFeed === undefined;
   const currentPath = `${location.pathname}${location.search}`;
   const privateEpubBooks = useMemo(
     () => (Array.isArray(myUploads) ? myUploads.slice(0, 6) : []),
@@ -152,7 +210,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
     return new URL(path, window.location.origin).toString();
   };
 
-  const handleShareBook = async (book: any) => {
+  const handleShareBook = async (book: EpubLibraryBook) => {
     try {
       const result = await ensureShareLink({ bookId: book._id });
       const shareUrl = buildShareUrl(book.slug, result.shareToken);
@@ -205,61 +263,45 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
 
   return (
     <div
-      className="absolute inset-0 overflow-y-auto no-scrollbar pb-mobile-nav px-6 pt-6 animate-in fade-in slide-in-from-right-4 duration-300"
+      className="h-full overflow-y-auto no-scrollbar pb-mobile-nav px-5 pt-5 animate-in fade-in slide-in-from-right-4 duration-300"
       style={{
-        background: KT.bg,
+        background: `radial-gradient(ellipse at 50% 0%, ${KT.bg2} 0%, ${KT.bg} 48%)`,
         color: KT.ink,
         fontFamily: KT.font,
+        maxWidth: '100%',
+        overflowX: 'hidden',
       }}
     >
-      {/* 1. Storybooks Section */}
-      <section className="mb-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border border-white/10 bg-indigo-500/10 text-indigo-200 shadow-xl rim-light">
-              <BookMarked className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-black text-xl text-foreground tracking-tighter italic leading-none mb-1">
-                {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Storybooks' })}
-              </h3>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">
-                {t('readingDiscovery.mobile.swipeHint', { defaultValue: 'Swipe to browse' })}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setShowAllBooks(true)}
-            className="flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
-            aria-label={t('readingDiscovery.pictureBooks.viewAll', {
-              defaultValue: 'View all storybooks',
-            })}
-          >
-            {t('common.viewAll', { defaultValue: 'All' })}
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Button>
-        </div>
+      <section className="mb-8">
+        <SectionHead
+          kanji="冊"
+          title={t('readingDiscovery.pictureBooks.title', { defaultValue: 'Storybooks' })}
+          action={books.length > 0 ? t('common.viewAll', { defaultValue: 'All' }) : undefined}
+          onAction={books.length > 0 ? () => setShowAllBooks(true) : undefined}
+        />
 
         {booksLoading ? (
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="min-w-[150px] aspect-[10/13] bg-muted animate-pulse rounded-[2rem] border border-border"
-              />
-            ))}
-          </div>
+          <SkeletonCard height={176} />
         ) : books.length === 0 ? (
-          <div className="py-12 text-center bg-card rounded-[2.5rem] border border-dashed border-border">
-            <p className="text-muted-foreground font-semibold text-sm">
-              {t('readingDiscovery.noContent', { defaultValue: 'No stories available yet' })}
-            </p>
-          </div>
+          <KsoftEmpty
+            kanji="空"
+            title={t('readingDiscovery.noContent', { defaultValue: 'No stories available yet' })}
+            description={t('readingDiscovery.mobile.swipeHint', {
+              defaultValue: 'Swipe to browse',
+            })}
+          />
         ) : (
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
-            {books.map(book => (
+          <FeaturedReadingBook
+            book={books[0]}
+            currentPath={currentPath}
+            navigate={navigate}
+            t={t}
+          />
+        )}
+
+        {!booksLoading && books.length > 1 ? (
+          <div className="-mx-5 mt-4 flex gap-3 overflow-x-auto no-scrollbar px-5 pb-3">
+            {books.slice(1, 8).map(book => (
               <div key={book._id} className="shrink-0">
                 <MobilePictureBookCard
                   title={book.title}
@@ -275,26 +317,41 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </section>
 
       {/* All Books Full-Screen Sheet – rendered via portal to escape stacking context */}
       {showAllBooks &&
         ReactDOM.createPortal(
-          <div className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom-8 duration-300">
+          <div
+            className="fixed inset-0 z-[70] flex flex-col animate-in slide-in-from-bottom-8 duration-300"
+            style={{ background: KT.bg, color: KT.ink, fontFamily: KT.font }}
+          >
             {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-border" />
+              <div className="w-10 h-1 rounded-full" style={{ background: KT.line2 }} />
             </div>
 
             {/* Header */}
-            <div className="shrink-0 px-5 pt-3 pb-3 border-b border-border bg-background">
+            <div
+              className="shrink-0 px-5 pt-3 pb-3"
+              style={{ borderBottom: `1px solid ${KT.line}`, background: KT.bg }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-2xl font-black text-foreground tracking-tighter italic leading-none">
+                  <div
+                    className="mb-1 text-[11px] font-bold tracking-[0.24em]"
+                    style={{ color: KT.crimson, fontFamily: KT.serif }}
+                  >
+                    冊 · LIBRARY
+                  </div>
+                  <h2
+                    className="text-2xl font-black tracking-tighter leading-none"
+                    style={{ color: KT.ink }}
+                  >
                     {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Storybooks' })}
                   </h2>
-                  <p className="text-xs text-muted-foreground font-semibold mt-1">
+                  <p className="text-xs font-semibold mt-1" style={{ color: KT.sub }}>
                     {filteredBooks.length} / {books.length}{' '}
                     {t('readingDiscovery.pictureBooks.total', { defaultValue: 'books' })}
                   </p>
@@ -303,7 +360,8 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                   variant="ghost"
                   size="auto"
                   onClick={() => setShowAllBooks(false)}
-                  className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-all"
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+                  style={{ background: KT.card, border: `1px solid ${KT.line}`, color: KT.ink }}
                   aria-label={t('common.close', { defaultValue: 'Close' })}
                 >
                   <X className="w-4 h-4" />
@@ -322,11 +380,12 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                     <button
                       key={level}
                       onClick={() => setBookLevelFilter(level)}
-                      className={`shrink-0 h-8 px-4 rounded-full text-xs font-black tracking-tight transition-all active:scale-95 ${
-                        active
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                          : 'bg-muted text-muted-foreground border border-border'
-                      }`}
+                      className="shrink-0 h-8 px-4 rounded-full text-xs font-black tracking-tight transition-all active:scale-95"
+                      style={{
+                        background: active ? KT.ink : KT.card,
+                        color: active ? KT.card : KT.sub,
+                        border: `1px solid ${active ? KT.ink : KT.line}`,
+                      }}
                     >
                       {label}
                     </button>
@@ -338,7 +397,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
             {/* Book Grid */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
               {filteredBooks.length === 0 ? (
-                <div className="py-16 text-center text-muted-foreground text-sm font-semibold">
+                <div className="py-16 text-center text-sm font-semibold" style={{ color: KT.sub }}>
                   {t('readingDiscovery.noContent', { defaultValue: 'No stories available yet' })}
                 </div>
               ) : (
@@ -354,9 +413,13 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                           navigate(buildPictureBookPath(book.slug, currentPath));
                         }}
                         className="flex flex-col gap-2 text-left group active:scale-95 transition-transform"
+                        style={{ fontFamily: KT.font }}
                       >
                         {/* Cover */}
-                        <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden border border-border bg-muted shadow-sm">
+                        <div
+                          className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-sm"
+                          style={{ border: `1px solid ${KT.line}`, background: KT.bg2 }}
+                        >
                           {coverUrl ? (
                             <img
                               src={coverUrl}
@@ -392,11 +455,17 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                         </div>
                         {/* Title & Author */}
                         <div className="px-0.5">
-                          <p className="text-sm font-black text-foreground leading-snug line-clamp-2 group-active:text-indigo-600 transition-colors">
+                          <p
+                            className="text-sm font-black leading-snug line-clamp-2 transition-colors"
+                            style={{ color: KT.ink }}
+                          >
                             {book.title}
                           </p>
                           {book.author && (
-                            <p className="text-[10px] font-semibold text-muted-foreground mt-0.5 truncate">
+                            <p
+                              className="text-[10px] font-semibold mt-0.5 truncate"
+                              style={{ color: KT.sub }}
+                            >
                               {book.author}
                             </p>
                           )}
@@ -411,152 +480,90 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           document.body
         )}
 
-      <section className="mb-10">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] border border-white/10 bg-sky-500/10 text-sky-200 shadow-xl rim-light">
-              <Library className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-black text-xl text-foreground tracking-tighter italic leading-none mb-1">
-                {t('readingDiscovery.library.privateLabel', {
-                  defaultValue: 'Private EPUB Library',
-                })}
-              </h3>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">
-                {t('readingDiscovery.mobile.privateUploads', {
-                  defaultValue: 'Only visible to you',
-                })}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => {
-              if (!user?.id) {
-                navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
-                return;
-              }
-              setShowEpubUploader(true);
-            }}
-            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm active:scale-95 transition-all"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            {t('readingDiscovery.library.uploadCta', { defaultValue: 'Upload EPUB' })}
-          </Button>
-        </div>
+      <section className="mb-8">
+        <SectionHead
+          kanji="庫"
+          title={t('readingDiscovery.library.privateLabel', {
+            defaultValue: 'Private EPUB Library',
+          })}
+          action={t('readingDiscovery.library.uploadCta', { defaultValue: 'Upload EPUB' })}
+          onAction={() => {
+            if (!user?.id) {
+              navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
+              return;
+            }
+            setShowEpubUploader(true);
+          }}
+        />
 
         {epubLoading ? (
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="min-w-[180px] h-[220px] bg-muted animate-pulse rounded-[2rem] border border-border"
+          <SkeletonCard height={168} />
+        ) : !user?.id ? (
+          <KsoftEmpty
+            kanji="入"
+            title={t('readingDiscovery.library.privateLogin', {
+              defaultValue: 'Sign in to see your private EPUB library and create share links.',
+            })}
+            actionLabel={t('auth.signIn', { defaultValue: 'Sign in' })}
+            onAction={() => navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`)}
+          />
+        ) : privateEpubBooks.length === 0 ? (
+          <KsoftEmpty
+            kanji="本"
+            title={t('readingDiscovery.library.privateEmpty', {
+              defaultValue: 'No private EPUBs yet. Upload your first book from the button above.',
+            })}
+            description={t('readingDiscovery.mobile.privateUploads', {
+              defaultValue: 'Only visible to you',
+            })}
+            actionLabel={t('readingDiscovery.library.uploadCta', { defaultValue: 'Upload EPUB' })}
+            onAction={() => setShowEpubUploader(true)}
+          />
+        ) : (
+          <Card pad={0} style={{ overflow: 'hidden' }}>
+            {privateEpubBooks.map((book, index) => (
+              <EpubShelfRow
+                key={book._id}
+                book={book}
+                isLast={index === privateEpubBooks.length - 1}
+                t={t}
+                onOpen={() => navigate(buildEpubLibraryPath(book.slug, currentPath))}
+                onShare={() => void handleShareBook(book)}
+                onDisableShare={() => void handleDisableShare(book._id)}
               />
             ))}
-          </div>
-        ) : !user?.id ? (
-          <div className="py-12 text-center bg-card rounded-[2.5rem] border border-dashed border-border">
-            <p className="text-muted-foreground font-semibold text-sm">
-              {t('readingDiscovery.library.privateLogin', {
-                defaultValue: 'Sign in to see your private EPUB library and create share links.',
-              })}
-            </p>
-          </div>
-        ) : privateEpubBooks.length === 0 ? (
-          <div className="py-12 text-center bg-card rounded-[2.5rem] border border-dashed border-border">
-            <p className="text-muted-foreground font-semibold text-sm">
-              {t('readingDiscovery.library.privateEmpty', {
-                defaultValue: 'No private EPUBs yet. Upload your first book from the button above.',
-              })}
-            </p>
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
-            {privateEpubBooks.map(book => (
-              <div
-                key={book._id}
-                className="shrink-0 w-[180px] overflow-hidden rounded-[2rem] border border-border bg-card text-left shadow-sm"
-              >
-                <button
-                  type="button"
-                  onClick={() => navigate(buildEpubLibraryPath(book.slug, currentPath))}
-                  className="block w-full text-left"
-                >
-                  {book.coverSignedUrlCache ? (
-                    <img
-                      src={book.coverSignedUrlCache}
-                      alt={book.title}
-                      className="h-[180px] w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-[180px] items-end bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_55%),linear-gradient(180deg,_rgba(14,165,233,0.08),_rgba(15,23,42,0.02))] p-4">
-                      <h4 className="line-clamp-3 text-lg font-black text-foreground">
-                        {book.title}
-                      </h4>
-                    </div>
-                  )}
-                  <div className="space-y-1 p-4">
-                    <p className="line-clamp-2 text-sm font-black text-foreground">{book.title}</p>
-                    <p className="line-clamp-1 text-xs font-semibold text-muted-foreground">
-                      {book.author}
-                    </p>
-                    <p className="text-[11px] font-semibold text-muted-foreground">
-                      {t('readingDiscovery.library.chapterCount', {
-                        defaultValue: '{{count}} chapters',
-                        count: book.chapterCount,
-                      })}
-                    </p>
-                  </div>
-                </button>
-                <div className="flex gap-2 border-t border-border/70 px-3 py-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleShareBook(book)}
-                    disabled={!book.canShare}
-                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-border px-2 py-2 text-[11px] font-black uppercase tracking-wide text-muted-foreground disabled:opacity-50"
-                  >
-                    <Share2 className="mr-1.5 h-3.5 w-3.5" />
-                    {book.shareEnabled
-                      ? t('readingDiscovery.library.copyShareLink', {
-                          defaultValue: 'Copy Link',
-                        })
-                      : t('readingDiscovery.library.shareShort', {
-                          defaultValue: 'Share',
-                        })}
-                  </button>
-                  {book.shareEnabled ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDisableShare(book._id)}
-                      className="inline-flex items-center justify-center rounded-xl border border-amber-200 px-2 py-2 text-[11px] font-black uppercase tracking-wide text-amber-700"
-                    >
-                      {t('readingDiscovery.library.stopShareShort', {
-                        defaultValue: 'Stop',
-                      })}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
+          </Card>
         )}
       </section>
 
       {showEpubUploader &&
         ReactDOM.createPortal(
-          <div className="fixed inset-0 z-[70] flex flex-col bg-background animate-in slide-in-from-bottom-8 duration-300">
+          <div
+            className="fixed inset-0 z-[70] flex flex-col animate-in slide-in-from-bottom-8 duration-300"
+            style={{ background: KT.bg, color: KT.ink, fontFamily: KT.font }}
+          >
             <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-border" />
+              <div className="w-10 h-1 rounded-full" style={{ background: KT.line2 }} />
             </div>
-            <div className="shrink-0 px-5 pt-3 pb-3 border-b border-border bg-background">
+            <div
+              className="shrink-0 px-5 pt-3 pb-3"
+              style={{ borderBottom: `1px solid ${KT.line}`, background: KT.bg }}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-black text-foreground tracking-tighter italic leading-none">
+                  <div
+                    className="mb-1 text-[11px] font-bold tracking-[0.24em]"
+                    style={{ color: KT.crimson, fontFamily: KT.serif }}
+                  >
+                    庫 · EPUB
+                  </div>
+                  <h2
+                    className="text-2xl font-black tracking-tighter leading-none"
+                    style={{ color: KT.ink }}
+                  >
                     {t('readingDiscovery.upload.title', { defaultValue: 'Upload EPUB' })}
                   </h2>
-                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                  <p className="mt-1 text-xs font-semibold" style={{ color: KT.sub }}>
                     {t('readingDiscovery.upload.supportedFormat', {
                       defaultValue:
                         'Supported format: EPUB. The file will be parsed after upload and saved as a draft.',
@@ -567,7 +574,8 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                   variant="ghost"
                   size="auto"
                   onClick={() => setShowEpubUploader(false)}
-                  className="w-9 h-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground active:scale-95 transition-all"
+                  className="w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+                  style={{ background: KT.card, border: `1px solid ${KT.line}`, color: KT.ink }}
                   aria-label={t('common.close', { defaultValue: 'Close' })}
                 >
                   <X className="w-4 h-4" />
@@ -589,56 +597,37 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
           document.body
         )}
 
-      {/* 3. News Feed Section */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-100 bg-indigo-50 text-indigo-500 shadow-sm dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200">
-            <Newspaper className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-black text-lg text-foreground tracking-tight italic">
-              {t('readingDiscovery.news.title', { defaultValue: 'Live News' })}
-            </h3>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {t('readingDiscovery.news.updated', { defaultValue: 'Updated every hour' })}
-            </p>
-          </div>
-        </div>
+      <section className="space-y-4">
+        <SectionHead
+          kanji="聞"
+          title={t('readingDiscovery.news.title', { defaultValue: 'Live News' })}
+        />
 
         {newsLoading ? (
-          <div className="space-y-5">
+          <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="h-44 bg-muted animate-pulse rounded-[2.5rem] border border-border"
-              />
+              <SkeletonCard key={i} height={132} />
             ))}
           </div>
         ) : showNewsError ? (
-          <div className="py-12 px-8 text-center bg-card rounded-[2.5rem] border border-border">
-            <p className="text-sm font-semibold text-muted-foreground mb-4">
-              {t('readingDiscovery.news.loadError', {
-                defaultValue: 'Unable to load news right now.',
-              })}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="auto"
-              onClick={retryNewsFeed}
-              className="h-10 px-6 rounded-xl border-border bg-background text-foreground font-black uppercase tracking-widest text-[10px] shadow-sm"
-            >
-              {t('common.retry', { defaultValue: 'Try Again' })}
-            </Button>
-          </div>
+          <KsoftEmpty
+            kanji="新"
+            title={t('readingDiscovery.news.loadError', {
+              defaultValue: 'Unable to load news right now.',
+            })}
+            actionLabel={t('common.retry', { defaultValue: 'Try Again' })}
+            onAction={retryNewsFeed}
+          />
         ) : news.length === 0 ? (
-          <div className="py-20 text-center text-muted-foreground font-semibold">
-            {t('readingDiscovery.news.empty', {
+          <KsoftEmpty
+            kanji="待"
+            title={t('readingDiscovery.news.empty', {
               defaultValue: 'Check back soon for new articles.',
             })}
-          </div>
+            description={t('readingDiscovery.news.updated', { defaultValue: 'Updated every hour' })}
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-3">
             {news.map((item, index) => (
               <motion.div
                 key={item._id}
@@ -647,7 +636,7 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
                 transition={{ delay: index * 0.05 }}
                 className={index === 0 ? 'col-span-1' : ''}
               >
-                <MobileReadingItem
+                <MobileArticleCard
                   item={item}
                   currentPath={currentPath}
                   language={language}
@@ -663,8 +652,278 @@ export const MobileReadingDiscoveryView: React.FC<MobileReadingDiscoveryViewProp
   );
 };
 
-// Helper component for News Card logic
-const MobileReadingItem = ({
+const FeaturedReadingBook: React.FC<{
+  readonly book: MobilePictureBook;
+  readonly currentPath: string;
+  readonly navigate: (path: string) => void;
+  readonly t: TranslationFn;
+}> = ({ book, currentPath, navigate, t }) => {
+  const coverUrl = (book.coverImageUrl || book.coverUrl || '').trim();
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.98 }}
+      onClick={() => navigate(buildPictureBookPath(book.slug, currentPath))}
+      aria-label={t('readingDiscovery.pictureBooks.openCard', {
+        defaultValue: 'Open storybook {{title}}',
+        title: book.title,
+      })}
+      style={{
+        width: '100%',
+        textAlign: 'left',
+        border: 'none',
+        padding: 0,
+        background: 'transparent',
+        fontFamily: KT.font,
+      }}
+    >
+      <Card pad={16} style={{ overflow: 'hidden', position: 'relative' }}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            right: -8,
+            top: -14,
+            fontFamily: KT.serif,
+            fontSize: 86,
+            lineHeight: 1,
+            color: `${KT.crimson}10`,
+            pointerEvents: 'none',
+          }}
+        >
+          讀
+        </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', position: 'relative' }}>
+          <div
+            style={{
+              width: 104,
+              minHeight: 138,
+              borderRadius: 22,
+              overflow: 'hidden',
+              border: `1px solid ${KT.line}`,
+              background: `linear-gradient(135deg, ${KT.sky}66, ${KT.lilac}66)`,
+              boxShadow: KT.shSm,
+              flexShrink: 0,
+            }}
+          >
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt={book.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                style={{ display: 'grid', placeItems: 'center', height: '100%', color: KT.skyDeep }}
+              >
+                <BookOpen size={36} />
+              </div>
+            )}
+          </div>
+          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Chip tone="sky">{book.levelLabel || 'Level 1'}</Chip>
+              <span
+                style={{ color: KT.subLight, fontSize: 10, fontWeight: 800, letterSpacing: 1.4 }}
+              >
+                READING
+              </span>
+            </div>
+            <h3
+              style={{
+                color: KT.ink,
+                fontSize: 20,
+                fontWeight: 950,
+                letterSpacing: -0.8,
+                lineHeight: 1.15,
+                ...clampStyle(3),
+              }}
+            >
+              {book.title}
+            </h3>
+            {book.author ? (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: KT.sub,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  ...clampStyle(1),
+                }}
+              >
+                {book.author}
+              </p>
+            ) : null}
+            <div
+              style={{
+                marginTop: 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                color: KT.crimson,
+                fontSize: 12,
+                fontWeight: 950,
+              }}
+            >
+              {t('readingDiscovery.pictureBooks.startReading', { defaultValue: 'Start reading' })}
+              <ChevronRight size={15} />
+            </div>
+          </div>
+        </div>
+      </Card>
+    </motion.button>
+  );
+};
+
+const EpubShelfRow: React.FC<{
+  readonly book: EpubLibraryBook;
+  readonly isLast: boolean;
+  readonly t: TranslationFn;
+  readonly onOpen: () => void;
+  readonly onShare: () => void;
+  readonly onDisableShare: () => void;
+}> = ({ book, isLast, t, onOpen, onShare, onDisableShare }) => {
+  const chapterLabel = t('readingDiscovery.library.chapterCount', {
+    defaultValue: '{{count}} chapters',
+    count: book.chapterCount,
+  });
+
+  return (
+    <article
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '58px minmax(0, 1fr)',
+        gap: 12,
+        padding: '14px 14px',
+        borderBottom: isLast ? 'none' : `1px solid ${KT.line}`,
+        alignItems: 'center',
+      }}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={book.title}
+        style={{
+          width: 58,
+          height: 76,
+          borderRadius: 16,
+          overflow: 'hidden',
+          border: `1px solid ${KT.line}`,
+          background: `linear-gradient(135deg, ${KT.sky}66, ${KT.bg2})`,
+          boxShadow: KT.shSm,
+          padding: 0,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {book.coverSignedUrlCache ? (
+          <img
+            src={book.coverSignedUrlCache}
+            alt={book.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <span style={{ fontFamily: KT.serif, color: KT.skyDeep, fontSize: 25 }}>書</span>
+        )}
+      </button>
+
+      <div style={{ minWidth: 0 }}>
+        <button
+          type="button"
+          onClick={onOpen}
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            textAlign: 'left',
+            fontFamily: KT.font,
+          }}
+        >
+          <div
+            style={{
+              color: KT.ink,
+              fontSize: 15,
+              fontWeight: 950,
+              letterSpacing: -0.35,
+              lineHeight: 1.25,
+              ...clampStyle(2),
+            }}
+          >
+            {book.title}
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: KT.sub,
+              fontSize: 11,
+              fontWeight: 750,
+              minWidth: 0,
+            }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {book.author || 'EPUB'}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span style={{ whiteSpace: 'nowrap' }}>{chapterLabel}</span>
+          </div>
+        </button>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={onShare}
+            disabled={!book.canShare}
+            style={{
+              border: `1px solid ${KT.line}`,
+              background: KT.bg,
+              color: book.canShare ? KT.crimson : KT.subLight,
+              borderRadius: 999,
+              padding: '7px 11px',
+              fontSize: 11,
+              fontWeight: 900,
+              fontFamily: KT.font,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              opacity: book.canShare ? 1 : 0.55,
+            }}
+          >
+            <Share2 size={13} />
+            {book.shareEnabled
+              ? t('readingDiscovery.library.copyShareLink', { defaultValue: 'Copy Link' })
+              : t('readingDiscovery.library.shareShort', { defaultValue: 'Share' })}
+          </button>
+          {book.shareEnabled ? (
+            <button
+              type="button"
+              onClick={onDisableShare}
+              style={{
+                border: `1px solid ${KT.butter}`,
+                background: KT.card,
+                color: KT.butterDeep,
+                borderRadius: 999,
+                padding: '7px 11px',
+                fontSize: 11,
+                fontWeight: 900,
+                fontFamily: KT.font,
+              }}
+            >
+              {t('readingDiscovery.library.stopShareShort', { defaultValue: 'Stop' })}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+};
+
+const MobileArticleCard = ({
   item,
   currentPath,
   language,
@@ -675,7 +934,7 @@ const MobileReadingItem = ({
   currentPath: string;
   language: string;
   navigate: (path: string) => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  t: TranslationFn;
 }) => {
   const dateLabel = formatReadingRelativeTime(
     item.publishedAt,
@@ -684,15 +943,93 @@ const MobileReadingItem = ({
   );
 
   return (
-    <MobileNewsCard
-      title={item.title}
-      source={item.sourceKey || 'News'}
-      summary={item.summary}
-      difficulty={item.difficultyLevel || 'L2'}
-      wordCount={Math.max(5, Math.round((item.bodyText?.length || 0) / 95))}
-      dateLabel={dateLabel}
-      ariaLabel={'Open news article: ' + item.title}
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.98 }}
       onClick={() => navigate(buildReadingArticlePath(item._id, currentPath))}
-    />
+      aria-label={'Open news article: ' + item.title}
+      style={{
+        width: '100%',
+        textAlign: 'left',
+        border: `1px solid ${KT.line}`,
+        background: KT.card,
+        borderRadius: 26,
+        padding: 16,
+        boxShadow: KT.shSm,
+        fontFamily: KT.font,
+      }}
+    >
+      <div style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
+        <HanjaSeal c="新" size={44} bg={KT.butterDeep} round={15} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+            <Chip
+              tone={
+                item.difficultyLevel === 'L1'
+                  ? 'mint'
+                  : item.difficultyLevel === 'L2'
+                    ? 'sky'
+                    : 'lilac'
+              }
+            >
+              {item.difficultyLevel}
+            </Chip>
+            <span style={{ color: KT.subLight, fontSize: 10, fontWeight: 850 }}>
+              {item.sourceKey || 'News'} · {dateLabel}
+            </span>
+          </div>
+          <h3
+            style={{
+              marginTop: 9,
+              color: KT.ink,
+              fontSize: 16,
+              fontWeight: 950,
+              letterSpacing: -0.35,
+              lineHeight: 1.28,
+              ...clampStyle(2),
+            }}
+          >
+            {item.title}
+          </h3>
+          {item.summary ? (
+            <p
+              style={{
+                marginTop: 7,
+                color: KT.sub,
+                fontSize: 12,
+                lineHeight: 1.5,
+                fontWeight: 600,
+                ...clampStyle(2),
+              }}
+            >
+              {item.summary}
+            </p>
+          ) : null}
+          <div
+            style={{
+              marginTop: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderTop: `1px solid ${KT.line}`,
+              paddingTop: 10,
+              color: KT.subLight,
+              fontSize: 10,
+              fontWeight: 850,
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <Newspaper size={12} />
+              {Math.max(5, Math.round((item.bodyText?.length || 0) / 95))} words
+            </span>
+            <span
+              style={{ color: KT.crimson, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+            >
+              Read <ChevronRight size={14} />
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.button>
   );
 };

@@ -16,6 +16,11 @@ import {
   ContextualPrimaryActionButton,
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
+import { Card as KsoftCard, Chip, KT, PageShell } from '../components/mobile/ksoft/ksoft';
+import {
+  KsoftEmptyState,
+  KsoftImmersiveHeader,
+} from '../components/mobile/ksoft/KsoftMobilePrimitives';
 
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 
@@ -78,7 +83,7 @@ const ReviewQuizPage: React.FC = () => {
       korean: item.word,
       english: item.meaning,
       unit: 0,
-      partOfSpeech: (item as any).partOfSpeech,
+      partOfSpeech: item.partOfSpeech,
     }));
   }, [reviewQueue, dueItems, mode]);
 
@@ -157,6 +162,89 @@ const ReviewQuizPage: React.FC = () => {
     content: quizSidebarContent,
     enabled: !isMobile,
   });
+
+  if (isMobile) {
+    return (
+      <PageShell bg={`linear-gradient(180deg, ${KT.bg} 0%, ${KT.bg2} 100%)`}>
+        <KsoftImmersiveHeader
+          eyebrow="復 · REVIEW"
+          title={modeLabel}
+          subtitle={
+            loading
+              ? t('common.loading', { defaultValue: 'Loading...' })
+              : `${words.length} ${labels.wordsUnit ?? 'words'}`
+          }
+          seal="復"
+          onBack={() => navigate('/review')}
+        />
+        <main style={{ padding: '2px 16px 112px' }}>
+          {loading ? (
+            <KsoftCard pad={22}>
+              <div style={{ color: KT.sub, fontSize: 14, fontWeight: 800 }}>
+                {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
+              </div>
+            </KsoftCard>
+          ) : words.length === 0 ? (
+            <KsoftEmptyState
+              title={t('reviewPage.queue.empty_due', {
+                defaultValue: 'No words due for review! Good job.',
+              })}
+              actionLabel={t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' })}
+              onAction={() => navigate('/review')}
+            />
+          ) : (
+            <KsoftCard
+              pad={12}
+              style={{
+                overflow: 'hidden',
+                border: `1px solid ${KT.line}`,
+                background: KT.card,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 6px 12px',
+                }}
+              >
+                <Chip tone={mode === 'full' ? 'pink' : mode === 'quick' ? 'butter' : 'mint'}>
+                  {modeLabel}
+                </Chip>
+                <span style={{ color: KT.sub, fontSize: 12, fontWeight: 800 }}>
+                  {words.length} {labels.wordsUnit ?? 'words'}
+                </span>
+              </div>
+              <Suspense
+                fallback={
+                  <div
+                    style={{ minHeight: 220, display: 'grid', placeItems: 'center', color: KT.sub }}
+                  >
+                    {t('common.loading', { defaultValue: 'Loading...' })}
+                  </div>
+                }
+              >
+                <VocabQuiz
+                  words={words}
+                  language={language}
+                  variant="quiz"
+                  presetSettings={{
+                    multipleChoice: true,
+                    writingMode: false,
+                    mcDirection: 'KR_TO_NATIVE',
+                    autoTTS: true,
+                    soundEffects: true,
+                  }}
+                  onComplete={() => navigate('/review')}
+                />
+              </Suspense>
+            </KsoftCard>
+          )}
+        </main>
+      </PageShell>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-indigo-400/8 dark:via-background dark:to-indigo-300/8">

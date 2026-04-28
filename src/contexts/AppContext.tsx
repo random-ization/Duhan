@@ -31,9 +31,6 @@ function isPublicPathname(pathname: string): boolean {
   }
 
   if (
-    routeRoot === 'login' ||
-    routeRoot === 'register' ||
-    routeRoot === 'auth' ||
     routeRoot === 'verify-email' ||
     routeRoot === 'forgot-password' ||
     routeRoot === 'reset-password' ||
@@ -51,10 +48,6 @@ function isPublicPathname(pathname: string): boolean {
   }
 
   if (routeRoot === 'preview' && routeChild === 'mobile') {
-    return true;
-  }
-
-  if (routeRoot === 'admin' && routeChild === 'login') {
     return true;
   }
 
@@ -90,9 +83,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // skeleton UIs.
   return (
     <Suspense fallback={null}>
-      <AuthedAppProviders>
-        <LearningProvider>{children}</LearningProvider>
-      </AuthedAppProviders>
+      <AuthedAppProviders>{children}</AuthedAppProviders>
     </Suspense>
   );
 };

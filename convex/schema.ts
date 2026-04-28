@@ -161,6 +161,7 @@ export default defineSchema({
     lastLoginAt: v.optional(v.number()),
     lastActivityAt: v.optional(v.number()),
     lastActivityType: v.optional(v.string()),
+    friendCode: v.optional(v.string()),
     postgresId: v.optional(v.string()),
 
     // Regional promo eligibility (CN/VN/MN phone verification)
@@ -175,7 +176,9 @@ export default defineSchema({
     .index('by_googleId', ['googleId'])
     .index('by_token', ['token']) // Security index
     .index('by_postgresId', ['postgresId'])
-    .index('by_lastActivityAt', ['lastActivityAt']),
+    .index('by_lastActivityAt', ['lastActivityAt'])
+    .index('by_friendCode', ['friendCode'])
+    .searchIndex('search_name', { searchField: 'name' }),
 
   // Institutes (Courses/Textbooks)
   institutes: defineTable({
@@ -1458,7 +1461,9 @@ export default defineSchema({
     ),
     audioSpeed: v.optional(v.union(v.literal(0.8), v.literal(1), v.literal(1.2), v.literal(1.4))),
     dictationPlayCount: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
-    dictationGapSeconds: v.optional(v.union(v.literal(2), v.literal(4), v.literal(6), v.literal(8))),
+    dictationGapSeconds: v.optional(
+      v.union(v.literal(2), v.literal(4), v.literal(6), v.literal(8))
+    ),
     dictationAutoNext: v.optional(v.boolean()),
 
     updatedAt: v.number(),
@@ -1484,7 +1489,11 @@ export default defineSchema({
       v.literal('exam_countdown'),
       v.literal('partner_milestone'),
       v.literal('achievement_unlocked'),
-      v.literal('friend_activity')
+      v.literal('friend_activity'),
+      v.literal('friend_request'),
+      v.literal('friend_accepted'),
+      v.literal('group_invite'),
+      v.literal('group_accepted')
     ),
     title: v.string(),
     body: v.string(),
@@ -1516,4 +1525,67 @@ export default defineSchema({
   })
     .index('by_userA_status', ['userA', 'status'])
     .index('by_userB_status', ['userB', 'status']),
+
+  // ───────────────────────────────────────────
+  // Study groups MVP (community v2)
+  // ───────────────────────────────────────────
+
+  study_groups: defineTable({
+    name: v.string(),
+    ownerId: v.id('users'),
+    description: v.optional(v.string()),
+    memberCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_owner', ['ownerId'])
+    .index('by_createdAt', ['createdAt']),
+
+  study_group_members: defineTable({
+    groupId: v.id('study_groups'),
+    userId: v.id('users'),
+    role: v.union(v.literal('owner'), v.literal('member')),
+    joinedAt: v.number(),
+  })
+    .index('by_group', ['groupId'])
+    .index('by_user', ['userId'])
+    .index('by_group_user', ['groupId', 'userId']),
+
+  study_group_invites: defineTable({
+    groupId: v.id('study_groups'),
+    inviterId: v.id('users'),
+    inviteeId: v.id('users'),
+    status: v.union(v.literal('pending'), v.literal('accepted'), v.literal('declined')),
+    createdAt: v.number(),
+    respondedAt: v.optional(v.number()),
+  })
+    .index('by_invitee_status', ['inviteeId', 'status'])
+    .index('by_group', ['groupId'])
+    .index('by_group_invitee', ['groupId', 'inviteeId']),
+
+  // ───────────────────────────────────────────
+  // League tiers (community v2)
+  // ───────────────────────────────────────────
+
+  league_memberships: defineTable({
+    weekIdentifier: v.string(),
+    userId: v.id('users'),
+    tier: v.union(
+      v.literal('bronze'),
+      v.literal('silver'),
+      v.literal('gold'),
+      v.literal('diamond')
+    ),
+    cohortId: v.string(), // "{weekIdentifier}:{tier}:{cohortNum}"
+    weeklyXpSnapshot: v.number(), // refreshed at settlement / kept in sync via xp.ts hook
+  })
+    .index('by_week_user', ['weekIdentifier', 'userId'])
+    .index('by_user_week', ['userId', 'weekIdentifier'])
+    .index('by_cohort_xp', ['cohortId', 'weeklyXpSnapshot']),
+
+  league_settlements: defineTable({
+    weekIdentifier: v.string(),
+    settledAt: v.number(),
+    nextWeekPrepared: v.boolean(),
+    usersProcessed: v.number(),
+  }).index('by_week', ['weekIdentifier']),
 });

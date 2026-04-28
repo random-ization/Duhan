@@ -857,28 +857,9 @@ function DashboardPage() {
     if (dailyPhrase?.korean) {
       speak(dailyPhrase.korean);
     }
-  }, [dailyPhrase?.korean, speak]);
-  const cardContext: DashboardCardContext = {
-    t,
-    isSpeaking,
-    dailyPhrase,
-    onSpeakDailyPhrase,
-    isInstituteNameLoading,
-    instituteName,
-    selectedLevel,
-    currentUnit,
-    progressPercent,
-    savedWordsCount,
-  };
-  const dashboardGridItems = useMemo<EditableDashboardGridItem[]>(
-    () =>
-      filteredCardOrder.map(id => ({
-        id,
-        className: getCardStyleForId(id),
-        content: renderDashboardCard(id, cardContext),
-      })),
-    [
-      filteredCardOrder,
+  }, [dailyPhrase, speak]);
+  const dashboardGridItems = useMemo<EditableDashboardGridItem[]>(() => {
+    const cardContext: DashboardCardContext = {
       t,
       isSpeaking,
       dailyPhrase,
@@ -889,8 +870,25 @@ function DashboardPage() {
       currentUnit,
       progressPercent,
       savedWordsCount,
-    ]
-  );
+    };
+    return filteredCardOrder.map(id => ({
+      id,
+      className: getCardStyleForId(id),
+      content: renderDashboardCard(id, cardContext),
+    }));
+  }, [
+    filteredCardOrder,
+    t,
+    isSpeaking,
+    dailyPhrase,
+    onSpeakDailyPhrase,
+    isInstituteNameLoading,
+    instituteName,
+    selectedLevel,
+    currentUnit,
+    progressPercent,
+    savedWordsCount,
+  ]);
   const renderStaticDashboardGrid = useCallback(
     (className: string) => (
       <div className={className}>

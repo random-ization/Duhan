@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Settings, ChevronDown, X, BookMarked } from 'lucide-react';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
 import { useGlobalSettings } from '../../hooks/useGlobalSettings';
@@ -7,7 +7,6 @@ import { useSearchParams } from 'react-router-dom';
 import MobileUnitSelector from './MobileUnitSelector';
 import MobileFlashcardPlayer from './MobileFlashcardPlayer';
 import { MobileLearnMode } from './MobileLearnMode';
-import VocabQuiz from '../../features/vocab/components/VocabQuiz';
 import VocabTest from '../../features/vocab/components/VocabTest';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { Language } from '../../types';
@@ -24,7 +23,7 @@ interface MobileVocabViewProps {
   // Data
   readonly allWords: ExtendedVocabItem[];
   readonly filteredWords: ExtendedVocabItem[];
-  readonly gameWords: any[];
+  readonly gameWords: MobileVocabGameWord[];
 
   // State
   readonly currentUnitId: number | 'ALL';
@@ -44,10 +43,19 @@ interface MobileVocabViewProps {
   readonly instituteId: string;
   readonly language: Language;
   readonly userId?: string;
+  readonly initialMode?: TabId;
   readonly onRequestTestMode?: () => Promise<boolean>;
 }
 
 type TabId = 'flashcard' | 'match' | 'learn' | 'test';
+type MobileVocabGameWord = {
+  id: string;
+  korean: string;
+  english: string;
+  unit: number;
+  partOfSpeech?: ExtendedVocabItem['partOfSpeech'];
+  pos?: string;
+};
 
 // K-Soft Hanja labels for each tab mode
 const TAB_META: Record<TabId, { hanja: string }> = {
@@ -102,7 +110,8 @@ export default function MobileVocabView({
   onFsrsReview,
   instituteId,
   language,
-  userId,
+  userId: _userId,
+  initialMode,
   onRequestTestMode,
 }: MobileVocabViewProps) {
   const { t } = useTranslation();
@@ -110,6 +119,7 @@ export default function MobileVocabView({
   const [searchParams] = useSearchParams();
   const tabStorageKey = `mobileVocabActiveTab:${instituteId}`;
   const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (initialMode) return initialMode;
     if (globalThis.window === undefined) return 'flashcard';
     const saved = safeGetLocalStorageItem(tabStorageKey);
     if (saved === 'match' || saved === 'learn' || saved === 'test') return saved;
@@ -119,6 +129,7 @@ export default function MobileVocabView({
   const [focusOpen, setFocusOpen] = useState(true);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [showFlashcardSettings, setShowFlashcardSettings] = useState(false);
+  const appliedInitialModeRef = useRef<TabId | null>(null);
 
   const labels = useMemo(() => getLabels(language), [language]);
   const switchMaterialPath = buildLearningPickerPath('vocabulary');
@@ -141,6 +152,27 @@ export default function MobileVocabView({
     if (globalThis.window === undefined) return;
     safeSetLocalStorageItem(tabStorageKey, activeTab);
   }, [activeTab, tabStorageKey]);
+
+  useEffect(() => {
+    if (!initialMode || appliedInitialModeRef.current === initialMode) return;
+    appliedInitialModeRef.current = initialMode;
+
+    if (initialMode === 'test' && onRequestTestMode) {
+      void (async () => {
+        const allowed = await onRequestTestMode();
+        if (!allowed) return;
+        setActiveTab(initialMode);
+        setFocusOpen(true);
+      })();
+      return;
+    }
+
+    const timeoutId = globalThis.window.setTimeout(() => {
+      setActiveTab(initialMode);
+      setFocusOpen(true);
+    }, 0);
+    return () => globalThis.window.clearTimeout(timeoutId);
+  }, [initialMode, onRequestTestMode]);
 
   const tabs = [
     { id: 'flashcard', label: t('vocab.flashcard', { defaultValue: 'Flashcard' }) },
@@ -531,7 +563,15 @@ export default function MobileVocabView({
         language={language}
         title={tabs.find(x => x.id === activeTab)?.label}
         variant="fullscreen"
-        headerContent={activeTab === 'flashcard' ? flashcardFocusHeader : activeTab === 'learn' ? <></> : defaultFocusHeader}
+        headerContent={
+          activeTab === 'flashcard' ? (
+            flashcardFocusHeader
+          ) : activeTab === 'learn' ? (
+            <></>
+          ) : (
+            defaultFocusHeader
+          )
+        }
       >
         <div className="h-full bg-background">{renderFocusContent()}</div>
       </VocabLearnOverlay>
