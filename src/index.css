@@ -177,7 +177,6 @@
     width: 100%;
     max-width: 100%;
     background: #fbf8f3;
-    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground;
@@ -186,7 +185,6 @@
     min-height: 100dvh;
     overflow-x: hidden;
     background: #fbf8f3;
-    overscroll-behavior: none;
   }
   #root {
     width: 100%;
@@ -208,7 +206,6 @@
 
     body {
       position: relative;
-      overscroll-behavior-x: none;
     }
   }
 }
