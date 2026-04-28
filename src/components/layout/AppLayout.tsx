@@ -84,10 +84,7 @@ export default function AppLayout() {
     : mainBackgroundStyle;
 
   return (
-    <div
-      className="flex min-h-screen min-h-[100dvh] bg-background overflow-hidden font-sans"
-      style={mobileShellStyle}
-    >
+    <div className="flex min-h-screen min-h-[100dvh] bg-background font-sans">
       {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
       <main
         className={`flex-1 h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
