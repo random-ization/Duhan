@@ -909,6 +909,7 @@
     "prev": "Өмнөх",
     "next": "Дараах",
     "back": "Буцах",
+    "you": "Та",
     "backHome": "Нүүр хуудас руу буцах",
     "continue": "Үргэлжлүүлэх",
     "viewAll": "Бүгдийг харах",
@@ -945,6 +946,29 @@
     "loading": "Уншиж байна...",
     "error": "Алдаа гарлаа.",
     "allRightsReserved": "Бүх эрх хуулиар хамгаалагдсан."
+  },
+  "search": {
+    "placeholder": "Дүрэм, ном, тэмдэглэл хайх...",
+    "startTyping": "Хайхын тулд бичиж эхлээрэй",
+    "empty": "Илэрц олдсонгүй.",
+    "bucket": {
+      "grammar": "Дүрэм",
+      "book": "Ном",
+      "podcast": "Подкаст",
+      "note": "Тэмдэглэл"
+    }
+  },
+  "notifications": {
+    "open": "Мэдэгдлүүд",
+    "title": "Мэдэгдлүүд",
+    "markAll": "Бүгдийг уншсан гэж тэмдэглэх",
+    "markAllFailed": "Бүгдийг уншсан гэж тэмдэглэж чадсангүй.",
+    "empty": "Бүх мэдэгдлээ уншсан байна.",
+    "dismiss": "Нуух",
+    "viewAll": "Бүх мэдэгдлийг харах"
+  },
+  "mobileLearnMode": {
+    "emptyWords": "Үгийн өгөгдөл алга"
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "Подкаст суваг үүсгэж чадсангүй.",
@@ -1494,6 +1518,15 @@
         "minuteShort": "{{minutes}}м",
         "questionCountShort": "{{count}}А",
         "bestScore": "{{score}}%",
+        "questionType": {
+          "visual": "Зураг/график унших",
+          "sequence": "Дараалал тогтоох",
+          "insert": "Өгүүлбэр оруулах",
+          "headline": "Мэдээ унших",
+          "fillBlank": "Хоосон зай бөглөх",
+          "reading": "Уншлагын ойлголт",
+          "multipleChoice": "Сонголттой"
+        },
         "cover": {
           "roundMock": "{{round}}-р шалгалтын симуляци",
           "time": "Хугацаа",
@@ -2501,6 +2534,44 @@
       "TYPING": "Бичгийн аварга",
       "VOCAB": "Үгийн сангийн мастер",
       "STREAK": "Цуваа хадгалагч"
+    },
+    "mobile": {
+      "title": "Амжилт ба тэмдэг",
+      "learningBadges": "Суралцах тэмдэг",
+      "unlockedAt": "{{date}} нээгдсэн"
+    },
+    "categories": {
+      "streak": "Тасралтгүй суралцах",
+      "vocab": "Үгийн сан",
+      "grammar": "Дүрэм",
+      "listening": "Сонсох",
+      "typing": "Бичих",
+      "topik": "TOPIK",
+      "social": "Нийгмийн"
+    },
+    "badges": {
+      "streak7": { "title": "7 өдөр дараалан", "description": "7 өдөр дараалан суралцах." },
+      "streak14": { "title": "14 өдөр дараалан", "description": "14 өдөр дараалан суралцах." },
+      "streak30": { "title": "30 өдөр дараалан", "description": "30 өдөр дараалан суралцах." },
+      "streak60": { "title": "60 өдөр дараалан", "description": "60 өдөр дараалан суралцах." },
+      "streak100": { "title": "100 өдөр дараалан", "description": "100 өдөр дараалан суралцах." },
+      "streak365": { "title": "365 өдөр дараалан", "description": "Бүтэн жил суралцах." },
+      "vocab100": { "title": "Үг 100", "description": "100 үг эзэмших." },
+      "vocab500": { "title": "Үг 500", "description": "500 үг эзэмших." },
+      "vocab1000": { "title": "Үг 1000", "description": "1000 үг эзэмших." },
+      "grammar20": { "title": "Дүрэм 20", "description": "20 дүрмийн сэдэв эзэмших." },
+      "grammar100": { "title": "Дүрэм 100", "description": "100 дүрмийн сэдэв эзэмших." },
+      "listening20h": { "title": "Сонсох 20 цаг", "description": "20 цагийн сонсох дадлага хийх." },
+      "listening100h": { "title": "Сонсох 100 цаг", "description": "100 цагийн сонсох дадлага хийх." },
+      "typing40": { "title": "WPM 40", "description": "Бичих дадлагад WPM 40 хүрэх." },
+      "typing80": { "title": "WPM 80", "description": "Бичих дадлагад WPM 80 хүрэх." },
+      "typing100": { "title": "WPM 100", "description": "Бичих дадлагад WPM 100 хүрэх." },
+      "topikPass": { "title": "TOPIK тэнцсэн", "description": "Нэг TOPIK туршилтын шалгалтад тэнцэх." },
+      "topikHighScore": { "title": "TOPIK өндөр оноо", "description": "Нэг TOPIK туршилтын шалгалтад өндөр оноо авах." },
+      "friends1": { "title": "Анхны найз", "description": "Анхны харилцан найзаа нэмэх." },
+      "friends10": { "title": "10 найз", "description": "10 харилцан найзтай болох." },
+      "groupJoin": { "title": "Бүлэгт нэгдэх", "description": "Нэг сургалтын бүлэгт нэгдэх." },
+      "groupCreate": { "title": "Бүлэг үүсгэх", "description": "Нэг сургалтын бүлэг үүсгэх." }
     }
   },
   "weeklyActivity": {
@@ -2682,6 +2753,12 @@
     "settingsTitle": "Ерөнхий тохиргоо",
     "displayLanguage": "Хэлний тохиргоо",
     "languageDesc": "Интерфейс болон хичээлийн хэлийг сонгоно уу.",
+    "mobile": {
+      "legalPrivacyHint": "Өгөгдөл ба нууцлалын мэдээлэл",
+      "legalTermsHint": "Үйлчилгээний нөхцөл, дүрэм",
+      "legalRefundHint": "Буцаан олголтын мэдээлэл",
+      "discordHint": "Нийгэмлэгт нэгдэж санал хүсэлт үлдээх"
+    },
     "noActivity": "Идэвх байхгүй байна. Хичээлээ эхэлж ахицаа хараарай!",
     "updatePassword": "Нууц үг шинэчлэх",
     "recentActivity": "Сүүлийн идэвх",
@@ -2998,6 +3075,10 @@
     "questionTypeMultipleChoice": "Олон сонголт",
     "questionTypeFill": "Бөглөх",
     "questionTypeWritten": "Бичгээр",
+    "nextQuestion": "Дараах",
+    "trueFalseTitle": "Тайлбар таарч байна уу?",
+    "promptMeaning": "Энэ үг ямар утгатай вэ?",
+    "promptChooseKorean": "Солонгос үгээ сонгоно уу",
     "answeredCount": "Хариулсан {current}/{total}",
     "unansweredWarning": "Хариулаагүй асуулт байна. Эхний асуулт руу шилжлээ.",
     "submitTest": "Илгээх",
@@ -3182,7 +3263,12 @@
     "currentSentenceEmpty": "Тоглуулж эхлэхийн тулд өгүүлбэр дээр дарна уу.",
     "pageOutline": "Хуудасны навигаци",
     "sentenceList": "Өгүүлбэрийн жагсаалт",
-    "sentenceNumber": "{{number}}-р өгүүлбэр"
+    "sentenceNumber": "{{number}}-р өгүүлбэр",
+    "translationDailyLimit": "Өнөөдрийн AI орчуулгын лимит дууссан байна. Маргааш дахин оролдоно уу.",
+    "translationAuthRequired": "Орчуулга ашиглахын тулд нэвтэрнэ үү.",
+    "translationFailed": "Орчуулга амжилтгүй. Холболтоо шалгаад дахин оролдоно уу.",
+    "translationTimeout": "Орчуулгын хугацаа дууслаа. Дахин оролдоно уу.",
+    "upgradeNow": "Шинэчлэх"
   },
   "readingArticle": {
     "difficulty": {
@@ -3395,6 +3481,7 @@
     }
   },
   "footer": {
+    "contactSupport": "Дэмжлэгтэй холбогдох",
     "joinDiscord": "Discord-д нэгдэх",
     "copyright": "© 2026 DuHan Inc. Бүх эрх хуулиар хамгаалагдсан."
   },

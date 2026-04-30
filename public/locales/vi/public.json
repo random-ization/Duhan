@@ -909,6 +909,7 @@
     "prev": "Trước",
     "next": "Tiếp",
     "back": "Quay lại",
+    "you": "Bạn",
     "backHome": "Về trang chủ",
     "continue": "Tiếp tục",
     "viewAll": "Xem tất cả",
@@ -945,6 +946,29 @@
     "loading": "Đang tải...",
     "error": "Đã xảy ra lỗi.",
     "allRightsReserved": "Bảo lưu mọi quyền."
+  },
+  "search": {
+    "placeholder": "Tìm ngữ pháp, sách, ghi chú...",
+    "startTyping": "Bắt đầu gõ để tìm",
+    "empty": "Không có kết quả.",
+    "bucket": {
+      "grammar": "Ngữ pháp",
+      "book": "Sách",
+      "podcast": "Podcast",
+      "note": "Ghi chú"
+    }
+  },
+  "notifications": {
+    "open": "Thông báo",
+    "title": "Thông báo",
+    "markAll": "Đánh dấu đã đọc hết",
+    "markAllFailed": "Không thể đánh dấu tất cả là đã đọc.",
+    "empty": "Bạn đã xem hết rồi.",
+    "dismiss": "Ẩn",
+    "viewAll": "Xem tất cả thông báo"
+  },
+  "mobileLearnMode": {
+    "emptyWords": "Không có dữ liệu từ vựng"
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "Lỗi tạo kênh podcast.",
@@ -1494,6 +1518,15 @@
         "minuteShort": "{{minutes}}p",
         "questionCountShort": "{{count}}C",
         "bestScore": "{{score}}%",
+        "questionType": {
+          "visual": "Đọc biểu đồ",
+          "sequence": "Sắp xếp đoạn",
+          "insert": "Chèn câu",
+          "headline": "Đọc tin tức",
+          "fillBlank": "Điền chỗ trống",
+          "reading": "Đọc hiểu",
+          "multipleChoice": "Trắc nghiệm"
+        },
         "cover": {
           "roundMock": "Mô phỏng đề kỳ {{round}}",
           "time": "Thời gian",
@@ -2501,6 +2534,44 @@
       "TYPING": "Bậc thầy gõ phím",
       "VOCAB": "Bậc thầy từ vựng",
       "STREAK": "Người giữ chuỗi ngày học"
+    },
+    "mobile": {
+      "title": "Thành tựu & huy hiệu",
+      "learningBadges": "Huy hiệu học tập",
+      "unlockedAt": "Mở khóa {{date}}"
+    },
+    "categories": {
+      "streak": "Chuỗi ngày học",
+      "vocab": "Từ vựng",
+      "grammar": "Ngữ pháp",
+      "listening": "Nghe",
+      "typing": "Gõ phím",
+      "topik": "TOPIK",
+      "social": "Xã hội"
+    },
+    "badges": {
+      "streak7": { "title": "7 ngày liên tục", "description": "Học 7 ngày liên tiếp." },
+      "streak14": { "title": "14 ngày liên tục", "description": "Học 14 ngày liên tiếp." },
+      "streak30": { "title": "30 ngày liên tục", "description": "Học 30 ngày liên tiếp." },
+      "streak60": { "title": "60 ngày liên tục", "description": "Học 60 ngày liên tiếp." },
+      "streak100": { "title": "100 ngày liên tục", "description": "Học 100 ngày liên tiếp." },
+      "streak365": { "title": "365 ngày liên tục", "description": "Học trọn một năm." },
+      "vocab100": { "title": "Từ vựng 100", "description": "Nắm vững 100 từ." },
+      "vocab500": { "title": "Từ vựng 500", "description": "Nắm vững 500 từ." },
+      "vocab1000": { "title": "Từ vựng 1000", "description": "Nắm vững 1000 từ." },
+      "grammar20": { "title": "Ngữ pháp 20", "description": "Nắm vững 20 điểm ngữ pháp." },
+      "grammar100": { "title": "Ngữ pháp 100", "description": "Nắm vững 100 điểm ngữ pháp." },
+      "listening20h": { "title": "Nghe 20 giờ", "description": "Tích lũy 20 giờ nghe." },
+      "listening100h": { "title": "Nghe 100 giờ", "description": "Tích lũy 100 giờ nghe." },
+      "typing40": { "title": "WPM 40", "description": "Đạt WPM 40 khi luyện gõ." },
+      "typing80": { "title": "WPM 80", "description": "Đạt WPM 80 khi luyện gõ." },
+      "typing100": { "title": "WPM 100", "description": "Đạt WPM 100 khi luyện gõ." },
+      "topikPass": { "title": "Đạt TOPIK", "description": "Đạt một bài thi thử TOPIK." },
+      "topikHighScore": { "title": "TOPIK điểm cao", "description": "Đạt điểm cao trong một bài thi thử TOPIK." },
+      "friends1": { "title": "Người bạn đầu tiên", "description": "Thêm người bạn hai chiều đầu tiên." },
+      "friends10": { "title": "10 người bạn", "description": "Có 10 người bạn hai chiều." },
+      "groupJoin": { "title": "Tham gia nhóm", "description": "Tham gia một nhóm học tập." },
+      "groupCreate": { "title": "Tạo nhóm", "description": "Tạo một nhóm học tập." }
     }
   },
   "weeklyActivity": {
@@ -2682,6 +2753,12 @@
     "settingsTitle": "Cài đặt chung",
     "displayLanguage": "Ngôn ngữ hiển thị",
     "languageDesc": "Chọn ngôn ngữ cho giao diện và tài liệu học tập.",
+    "mobile": {
+      "legalPrivacyHint": "Xem thông tin dữ liệu và quyền riêng tư",
+      "legalTermsHint": "Xem điều khoản và quy định",
+      "legalRefundHint": "Xem chính sách hoàn tiền",
+      "discordHint": "Tham gia cộng đồng và gửi phản hồi"
+    },
     "noActivity": "Chưa có hoạt động. Hãy bắt đầu kiểm tra để xem tiến trình!",
     "updatePassword": "Cập nhật mật khẩu",
     "recentActivity": "Hoạt động gần đây",
@@ -2998,6 +3075,10 @@
     "questionTypeMultipleChoice": "Trắc nghiệm",
     "questionTypeFill": "Điền",
     "questionTypeWritten": "Tự viết",
+    "nextQuestion": "Câu tiếp",
+    "trueFalseTitle": "Định nghĩa có khớp không?",
+    "promptMeaning": "Nghĩa của từ này là gì?",
+    "promptChooseKorean": "Chọn từ tiếng Hàn",
     "answeredCount": "Đã trả lời {current}/{total}",
     "unansweredWarning": "Vẫn còn câu chưa trả lời. Đã chuyển đến câu đầu tiên.",
     "submitTest": "Nộp bài",
@@ -3182,7 +3263,12 @@
     "currentSentenceEmpty": "Chạm vào một câu để bắt đầu phát.",
     "pageOutline": "Điều hướng trang",
     "sentenceList": "Danh sách câu",
-    "sentenceNumber": "Câu {{number}}"
+    "sentenceNumber": "Câu {{number}}",
+    "translationDailyLimit": "Bạn đã dùng hết lượt dịch AI hôm nay. Hãy thử lại vào ngày mai.",
+    "translationAuthRequired": "Vui lòng đăng nhập để dùng tính năng dịch.",
+    "translationFailed": "Dịch thất bại. Hãy kiểm tra kết nối và thử lại.",
+    "translationTimeout": "Dịch quá thời gian. Vui lòng thử lại.",
+    "upgradeNow": "Nâng cấp"
   },
   "readingArticle": {
     "difficulty": {
@@ -3395,6 +3481,7 @@
     }
   },
   "footer": {
+    "contactSupport": "Liên hệ hỗ trợ",
     "joinDiscord": "Tham gia Discord",
     "copyright": "© 2026 DuHan Inc. Bảo lưu mọi quyền."
   },

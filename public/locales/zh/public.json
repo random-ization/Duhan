@@ -268,6 +268,7 @@
     "prev": "上一词",
     "next": "下一词",
     "back": "返回",
+    "you": "你",
     "backHome": "返回首页",
     "continue": "继续",
     "viewAll": "查看全部",
@@ -304,6 +305,29 @@
     "loading": "正在加载...",
     "error": "出了点问题。",
     "allRightsReserved": "保留所有权利。"
+  },
+  "search": {
+    "placeholder": "搜索语法、书籍、笔记…",
+    "startTyping": "开始输入关键字",
+    "empty": "没有找到结果。",
+    "bucket": {
+      "grammar": "语法",
+      "book": "书籍",
+      "podcast": "播客",
+      "note": "笔记"
+    }
+  },
+  "notifications": {
+    "open": "通知",
+    "title": "通知",
+    "markAll": "全部标为已读",
+    "markAllFailed": "无法全部标为已读。",
+    "empty": "你已看完所有通知。",
+    "dismiss": "关闭",
+    "viewAll": "查看全部通知"
+  },
+  "mobileLearnMode": {
+    "emptyWords": "暂无单词数据"
   },
   "learnHub": {
     "badge": "DuHan 学习指南中心",
@@ -1525,6 +1549,15 @@
         "minuteShort": "{{minutes}}分",
         "questionCountShort": "{{count}}题",
         "bestScore": "{{score}}%",
+        "questionType": {
+          "visual": "图表阅读",
+          "sequence": "段落排序",
+          "insert": "句子插入",
+          "headline": "新闻阅读",
+          "fillBlank": "信息填空",
+          "reading": "阅读理解",
+          "multipleChoice": "选择题"
+        },
         "cover": {
           "roundMock": "第 {{round}} 届真题模拟",
           "time": "时间",
@@ -2513,6 +2546,44 @@
       "TYPING": "打字达人",
       "VOCAB": "词汇大师",
       "STREAK": "连续打卡达人"
+    },
+    "mobile": {
+      "title": "成就与徽章",
+      "learningBadges": "学习徽章",
+      "unlockedAt": "{{date}} 解锁"
+    },
+    "categories": {
+      "streak": "连续学习",
+      "vocab": "词汇",
+      "grammar": "语法",
+      "listening": "听力",
+      "typing": "打字",
+      "topik": "TOPIK",
+      "social": "社交"
+    },
+    "badges": {
+      "streak7": { "title": "7 日连续", "description": "连续学习 7 天。" },
+      "streak14": { "title": "14 日连续", "description": "连续学习 14 天。" },
+      "streak30": { "title": "30 日连续", "description": "连续学习 30 天。" },
+      "streak60": { "title": "60 日连续", "description": "连续学习 60 天。" },
+      "streak100": { "title": "100 日连续", "description": "连续学习 100 天。" },
+      "streak365": { "title": "365 日连续", "description": "连续学习一整年。" },
+      "vocab100": { "title": "词汇 100", "description": "掌握 100 个单词。" },
+      "vocab500": { "title": "词汇 500", "description": "掌握 500 个单词。" },
+      "vocab1000": { "title": "词汇 1000", "description": "掌握 1000 个单词。" },
+      "grammar20": { "title": "语法 20", "description": "掌握 20 个语法点。" },
+      "grammar100": { "title": "语法 100", "description": "掌握 100 个语法点。" },
+      "listening20h": { "title": "听力 20 小时", "description": "累计听力学习 20 小时。" },
+      "listening100h": { "title": "听力 100 小时", "description": "累计听力学习 100 小时。" },
+      "typing40": { "title": "WPM 40", "description": "打字记录达到 WPM 40。" },
+      "typing80": { "title": "WPM 80", "description": "打字记录达到 WPM 80。" },
+      "typing100": { "title": "WPM 100", "description": "打字记录达到 WPM 100。" },
+      "topikPass": { "title": "TOPIK 合格", "description": "完成一次合格的 TOPIK 模考。" },
+      "topikHighScore": { "title": "TOPIK 高分", "description": "完成一次高分 TOPIK 模考。" },
+      "friends1": { "title": "第一位好友", "description": "添加第一位双向好友。" },
+      "friends10": { "title": "好友 10", "description": "拥有 10 位双向好友。" },
+      "groupJoin": { "title": "加入小组", "description": "加入一个学习小组。" },
+      "groupCreate": { "title": "创建小组", "description": "创建一个学习小组。" }
     }
   },
   "weeklyActivity": {
@@ -2727,6 +2798,12 @@
     "settingsTitle": "常规设置",
     "displayLanguage": "显示语言",
     "languageDesc": "选择界面和学习内容的语言。",
+    "mobile": {
+      "legalPrivacyHint": "查看数据与隐私说明",
+      "legalTermsHint": "查看平台使用规则",
+      "legalRefundHint": "查看订阅退款说明",
+      "discordHint": "加入社区并反馈问题"
+    },
     "noActivity": "暂无活动。开始一次测试以查看进度！",
     "updatePassword": "更新密码",
     "recentActivity": "最近活动",
@@ -3069,6 +3146,10 @@
     "questionTypeMultipleChoice": "多项选择",
     "questionTypeFill": "填空",
     "questionTypeWritten": "书写回答",
+    "nextQuestion": "下一题",
+    "trueFalseTitle": "判断释义是否匹配",
+    "promptMeaning": "这个单词是什么意思？",
+    "promptChooseKorean": "选出对应的韩语单词",
     "answeredCount": "已作答 {current}/{total}",
     "unansweredWarning": "还有未作答的题目，已跳转到第一题。",
     "submitTest": "提交测试",
@@ -3194,9 +3275,15 @@
     "currentSentenceEmpty": "点击任意句子开始播放。",
     "pageOutline": "页面导航",
     "sentenceList": "句子列表",
-    "sentenceNumber": "第 {{number}} 句"
+    "sentenceNumber": "第 {{number}} 句",
+    "translationDailyLimit": "今日 AI 翻译次数已用完，可明日再试。",
+    "translationAuthRequired": "请先登录后再使用翻译。",
+    "translationFailed": "翻译失败，请检查网络后重试。",
+    "translationTimeout": "翻译超时，请稍后重试。",
+    "upgradeNow": "去开通会员"
   },
   "readingArticle": {
+    "articleLabel": "文 · ARTICLE",
     "difficulty": {
       "l1": "A2 初阶",
       "l2": "B1 中阶",
@@ -3407,6 +3494,7 @@
     }
   },
   "footer": {
+    "contactSupport": "联系支持团队",
     "joinDiscord": "加入我们的 Discord",
     "copyright": "© 2026 DuHan Inc. 保留所有权利。"
   },

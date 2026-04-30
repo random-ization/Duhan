@@ -268,6 +268,7 @@
     "prev": "Previous",
     "next": "Next",
     "back": "Back",
+    "you": "You",
     "backHome": "Back to Home",
     "continue": "Continue",
     "viewAll": "View all",
@@ -304,6 +305,29 @@
     "loading": "Loading...",
     "error": "Something went wrong.",
     "allRightsReserved": "All rights reserved."
+  },
+  "search": {
+    "placeholder": "Search grammar, books, notes...",
+    "startTyping": "Start typing to search",
+    "empty": "No results found.",
+    "bucket": {
+      "grammar": "Grammar",
+      "book": "Books",
+      "podcast": "Podcasts",
+      "note": "Notes"
+    }
+  },
+  "notifications": {
+    "open": "Notifications",
+    "title": "Notifications",
+    "markAll": "Mark all read",
+    "markAllFailed": "Could not mark all as read.",
+    "empty": "You're all caught up.",
+    "dismiss": "Dismiss",
+    "viewAll": "View all notifications"
+  },
+  "mobileLearnMode": {
+    "emptyWords": "No words available"
   },
   "learnHub": {
     "badge": "DuHan Learn Hub",
@@ -1536,6 +1560,15 @@
         "minuteShort": "{{minutes}}m",
         "questionCountShort": "{{count}}Q",
         "bestScore": "{{score}}%",
+        "questionType": {
+          "visual": "Visual reading",
+          "sequence": "Paragraph ordering",
+          "insert": "Sentence insertion",
+          "headline": "News headlines",
+          "fillBlank": "Fill in the blank",
+          "reading": "Reading comprehension",
+          "multipleChoice": "Multiple choice"
+        },
         "cover": {
           "roundMock": "Round {{round}} Past Exam",
           "time": "Time",
@@ -2502,6 +2535,44 @@
       "TYPING": "Typing Legend",
       "VOCAB": "Vocab Master",
       "STREAK": "Streak Keeper"
+    },
+    "mobile": {
+      "title": "Achievements & Badges",
+      "learningBadges": "Learning badges",
+      "unlockedAt": "Unlocked {{date}}"
+    },
+    "categories": {
+      "streak": "Learning streak",
+      "vocab": "Vocabulary",
+      "grammar": "Grammar",
+      "listening": "Listening",
+      "typing": "Typing",
+      "topik": "TOPIK",
+      "social": "Social"
+    },
+    "badges": {
+      "streak7": { "title": "7-day streak", "description": "Study for 7 days in a row." },
+      "streak14": { "title": "14-day streak", "description": "Study for 14 days in a row." },
+      "streak30": { "title": "30-day streak", "description": "Study for 30 days in a row." },
+      "streak60": { "title": "60-day streak", "description": "Study for 60 days in a row." },
+      "streak100": { "title": "100-day streak", "description": "Study for 100 days in a row." },
+      "streak365": { "title": "365-day streak", "description": "Study for a full year." },
+      "vocab100": { "title": "Vocab 100", "description": "Master 100 words." },
+      "vocab500": { "title": "Vocab 500", "description": "Master 500 words." },
+      "vocab1000": { "title": "Vocab 1000", "description": "Master 1000 words." },
+      "grammar20": { "title": "Grammar 20", "description": "Master 20 grammar points." },
+      "grammar100": { "title": "Grammar 100", "description": "Master 100 grammar points." },
+      "listening20h": { "title": "Listening 20h", "description": "Reach 20 listening hours." },
+      "listening100h": { "title": "Listening 100h", "description": "Reach 100 listening hours." },
+      "typing40": { "title": "WPM 40", "description": "Reach WPM 40 in typing practice." },
+      "typing80": { "title": "WPM 80", "description": "Reach WPM 80 in typing practice." },
+      "typing100": { "title": "WPM 100", "description": "Reach WPM 100 in typing practice." },
+      "topikPass": { "title": "TOPIK pass", "description": "Pass one TOPIK mock exam." },
+      "topikHighScore": { "title": "TOPIK high score", "description": "Earn a high score in one TOPIK mock exam." },
+      "friends1": { "title": "First friend", "description": "Add your first mutual friend." },
+      "friends10": { "title": "10 friends", "description": "Have 10 mutual friends." },
+      "groupJoin": { "title": "Join a group", "description": "Join one study group." },
+      "groupCreate": { "title": "Create a group", "description": "Create one study group." }
     }
   },
   "weeklyActivity": {
@@ -2716,6 +2787,12 @@
     "settingsTitle": "General Settings",
     "displayLanguage": "Display Language",
     "languageDesc": "Choose the language for the interface and learning materials.",
+    "mobile": {
+      "legalPrivacyHint": "View data and privacy details",
+      "legalTermsHint": "View platform terms and rules",
+      "legalRefundHint": "View subscription refund details",
+      "discordHint": "Join the community and share feedback"
+    },
     "noActivity": "No activity yet. Start a test to see your progress!",
     "updatePassword": "Update Password",
     "recentActivity": "Recent Activity",
@@ -3058,6 +3135,10 @@
     "questionTypeMultipleChoice": "Multiple choice",
     "questionTypeFill": "Fill",
     "questionTypeWritten": "Written",
+    "nextQuestion": "Next",
+    "trueFalseTitle": "Does the definition match?",
+    "promptMeaning": "WHAT DOES THIS WORD MEAN?",
+    "promptChooseKorean": "CHOOSE THE KOREAN WORD",
     "answeredCount": "Answered {current}/{total}",
     "unansweredWarning": "Some questions are unanswered. Jumped to the first one.",
     "submitTest": "Submit test",
@@ -3183,7 +3264,12 @@
     "currentSentenceEmpty": "Tap a sentence to start playback.",
     "pageOutline": "Page outline",
     "sentenceList": "Sentence list",
-    "sentenceNumber": "Sentence {{number}}"
+    "sentenceNumber": "Sentence {{number}}",
+    "translationDailyLimit": "You've reached today's AI translation limit. Try again tomorrow.",
+    "translationAuthRequired": "Please sign in to use translations.",
+    "translationFailed": "Translation failed. Check your connection and try again.",
+    "translationTimeout": "Translation timed out. Please try again.",
+    "upgradeNow": "Upgrade"
   },
   "readingArticle": {
     "difficulty": {
@@ -3396,6 +3482,7 @@
     }
   },
   "footer": {
+    "contactSupport": "Contact support",
     "joinDiscord": "Join our Discord",
     "copyright": "© 2026 DuHan Inc. All rights reserved."
   },
