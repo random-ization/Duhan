@@ -31,9 +31,6 @@ function isPublicPathname(pathname: string): boolean {
   }
 
   if (
-    routeRoot === 'verify-email' ||
-    routeRoot === 'forgot-password' ||
-    routeRoot === 'reset-password' ||
     routeRoot === 'terms' ||
     routeRoot === 'privacy' ||
     routeRoot === 'refund' ||

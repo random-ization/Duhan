@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
+import { Bell, BookOpen, ShieldAlert, UserRoundPlus, Users } from 'lucide-react';
 import type { Id } from '../../../convex/_generated/dataModel';
 import type { CommunityActivityDto } from '../../../convex/community';
 import type { DailyChallengeDto } from '../../../convex/dailyChallenges';
@@ -16,19 +17,28 @@ import {
   DAILY_CHALLENGES,
   FRIENDS,
   GRAMMARS,
+  INSTITUTES,
   LEADERBOARD,
   NEWS,
   NoArgs,
+  NOTIFICATIONS,
   PARTNERSHIPS,
   qRef,
   RECOMMENDATIONS,
+  VOCAB,
+  WEAK_POINTS,
   type NextBestAction,
+  type NotificationDto,
 } from '../../utils/convexRefs';
+import { useLearningSelection } from '../../contexts/LearningContext';
 import { buildMediaPath } from '../../utils/mediaRoutes';
 import { appendReturnToPath } from '../../utils/navigation';
 import { notify } from '../../utils/notify';
 import { buildPodcastPlayerPath } from '../../utils/podcastRoutes';
+import { buildVocabTodayPath, type VocabPathStep } from '../../utils/todayPath';
+import { getLocalizedContent } from '../../utils/languageUtils';
 import type { ExamAttempt, Institute } from '../../types';
+import { formatNotificationTime } from '../../utils/notificationFormat';
 import { ChipTone, Chip, HanjaSeal, KT, SectionHead, StreakRow } from './ksoft/ksoft';
 
 type LearningEntryTarget = {
@@ -121,7 +131,7 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       greeting: `你好，${name}`,
       greetingSub: '今天的学习已就绪',
       streakUnit: '天',
-      streakLabel: '连续学习',
+      streakLabel: '',
       pathTitle: '今日之路',
       pathSub: "TODAY'S PATH",
       pathStart: '开始',
@@ -550,19 +560,92 @@ function getTargetAlreadyPairedMessage(language: string): string {
   return 'That learner already has a study buddy.';
 }
 
+function renderVocabPathRow(
+  step: VocabPathStep,
+  language: string
+): { title: string; sub: string; tone: string } {
+  const isZh = language.startsWith('zh');
+  const isVi = language.startsWith('vi');
+  const isMn = language.startsWith('mn');
+  const isKo = language.startsWith('ko');
+
+  if (step.kind === 'review') {
+    const title = isZh
+      ? `复习 ${step.count} 个到期词`
+      : isVi
+        ? `Ôn lại ${step.count} từ đến hạn`
+        : isMn
+          ? `${step.count} үг давтах`
+          : isKo
+            ? `복습 ${step.count}개`
+            : `Review ${step.count} due words`;
+    const sub = isZh
+      ? 'FSRS · 优先到期'
+      : isVi
+        ? 'FSRS · ưu tiên đến hạn'
+        : isMn
+          ? 'FSRS · хугацаа дууссан'
+          : isKo
+            ? 'FSRS · 만기 우선'
+            : 'FSRS · due first';
+    return { title, sub, tone: KT.crimson };
+  }
+
+  if (step.kind === 'new') {
+    const title = isZh
+      ? `新学 ${step.count} 个新词`
+      : isVi
+        ? `Học ${step.count} từ mới`
+        : isMn
+          ? `${step.count} шинэ үг сурах`
+          : isKo
+            ? `새 단어 ${step.count}개`
+            : `Learn ${step.count} new words`;
+    const courseLabel = step.courseLabel;
+    const unitLabel = step.unitId
+      ? ` · ${isZh ? '單元' : isKo ? '단원' : 'Unit'} ${step.unitId}`
+      : '';
+    return { title, sub: `${courseLabel}${unitLabel}`, tone: KT.ink };
+  }
+
+  // weak
+  const title = isZh
+    ? `攻克 ${step.categoryLabel} 薄弱词类`
+    : isVi
+      ? `Khắc phục từ loại yếu (${step.categoryLabel})`
+      : isMn
+      ? `Сул талтай үг (${step.categoryLabel})`
+      : isKo
+        ? `약점 보완 · ${step.categoryLabel}`
+        : `Drill weak ${step.categoryLabel}`;
+  const sub = isZh
+    ? `针对性练习 ${step.count} 词`
+    : isVi
+      ? `Luyện tập tập trung ${step.count} từ`
+      : isMn
+        ? `Зорилтот ${step.count} үг`
+        : isKo
+          ? `집중 연습 ${step.count}개`
+          : `Focused drill of ${step.count} words`;
+  return { title, sub, tone: KT.crimson };
+}
+
 export const MobileDashboard: React.FC<{
   learningEntryTarget: LearningEntryTarget | null;
   institutes: Institute[] | undefined;
   institutesLoading: boolean;
 }> = () => {
   const { user } = useAuth();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const ensureUserFeed = useMutation(NEWS.ensureUserFeed);
   const language = i18n.resolvedLanguage || i18n.language || 'en';
   const userName = user?.name?.split(' ')[0] || user?.name || '';
   const copy = useMemo(() => getDashboardCopy(language, userName), [language, userName]);
+  const [notificationPanelOpen, setNotificationPanelOpen] = React.useState(false);
+  const latestUnreadIdRef = useRef<string | null>(null);
+  const latestUnreadCreatedAtRef = useRef<number | null>(null);
 
   const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
   const examAttempts = useQuery(
@@ -586,6 +669,22 @@ export const MobileDashboard: React.FC<{
   // don't re-issue the recommendation query every minute.
   const [localHour] = React.useState(() => new Date().getHours());
   const nextBestAction = useQuery(RECOMMENDATIONS.getNextBestAction, user ? { localHour } : 'skip');
+  const vocabReviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
+  const weakVocabCategories = useQuery(
+    WEAK_POINTS.getWeakVocabCategories,
+    user ? { limit: 3, language } : 'skip'
+  );
+  const unreadNotificationCount = useQuery(NOTIFICATIONS.getUnreadCount, user ? {} : 'skip') ?? 0;
+  const recentNotifications = useQuery(
+    NOTIFICATIONS.listRecent,
+    user && notificationPanelOpen ? { limit: 20 } : 'skip'
+  );
+  const learningSelection = useLearningSelection();
+  const recentVocabMaterial = learningSelection.recentMaterials.vocabulary ?? null;
+  const recentVocabInstitute = useQuery(
+    INSTITUTES.get,
+    recentVocabMaterial?.instituteId ? { id: recentVocabMaterial.instituteId } : 'skip'
+  );
   const myRank = useQuery(LEADERBOARD.getMyRank, user ? {} : 'skip');
   const activePartnership = useQuery(PARTNERSHIPS.getActivePartnership, user ? {} : 'skip');
   const pendingPartnerships = useQuery(PARTNERSHIPS.listPending, user ? {} : 'skip');
@@ -598,6 +697,9 @@ export const MobileDashboard: React.FC<{
   const likeCommunityActivity = useMutation(COMMUNITY.likeActivity);
   const unlikeCommunityActivity = useMutation(COMMUNITY.unlikeActivity);
   const claimDailyChallenge = useMutation(DAILY_CHALLENGES.claimReward);
+  const markNotificationRead = useMutation(NOTIFICATIONS.markRead);
+  const markAllNotificationsRead = useMutation(NOTIFICATIONS.markAllRead);
+  const dismissNotification = useMutation(NOTIFICATIONS.dismiss);
   const sendRequestByCodeMutation = useMutation(FRIENDS.sendRequestByCode);
   const invitePartnerMutation = useMutation(PARTNERSHIPS.invitePartner);
   const acceptPartnershipMutation = useMutation(PARTNERSHIPS.acceptPartnership);
@@ -613,11 +715,34 @@ export const MobileDashboard: React.FC<{
     Record<string, boolean>
   >({});
   const [friendSearchBusy, setFriendSearchBusy] = React.useState<Record<string, boolean>>({});
+    
 
   useEffect(() => {
     if (!user?.id) return;
     void ensureUserFeed({ newsLimit: 3, articleLimit: 3 }).catch(() => undefined);
   }, [ensureUserFeed, user?.id]);
+
+  useEffect(() => {
+    if (!recentNotifications || recentNotifications.length === 0) return;
+    const newestUnread = recentNotifications.find(item => !item.readAt);
+    if (!newestUnread) return;
+    if (latestUnreadIdRef.current === null) {
+      latestUnreadIdRef.current = newestUnread.id;
+      latestUnreadCreatedAtRef.current = newestUnread.createdAt;
+      return;
+    }
+    if (
+      typeof latestUnreadCreatedAtRef.current === 'number' &&
+      newestUnread.createdAt <= latestUnreadCreatedAtRef.current
+    ) {
+      latestUnreadIdRef.current = newestUnread.id;
+      return;
+    }
+    if (latestUnreadIdRef.current === newestUnread.id) return;
+    latestUnreadIdRef.current = newestUnread.id;
+    latestUnreadCreatedAtRef.current = newestUnread.createdAt;
+    notify.info(newestUnread.title);
+  }, [recentNotifications]);
 
   useEffect(() => {
     const timeoutId = globalThis.setTimeout(() => {
@@ -677,64 +802,33 @@ export const MobileDashboard: React.FC<{
   const goTopik = () => navigate(appendReturnToPath('/topik', dashboardPath));
   const goTyping = () => navigate(appendReturnToPath('/typing', dashboardPath));
 
-  const path: PathStep[] = [
-    {
-      key: 'review',
-      kind: copy.reviewKind,
-      en: copy.reviewEn,
-      mins: 8,
-      title: copy.reviewTitle(dueReviews || 24),
-      sub: copy.reviewSub,
-      tone: 'pink',
-      kanji: '復',
-      onStart: goReview,
-    },
-    {
-      key: 'grammar',
-      kind: copy.grammarKind,
-      en: copy.grammarEn,
-      mins: 6,
-      title: grammarTitle,
-      sub: copy.grammarSub,
-      tone: 'mint',
-      kanji: '文',
-      onStart: goGrammar,
-    },
-    {
-      key: 'listen',
-      kind: copy.listenKind,
-      en: copy.listenEn,
-      mins: 12,
-      title: latestPodcast?.episodeTitle || copy.listenFallbackTitle,
-      sub: latestPodcast?.channelName || copy.listenFallbackSub,
-      tone: 'butter',
-      kanji: '聽',
-      onStart: goPodcast,
-    },
-    {
-      key: 'topik',
-      kind: copy.topikKind,
-      en: copy.topikEn,
-      mins: 2,
-      title: copy.topikTitle,
-      sub: copy.topikSub,
-      tone: 'lilac',
-      kanji: '試',
-      onStart: goTopik,
-    },
-  ];
+  const recentInstituteName = recentVocabInstitute
+    ? getLocalizedContent(recentVocabInstitute as unknown as Record<string, unknown>, 'name', language) ||
+      recentVocabInstitute.name ||
+      recentVocabMaterial?.instituteId
+    : recentVocabMaterial?.instituteId;
 
-  // Derive "done" steps from today's activity counts
-  const { wordsLearned, listeningsCompleted, examsCompleted } = stats.todayActivities;
-  const doneCount =
-    (wordsLearned > 0 ? 1 : 0) +
-    (stats.todayGrammarStudied > 0 ? 1 : 0) +
-    (listeningsCompleted > 0 ? 1 : 0) +
-    (examsCompleted > 0 ? 1 : 0);
-  const step = Math.min(doneCount, path.length);
-  const done = path.slice(0, step);
-  const next = path[step] ?? null;
-  const totalMin = path.reduce((s, x) => s + x.mins, 0);
+  const vocabTodayPath = useMemo(
+    () =>
+      buildVocabTodayPath({
+        reviewSummary: vocabReviewSummary ?? null,
+        weakCategories: weakVocabCategories ?? null,
+        recentVocab: recentVocabMaterial,
+        recentInstituteName,
+      }),
+    [vocabReviewSummary, weakVocabCategories, recentVocabMaterial, recentInstituteName]
+  );
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const auto = searchParams.get('auto') === '1';
+    if (auto && vocabTodayPath.steps.length > 0) {
+      const target = vocabTodayPath.steps[0].target;
+      const connector = target.includes('?') ? '&' : '?';
+      navigate(appendReturnToPath(`${target}${connector}flow=today`, dashboardPath), { replace: true });
+    }
+  }, [vocabTodayPath.steps, navigate, dashboardPath]);
+
   const streakDoneDays = Math.min(7, Math.max(0, streak % 7 || (streak > 0 ? 7 : 0)));
 
   const dateLabel = useMemo(() => {
@@ -756,7 +850,7 @@ export const MobileDashboard: React.FC<{
 
   const recentScoreCount = examAttempts?.length ?? 0;
   const achievements = [
-    { e: '⚡', l: copy.reviewKind, s: `${wordsLearned || 0}`, visible: true },
+    { e: '⚡', l: copy.reviewKind, s: `${stats.todayActivities?.wordsLearned || 0}`, visible: true },
     { e: '📚', l: copy.grammarKind, s: `+${stats.todayGrammarStudied || 0}`, visible: true },
     { e: '🎯', l: 'TOPIK', s: `${recentScoreCount}`, visible: recentScoreCount > 0 },
   ].filter(a => a.visible);
@@ -853,6 +947,46 @@ export const MobileDashboard: React.FC<{
       }));
     } finally {
       setLikePending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const renderNotificationTypeIcon = (notification: NotificationDto) => {
+    if (notification.category === 'learning') return <BookOpen size={13} />;
+    if (notification.category === 'exam') return <ShieldAlert size={13} />;
+    if (notification.kind === 'friend_request') return <UserRoundPlus size={13} />;
+    if (notification.category === 'social') return <Users size={13} />;
+    return <Bell size={13} />;
+  };
+
+  const openNotification = async (notification: NotificationDto) => {
+    setNotificationPanelOpen(false);
+    if (!notification.readAt) {
+      try {
+        await markNotificationRead({ id: notification.id });
+      } catch {
+        // non-blocking
+      }
+    }
+    if (notification.linkPath) {
+      navigate(notification.linkPath);
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await markAllNotificationsRead({});
+    } catch {
+      notify.error(
+        t('notifications.markAllFailed', { defaultValue: 'Could not mark all as read.' })
+      );
+    }
+  };
+
+  const handleDismissNotification = async (notificationId: NotificationDto['id']) => {
+    try {
+      await dismissNotification({ id: notificationId });
+    } catch {
+      // non-blocking
     }
   };
 
@@ -1209,7 +1343,7 @@ export const MobileDashboard: React.FC<{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-end',
-              gap: 4,
+              gap: 5,
               fontFamily: KT.font,
             }}
           >
@@ -1217,20 +1351,255 @@ export const MobileDashboard: React.FC<{
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                background: KT.card,
-                padding: '6px 10px',
-                borderRadius: 20,
-                boxShadow: KT.shSm,
+                gap: 8,
+                position: 'relative',
               }}
             >
-              <span style={{ fontSize: 13 }}>🔥</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: KT.ink }}>{streak}</span>
-              <span style={{ fontSize: 11, color: KT.sub, fontWeight: 600 }}>
-                {copy.streakUnit}
-              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: KT.card,
+                  padding: '6px 10px',
+                  borderRadius: 20,
+                  boxShadow: KT.shSm,
+                }}
+              >
+                <span style={{ fontSize: 13 }}>🔥</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: KT.ink }}>{streak}</span>
+                <span style={{ fontSize: 11, color: KT.sub, fontWeight: 600 }}>
+                  {copy.streakUnit}
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-label={t('notifications.open', { defaultValue: 'Notifications' })}
+                onClick={() => setNotificationPanelOpen(current => !current)}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  border: `1px solid ${KT.line}`,
+                  background: KT.card,
+                  color: KT.ink,
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  boxShadow: KT.shSm,
+                  position: 'relative',
+                }}
+              >
+                <Bell size={16} />
+                {unreadNotificationCount > 0 ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 3,
+                      right: 3,
+                      minWidth: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      background: KT.crimson,
+                      color: KT.card,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      display: 'grid',
+                      placeItems: 'center',
+                      lineHeight: 1,
+                      padding: '0 3px',
+                      boxShadow: `0 0 0 2px ${KT.card}`,
+                    }}
+                  >
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                ) : null}
+              </button>
+              {notificationPanelOpen ? (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 40,
+                    right: 0,
+                    width: 292,
+                    maxHeight: 360,
+                    overflowY: 'auto',
+                    borderRadius: 18,
+                    border: `1px solid ${KT.line}`,
+                    background: KT.card,
+                    boxShadow: KT.shLg,
+                    padding: 8,
+                    zIndex: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: 1.2,
+                        textTransform: 'uppercase',
+                        color: KT.sub,
+                      }}
+                    >
+                      {t('notifications.title', { defaultValue: 'Notifications' })}
+                    </span>
+                    {unreadNotificationCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleMarkAllNotificationsRead()}
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          color: KT.crimson,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        {t('notifications.markAll', { defaultValue: 'Mark all read' })}
+                      </button>
+                    ) : null}
+                  </div>
+                  {recentNotifications === undefined ? (
+                    <div style={{ color: KT.sub, fontSize: 12, padding: '8px 4px' }}>
+                      {t('common.loading', { defaultValue: 'Loading…' })}
+                    </div>
+                  ) : recentNotifications.length === 0 ? (
+                    <div style={{ color: KT.sub, fontSize: 12, padding: '8px 4px' }}>
+                      {t('notifications.empty', { defaultValue: "You're all caught up." })}
+                    </div>
+                  ) : (
+                    recentNotifications.map(notification => (
+                      <div
+                        key={notification.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 8,
+                          borderRadius: 12,
+                          padding: '8px 9px',
+                          background: notification.readAt
+                            ? 'transparent'
+                            : notification.priority === 'high'
+                              ? `${KT.butter}55`
+                              : `${KT.pink}33`,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'grid',
+                            placeItems: 'center',
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            border: `1px solid ${KT.line}`,
+                            color: KT.sub,
+                            background: KT.card,
+                            marginTop: 2,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {renderNotificationTypeIcon(notification)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void openNotification(notification)}
+                          style={{
+                            flex: 1,
+                            textAlign: 'left',
+                            border: 'none',
+                            background: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: KT.ink,
+                              marginBottom: 2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {notification.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: KT.sub,
+                              lineHeight: 1.3,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {notification.body}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: KT.sub,
+                              marginTop: 3,
+                              letterSpacing: 1,
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {formatNotificationTime(notification.createdAt, defaultLabel =>
+                              t('time.now', { defaultValue: defaultLabel })
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDismissNotification(notification.id)}
+                          aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                          style={{
+                            fontSize: 12,
+                            color: KT.sub,
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px 4px',
+                            fontWeight: 800,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : null}
             </div>
-            <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600 }}>{copy.streakLabel}</div>
+            {copy.streakLabel ? (
+              <div
+                style={{
+                  fontSize: 10,
+                  color: KT.sub,
+                  fontWeight: 600,
+                  width: '100%',
+                  textAlign: 'right',
+                }}
+              >
+                {copy.streakLabel}
+              </div>
+            ) : null}
           </div>
         </div>
         <StreakRow done={streakDoneDays} />
@@ -1280,8 +1649,9 @@ export const MobileDashboard: React.FC<{
                   letterSpacing: -0.3,
                   lineHeight: 1.2,
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
                 }}
               >
                 {resumeCopy(nextBestAction).title}
@@ -1293,8 +1663,9 @@ export const MobileDashboard: React.FC<{
                   marginTop: 3,
                   fontWeight: 500,
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
                 }}
               >
                 {resumeCopy(nextBestAction).sub}
@@ -1315,20 +1686,22 @@ export const MobileDashboard: React.FC<{
         </div>
       )}
 
-      {/* TODAY'S PATH hero */}
-      <div style={{ padding: '0 18px', marginTop: -4 }}>
+      {/* TODAY'S PATH hero (Vocab focus) */}
+      <div style={{ padding: '0 18px', marginTop: 8 }}>
         <div
           style={{
             background: KT.card,
             borderRadius: 28,
             boxShadow: KT.sh,
             overflow: 'hidden',
+            border: `1px solid ${KT.line}`,
+            position: 'relative',
           }}
         >
+          {/* Header */}
           <div
             style={{
               padding: '16px 20px 14px',
-              borderBottom: `1px solid ${KT.line}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -1356,127 +1729,74 @@ export const MobileDashboard: React.FC<{
                     marginTop: 1,
                   }}
                 >
-                  {copy.pathSub} · {copy.minsShort(totalMin)}
+                  {vocabTodayPath.estimatedMinutes > 0 
+                    ? `${language.startsWith('zh') ? '预计' : 'Est.'} ${vocabTodayPath.estimatedMinutes} ${language.startsWith('zh') ? '分钟' : 'min'}`
+                    : language.startsWith('zh') ? '全部完成' : 'All done'}
                 </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {path.map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i === step ? 18 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    background: i < step ? KT.mintDeep : i === step ? KT.ink : KT.line2,
-                    transition: 'all .3s',
-                  }}
-                />
-              ))}
             </div>
           </div>
+          
+          <div style={{ height: 1, background: KT.line }} />
 
-          {done.map(p => (
-            <div
-              key={p.key}
-              style={{
-                padding: '12px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                borderBottom: `1px solid ${KT.line}`,
-                opacity: 0.55,
-              }}
-            >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  background: KT.mint,
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: KT.mintDeep,
-                  fontSize: 14,
-                  fontWeight: 800,
-                }}
-              >
-                ✓
+          {/* Steps */}
+          <div style={{ padding: '16px 20px' }}>
+            {vocabTodayPath.steps.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: KT.subLight, fontSize: 13, fontWeight: 500 }}>
+                {language.startsWith('zh') ? '太棒了！今天的单词任务已全部完成。' : 'Awesome! All vocab tasks for today are done.'}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: KT.ink,
-                    textDecoration: 'line-through',
-                    textDecorationColor: KT.subLight,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {p.title}
-                </div>
-                <div style={{ fontSize: 11, color: KT.sub, marginTop: 1 }}>
-                  {p.kind} · {copy.minsShort(p.mins)} {copy.minsDone}
-                </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {vocabTodayPath.steps.map((vstep, idx) => {
+                  const meta = renderVocabPathRow(vstep, language);
+                  return (
+                    <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ 
+                        width: 24, 
+                        height: 24, 
+                        borderRadius: 12, 
+                        background: `${meta.tone}15`, 
+                        color: meta.tone, 
+                        display: 'grid', 
+                        placeItems: 'center',
+                        fontSize: 12,
+                        fontWeight: 800,
+                        fontFamily: KT.serif,
+                        flexShrink: 0
+                      }}>
+                        {idx + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: KT.ink, letterSpacing: -0.2 }}>
+                          {meta.title}
+                        </div>
+                        {meta.sub && (
+                          <div style={{ fontSize: 12, color: KT.sub, marginTop: 2, fontWeight: 500 }}>
+                            {meta.sub}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          ))}
+            )}
+          </div>
 
-          {next && (
-            <div
-              style={{
-                padding: '20px 20px 22px',
-                background: `linear-gradient(180deg, ${KT[next.tone as keyof typeof KT]}30 0%, ${KT.card} 70%)`,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 14,
-                  alignItems: 'flex-start',
-                  marginBottom: 16,
-                }}
-              >
-                <HanjaSeal
-                  c={next.kanji}
-                  size={52}
-                  bg={KT[`${next.tone}Deep` as keyof typeof KT] as string}
-                  round={12}
-                />
-                <div style={{ flex: 1, paddingTop: 2, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-                    <Chip tone={next.tone}>
-                      {next.kind.toUpperCase()} · {next.en}
-                    </Chip>
-                    <span style={{ fontSize: 10, color: KT.sub, fontWeight: 700 }}>
-                      ≈ {copy.minsShort(next.mins)}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 19,
-                      fontWeight: 800,
-                      color: KT.ink,
-                      lineHeight: 1.25,
-                      letterSpacing: -0.4,
-                    }}
-                  >
-                    {next.title}
-                  </div>
-                  <div style={{ fontSize: 12, color: KT.sub, marginTop: 4 }}>{next.sub}</div>
-                </div>
-              </div>
+          {/* Footer Action */}
+          {vocabTodayPath.steps.length > 0 && (
+            <div style={{ padding: '0 20px 20px' }}>
               <button
                 type="button"
-                onClick={next.onStart}
+                onClick={() => {
+                  const target = vocabTodayPath.steps[0].target;
+                  const connector = target.includes('?') ? '&' : '?';
+                  navigate(appendReturnToPath(`${target}${connector}flow=today`, dashboardPath));
+                }}
                 style={{
                   width: '100%',
                   padding: 16,
                   borderRadius: 18,
-                  border: 'none',
                   background: KT.ink,
                   color: KT.bg,
                   fontSize: 15,
@@ -1491,25 +1811,9 @@ export const MobileDashboard: React.FC<{
                   gap: 8,
                 }}
               >
-                <span>{copy.pathStart}</span>
-                <span style={{ fontFamily: KT.serif, opacity: 0.7, fontSize: 13 }}>始</span>
-                <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
+                <span>{language.startsWith('zh') ? '开始今日学习' : 'Start Today\'s Path'}</span>
+                <span style={{ fontSize: 16 }}>▶</span>
               </button>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: 10,
-                  padding: '0 4px',
-                }}
-              >
-                <button type="button" style={btnSub()}>
-                  {copy.pathSkip}
-                </button>
-                <button type="button" style={btnSub()}>
-                  {copy.pathLater}
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -1518,7 +1822,7 @@ export const MobileDashboard: React.FC<{
       {achievements.length > 0 && (
         <div style={{ padding: '20px 18px 0' }}>
           <SectionHead kanji="成" title={copy.achievementsTitle} />
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {achievements.map((a, i) => (
               <div
                 key={i}
@@ -1652,7 +1956,7 @@ export const MobileDashboard: React.FC<{
                       fontSize: 14,
                       fontWeight: 800,
                       color: entry.isMe ? KT.crimson : KT.sub,
-                      minWidth: 28,
+                      minWidth: 36,
                     }}
                   >
                     #{entry.rank}
@@ -2390,7 +2694,7 @@ export const MobileDashboard: React.FC<{
                   {item.time}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                 {(() => {
                   const actorKey = String(item.actorUserId);
                   const alreadyInvited =
@@ -2589,9 +2893,12 @@ export const MobileDashboard: React.FC<{
                 border: `1.5px solid ${KT.card}`,
                 background:
                   !dailyChallenge || dailyChallenge.isClaimed
-                    ? 'rgba(255,255,255,0.1)'
-                    : 'transparent',
-                color: KT.card,
+                    ? 'transparent'
+                    : KT.card,
+                color:
+                  !dailyChallenge || dailyChallenge.isClaimed
+                    ? KT.card
+                    : KT.indigo,
                 fontSize: 13,
                 fontWeight: 800,
                 cursor:

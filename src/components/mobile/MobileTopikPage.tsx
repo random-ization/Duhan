@@ -158,7 +158,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
                 letterSpacing: -0.6,
               }}
             >
-              {t('dashboard.topik.examCenter', { defaultValue: '모의고사' })}
+              {t('dashboard.topik.examCenter', { defaultValue: 'Mock exam' })}
             </div>
             <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
               {t('topik.mobileSubtitle', {
@@ -264,19 +264,19 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
         {[
           {
             k: '均',
-            label: t('dashboard.topik.avgScore', { defaultValue: '평균 점수' }),
+            label: t('dashboard.topik.avgScore', { defaultValue: 'Avg score' }),
             value: `${avgScore}`,
             color: KT.ink,
           },
           {
             k: '率',
-            label: t('dashboard.topik.passRate', { defaultValue: '합격률' }),
+            label: t('dashboard.topik.passRate', { defaultValue: 'Pass rate' }),
             value: `${passRate}%`,
             color: KT.mintDeep,
           },
           {
             k: '數',
-            label: t('dashboard.topik.total', { defaultValue: '총 시험' }),
+            label: t('dashboard.topik.total', { defaultValue: 'Total exams' }),
             value: `${filteredExams.length}`,
             color: KT.ink,
           },
@@ -320,6 +320,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
 
       {/* ── Filter Tabs ─────────────────────────────── */}
       <div
+        className="hide-scroll"
         style={{
           padding: '0 18px 14px',
           display: 'flex',
@@ -366,7 +367,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
       <div style={{ padding: '0 18px 24px' }}>
         <SectionHead
           kanji="錄"
-          title={t('dashboard.topik.availableExams', { defaultValue: '시험 목록' })}
+          title={t('dashboard.topik.availableExams', { defaultValue: 'Available exams' })}
         />
 
         {filteredExams.length === 0 && (
@@ -375,7 +376,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
               無
             </div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>
-              {t('topikLobby.noExams', { defaultValue: '시험이 없습니다' })}
+              {t('topikLobby.noExams', { defaultValue: 'No exams available' })}
             </div>
           </div>
         )}

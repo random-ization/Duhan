@@ -101,7 +101,7 @@ export function MobileSearchSheet({
               padding: '14px 12px',
             }}
           >
-            {t('search.startTyping', { defaultValue: '开始输入关键字' })}
+            {t('search.startTyping', { defaultValue: 'Start typing to search' })}
           </div>
         ) : searchResult === undefined ? (
           <div

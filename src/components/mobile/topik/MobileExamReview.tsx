@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { TopikExam, Language, TopikQuestion } from '../../../types';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -171,6 +171,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [autoTriggerAiAnalysis, setAutoTriggerAiAnalysis] = useState(false);
 
   // Convex Actions
   const analyzeQuestionAction = useAction(
@@ -386,6 +387,35 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     }
   };
 
+  const handleAiReview = () => {
+    const firstWrong = exam.questions.findIndex((q, idx) => userAnswers[idx] !== q.correctAnswer);
+    const targetIndex = firstWrong >= 0 ? firstWrong : 0;
+    setCurrentQuestionIndex(targetIndex);
+    setReviewFilter(firstWrong >= 0 ? 'WRONG' : 'ALL');
+    setViewMode('DETAIL');
+    setAutoTriggerAiAnalysis(true);
+  };
+
+  useEffect(() => {
+    if (!autoTriggerAiAnalysis) return;
+    if (viewMode !== 'DETAIL') return;
+    const question = exam.questions[currentQuestionIndex];
+    if (!question) return;
+    if (aiLoading || aiAnalysis) {
+      setAutoTriggerAiAnalysis(false);
+      return;
+    }
+    void handleAIAnalysis(question);
+    setAutoTriggerAiAnalysis(false);
+  }, [
+    aiAnalysis,
+    aiLoading,
+    autoTriggerAiAnalysis,
+    currentQuestionIndex,
+    exam.questions,
+    viewMode,
+  ]);
+
   const handleNext = () => {
     if (currentFilterIndex < questionsToShow.length - 1) {
       setCurrentQuestionIndex(questionsToShow[currentFilterIndex + 1]);
@@ -488,7 +518,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="px-6 mb-8 flex gap-3">
+        <div className="px-6 mb-8 grid grid-cols-2 gap-3">
           <Button
             variant="ghost"
             size="auto"
@@ -496,18 +526,17 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               setCurrentQuestionIndex(0);
               setViewMode('DETAIL');
             }}
-            className="flex-1 rounded-xl py-3.5 font-bold active:scale-95 transition-all text-sm"
+            className="rounded-xl py-3.5 font-bold active:scale-95 transition-all text-sm"
             style={{ background: KT.ink, color: KT.card, boxShadow: KT.sh }}
           >
             {t('dashboard.topik.mobile.review.reviewAll', { defaultValue: 'Review All' })}
           </Button>
-          {/* Review Wrong Only */}
           <Button
             variant="ghost"
             size="auto"
             onClick={handleReviewWrong}
             disabled={stats.mistakeCount === 0}
-            className="flex-1 border rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+            className="border rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
             style={{ background: KT.card, borderColor: KT.line, color: KT.sub }}
           >
             {t('dashboard.topik.mobile.review.reviewMistakes', {
@@ -515,12 +544,26 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
               defaultValue: 'Review Mistakes ({{count}})',
             })}
           </Button>
+          <Button
+            variant="ghost"
+            size="auto"
+            onClick={handleAiReview}
+            className="col-span-2 rounded-xl py-3.5 font-bold active:scale-95 text-sm flex items-center justify-center gap-2 transition-all"
+            style={{
+              background: `linear-gradient(135deg, ${KT.ink}, ${KT.indigo})`,
+              color: KT.card,
+              boxShadow: KT.shSm,
+            }}
+          >
+            <Sparkles className="w-4 h-4" />
+            {t('dashboard.topik.mobile.review.aiTitle', { defaultValue: 'AI Analysis' })}
+          </Button>
           {onReset && (
             <Button
               variant="ghost"
               size="auto"
               onClick={onReset}
-              className="rounded-xl p-3.5 flex items-center justify-center"
+              className="rounded-xl p-3.5 flex items-center justify-center col-span-2"
               style={{ background: KT.bg2, color: KT.sub }}
             >
               <RotateCcw className="w-5 h-5" />

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { usePublicMembershipSnapshot } from '../../hooks/usePublicMembershipSnapshot';
 // `/pricing` is SSG-prerendered so we keep `convex/react` out of this
 // chunk. Prices are fetched anonymously over HTTP; checkout uses the
 // authenticated helper that attaches the JWT from localStorage.
@@ -25,15 +26,19 @@ import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
 import { getSubscriptionPageCopy } from '../../utils/subscriptionPageCopy';
 import { Button } from '../ui';
 import { KT } from './ksoft/ksoft';
+import { MemberSubscriptionManagement } from '../subscription/MemberSubscriptionManagement';
 
 export const MobileSubscriptionPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { user, loading: authLoading } = useAuth();
+  const membership = usePublicMembershipSnapshot();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState<LemonSqueezyVariantPrices | null>(null);
 
+  const effectiveUser = membership.user ?? user;
+  const isPremiumMember = Boolean(membership.viewerAccess?.isPremium);
 
   const showLocalizedPromo =
     i18n.language === 'zh' ||
@@ -69,6 +74,7 @@ export const MobileSubscriptionPage: React.FC = () => {
   );
 
   useEffect(() => {
+    if (isPremiumMember) return;
     const controller = new AbortController();
     runConvexActionWithRetry(
       () =>
@@ -86,7 +92,7 @@ export const MobileSubscriptionPage: React.FC = () => {
         logger.warn('Failed to load variant prices for mobile subscription', err);
       });
     return () => controller.abort();
-  }, []);
+  }, [isPremiumMember]);
 
   const handleSubscribe = async () => {
     if (authLoading) {
@@ -99,7 +105,7 @@ export const MobileSubscriptionPage: React.FC = () => {
       source: 'mobile_subscription',
     });
 
-    if (!user) {
+    if (!effectiveUser) {
       navigate(
         `/auth?redirect=${encodeURIComponent(
           buildPricingDetailsPath({
@@ -116,9 +122,9 @@ export const MobileSubscriptionPage: React.FC = () => {
     try {
       const checkoutArgs: LemonSqueezyCheckoutRequest = {
         plan: billingInterval,
-        userId: user.id?.toString() || '',
-        userEmail: user.email || '',
-        userName: user.name || '',
+        userId: effectiveUser.id?.toString() || '',
+        userEmail: effectiveUser.email || '',
+        userName: effectiveUser.name || '',
         region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
         locale: i18n.language,
         source: 'mobile_subscription',
@@ -152,6 +158,19 @@ export const MobileSubscriptionPage: React.FC = () => {
     }
   };
 
+  if (membership.hasStoredSession && (membership.loading || isPremiumMember)) {
+    return (
+      <MemberSubscriptionManagement
+        user={effectiveUser}
+        viewerAccess={membership.viewerAccess}
+        variant="mobile"
+        loading={membership.loading}
+        error={membership.error}
+        onRefresh={membership.refresh}
+      />
+    );
+  }
+
   return (
     <div
       className="relative min-h-[100dvh] flex flex-col pb-40 overflow-hidden"
@@ -180,7 +199,7 @@ export const MobileSubscriptionPage: React.FC = () => {
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => navigate(user ? '/profile' : '/')}
+            onClick={() => navigate(effectiveUser ? '/profile' : '/')}
             className="p-2 -ml-2 text-muted-foreground hover:bg-secondary rounded-lg"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -277,7 +296,7 @@ export const MobileSubscriptionPage: React.FC = () => {
           </div>
 
           <div className="grid gap-3">
-            {pageCopy.comparisonRows.map((row: any) => (
+            {pageCopy.comparisonRows.map(row => (
               <div key={row.label} className="bg-card rounded-2xl border p-5 shadow-sm">
                 <div className="font-bold text-base mb-3 text-foreground">{row.label}</div>
                 <div className="grid grid-cols-2 gap-3 text-sm">

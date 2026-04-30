@@ -512,7 +512,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
 
   return (
     <div
-      className="flex flex-col h-[100dvh] overflow-hidden relative"
+      className="flex h-[100dvh] flex-col overflow-hidden"
       style={{
         background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
         color: KT.ink,
@@ -599,7 +599,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           <button
             type="button"
             onClick={() => setGridOpen(true)}
-            className="rounded-2xl border px-3 py-2 text-xs font-bold shadow-sm"
+            className="flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold shadow-sm"
             style={{
               borderColor: KT.line,
               background: KT.card,
@@ -620,7 +620,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
         {/* Split View: Top Passage Pane */}
         {isPassageView && (
           <div
-            className="h-[40%] flex flex-col shadow-sm relative z-20"
+            className="relative z-20 flex min-h-[180px] max-h-[46%] flex-col shadow-sm"
             style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
           >
             <div
@@ -648,7 +648,7 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
           className={clsx('flex-1 overflow-y-auto w-full', isPassageView ? 'h-[60%]' : 'h-full')}
           style={{ background: KT.bg }}
         >
-          <div className="p-4 md:p-6 pb-32 max-w-2xl mx-auto w-full min-h-full">
+          <div className="mx-auto min-h-full w-full max-w-2xl p-4 pb-6 md:p-6">
             {currentQuestion && (
               <MobileQuestionRenderer
                 question={currentQuestion}
@@ -662,9 +662,9 @@ export const MobileExamSession: React.FC<MobileExamSessionProps> = ({
       </div>
 
       {/* Footer Stack */}
-      <div className="absolute bottom-0 left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
+      <div className="z-30 flex shrink-0 flex-col items-center">
         {/* Audio Player (Floating above Nav) */}
-        {exam.type === 'LISTENING' && exam.audioUrl && (
+        {exam.type === 'LISTENING' && normalizedExamAudioUrl && (
           <ListeningAudioPanel
             audioPlayerOpen={audioPlayerOpen}
             audioError={audioError}

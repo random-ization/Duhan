@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Volume2, Bookmark, Check, X, ChevronRight, MoreVertical } from 'lucide-react';
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
+import { Volume2, Check, X, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '../ui';
 import { useTTS } from '../../hooks/useTTS';
+import { KT } from './ksoft/ksoft';
 
 type QuestionLanguage = 'KOREAN' | 'NATIVE';
 
@@ -19,6 +21,8 @@ type QuizOption = Readonly<{
   text: string;
   isCorrect: boolean;
 }>;
+
+type AnswerState = 'correct' | 'wrong' | null;
 
 const FALLBACK_OPTIONS = ['...', '...', '...'] as const;
 
@@ -59,18 +63,36 @@ function getAnswerText(word: MobileLearnWord, questionLanguage: QuestionLanguage
   return questionLanguage === 'KOREAN' ? getNativeText(word) : getKoreanText(word);
 }
 
+function formatDuration(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getSegmentQuestionIndex(slot: number, totalSlots: number, totalQuestions: number): number {
+  if (totalQuestions <= 1) return 0;
+  const ratio = slot / Math.max(1, totalSlots - 1);
+  return Math.min(totalQuestions - 1, Math.round(ratio * (totalQuestions - 1)));
+}
+
 export interface MobileLearnModeProps {
   readonly words: readonly MobileLearnWord[];
+  readonly initialIndex?: number;
+  readonly onProgressChange?: (index: number, total: number) => void;
   readonly onComplete?: () => void;
   readonly onFsrsReview?: (wordId: string, isCorrect: boolean) => void;
 }
 
-export function MobileLearnMode({ words, onComplete, onFsrsReview }: MobileLearnModeProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export function MobileLearnMode({ words, initialIndex = 0, onProgressChange, onComplete, onFsrsReview }: MobileLearnModeProps) {
+  const { t } = useTranslation();
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
   const [revealCorrect, setRevealCorrect] = useState(false);
-  const [questionLang, setQuestionLang] = useState<QuestionLanguage>('KOREAN');
+  const questionLang: QuestionLanguage = 'KOREAN';
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [answerStates, setAnswerStates] = useState<AnswerState[]>(() => words.map(() => null));
 
   const { speak } = useTTS();
   const revealTimeoutRef = useRef<number | null>(null);
@@ -94,6 +116,31 @@ export function MobileLearnMode({ words, onComplete, onFsrsReview }: MobileLearn
       }
     };
   }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const schedule =
+      typeof globalThis.queueMicrotask === 'function'
+        ? globalThis.queueMicrotask
+        : (callback: () => void) => {
+            globalThis.setTimeout(callback, 0);
+          };
+
+    schedule(() => {
+      setAnswerStates(prev => {
+        if (prev.length === words.length) return prev;
+        return words.map((_, idx) => prev[idx] ?? null);
+      });
+    });
+  }, [words]);
 
   const correctOption = questionLang === 'KOREAN' ? nativeText : korean;
   const distractors = useMemo(() => {
@@ -132,21 +179,62 @@ export function MobileLearnMode({ words, onComplete, onFsrsReview }: MobileLearn
     return deterministicSort(optionList, option => option.key, `options:${optionSeed}`);
   }, [correctOption, distractors, optionSeed]);
 
+  const progressSegments = useMemo(() => {
+    const totalSlots = Math.min(20, Math.max(8, words.length));
+    return Array.from({ length: totalSlots }, (_, slot) => {
+      const representedIndex = getSegmentQuestionIndex(slot, totalSlots, words.length);
+      const state = answerStates[representedIndex] ?? null;
+      const isCurrent = representedIndex === currentIndex && !hasAnswered;
+      const isFuture =
+        representedIndex > currentIndex || (representedIndex === currentIndex && hasAnswered);
+      return { representedIndex, state, isCurrent, isFuture };
+    });
+  }, [answerStates, currentIndex, hasAnswered, words.length]);
+
   if (!currentWord) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-6 text-center text-slate-500">
-        <p className="font-bold">无单词数据</p>
+        <p className="font-bold">
+          {t('mobileLearnMode.emptyWords', { defaultValue: 'No words available' })}
+        </p>
         <Button onClick={onComplete} className="mt-4">
-          返回
+          {t('common.back', { defaultValue: 'Back' })}
         </Button>
       </div>
     );
   }
 
+  const moveToNext = () => {
+    if (revealTimeoutRef.current !== null) {
+      window.clearTimeout(revealTimeoutRef.current);
+      revealTimeoutRef.current = null;
+    }
+
+    if (currentIndex + 1 < words.length) {
+      setCurrentIndex(prev => {
+        const next = prev + 1;
+        if (onProgressChange) onProgressChange(next, words.length);
+        return next;
+      });
+      setHasAnswered(false);
+      setSelectedOptionKey(null);
+      setRevealCorrect(false);
+      return;
+    }
+
+    if (onProgressChange) onProgressChange(words.length, words.length);
+    if (onComplete) onComplete();
+  };
+
   const handleAnswer = (optionKey: string, isCorrect: boolean) => {
     if (hasAnswered) return;
     setHasAnswered(true);
     setSelectedOptionKey(optionKey);
+    setAnswerStates(prev => {
+      const next = [...prev];
+      next[currentIndex] = isCorrect ? 'correct' : 'wrong';
+      return next;
+    });
 
     if (revealTimeoutRef.current !== null) {
       window.clearTimeout(revealTimeoutRef.current);
@@ -167,255 +255,305 @@ export function MobileLearnMode({ words, onComplete, onFsrsReview }: MobileLearn
     }
   };
 
-  const handleNext = () => {
-    if (!hasAnswered) return;
-
-    if (revealTimeoutRef.current !== null) {
-      window.clearTimeout(revealTimeoutRef.current);
-      revealTimeoutRef.current = null;
-    }
-
-    if (currentIndex + 1 < words.length) {
-      setCurrentIndex(prev => prev + 1);
-      setHasAnswered(false);
-      setSelectedOptionKey(null);
-      setRevealCorrect(false);
-    } else if (onComplete) {
-      onComplete();
-    }
+  const handleSkip = () => {
+    if (hasAnswered) return;
+    setAnswerStates(prev => {
+      const next = [...prev];
+      next[currentIndex] = 'wrong';
+      return next;
+    });
+    if (onFsrsReview) onFsrsReview(currentWord.id, false);
+    moveToNext();
   };
 
+  const handleNext = () => {
+    if (!hasAnswered) return;
+    moveToNext();
+  };
+
+  const promptText = questionLang === 'KOREAN' ? '下列单词的意思是？' : '下列意思对应的韩语是？';
+  const promptWord = questionLang === 'KOREAN' ? korean : nativeText;
+  const hintText =
+    questionLang === 'KOREAN'
+      ? pronunciation
+        ? `“${pronunciation}”`
+        : '“请选择正确答案”'
+      : '“请选择正确答案”';
   return (
-    <div className="flex h-full w-full flex-col overflow-x-hidden bg-transparent text-slate-900">
-      <style>{`
-        .card-sage {
-            background: linear-gradient(150deg, #576359 0%, #404942 100%);
-            box-shadow: 
-                0 24px 48px -12px rgba(64, 73, 66, 0.4), 
-                inset 0 1px 1px rgba(230, 255, 235, 0.15),
-                inset 0 0 0 1px rgba(255,255,255,0.05);
-            color: #ffffff;
-        }
-
-        .learn-option {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-            cursor: pointer;
-        }
-        
-        .learn-option.active-state,
-        .learn-option:active {
-            transform: translateY(4px);
-            box-shadow: 0 0px 0 rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-            background: rgba(255, 255, 255, 0.12);
-        }
-
-        .learn-option.correct {
-            transform: translateY(4px);
-            box-shadow: 0 0px 0 rgba(0,0,0,0), 0 0 24px rgba(52, 211, 153, 0.4), inset 0 2px 4px rgba(52, 211, 153, 0.2);
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(52, 211, 153, 0.8);
-            color: #A7F3D0 !important;
-        }
-        .learn-option.correct .option-icon {
-            background: #10B981;
-            color: #064E3B;
-            border-color: #34D399;
-        }
-        .learn-option.correct .option-text {
-            color: #A7F3D0;
-        }
-
-        .learn-option.wrong {
-            transform: translateY(4px) scale(0.98);
-            box-shadow: 0 0px 0 rgba(0,0,0,0), inset 0 2px 4px rgba(244, 63, 94, 0.2);
-            background: rgba(225, 29, 72, 0.15);
-            border-color: rgba(251, 113, 133, 0.8);
-            color: #FECDD3 !important;
-            animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-        }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 2px, 0) scale(0.98); }
-            20%, 80% { transform: translate3d(2px, 2px, 0) scale(0.98); }
-            30%, 50%, 70% { transform: translate3d(-3px, 2px, 0) scale(0.98); }
-            40%, 60% { transform: translate3d(3px, 2px, 0) scale(0.98); }
-        }
-      `}</style>
-
-      <header className="header-glass pointer-events-auto fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-5 pb-4 pt-14">
-        <button
-          className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-slate-200 bg-white/60 text-slate-700 shadow-sm transition-transform active:scale-95"
-          onClick={() => {
-            if (onComplete) onComplete();
+    <div
+      className="flex h-full w-full flex-col overflow-hidden"
+      style={{
+        background: KT.bg,
+        color: KT.ink,
+        fontFamily: KT.font,
+      }}
+    >
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: 'calc(env(safe-area-inset-top) + 16px) 18px 16px',
           }}
         >
-          <X className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
-        </button>
-
-        <div className="mx-6 flex-1">
-          <div className="mb-1.5 flex items-end justify-between px-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              学习进度
-            </span>
-            <span className="text-[12px] font-black text-slate-800">
-              {currentIndex + 1}
-              <span className="text-[10px] font-bold text-slate-400">/{words.length}</span>
-            </span>
-          </div>
-          <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-300/40 shadow-inner">
-            <div
-              className="rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / Math.max(1, words.length)) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="relative flex items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex h-10 w-10 items-center justify-center bg-transparent text-slate-400 outline-none transition-transform active:scale-95">
-                <MoreVertical className="h-5 w-5 text-slate-400" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              unstyled
-              className="absolute right-0 top-full z-[96] mt-2 flex w-44 flex-col gap-0.5 overflow-hidden rounded-2xl border border-border bg-card/95 p-1 shadow-xl backdrop-blur-xl"
-            >
-              <div className="mb-1 rounded-t-xl bg-muted/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                测验语言
-              </div>
+          <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
+                type="button"
                 onClick={() => {
-                  if (!hasAnswered) setQuestionLang('KOREAN');
+                  if (onComplete) onComplete();
                 }}
-                className={`flex w-full items-center justify-between rounded-[10px] px-3 py-3 text-[13px] font-black transition-colors ${
-                  questionLang === 'KOREAN'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <span>韩语问题</span>
-                {questionLang === 'KOREAN' && <Check className="ml-2 h-4 w-4" strokeWidth={3} />}
-              </button>
-              <button
-                onClick={() => {
-                  if (!hasAnswered) setQuestionLang('NATIVE');
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  border: `1px solid ${KT.line}`,
+                  background: KT.card,
+                  boxShadow: KT.shSm,
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
                 }}
-                className={`flex w-full items-center justify-between rounded-[10px] px-3 py-3 text-[13px] font-black transition-colors ${
-                  questionLang === 'NATIVE'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
+                aria-label="关闭"
               >
-                <span>中文问题</span>
-                {questionLang === 'NATIVE' && <Check className="ml-2 h-4 w-4" strokeWidth={3} />}
+                <X size={18} color={KT.ink} />
               </button>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
 
-      <div className="flex min-h-screen h-full flex-col justify-end px-5 pb-8 pt-32">
-        <main className="mx-auto flex-1 w-full max-w-[420px] space-y-12 px-5 pb-24">
-          <section>
-            <div className="card-sage relative flex w-full flex-col overflow-hidden rounded-[2.5rem] p-7">
-              <div className="pointer-events-none absolute -left-10 -top-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
-
-              <div className="relative z-10 mb-6 flex items-start justify-between">
-                <span className="rounded-md border border-white/20 bg-white/5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white/70">
-                  即时测验
-                </span>
-                <button className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white/60 transition-colors hover:text-white">
-                  <Bookmark className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="relative z-10 mb-10 text-center">
-                <h4 className="mb-4 text-5xl font-black tracking-tight text-white drop-shadow-sm">
-                  {questionLang === 'KOREAN' ? korean : nativeText}
-                </h4>
-                <div className="flex min-h-[28px] items-center justify-center space-x-2 text-white/60">
-                  {questionLang === 'KOREAN' && (
-                    <button
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/20"
-                      onClick={() => {
-                        void speak(korean);
-                      }}
-                    >
-                      <Volume2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                  {questionLang === 'KOREAN' && pronunciation && (
-                    <p className="text-[13px] font-mono tracking-widest">[{pronunciation}]</p>
-                  )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: KT.sub, letterSpacing: 0.2 }}>学习模式 · 试</div>
+                <div style={{ marginTop: 2, fontSize: 18, fontWeight: 800, color: KT.ink, lineHeight: 1.1 }}>
+                  第 {currentIndex + 1} 题
+                  <span style={{ fontSize: 14, fontWeight: 700, color: KT.ink2 }}> / {words.length}</span>
                 </div>
               </div>
 
-              <div className="relative z-10 space-y-4">
-                {options.map((option, idx) => {
-                  const isSelected = selectedOptionKey === option.key;
-                  const showAsCorrect = hasAnswered && revealCorrect && option.isCorrect;
-                  const showAsWrong = hasAnswered && isSelected && !option.isCorrect;
-
-                  let classNames =
-                    'learn-option w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between text-left';
-                  let iconContent = (
-                    <span className="text-[11px] font-black text-white/50 transition-colors">
-                      {['A', 'B', 'C', 'D'][idx]}
-                    </span>
-                  );
-
-                  let rootOpacity = 1;
-                  if (hasAnswered && !showAsCorrect && !showAsWrong) {
-                    rootOpacity = 0.4;
-                  }
-
-                  if (showAsCorrect) {
-                    classNames += ' correct';
-                    iconContent = <Check className="h-3.5 w-3.5" strokeWidth={3} />;
-                  } else if (showAsWrong) {
-                    classNames += ' wrong';
-                    iconContent = <X className="h-3.5 w-3.5" strokeWidth={3} />;
-                  }
-
-                  return (
-                    <button
-                      key={option.key}
-                      onClick={() => handleAnswer(option.key, option.isCorrect)}
-                      className={classNames}
-                      disabled={hasAnswered}
-                      style={{ opacity: rootOpacity }}
-                    >
-                      <span className="option-text text-[15px] font-bold tracking-wide text-white">
-                        {option.text}
-                      </span>
-                      <span className="option-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 transition-colors">
-                        {iconContent}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
               <div
-                className={`mt-8 border-t border-white/10 pt-5 transition-opacity duration-300 ${
-                  hasAnswered ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-                }`}
+                style={{
+                  flexShrink: 0,
+                  minWidth: 72,
+                  height: 38,
+                  borderRadius: 19,
+                  background: KT.ink,
+                  color: KT.card,
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  fontVariantNumeric: 'tabular-nums',
+                  padding: '0 12px',
+                }}
               >
+                {formatDuration(elapsedSeconds)}
+              </div>
+            </header>
+
+            <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `repeat(${progressSegments.length}, 1fr)`, gap: 5 }}>
+              {progressSegments.map((segment, idx) => {
+                let background = 'rgba(31,27,23,0.1)';
+                if (segment.isCurrent) {
+                  background = KT.ink;
+                } else if (segment.state === 'correct') {
+                  background = KT.mintDeep;
+                } else if (segment.state === 'wrong') {
+                  background = KT.pinkDeep;
+                } else if (segment.isFuture) {
+                  background = 'rgba(31,27,23,0.1)';
+                }
+
+                return (
+                  <span
+                    key={`progress-${segment.representedIndex}-${idx}`}
+                    style={{ height: 6, borderRadius: 999, background }}
+                  />
+                );
+              })}
+            </div>
+
+            <section
+              style={{
+                marginTop: 16,
+                background: KT.card,
+                border: `1px solid ${KT.line}`,
+                boxShadow: KT.sh,
+                borderRadius: 24,
+                padding: '16px 16px 14px',
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 800, color: KT.sub, letterSpacing: 0.2, marginBottom: 8 }}>{promptText}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: questionLang === 'KOREAN' ? 44 : 28, fontWeight: 800, color: KT.ink, lineHeight: 1.08 }}>
+                  {promptWord}
+                </div>
                 <button
-                  onClick={handleNext}
-                  className="flex w-full items-center justify-center space-x-2 rounded-[1.2rem] bg-emerald-500 py-4 text-[14px] font-black tracking-widest text-slate-900 shadow-[0_8px_20px_-8px_rgba(16,185,129,0.8)] transition-transform active:scale-95"
+                  type="button"
+                  onClick={() => {
+                    if (questionLang === 'KOREAN') {
+                      void speak(korean);
+                    } else {
+                      void speak(nativeText);
+                    }
+                  }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    border: 'none',
+                    background: KT.ink,
+                    color: KT.card,
+                    display: 'grid',
+                    placeItems: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                  aria-label="播放发音"
                 >
-                  <span>下一个</span>
-                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={3} />
+                  <Volume2 size={18} />
                 </button>
               </div>
-            </div>
-          </section>
-        </main>
-      </div>
+              <div style={{ marginTop: 8, fontSize: 12, color: KT.sub, fontStyle: 'italic' }}>{hintText}</div>
+            </section>
+
+            <section style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+              {options.map((option, idx) => {
+                const isSelected = selectedOptionKey === option.key;
+                const showAsCorrect = hasAnswered && revealCorrect && option.isCorrect;
+                const showAsWrong = hasAnswered && isSelected && !option.isCorrect;
+
+                let background: string = KT.card;
+                let border: string = `1px solid ${KT.line}`;
+                let textColor: string = KT.ink;
+                let badgeBackground: string = KT.bg2;
+                let badgeTextColor: string = KT.ink;
+
+                if (showAsCorrect) {
+                  background = `${KT.mint}66`;
+                  border = `2px solid ${KT.mintDeep}`;
+                  textColor = KT.mintDeep;
+                  badgeBackground = KT.mintDeep;
+                  badgeTextColor = KT.card;
+                } else if (showAsWrong) {
+                  background = `${KT.pink}66`;
+                  border = `2px solid ${KT.pinkDeep}`;
+                  textColor = KT.pinkDeep;
+                  badgeBackground = KT.pinkDeep;
+                  badgeTextColor = KT.card;
+                }
+
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => handleAnswer(option.key, option.isCorrect)}
+                    disabled={hasAnswered}
+                    style={{
+                      minHeight: 74,
+                      borderRadius: 18,
+                      border,
+                      background,
+                      boxShadow: KT.shSm,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 14px',
+                      cursor: hasAnswered ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 11,
+                        background: badgeBackground,
+                        color: badgeTextColor,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 20,
+                        fontWeight: 800,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {['A', 'B', 'C', 'D'][idx]}
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: textColor,
+                        textAlign: 'left',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {option.text}
+                    </span>
+                    {showAsCorrect ? <Check size={20} color={KT.mintDeep} /> : null}
+                    {showAsWrong ? <X size={20} color={KT.pinkDeep} /> : null}
+                  </button>
+                );
+              })}
+            </section>
+
+          </div>
+        </div>
+
+        <footer
+          style={{
+            borderTop: `1px solid ${KT.line}`,
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            padding: '12px 18px calc(env(safe-area-inset-bottom) + 12px)',
+          }}
+        >
+          <div style={{ width: '100%', maxWidth: 440, margin: '0 auto', display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={hasAnswered}
+              style={{
+                flex: 0.34,
+                minHeight: 48,
+                borderRadius: 16,
+                border: `1px solid ${KT.line2}`,
+                background: KT.card,
+                color: KT.ink2,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: hasAnswered ? 'default' : 'pointer',
+                opacity: hasAnswered ? 0.45 : 1,
+              }}
+            >
+              跳过
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!hasAnswered}
+              style={{
+                flex: 1,
+                minHeight: 48,
+                borderRadius: 16,
+                border: 'none',
+                background: KT.ink,
+                color: KT.card,
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: 0.2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                cursor: hasAnswered ? 'pointer' : 'default',
+                opacity: hasAnswered ? 1 : 0.36,
+              }}
+            >
+              {currentIndex + 1 === words.length ? '完成' : '下一题'}
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }

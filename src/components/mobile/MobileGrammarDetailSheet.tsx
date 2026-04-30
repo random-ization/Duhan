@@ -1,31 +1,36 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { X, Trophy, AlertCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
+import React, {
+  type CSSProperties,
+  type ComponentPropsWithoutRef,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { AlertCircle, Eye, EyeOff, Sparkles, Trophy, Type, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { GrammarPointData } from '../../types';
 import { useAction, useMutation } from 'convex/react';
-import type { Id } from '../../../convex/_generated/dataModel';
-import { aRef, mRef } from '../../utils/convexRefs';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+
+import type { Id } from '../../../convex/_generated/dataModel';
+import type { GrammarPointData } from '../../types';
+import { aRef, mRef } from '../../utils/convexRefs';
 import {
-  sanitizeGrammarDisplayText,
-  sanitizeGrammarMarkdown,
-  stripLeadingDuplicateHeading,
-  GRAMMAR_MASK_ANSWER_TOKEN,
   GRAMMAR_MASK_ANSWER_END_TOKEN,
   GRAMMAR_MASK_ANSWER_START_TOKEN,
-  GRAMMAR_MASK_TRANSLATION_TOKEN,
+  GRAMMAR_MASK_ANSWER_TOKEN,
   GRAMMAR_MASK_TRANSLATION_END_TOKEN,
   GRAMMAR_MASK_TRANSLATION_START_TOKEN,
-  getGrammarMaskKind,
+  GRAMMAR_MASK_TRANSLATION_TOKEN,
+  sanitizeGrammarDisplayText,
+  sanitizeGrammarMarkdown,
   stripGrammarMaskTokens,
+  stripLeadingDuplicateHeading,
 } from '../../utils/grammarDisplaySanitizer';
 import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
-import { Button } from '../ui';
-import { Input } from '../ui';
-import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
+import { Button, Input, Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
 import { Card, Chip, HanjaSeal, KT, SectionHead, type ChipTone } from './ksoft/ksoft';
 
 interface MobileGrammarDetailSheetProps {
@@ -45,12 +50,36 @@ type AiCheckResponse = {
 } | null;
 
 type AiFeedbackState = {
-  isCorrect: boolean;
-  feedback: string;
-  correctedSentence?: string;
-  progress?: { proficiency: number; status: string };
+  readonly isCorrect: boolean;
+  readonly feedback: string;
+  readonly correctedSentence?: string;
+  readonly progress?: { proficiency: number; status: string };
 };
+
 type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
+type ReaderFontScale = 'compact' | 'comfortable' | 'relaxed';
+type GrammarMaskKind = 'translation' | 'answer';
+type GrammarExample = GrammarPointData['examples'][number];
+type GrammarQuizItem = NonNullable<GrammarPointData['quizItems']>[number];
+type LocalizedQuizItem = {
+  readonly prompt: string;
+  readonly answer: string;
+};
+type LocalizedSection = { zh?: string; en?: string; vi?: string; mn?: string };
+type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> & { inline?: boolean };
+
+type ReaderStyleVars = CSSProperties & {
+  '--mobile-reader-title-size': string;
+  '--mobile-reader-section-size': string;
+  '--mobile-reader-label-size': string;
+  '--mobile-reader-body-size': string;
+  '--mobile-reader-body-leading': string;
+  '--mobile-reader-list-size': string;
+  '--mobile-reader-inline-code-size': string;
+  '--mobile-reader-block-code-size': string;
+  '--mobile-reader-example-size': string;
+  '--mobile-reader-translation-size': string;
+};
 
 type GrammarTone = {
   readonly chipTone: ChipTone;
@@ -60,7 +89,76 @@ type GrammarTone = {
   readonly seal: string;
 };
 
-const NEGATIVE_FEEDBACK_MARKERS = ['incorrect', '\u9519\u8BEF', 'Incorrect'] as const;
+const RED_EYE_STORAGE_KEY = 'grammar_mobile_red_eye';
+const READER_FONT_SCALE_STORAGE_KEY = 'grammar_mobile_reader_font_scale';
+const NEGATIVE_FEEDBACK_MARKERS = ['incorrect', '错误', 'Incorrect'] as const;
+const LEADING_ANSWER_LABEL_RE =
+  /^(?:\*{1,2})?(?:参考答案|测验参考答案|示例答案|答案|reference answers?|answers?)(?:\*{1,2})?\s*[:：]/i;
+
+const READER_FONT_SCALE_OPTIONS: ReadonlyArray<{
+  value: ReaderFontScale;
+  label: string;
+  titleKey: string;
+  titleDefault: string;
+}> = [
+  {
+    value: 'compact',
+    label: 'A-',
+    titleKey: 'grammarDetail.fontScaleCompact',
+    titleDefault: 'Compact',
+  },
+  {
+    value: 'comfortable',
+    label: 'A',
+    titleKey: 'grammarDetail.fontScaleComfortable',
+    titleDefault: 'Comfortable',
+  },
+  {
+    value: 'relaxed',
+    label: 'A+',
+    titleKey: 'grammarDetail.fontScaleRelaxed',
+    titleDefault: 'Relaxed',
+  },
+];
+
+const READER_FONT_SCALE_VARS: Record<ReaderFontScale, ReaderStyleVars> = {
+  compact: {
+    '--mobile-reader-title-size': '1.65rem',
+    '--mobile-reader-section-size': '1.05rem',
+    '--mobile-reader-label-size': '0.68rem',
+    '--mobile-reader-body-size': '0.94rem',
+    '--mobile-reader-body-leading': '1.72',
+    '--mobile-reader-list-size': '0.93rem',
+    '--mobile-reader-inline-code-size': '0.88em',
+    '--mobile-reader-block-code-size': '0.83rem',
+    '--mobile-reader-example-size': '1rem',
+    '--mobile-reader-translation-size': '0.85rem',
+  },
+  comfortable: {
+    '--mobile-reader-title-size': '1.82rem',
+    '--mobile-reader-section-size': '1.12rem',
+    '--mobile-reader-label-size': '0.7rem',
+    '--mobile-reader-body-size': '0.98rem',
+    '--mobile-reader-body-leading': '1.8',
+    '--mobile-reader-list-size': '0.96rem',
+    '--mobile-reader-inline-code-size': '0.9em',
+    '--mobile-reader-block-code-size': '0.85rem',
+    '--mobile-reader-example-size': '1.04rem',
+    '--mobile-reader-translation-size': '0.88rem',
+  },
+  relaxed: {
+    '--mobile-reader-title-size': '1.96rem',
+    '--mobile-reader-section-size': '1.2rem',
+    '--mobile-reader-label-size': '0.73rem',
+    '--mobile-reader-body-size': '1.05rem',
+    '--mobile-reader-body-leading': '1.9',
+    '--mobile-reader-list-size': '1rem',
+    '--mobile-reader-inline-code-size': '0.94em',
+    '--mobile-reader-block-code-size': '0.9rem',
+    '--mobile-reader-example-size': '1.08rem',
+    '--mobile-reader-translation-size': '0.92rem',
+  },
+};
 
 const getFeedbackText = (nuance: unknown): string =>
   typeof nuance === 'string' ? nuance : 'Analysis complete';
@@ -75,21 +173,13 @@ const triggerConfetti = (setShowConfetti: (value: boolean) => void) => {
   setTimeout(() => setShowConfetti(false), 2000);
 };
 
-const getRulesObject = (grammar: GrammarPointData): Record<string, unknown> =>
-  (grammar.conjugationRules ?? grammar.construction ?? {}) as Record<string, unknown>;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-const getExamples = (
-  grammar: GrammarPointData
-): Array<{ kr?: string; cn?: string; en?: string; vi?: string; mn?: string }> =>
-  Array.isArray(grammar.examples)
-    ? (grammar.examples as Array<{
-        kr?: string;
-        cn?: string;
-        en?: string;
-        vi?: string;
-        mn?: string;
-      }>)
-    : [];
+function isReaderFontScale(value: string): value is ReaderFontScale {
+  return value === 'compact' || value === 'comfortable' || value === 'relaxed';
+}
 
 const resolveSupportedLanguage = (language?: string): SupportedLanguage => {
   const normalized = (language || '').toLowerCase();
@@ -190,21 +280,147 @@ const getLocalizedExplanation = (
   );
 };
 
-const RED_EYE_STORAGE_KEY = 'grammar_mobile_red_eye';
+const getLocalizedCustomNote = (grammar: GrammarPointData, language: SupportedLanguage): string => {
+  const candidates =
+    language === 'en'
+      ? [grammar.customNoteEn, grammar.customNote, grammar.customNoteVi, grammar.customNoteMn]
+      : language === 'vi'
+        ? [grammar.customNoteVi, grammar.customNoteEn, grammar.customNote, grammar.customNoteMn]
+        : language === 'mn'
+          ? [grammar.customNoteMn, grammar.customNoteEn, grammar.customNote, grammar.customNoteVi]
+          : [grammar.customNote, grammar.customNoteEn, grammar.customNoteVi, grammar.customNoteMn];
+
+  return sanitizeGrammarMarkdown(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
+};
+
+function pickLocalizedText(localized: LocalizedSection, language: SupportedLanguage): string {
+  const value = localized[language];
+  return typeof value === 'string' && value.trim().length > 0 ? value : '';
+}
+
+function getLocalizedSectionText(
+  section: string | LocalizedSection | null | undefined,
+  language: SupportedLanguage
+): string {
+  if (!section) return '';
+  if (typeof section === 'string') return section;
+  return pickLocalizedText(section, language);
+}
+
+function buildMarkdownFromSections(
+  sections: GrammarPointData['sections'],
+  language: SupportedLanguage
+): string {
+  if (!sections) return '';
+
+  const sectionDefs: Array<{
+    key: keyof NonNullable<GrammarPointData['sections']>;
+    title: string;
+  }> = [
+    { key: 'introduction', title: 'Introduction' },
+    { key: 'core', title: 'Core Usage' },
+    { key: 'comparative', title: 'Comparative Notes' },
+    { key: 'cultural', title: 'Cultural Notes' },
+    { key: 'commonMistakes', title: 'Common Mistakes' },
+    { key: 'review', title: 'Review' },
+  ];
+
+  return sectionDefs
+    .map(({ key, title }) => {
+      const content = getLocalizedSectionText(sections[key], language);
+      if (!content) return '';
+      return `## ${title}\n\n${content}`;
+    })
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+const getRulesObject = (grammar: GrammarPointData): Record<string, unknown> => {
+  if (isRecord(grammar.conjugationRules)) return grammar.conjugationRules;
+  if (grammar.construction && isRecord(grammar.construction)) return grammar.construction;
+  return {};
+};
+
+const getExamples = (grammar: GrammarPointData): GrammarExample[] =>
+  Array.isArray(grammar.examples)
+    ? grammar.examples.filter(
+        (example): example is GrammarExample => isRecord(example) && typeof example.kr === 'string'
+      )
+    : [];
+
+const getLocalizedExampleTranslation = (
+  example: Pick<GrammarExample, 'cn' | 'en' | 'vi' | 'mn'>,
+  language: SupportedLanguage
+): string => {
+  const candidates =
+    language === 'en'
+      ? [example.en, example.cn, example.vi, example.mn]
+      : language === 'vi'
+        ? [example.vi, example.en, example.cn, example.mn]
+        : language === 'mn'
+          ? [example.mn, example.en, example.cn, example.vi]
+          : [example.cn, example.en, example.vi, example.mn];
+
+  return sanitizeGrammarDisplayText(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
+};
+
+const getLocalizedQuizText = (
+  value: GrammarQuizItem['prompt'] | GrammarQuizItem['answer'] | undefined,
+  language: SupportedLanguage
+): string => {
+  if (!value) return '';
+
+  const candidates =
+    language === 'en'
+      ? [value.en, value.zh, value.vi, value.mn]
+      : language === 'vi'
+        ? [value.vi, value.en, value.zh, value.mn]
+        : language === 'mn'
+          ? [value.mn, value.en, value.zh, value.vi]
+          : [value.zh, value.en, value.vi, value.mn];
+
+  return sanitizeGrammarDisplayText(
+    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
+  );
+};
+
+const stringifyRuleValue = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+
+  if (Array.isArray(value)) {
+    return value
+      .map(item => stringifyRuleValue(item))
+      .filter(item => item.trim().length > 0)
+      .join(' · ');
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value)
+      .map(([key, entryValue]) => {
+        const rendered = stringifyRuleValue(entryValue);
+        return rendered.trim().length > 0 ? `${key}: ${rendered}` : key;
+      })
+      .join(' · ');
+  }
+
+  return '';
+};
 
 function extractTextContent(node: React.ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(extractTextContent).join('');
-  if (React.isValidElement(node))
+  if (React.isValidElement(node)) {
     return extractTextContent((node.props as { children?: React.ReactNode }).children);
+  }
   return '';
 }
 
-function getRedEyeMaskClass(enabled: boolean): string {
-  return enabled ? 'blur-sm hover:blur-none select-none transition-all duration-200' : '';
-}
-
-function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
+function getStandaloneLineMaskKind(input: string): GrammarMaskKind | null {
   const stripped = stripGrammarMaskTokens(input).trim();
   if (stripped.length > 0) return null;
   if (input.includes(GRAMMAR_MASK_TRANSLATION_TOKEN)) return 'translation';
@@ -212,16 +428,111 @@ function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | nu
   return null;
 }
 
+function getNodeMaskKind(node: unknown): GrammarMaskKind | null {
+  if (!isRecord(node)) return null;
+
+  const properties = node.properties;
+  if (isRecord(properties)) {
+    const direct = properties['data-grammar-mask'];
+    if (direct === 'translation' || direct === 'answer') return direct;
+  }
+
+  const data = node.data;
+  if (!isRecord(data)) return null;
+  const hProperties = data.hProperties;
+  if (!isRecord(hProperties)) return null;
+  const fromHProperties = hProperties['data-grammar-mask'];
+  return fromHProperties === 'translation' || fromHProperties === 'answer' ? fromHProperties : null;
+}
+
+const isEmptySentence = (sentence: string): boolean => sentence.trim().length === 0;
+
+const formatImportedAt = (value: number | undefined, locale: string): string => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '';
+
+  try {
+    return new Intl.DateTimeFormat(locale || 'en', { dateStyle: 'medium' }).format(new Date(value));
+  } catch {
+    return new Date(value).toLocaleDateString();
+  }
+};
+
+const getRevealMaskClassName = (enabled: boolean): string =>
+  enabled ? 'select-none transition-[filter,opacity] duration-200' : '';
+
+function isInteractiveElementTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return Boolean(
+    target.closest(
+      'input, textarea, select, button, a, [role="button"], [contenteditable="true"]'
+    )
+  );
+}
+
+const RedEyeMask: React.FC<{
+  enabled: boolean;
+  kind: GrammarMaskKind;
+  children: React.ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}> = ({ enabled, kind, children, className, style }) => {
+  const [revealed, setRevealed] = useState(false);
+
+  if (!enabled) {
+    return (
+      <span data-grammar-mask={kind} className={className} style={style}>
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      data-grammar-mask={kind}
+      role="button"
+      tabIndex={0}
+      className={className}
+      style={{
+        ...style,
+        display: 'inline-block',
+        cursor: 'pointer',
+        filter: revealed ? 'none' : 'blur(7px)',
+      }}
+      onClick={() => setRevealed(previous => !previous)}
+      onPointerEnter={() => setRevealed(true)}
+      onPointerLeave={() => setRevealed(false)}
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
+      onFocus={() => setRevealed(true)}
+      onBlur={() => setRevealed(false)}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          setRevealed(previous => !previous);
+        }
+      }}
+    >
+      {children}
+    </span>
+  );
+};
+
 function wrapMaskedInlineNode(
   node: React.ReactNode,
-  maskKind: 'translation' | 'answer',
+  maskKind: GrammarMaskKind,
   redEyeEnabled: boolean,
   key: string
 ): React.ReactNode {
   return (
-    <span key={key} data-grammar-mask={maskKind} className={getRedEyeMaskClass(redEyeEnabled)}>
+    <RedEyeMask
+      key={key}
+      enabled={redEyeEnabled}
+      kind={maskKind}
+      className={getRevealMaskClassName(redEyeEnabled)}
+    >
       {node}
-    </span>
+    </RedEyeMask>
   );
 }
 
@@ -242,15 +553,13 @@ function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.
     ].filter(item => item.index >= 0);
 
     if (indices.length === 0) {
-      const cleanRemaining = stripGrammarMaskTokens(remaining);
-      segments.push(cleanRemaining);
+      segments.push(stripGrammarMaskTokens(remaining));
       break;
     }
 
     const next = indices.sort((a, b) => a.index - b.index)[0];
     if (next.index > 0) {
-      const plainText = stripGrammarMaskTokens(remaining.slice(0, next.index));
-      segments.push(plainText);
+      segments.push(stripGrammarMaskTokens(remaining.slice(0, next.index)));
     }
 
     if (next.kind === 'translation-line' || next.kind === 'answer-line') {
@@ -258,15 +567,18 @@ function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.
         next.kind === 'translation-line'
           ? GRAMMAR_MASK_TRANSLATION_TOKEN
           : GRAMMAR_MASK_ANSWER_TOKEN;
+      const maskKind: GrammarMaskKind = next.kind === 'translation-line' ? 'translation' : 'answer';
       const maskedContent = stripGrammarMaskTokens(remaining.slice(next.index + token.length));
+
       segments.push(
-        <span
+        <RedEyeMask
           key={`mask-${key++}`}
-          data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
-          className={getRedEyeMaskClass(redEyeEnabled)}
+          enabled={redEyeEnabled}
+          kind={maskKind}
+          className={getRevealMaskClassName(redEyeEnabled)}
         >
           {maskedContent}
-        </span>
+        </RedEyeMask>
       );
       break;
     }
@@ -279,23 +591,29 @@ function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.
       next.kind === 'translation-inline'
         ? GRAMMAR_MASK_TRANSLATION_END_TOKEN
         : GRAMMAR_MASK_ANSWER_END_TOKEN;
+    const maskKind: GrammarMaskKind = next.kind === 'translation-inline' ? 'translation' : 'answer';
     const endIndex = remaining.indexOf(endToken, next.index + startToken.length);
+
     if (endIndex < 0) {
       segments.push(stripGrammarMaskTokens(remaining));
       break;
     }
+
     const maskedContent = stripGrammarMaskTokens(
       remaining.slice(next.index + startToken.length, endIndex)
     );
+
     segments.push(
-      <span
+      <RedEyeMask
         key={`mask-${key++}`}
-        data-grammar-mask={next.kind.startsWith('translation') ? 'translation' : 'answer'}
-        className={getRedEyeMaskClass(redEyeEnabled)}
+        enabled={redEyeEnabled}
+        kind={maskKind}
+        className={getRevealMaskClassName(redEyeEnabled)}
       >
         {maskedContent}
-      </span>
+      </RedEyeMask>
     );
+
     remaining = remaining.slice(endIndex + endToken.length);
   }
 
@@ -306,9 +624,10 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
   if (typeof node === 'string' || typeof node === 'number') {
     return renderMaskedTextSegments(String(node), redEyeEnabled);
   }
+
   if (Array.isArray(node)) {
     const rendered: React.ReactNode[] = [];
-    let pendingMask: 'translation' | 'answer' | null = null;
+    let pendingMask: GrammarMaskKind | null = null;
 
     node.forEach((child, index) => {
       if (typeof child === 'string' || typeof child === 'number') {
@@ -342,11 +661,33 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
 
     return rendered;
   }
+
   if (React.isValidElement(node)) {
     const props = node.props as { children?: React.ReactNode };
     return React.cloneElement(node, props, renderMaskedNode(props.children, redEyeEnabled));
   }
+
   return node;
+}
+
+function renderMaskedBlockContent(
+  children: React.ReactNode,
+  maskKind: GrammarMaskKind | null,
+  redEyeEnabled: boolean
+): React.ReactNode {
+  if (!maskKind) return renderMaskedNode(children, redEyeEnabled);
+  if (!redEyeEnabled) return renderMaskedNode(children, false);
+
+  return (
+    <RedEyeMask
+      enabled
+      kind={maskKind}
+      className={getRevealMaskClassName(true)}
+      style={{ whiteSpace: 'normal' }}
+    >
+      {renderMaskedNode(children, false)}
+    </RedEyeMask>
+  );
 }
 
 const MarkdownRenderer: React.FC<{
@@ -364,8 +705,9 @@ const MarkdownRenderer: React.FC<{
             style={{
               marginTop: 24,
               marginBottom: 16,
-              fontSize: 26,
+              fontSize: 'var(--mobile-reader-title-size)',
               fontWeight: 800,
+              lineHeight: 1.1,
               color: KT.ink,
               letterSpacing: -0.6,
             }}
@@ -383,7 +725,7 @@ const MarkdownRenderer: React.FC<{
               alignItems: 'center',
               gap: 8,
               borderBottom: `1px solid ${KT.line}`,
-              fontSize: 19,
+              fontSize: 'var(--mobile-reader-section-size)',
               fontWeight: 800,
               color: KT.ink,
               letterSpacing: -0.2,
@@ -397,61 +739,94 @@ const MarkdownRenderer: React.FC<{
           <h3
             style={{
               marginTop: 24,
-              marginBottom: 8,
-              fontSize: 11,
+              marginBottom: 10,
+              fontSize: 'var(--mobile-reader-label-size)',
               fontWeight: 800,
               textTransform: 'uppercase',
-              letterSpacing: 1.2,
+              letterSpacing: 1.4,
               color: KT.sub,
             }}
           >
             {children}
           </h3>
         ),
-        p: ({ children, node: _node }) => {
+        p: ({ children, node }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind =
+            nodeMaskKind ||
+            (rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+              ? 'translation'
+              : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN) ||
+                  LEADING_ANSWER_LABEL_RE.test(stripGrammarMaskTokens(rawText).trim())
+                ? 'answer'
+                : null);
 
           return (
             <p
-              className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
               style={{
                 margin: '12px 0',
-                fontSize: 14,
-                lineHeight: 1.7,
+                fontSize: 'var(--mobile-reader-body-size)',
+                lineHeight: 'var(--mobile-reader-body-leading)',
                 color: KT.ink2,
               }}
             >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </p>
           );
         },
         ul: ({ children }) => (
-          <ul style={{ margin: '12px 0', paddingLeft: 22, display: 'grid', gap: 6 }}>{children}</ul>
+          <ul
+            style={{
+              margin: '12px 0',
+              paddingLeft: 22,
+              display: 'grid',
+              gap: 6,
+            }}
+          >
+            {children}
+          </ul>
         ),
         ol: ({ children }) => (
-          <ol style={{ margin: '12px 0', paddingLeft: 22, display: 'grid', gap: 6 }}>{children}</ol>
+          <ol
+            style={{
+              margin: '12px 0',
+              paddingLeft: 22,
+              display: 'grid',
+              gap: 6,
+            }}
+          >
+            {children}
+          </ol>
         ),
-        li: ({ children, node: _node }) => {
+        li: ({ children, node }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind =
+            nodeMaskKind ||
+            (rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+              ? 'translation'
+              : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN) ||
+                  LEADING_ANSWER_LABEL_RE.test(stripGrammarMaskTokens(rawText).trim())
+                ? 'answer'
+                : null);
+
           return (
             <li
-              className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
               style={{
-                fontSize: 14,
-                lineHeight: 1.7,
+                fontSize: 'var(--mobile-reader-list-size)',
+                lineHeight: 'var(--mobile-reader-body-leading)',
                 color: KT.ink2,
               }}
             >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </li>
           );
         },
         strong: ({ children }) => (
           <strong
             style={{
-              padding: '1px 4px',
+              padding: '1px 5px',
               borderRadius: 6,
               background: `${KT.butter}99`,
               color: KT.ink,
@@ -461,6 +836,20 @@ const MarkdownRenderer: React.FC<{
             {children}
           </strong>
         ),
+        a: ({ children, href }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              color: KT.crimson,
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {children}
+          </a>
+        ),
         blockquote: ({ children }) => (
           <blockquote
             style={{
@@ -468,16 +857,26 @@ const MarkdownRenderer: React.FC<{
               padding: '14px 16px',
               borderLeft: `4px solid ${KT.crimson}`,
               borderRadius: 16,
-              background: `${KT.bg2}`,
+              background: KT.bg2,
               color: KT.ink2,
-              fontStyle: 'italic',
             }}
           >
             {children}
           </blockquote>
         ),
+        hr: () => (
+          <hr
+            style={{
+              margin: '22px 0',
+              border: 0,
+              height: 1,
+              background: KT.line,
+            }}
+          />
+        ),
         table: ({ children }) => (
           <div
+            className="hide-scroll"
             style={{
               margin: '16px 0',
               overflowX: 'auto',
@@ -486,28 +885,45 @@ const MarkdownRenderer: React.FC<{
               background: KT.card,
             }}
           >
-            <table style={{ width: '100%', fontSize: 12, textAlign: 'left' }}>{children}</table>
+            <table
+              style={{
+                width: '100%',
+                fontSize: '0.8rem',
+                textAlign: 'left',
+                borderCollapse: 'collapse',
+              }}
+            >
+              {children}
+            </table>
           </div>
         ),
+        thead: ({ children }) => <thead style={{ background: KT.bg2 }}>{children}</thead>,
         th: ({ children }) => (
           <th
             style={{
               padding: '10px 12px',
               borderBottom: `1px solid ${KT.line}`,
-              background: KT.bg2,
               fontWeight: 800,
               color: KT.ink,
+              whiteSpace: 'nowrap',
             }}
           >
             {children}
           </th>
         ),
-        td: ({ children }) => {
+        td: ({ children, node }) => {
           const rawText = extractTextContent(children);
-          const maskKind = getGrammarMaskKind(rawText);
+          const nodeMaskKind = getNodeMaskKind(node);
+          const maskKind =
+            nodeMaskKind ||
+            (rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
+              ? 'translation'
+              : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN)
+                ? 'answer'
+                : null);
+
           return (
             <td
-              className={maskKind ? getRedEyeMaskClass(redEyeEnabled) : ''}
               style={{
                 padding: '10px 12px',
                 borderBottom: `1px solid ${KT.line}`,
@@ -515,10 +931,46 @@ const MarkdownRenderer: React.FC<{
                 verticalAlign: 'top',
               }}
             >
-              {renderMaskedNode(children, maskKind ? false : redEyeEnabled)}
+              {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
             </td>
           );
         },
+        pre: ({ children }) => (
+          <pre
+            style={{
+              margin: '16px 0',
+              overflowX: 'auto',
+              borderRadius: 18,
+              background: KT.ink,
+              color: KT.card,
+              padding: '14px 16px',
+              fontSize: 'var(--mobile-reader-block-code-size)',
+              lineHeight: 1.65,
+            }}
+          >
+            {children}
+          </pre>
+        ),
+        code: ({ inline, className, children, ...props }: MarkdownCodeProps) => (
+          <code
+            className={className}
+            style={
+              inline
+                ? {
+                    padding: '1px 6px',
+                    borderRadius: 6,
+                    background: `${KT.sky}55`,
+                    color: KT.ink,
+                    fontSize: 'var(--mobile-reader-inline-code-size)',
+                    fontWeight: 700,
+                  }
+                : undefined
+            }
+            {...props}
+          >
+            {children}
+          </code>
+        ),
       }}
     >
       {content}
@@ -526,57 +978,93 @@ const MarkdownRenderer: React.FC<{
   );
 };
 
-const getExampleTranslation = (
-  example: { cn?: string; en?: string; vi?: string; mn?: string },
-  language: SupportedLanguage
-): string => {
-  const candidates =
-    language === 'en'
-      ? [example.en, example.cn, example.vi, example.mn]
-      : language === 'vi'
-        ? [example.vi, example.en, example.cn, example.mn]
-        : language === 'mn'
-          ? [example.mn, example.en, example.cn, example.vi]
-          : [example.cn, example.en, example.vi, example.mn];
-  return sanitizeGrammarDisplayText(
-    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
-  );
-};
+const ReaderDisplayControls: React.FC<{
+  fontScale: ReaderFontScale;
+  onChange: (value: ReaderFontScale) => void;
+  redEyeEnabled: boolean;
+  onToggleRedEye: () => void;
+  t: TFunction;
+}> = ({ fontScale, onChange, redEyeEnabled, onToggleRedEye, t }) => (
+  <Card
+    pad={14}
+    style={{
+      background: 'rgba(255,255,255,0.92)',
+      boxShadow: KT.shSm,
+      backdropFilter: 'blur(16px)',
+    }}
+  >
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full"
+          style={{ background: KT.bg2, color: KT.ink }}
+        >
+          <Type size={16} />
+        </div>
+        <div className="min-w-0">
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: KT.sub }}>
+            {t('grammarDetail.readerControls', { defaultValue: 'READER' })}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: KT.ink }}>
+            {t('grammarDetail.redEyeMode', { defaultValue: 'Red eye mode' })}
+          </div>
+        </div>
+      </div>
 
-const getLocalizedCustomNote = (grammar: GrammarPointData, language: SupportedLanguage): string => {
-  const candidates =
-    language === 'en'
-      ? [grammar.customNoteEn, grammar.customNote, grammar.customNoteVi, grammar.customNoteMn]
-      : language === 'vi'
-        ? [grammar.customNoteVi, grammar.customNoteEn, grammar.customNote, grammar.customNoteMn]
-        : language === 'mn'
-          ? [grammar.customNoteMn, grammar.customNoteEn, grammar.customNote, grammar.customNoteVi]
-          : [grammar.customNote, grammar.customNoteEn, grammar.customNoteVi, grammar.customNoteMn];
+      <button
+        type="button"
+        onClick={onToggleRedEye}
+        aria-pressed={redEyeEnabled}
+        aria-label={t('grammarDetail.redEyeMode', { defaultValue: 'Red eye mode' })}
+        title={
+          redEyeEnabled
+            ? t('grammarDetail.redEyeOn', {
+                defaultValue: 'Red eye mode on: hide translations and answers',
+              })
+            : t('grammarDetail.redEyeOff', {
+                defaultValue: 'Red eye mode off: show translations and answers',
+              })
+        }
+        className="flex h-10 min-w-10 items-center justify-center rounded-full transition-all active:scale-95"
+        style={{
+          border: redEyeEnabled ? `1px solid ${KT.crimson}44` : `1px solid ${KT.line}`,
+          background: redEyeEnabled ? `${KT.pink}88` : KT.card,
+          color: redEyeEnabled ? KT.crimson : KT.sub,
+          boxShadow: KT.shSm,
+        }}
+      >
+        {redEyeEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
 
-  return candidates.find(text => typeof text === 'string' && text.trim().length > 0) || '';
-};
-
-const stringifyRuleValue = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) {
-    return value
-      .map(item => stringifyRuleValue(item))
-      .filter(item => item.trim().length > 0)
-      .join(' · ');
-  }
-  if (typeof value === 'object' && value !== null) {
-    return Object.entries(value as Record<string, unknown>)
-      .map(([key, entryValue]) => {
-        const rendered = stringifyRuleValue(entryValue);
-        return rendered.trim().length > 0 ? `${key}: ${rendered}` : key;
-      })
-      .join(' · ');
-  }
-  return '';
-};
-
-const isEmptySentence = (sentence: string): boolean => sentence.trim().length === 0;
+    <div className="mt-3 flex items-center gap-2">
+      {READER_FONT_SCALE_OPTIONS.map(option => {
+        const active = option.value === fontScale;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={active}
+            aria-label={`${t('grammarDetail.fontSize', { defaultValue: 'Font size' })}: ${t(option.titleKey, { defaultValue: option.titleDefault })}`}
+            title={`${t('grammarDetail.fontSize', { defaultValue: 'Font size' })}: ${t(option.titleKey, { defaultValue: option.titleDefault })}`}
+            className="flex h-9 min-w-[3rem] items-center justify-center rounded-full px-3 transition-all active:scale-95"
+            style={{
+              border: active ? `1px solid ${KT.ink}` : `1px solid ${KT.line}`,
+              background: active ? KT.ink : KT.card,
+              color: active ? KT.card : KT.sub,
+              fontSize: 12,
+              fontWeight: 800,
+              boxShadow: KT.shSm,
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  </Card>
+);
 
 export default function MobileGrammarDetailSheet({
   grammar,
@@ -590,15 +1078,26 @@ export default function MobileGrammarDetailSheet({
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const dragStartY = useRef<number>(0);
   const [redEyeEnabled, setRedEyeEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return safeGetLocalStorageItem(RED_EYE_STORAGE_KEY) === '1';
   });
+  const [fontScale, setFontScale] = useState<ReaderFontScale>(() => {
+    if (typeof window === 'undefined') return 'comfortable';
+    const stored = safeGetLocalStorageItem(READER_FONT_SCALE_STORAGE_KEY);
+    return stored && isReaderFontScale(stored) ? stored : 'comfortable';
+  });
+
+  const dragStartY = useRef(0);
+  const readerScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     safeSetLocalStorageItem(RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
   }, [redEyeEnabled]);
+
+  useEffect(() => {
+    safeSetLocalStorageItem(READER_FONT_SCALE_STORAGE_KEY, fontScale);
+  }, [fontScale]);
 
   const checkAction = useAction(
     aRef<
@@ -627,92 +1126,30 @@ export default function MobileGrammarDetailSheet({
     setIsExpanded(true);
   }, [grammar?.id]);
 
-  const handleCheck = async () => {
-    if (!grammar || !practiceSentence.trim()) return;
-
-    setIsChecking(true);
-    setAiFeedback(null);
-    try {
-      const response = await checkAction({
-        sentence: practiceSentence.trim(),
-        context: getLocalizedTitle(grammar, resolveSupportedLanguage(i18n.language)),
-        language: i18n.language,
-      });
-
-      const res = response as AiCheckResponse;
-      if (res?.success && res.data) {
-        // Logic duplicated from desktop component
-        const feedback = getFeedbackText(res.data.nuance);
-        const isFeedbackNegative = isNegativeFeedback(feedback);
-        const aiIsCorrect =
-          typeof res.data.isCorrect === 'boolean' ? res.data.isCorrect : undefined;
-        const finalIsCorrect = aiIsCorrect ?? !isFeedbackNegative;
-        const correctedSentence =
-          typeof res.data.corrected === 'string' && res.data.corrected.trim().length > 0
-            ? res.data.corrected.trim()
-            : undefined;
-
-        // Progress Update
-        let progress: { proficiency: number; status: string } | undefined = undefined;
-        if (finalIsCorrect) {
-          const updateRes = await updateStatus({
-            grammarId: grammar.id as unknown as Id<'grammar_points'>,
-            increment: 50,
-          });
-          progress = updateRes;
-
-          if (updateRes.proficiency >= 100) {
-            triggerConfetti(setShowConfetti);
-          }
-
-          onProficiencyUpdate?.(
-            grammar.id,
-            updateRes.proficiency,
-            updateRes.status as GrammarPointData['status']
-          );
-        }
-
-        setAiFeedback({
-          isCorrect: finalIsCorrect,
-          feedback,
-          correctedSentence,
-          progress,
-        });
-      }
-    } catch (error) {
-      console.error('Check failed', error);
-      setAiFeedback({ isCorrect: false, feedback: 'Error checking sentence.' });
-    } finally {
-      setIsChecking(false);
-    }
-  };
-
-  const handleToggleStatus = () => {
-    if (!grammar) return;
-    const newStatus = grammar.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
-    updateStatus({
-      grammarId: grammar.id as unknown as Id<'grammar_points'>,
-      status: newStatus,
-    }).then(res => {
-      onProficiencyUpdate?.(grammar.id, res.proficiency, res.status as GrammarPointData['status']);
-      if (res.status === 'MASTERED') {
-        triggerConfetti(setShowConfetti);
-      }
-    });
-  };
-
   if (!grammar) return null;
 
-  const rulesObject = getRulesObject(grammar);
-  const examples = getExamples(grammar);
   const language = resolveSupportedLanguage(i18n.language);
+  const readerVars = READER_FONT_SCALE_VARS[fontScale];
   const localizedTitle = getLocalizedTitle(grammar, language);
   const localizedSummary = getLocalizedSummary(grammar, language);
-  const localizedExplanation = stripLeadingDuplicateHeading(
-    getLocalizedExplanation(grammar, language),
+  const localizedExplanation = getLocalizedExplanation(grammar, language);
+  const markdownDocument = stripLeadingDuplicateHeading(
+    sanitizeGrammarMarkdown(
+      localizedExplanation || buildMarkdownFromSections(grammar.sections, language)
+    ),
     localizedTitle
   );
   const localizedCustomNote = getLocalizedCustomNote(grammar, language);
+  const renderedRules = Object.entries(getRulesObject(grammar))
+    .map(([key, value]) => ({ key, value: stringifyRuleValue(value) }))
+    .filter(rule => rule.value.trim().length > 0);
+  const examples = getExamples(grammar);
+  const quizItems: LocalizedQuizItem[] = (grammar.quizItems ?? [])
+    .map(item => ({
+      prompt: getLocalizedQuizText(item.prompt, language),
+      answer: getLocalizedQuizText(item.answer, language),
+    }))
+    .filter(item => item.prompt.trim().length > 0 || item.answer.trim().length > 0);
   const proficiency = aiFeedback?.progress?.proficiency ?? grammar.proficiency ?? 0;
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
   const proficiencyValue = clampPercentage(proficiency);
@@ -723,21 +1160,119 @@ export default function MobileGrammarDetailSheet({
       : status === 'LEARNING'
         ? t('grammar.status.learning', { defaultValue: 'Learning' })
         : t('grammar.status.new', { defaultValue: 'New' });
-  const renderedRules = Object.entries(rulesObject)
-    .map(([key, value]) => ({ key, value: stringifyRuleValue(value) }))
-    .filter(rule => rule.value.trim().length > 0);
   const isCheckDisabled = isChecking || isEmptySentence(practiceSentence);
+  const importedAtLabel = formatImportedAt(grammar.sourceMeta?.importedAt, i18n.language || 'en');
 
-  const handleDragStart = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+  const handleCheck = async () => {
+    if (!practiceSentence.trim()) return;
+
+    setIsChecking(true);
+    setAiFeedback(null);
+
+    try {
+      const response = await checkAction({
+        sentence: practiceSentence.trim(),
+        context: localizedTitle,
+        language: i18n.language,
+      });
+
+      const result = response as AiCheckResponse;
+      if (!result?.success || !result.data) return;
+
+      const feedback = getFeedbackText(result.data.nuance);
+      const isFeedbackNegative = isNegativeFeedback(feedback);
+      const aiIsCorrect =
+        typeof result.data.isCorrect === 'boolean' ? result.data.isCorrect : undefined;
+      const finalIsCorrect = aiIsCorrect ?? !isFeedbackNegative;
+      const correctedSentence =
+        typeof result.data.corrected === 'string' && result.data.corrected.trim().length > 0
+          ? result.data.corrected.trim()
+          : undefined;
+
+      let progress: { proficiency: number; status: string } | undefined;
+      if (finalIsCorrect) {
+        const updateResult = await updateStatus({
+          grammarId: grammar.id as unknown as Id<'grammar_points'>,
+          increment: 50,
+        });
+        progress = updateResult;
+
+        if (updateResult.proficiency >= 100) {
+          triggerConfetti(setShowConfetti);
+        }
+
+        onProficiencyUpdate?.(
+          grammar.id,
+          updateResult.proficiency,
+          updateResult.status as GrammarPointData['status']
+        );
+      }
+
+      setAiFeedback({
+        isCorrect: finalIsCorrect,
+        feedback,
+        correctedSentence,
+        progress,
+      });
+    } catch (error) {
+      console.error('Check failed', error);
+      setAiFeedback({
+        isCorrect: false,
+        feedback: t('grammarDetail.checkError', { defaultValue: 'Error checking sentence.' }),
+      });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleToggleStatus = () => {
+    const nextStatus = grammar.status === 'MASTERED' ? 'LEARNING' : 'MASTERED';
+
+    void updateStatus({
+      grammarId: grammar.id as unknown as Id<'grammar_points'>,
+      status: nextStatus,
+    }).then(result => {
+      onProficiencyUpdate?.(
+        grammar.id,
+        result.proficiency,
+        result.status as GrammarPointData['status']
+      );
+
+      if (result.status === 'MASTERED') {
+        triggerConfetti(setShowConfetti);
+      }
+    });
+  };
+
+  const handleDragStart = (event: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
     dragStartY.current = clientY;
   };
 
-  const handleDragEnd = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
+  const handleDragEnd = (event: React.TouchEvent | React.MouseEvent) => {
+    const clientY = 'changedTouches' in event ? event.changedTouches[0].clientY : event.clientY;
     const delta = dragStartY.current - clientY;
-    if (delta > 40) setIsExpanded(true); // swipe up → expand
-    if (delta < -40) setIsExpanded(false); // swipe down → collapse
+    if (delta > 40) setIsExpanded(true);
+    if (delta < -40) setIsExpanded(false);
+  };
+
+  const forwardWheelToReader = (event: React.WheelEvent<HTMLElement>) => {
+    if (isInteractiveElementTarget(event.target)) return;
+
+    const reader = readerScrollRef.current;
+    if (!reader) return;
+    if (Math.abs(event.deltaY) < 0.5 && Math.abs(event.deltaX) < 0.5) return;
+
+    const canScrollVertically = reader.scrollHeight > reader.clientHeight;
+    const canScrollHorizontally = reader.scrollWidth > reader.clientWidth;
+    if (!canScrollVertically && !canScrollHorizontally) return;
+
+    reader.scrollBy({
+      top: event.deltaY,
+      left: event.deltaX,
+      behavior: 'auto',
+    });
+    event.preventDefault();
   };
 
   return (
@@ -753,7 +1288,7 @@ export default function MobileGrammarDetailSheet({
           closeOnEscape={false}
           lockBodyScroll
           className={`fixed bottom-0 left-0 right-0 z-[61] flex flex-col overflow-hidden transition-[height] duration-300 ease-out ${
-            isExpanded ? 'h-[92dvh]' : 'h-[56dvh]'
+            isExpanded ? 'h-[94dvh]' : 'h-[62dvh]'
           }`}
           style={{
             background: KT.bg,
@@ -764,18 +1299,19 @@ export default function MobileGrammarDetailSheet({
           }}
         >
           <div
-            className="shrink-0 cursor-grab active:cursor-grabbing select-none"
+            className="shrink-0 cursor-grab select-none active:cursor-grabbing"
             onTouchStart={handleDragStart}
             onTouchEnd={handleDragEnd}
             onMouseDown={handleDragStart}
             onMouseUp={handleDragEnd}
-            onClick={() => setIsExpanded(prev => !prev)}
+            onWheel={forwardWheelToReader}
+            onClick={() => setIsExpanded(previous => !previous)}
             style={{
               background: `linear-gradient(180deg, ${KT.bg2} 0%, ${KT.bg} 100%)`,
               borderBottom: `1px solid ${KT.line}`,
             }}
           >
-            <div className="flex justify-center pt-3 pb-1">
+            <div className="flex justify-center pb-1 pt-3">
               <div
                 className="h-1 w-10 rounded-full"
                 style={{ background: 'rgba(31,27,23,0.14)' }}
@@ -784,58 +1320,47 @@ export default function MobileGrammarDetailSheet({
 
             <div
               className="relative z-10"
-              onCopy={e => e.preventDefault()}
-              onContextMenu={e => e.preventDefault()}
-              style={{ padding: '10px 22px 18px' }}
+              onCopy={event => event.preventDefault()}
+              onContextMenu={event => event.preventDefault()}
+              style={{ padding: '10px 18px 18px' }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontSize: 11, fontWeight: 700, color: KT.sub, letterSpacing: 1 }}>
-                  {grammar.level ? `${grammar.level} · ` : ''}
-                  {statusLabel}
-                </div>
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setRedEyeEnabled(prev => !prev)}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      border: redEyeEnabled ? `1px solid ${KT.crimson}44` : `1px solid ${KT.line}`,
-                      background: redEyeEnabled ? `${KT.pink}88` : KT.card,
-                      color: redEyeEnabled ? KT.crimson : KT.sub,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: KT.shSm,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: KT.sub,
+                      letterSpacing: 1.1,
                     }}
                   >
-                    {redEyeEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                    {grammar.level ? `${grammar.level} · ` : ''}
+                    {statusLabel}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontFamily: KT.serif,
+                      fontSize: 13,
+                      color: KT.crimson,
+                      letterSpacing: 3.2,
+                      fontWeight: 500,
+                    }}
+                  >
+                    語法 · MOBILE
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2" onClick={event => event.stopPropagation()}>
                   <button
                     type="button"
                     onClick={handleToggleStatus}
+                    aria-label={t('grammar.status.mastered', { defaultValue: 'Mastered' })}
+                    className="flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95"
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
                       border: status === 'MASTERED' ? 'none' : `1px solid ${KT.line}`,
                       background: status === 'MASTERED' ? KT.mint : KT.card,
                       color: status === 'MASTERED' ? KT.mintDeep : KT.sub,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                       boxShadow: KT.shSm,
                     }}
                   >
@@ -844,16 +1369,12 @@ export default function MobileGrammarDetailSheet({
                   <button
                     type="button"
                     onClick={onClose}
+                    aria-label={t('common.close', { defaultValue: 'Close' })}
+                    className="flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95"
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
                       border: `1px solid ${KT.line}`,
                       background: KT.card,
                       color: KT.sub,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                       boxShadow: KT.shSm,
                     }}
                   >
@@ -861,24 +1382,19 @@ export default function MobileGrammarDetailSheet({
                   </button>
                 </div>
               </div>
+
               <Card
                 pad={20}
                 style={{
+                  marginTop: 14,
                   background: tone.gradient,
                   boxShadow: KT.sh,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                <div className="flex items-start gap-4">
                   <HanjaSeal c={tone.seal} size={56} bg={tone.deep} round={14} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        flexWrap: 'wrap',
-                      }}
-                    >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Chip tone={tone.chipTone} size="sm">
                         {grammar.type}
                       </Chip>
@@ -886,69 +1402,91 @@ export default function MobileGrammarDetailSheet({
                       <Chip tone="ink" size="sm">
                         {statusLabel}
                       </Chip>
+                      {markdownDocument.trim() ? <Chip size="sm">Markdown</Chip> : null}
                     </div>
+
                     <div
                       style={{
-                        marginTop: 10,
-                        fontSize: 32,
+                        marginTop: 12,
+                        fontSize: 30,
                         fontWeight: 800,
                         color: KT.ink,
                         letterSpacing: -1,
-                        lineHeight: 1,
+                        lineHeight: 1.04,
                       }}
                     >
                       {localizedTitle}
                     </div>
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 13,
-                        color: KT.ink2,
-                        lineHeight: 1.6,
-                        display: '-webkit-box',
-                        WebkitLineClamp: isExpanded ? 4 : 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {localizedSummary}
-                    </div>
+
+                    {localizedSummary ? (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 13,
+                          color: KT.ink2,
+                          lineHeight: 1.65,
+                          display: '-webkit-box',
+                          WebkitLineClamp: isExpanded ? 4 : 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {localizedSummary}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    marginTop: 18,
-                  }}
+                  className="mt-4 grid gap-2"
+                  style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 10,
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          color: KT.sub,
-                          letterSpacing: 1,
-                        }}
-                      >
-                        {t('grammarDetail.progress', { defaultValue: 'PROFICIENCY' })}
-                      </span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: KT.sub }}>
-                        {proficiencyValue}%
-                      </span>
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      background: 'rgba(255,255,255,0.78)',
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
+                      {t('grammarDetail.progress', { defaultValue: 'PROFICIENCY' })}
                     </div>
+                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
+                      {proficiencyValue}%
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      background: 'rgba(255,255,255,0.78)',
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
+                      {t('grammarDetail.examples', { defaultValue: 'Examples' })}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
+                      {examples.length}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      background: 'rgba(255,255,255,0.78)',
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
+                      {t('grammarDetail.quizzes', { defaultValue: 'Quizzes' })}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
+                      {quizItems.length}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <div
                       style={{
                         height: 6,
@@ -967,14 +1505,12 @@ export default function MobileGrammarDetailSheet({
                       />
                     </div>
                   </div>
+
                   <div
+                    className="flex items-center gap-2 rounded-2xl"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
                       padding: '10px 12px',
-                      borderRadius: 14,
-                      background: 'rgba(255,255,255,0.8)',
+                      background: 'rgba(255,255,255,0.78)',
                       color: tone.deep,
                       boxShadow: KT.shSm,
                     }}
@@ -992,155 +1528,358 @@ export default function MobileGrammarDetailSheet({
           </div>
 
           <div
+            ref={readerScrollRef}
             className={`flex-1 overflow-y-auto select-none print:hidden transition-[opacity,transform] duration-300 ${
               isExpanded ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
-            onCopy={e => e.preventDefault()}
-            onContextMenu={e => e.preventDefault()}
-            onDragStart={e => e.preventDefault()}
+            onCopy={event => event.preventDefault()}
+            onContextMenu={event => event.preventDefault()}
+            onDragStart={event => event.preventDefault()}
             style={{
               padding: '14px 18px 0',
               transform: isExpanded ? 'translateY(0)' : 'translateY(12px)',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+              touchAction: 'pan-y',
             }}
           >
-            <Card pad={20} style={{ boxShadow: KT.shSm }}>
-              <SectionHead
-                kanji="解"
-                title={t('grammarDetail.explanation', { defaultValue: 'Explanation' })}
-              />
-              <div style={{ marginTop: 4 }}>
-                <MarkdownRenderer content={localizedExplanation} redEyeEnabled={redEyeEnabled} />
+            <article
+              data-testid="mobile-grammar-reader-shell"
+              data-font-scale={fontScale}
+              data-red-eye={redEyeEnabled ? 'on' : 'off'}
+              style={readerVars}
+            >
+              <div className="sticky top-0 z-10 pb-3" onWheel={forwardWheelToReader}>
+                <ReaderDisplayControls
+                  fontScale={fontScale}
+                  onChange={setFontScale}
+                  redEyeEnabled={redEyeEnabled}
+                  onToggleRedEye={() => setRedEyeEnabled(previous => !previous)}
+                  t={t}
+                />
               </div>
-            </Card>
 
-            {renderedRules.length > 0 ? (
-              <Card
-                pad={18}
-                style={{
-                  marginTop: 12,
-                  background: `linear-gradient(135deg, ${tone.surface} 0%, ${KT.card} 82%)`,
-                  boxShadow: KT.shSm,
-                }}
-              >
-                <SectionHead kanji="式" title={t('grammarDetail.rules')} />
-                <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-                  {renderedRules.map(rule => (
-                    <div
-                      key={rule.key}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '88px 1fr',
-                        gap: 12,
-                        alignItems: 'center',
-                        padding: '12px 14px',
-                        borderRadius: 18,
-                        background: KT.card,
-                        boxShadow: KT.shSm,
-                      }}
-                    >
-                      <div style={{ fontSize: 11, fontWeight: 800, color: KT.sub }}>{rule.key}</div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: KT.ink,
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {rule.value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ) : null}
-
-            {examples.length > 0 ? (
-              <Card pad={0} style={{ marginTop: 12, overflow: 'hidden', boxShadow: KT.shSm }}>
-                <div style={{ padding: '18px 20px 12px' }}>
+              {markdownDocument.trim() ? (
+                <Card
+                  pad={20}
+                  style={{
+                    boxShadow: KT.shSm,
+                    background: `linear-gradient(180deg, ${KT.card} 0%, rgba(255,255,255,0.92) 100%)`,
+                  }}
+                >
                   <SectionHead
-                    kanji="例"
-                    title={`${t('grammarDetail.examples')} · ${examples.length}`}
+                    kanji="文"
+                    title={t('grammarDetail.explanation', { defaultValue: 'Explanation' })}
                   />
-                </div>
-                {examples.map((example, index) => (
-                  <div
-                    key={`${example.kr || 'example'}-${index}`}
-                    style={{
-                      padding: '14px 20px',
-                      borderTop: index === 0 ? 'none' : `1px solid ${KT.line}`,
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ marginTop: 6 }}>
+                    <MarkdownRenderer content={markdownDocument} redEyeEnabled={redEyeEnabled} />
+                  </div>
+                </Card>
+              ) : null}
+
+              {renderedRules.length > 0 ? (
+                <Card
+                  pad={18}
+                  style={{
+                    marginTop: 12,
+                    background: `linear-gradient(135deg, ${tone.surface} 0%, ${KT.card} 82%)`,
+                    boxShadow: KT.shSm,
+                  }}
+                >
+                  <SectionHead
+                    kanji="式"
+                    title={t('grammarDetail.rules', { defaultValue: 'Conjugation rules' })}
+                  />
+                  <div className="mt-3 grid gap-3">
+                    {renderedRules.map(rule => (
                       <div
+                        key={rule.key}
                         style={{
-                          minWidth: 28,
-                          height: 28,
-                          borderRadius: 999,
-                          background: `${tone.surface}`,
-                          color: tone.deep,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 11,
-                          fontWeight: 800,
+                          borderRadius: 18,
+                          background: KT.card,
+                          padding: '14px 16px',
+                          boxShadow: KT.shSm,
                         }}
                       >
-                        {index + 1}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                           style={{
-                            fontSize: 16,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: KT.sub,
+                            letterSpacing: 0.9,
+                          }}
+                        >
+                          {rule.key}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 14,
                             fontWeight: 700,
                             color: KT.ink,
                             lineHeight: 1.6,
                           }}
                         >
-                          {example.kr}
+                          {rule.value}
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ) : null}
+
+              {examples.length > 0 ? (
+                <Card pad={0} style={{ marginTop: 12, overflow: 'hidden', boxShadow: KT.shSm }}>
+                  <div style={{ padding: '18px 20px 12px' }}>
+                    <SectionHead
+                      kanji="例"
+                      title={`${t('grammarDetail.examples', { defaultValue: 'Examples' })} · ${examples.length}`}
+                    />
+                  </div>
+                  {examples.map((example, index) => {
+                    const translation = getLocalizedExampleTranslation(example, language);
+                    return (
+                      <div
+                        key={`${example.kr}-${index}`}
+                        style={{
+                          padding: '14px 20px',
+                          borderTop: index === 0 ? 'none' : `1px solid ${KT.line}`,
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="flex h-8 w-8 items-center justify-center rounded-full"
+                            style={{
+                              background: tone.surface,
+                              color: tone.deep,
+                              fontSize: 11,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div
+                              style={{
+                                fontSize: 'var(--mobile-reader-example-size)',
+                                fontWeight: 700,
+                                color: KT.ink,
+                                lineHeight: 1.65,
+                              }}
+                            >
+                              {example.kr}
+                            </div>
+                            {translation ? (
+                              <div
+                                data-testid={`mobile-grammar-example-translation-${index}`}
+                                style={{
+                                  marginTop: 7,
+                                  fontSize: 'var(--mobile-reader-translation-size)',
+                                  color: KT.sub,
+                                  lineHeight: 1.65,
+                                }}
+                              >
+                                <RedEyeMask
+                                  enabled={redEyeEnabled}
+                                  kind="translation"
+                                  className={getRevealMaskClassName(redEyeEnabled)}
+                                  style={{ whiteSpace: 'normal' }}
+                                >
+                                  {translation}
+                                </RedEyeMask>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Card>
+              ) : null}
+
+              {quizItems.length > 0 ? (
+                <Card pad={0} style={{ marginTop: 12, overflow: 'hidden', boxShadow: KT.shSm }}>
+                  <div style={{ padding: '18px 20px 12px' }}>
+                    <SectionHead
+                      kanji="問"
+                      title={`${t('grammarDetail.quizzes', { defaultValue: 'Practice quizzes' })} · ${quizItems.length}`}
+                    />
+                  </div>
+                  {quizItems.map((quiz, index) => (
+                    <div
+                      key={`quiz-${index}`}
+                      style={{
+                        padding: '14px 20px',
+                        borderTop: index === 0 ? 'none' : `1px solid ${KT.line}`,
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
                         <div
+                          className="flex h-8 w-8 items-center justify-center rounded-full"
                           style={{
-                            marginTop: 6,
-                            fontSize: 13,
-                            color: KT.sub,
-                            lineHeight: 1.6,
+                            background: `${KT.sky}55`,
+                            color: tone.deep,
+                            fontSize: 11,
+                            fontWeight: 800,
                           }}
                         >
-                          {getExampleTranslation(example, language)}
+                          Q{index + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {quiz.prompt ? (
+                            <div
+                              style={{
+                                fontSize: 14,
+                                fontWeight: 700,
+                                color: KT.ink,
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {quiz.prompt}
+                            </div>
+                          ) : null}
+                          {quiz.answer ? (
+                            <div
+                              data-testid={`mobile-grammar-quiz-answer-${index}`}
+                              style={{
+                                marginTop: 8,
+                                fontSize: 13,
+                                color: KT.sub,
+                                lineHeight: 1.65,
+                              }}
+                            >
+                              <RedEyeMask
+                                enabled={redEyeEnabled}
+                                kind="answer"
+                                className={getRevealMaskClassName(redEyeEnabled)}
+                                style={{ whiteSpace: 'normal' }}
+                              >
+                                {t('grammarDetail.answerShort', { defaultValue: 'Ans.' })}{' '}
+                                {quiz.answer}
+                              </RedEyeMask>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </Card>
-            ) : null}
+                  ))}
+                </Card>
+              ) : null}
 
-            {localizedCustomNote ? (
-              <Card pad={18} tone="bg2" style={{ marginTop: 12, boxShadow: KT.shSm }}>
-                <SectionHead
-                  kanji="註"
-                  title={t('grammarDetail.customNote', { defaultValue: 'Custom note' })}
-                />
-                <div
+              {localizedCustomNote ? (
+                <Card
+                  pad={18}
+                  tone="bg2"
                   style={{
                     marginTop: 12,
-                    fontSize: 14,
-                    color: KT.ink2,
-                    lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap',
+                    boxShadow: KT.shSm,
                   }}
                 >
-                  {localizedCustomNote}
-                </div>
-              </Card>
-            ) : null}
+                  <SectionHead
+                    kanji="註"
+                    title={t('grammarDetail.customNote', { defaultValue: 'Instructor note' })}
+                  />
+                  <div style={{ marginTop: 6 }}>
+                    <MarkdownRenderer content={localizedCustomNote} redEyeEnabled={false} />
+                  </div>
+                </Card>
+              ) : null}
 
-            <div style={{ height: 18 }} />
+              {grammar.sourceMeta ? (
+                <Card pad={18} style={{ marginTop: 12, boxShadow: KT.shSm }}>
+                  <SectionHead
+                    kanji="源"
+                    title={t('grammarDetail.sourceMeta', { defaultValue: 'Content source' })}
+                  />
+                  <div className="mt-3 grid gap-3">
+                    <div
+                      style={{
+                        borderRadius: 16,
+                        background: KT.bg2,
+                        padding: '12px 14px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: KT.sub,
+                          letterSpacing: 0.9,
+                        }}
+                      >
+                        {t('grammarDetail.sourceType', { defaultValue: 'Source type' })}
+                      </div>
+                      <div style={{ marginTop: 5, fontSize: 13, color: KT.ink, lineHeight: 1.6 }}>
+                        {grammar.sourceMeta.sourceType}
+                      </div>
+                    </div>
+
+                    {grammar.sourceMeta.sourcePath ? (
+                      <div
+                        style={{
+                          borderRadius: 16,
+                          background: KT.bg2,
+                          padding: '12px 14px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: KT.sub,
+                            letterSpacing: 0.9,
+                          }}
+                        >
+                          {t('grammarDetail.sourcePath', { defaultValue: 'Source path' })}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 5,
+                            fontSize: 12,
+                            color: KT.ink,
+                            lineHeight: 1.6,
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {grammar.sourceMeta.sourcePath}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {importedAtLabel ? (
+                      <div
+                        style={{
+                          borderRadius: 16,
+                          background: KT.bg2,
+                          padding: '12px 14px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: KT.sub,
+                            letterSpacing: 0.9,
+                          }}
+                        >
+                          {t('grammarDetail.importedAt', { defaultValue: 'Imported' })}
+                        </div>
+                        <div style={{ marginTop: 5, fontSize: 13, color: KT.ink, lineHeight: 1.6 }}>
+                          {importedAtLabel}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </Card>
+              ) : null}
+
+              <div style={{ height: 18 }} />
+            </article>
           </div>
 
           <div
             className="relative z-10"
+            onWheel={forwardWheelToReader}
             style={{
               padding: '14px 18px calc(env(safe-area-inset-bottom) + 18px)',
               borderTop: `1px solid ${KT.line}`,
@@ -1148,15 +1887,7 @@ export default function MobileGrammarDetailSheet({
             }}
           >
             <Card pad={16} style={{ boxShadow: KT.shSm }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <div
                     style={{
@@ -1189,6 +1920,7 @@ export default function MobileGrammarDetailSheet({
               {aiFeedback ? (
                 <div
                   style={{
+                    marginTop: 12,
                     marginBottom: 12,
                     padding: 14,
                     borderRadius: 18,
@@ -1197,13 +1929,13 @@ export default function MobileGrammarDetailSheet({
                     color: aiFeedback.isCorrect ? KT.mintDeep : KT.pinkDeep,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div className="flex items-start gap-3">
                     {aiFeedback.isCorrect ? (
                       <Trophy size={18} style={{ flexShrink: 0, marginTop: 1 }} />
                     ) : (
                       <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="min-w-0 flex-1">
                       <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.6 }}>
                         {aiFeedback.feedback}
                       </div>
@@ -1212,7 +1944,9 @@ export default function MobileGrammarDetailSheet({
                           style={{
                             marginTop: 8,
                             paddingTop: 8,
-                            borderTop: `1px solid ${aiFeedback.isCorrect ? `${KT.mintDeep}22` : `${KT.pinkDeep}22`}`,
+                            borderTop: `1px solid ${
+                              aiFeedback.isCorrect ? `${KT.mintDeep}22` : `${KT.pinkDeep}22`
+                            }`,
                             fontSize: 12,
                             lineHeight: 1.6,
                           }}
@@ -1225,29 +1959,32 @@ export default function MobileGrammarDetailSheet({
                 </div>
               ) : null}
 
-              <div className="flex gap-3">
+              <div className="mt-3 flex gap-3">
                 <Input
                   value={practiceSentence}
-                  onChange={e => setPracticeSentence(e.target.value)}
-                  placeholder={t('grammarDetail.practicePlaceholder', { title: localizedTitle })}
+                  onChange={event => setPracticeSentence(event.target.value)}
+                  placeholder={t('grammarDetail.practicePlaceholder', {
+                    defaultValue: `Use ${localizedTitle} in a sentence`,
+                    title: localizedTitle,
+                  })}
                   className="h-12 flex-1 rounded-[1.15rem] px-5 text-sm font-bold shadow-none"
                   style={{
                     border: `1px solid ${KT.line}`,
                     background: KT.bg,
                     color: KT.ink,
                   }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
                       void handleCheck();
                     }
                   }}
                 />
                 <Button
-                  onClick={handleCheck}
+                  onClick={() => void handleCheck()}
                   disabled={isCheckDisabled}
                   loading={isChecking}
-                  loadingText={t('grammarDetail.checking')}
-                  loadingIconClassName="w-4 h-4"
+                  loadingText={t('grammarDetail.checking', { defaultValue: 'Checking…' })}
+                  loadingIconClassName="h-4 w-4"
                   className="h-12 rounded-[1.15rem] px-6 font-black"
                   style={{
                     background: KT.ink,
@@ -1255,27 +1992,27 @@ export default function MobileGrammarDetailSheet({
                     boxShadow: KT.shSm,
                   }}
                 >
-                  {t('grammarDetail.check')}
+                  {t('grammarDetail.check', { defaultValue: 'Check' })}
                 </Button>
               </div>
             </Card>
           </div>
 
-          {showConfetti && (
-            <div className="absolute inset-0 pointer-events-none z-[70] flex items-start justify-center overflow-hidden">
-              {Array.from({ length: 15 }).map((_, i) => (
+          {showConfetti ? (
+            <div className="pointer-events-none absolute inset-0 z-[70] flex items-start justify-center overflow-hidden">
+              {Array.from({ length: 15 }).map((_, index) => (
                 <motion.div
-                  key={i}
+                  key={index}
                   initial={{ y: -20, x: (Math.random() - 0.5) * 300, rotate: 0 }}
                   animate={{ y: 800, rotate: 720 }}
                   transition={{ duration: 2, delay: Math.random() * 0.5, ease: 'linear' }}
                   className="absolute text-2xl"
                 >
-                  {['🎉', '⭐', '✨'][i % 3]}
+                  {['🎉', '⭐', '✨'][index % 3]}
                 </motion.div>
               ))}
             </div>
-          )}
+          ) : null}
         </SheetContent>
       </SheetPortal>
     </Sheet>

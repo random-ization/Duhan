@@ -15,7 +15,7 @@ import {
   buildReadingArticlePath,
 } from '../../utils/readingRoutes';
 import { formatReadingRelativeTime } from '../../utils/readingMetadata';
-import { m as motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui';
 import { notify } from '../../utils/notify';

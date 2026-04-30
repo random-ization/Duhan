@@ -324,7 +324,7 @@ const VideoTab: React.FC<{
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+        <div className="hide-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
           {[
             { key: '', label: t('notes.tabs.all', { defaultValue: 'All' }) },
             { key: 'Beginner', label: t('dashboard.video.beginner', { defaultValue: 'Beginner' }) },
@@ -881,7 +881,7 @@ const PodcastTab: React.FC<{
             kanji="藏"
             title={t('podcast.mySubscriptions', { defaultValue: 'My Subscriptions' })}
           />
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
             {subscriptions.map((sub, index) => {
               const tone = getPodcastTone(index);
               return (
@@ -1026,7 +1026,7 @@ const PodcastTab: React.FC<{
         </div>
 
         {loadingTrending ? (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
             {[1, 2, 3].map(item => (
               <Card
                 key={item}
@@ -1070,7 +1070,7 @@ const PodcastTab: React.FC<{
             })}
           />
         ) : (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
             {listToShow.slice(0, 10).map((pod, idx) => {
               const tone = getPodcastTone(idx);
               return (
@@ -1377,7 +1377,7 @@ export const MobileMediaPage: React.FC = () => {
             fontWeight: 500,
           }}
         >
-          沒 · IMMERSE
+          浸 · IMMERSE
         </div>
         <div
           style={{

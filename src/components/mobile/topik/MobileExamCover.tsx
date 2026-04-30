@@ -15,6 +15,59 @@ interface MobileExamCoverProps {
   onBack: () => void;
 }
 
+const CoverMetric = ({
+  label,
+  value,
+  tone = 'default',
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: 'default' | 'accent';
+}) => (
+  <div
+    className="rounded-2xl border px-3 py-3 text-center"
+    style={{
+      background: tone === 'accent' ? KT.bg2 : KT.card,
+      borderColor: KT.line,
+      boxShadow: KT.shSm,
+    }}
+  >
+    <div className="text-[11px] font-bold tracking-wide" style={{ color: KT.sub }}>
+      {label}
+    </div>
+    <div className="mt-1 text-[30px] font-black leading-none" style={{ color: KT.ink }}>
+      {value}
+    </div>
+  </div>
+);
+
+const CoverRule = ({
+  index,
+  title,
+  description,
+}: {
+  readonly index: number;
+  readonly title: string;
+  readonly description: string;
+}) => (
+  <div className="flex items-start gap-3">
+    <div
+      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-black"
+      style={{ background: KT.bg2, borderColor: KT.line, color: KT.crimson }}
+    >
+      {index}
+    </div>
+    <div>
+      <div className="text-[19px] font-black leading-tight" style={{ color: KT.ink }}>
+        {title}
+      </div>
+      <div className="mt-1 text-[15px] font-semibold leading-snug" style={{ color: KT.sub }}>
+        {description}
+      </div>
+    </div>
+  </div>
+);
+
 export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
   exam,
   language: _language,
@@ -35,7 +88,6 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
   const examTypeLabel = isListening
     ? t('dashboard.topik.listening', { defaultValue: 'Listening' })
     : t('dashboard.topik.reading', { defaultValue: 'Reading' });
-  // bgPattern removed as unused
 
   return (
     <div
@@ -49,193 +101,132 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
         overflowX: 'hidden',
       }}
     >
-      {/* 1. Hero Section */}
-      <div
-        className="relative overflow-hidden pb-10 rounded-b-[40px] z-10"
-        style={{
-          background: `linear-gradient(135deg, ${KT.ink} 0%, ${isListening ? KT.indigo : KT.jade} 100%)`,
-          boxShadow: KT.shLg,
-        }}
-      >
-        {/* Abstract Shapes */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-card/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
+      <MobileImmersiveHeader
+        title={`${formatTopikLabel(exam.level)} ${examTypeLabel}`}
+        subtitle={t('dashboard.topik.mobile.cover.roundMock', {
+          round: exam.round,
+          defaultValue: 'Round {{round}} Past Exam',
+        })}
+        eyebrow={t('dashboard.topik.mobile.cover.noticeTitle', {
+          defaultValue: 'Before You Start',
+        })}
+        onBack={onBack}
+        backLabel={t('common.back', { defaultValue: 'Back' })}
+        className="sticky top-0 z-20"
+      />
 
-        <MobileImmersiveHeader
-          title={`${formatTopikLabel(exam.level)} ${examTypeLabel}`}
-          subtitle={t('dashboard.topik.mobile.cover.roundMock', {
-            round: exam.round,
-            defaultValue: 'Round {{round}} Past Exam',
-          })}
-          eyebrow={t('dashboard.topik.mobile.cover.noticeTitle', {
-            defaultValue: 'Before You Start',
-          })}
-          onBack={onBack}
-          backLabel={t('common.back', { defaultValue: 'Back' })}
-          tone="inverse"
-          className="border-transparent bg-transparent"
-        />
-
-        {/* Main Content */}
-        <div className="px-8 mt-2 text-center text-white">
-          <div className="mx-auto mb-6 flex items-center justify-center gap-3">
-            <HanjaSeal
-              c={isListening ? '聽' : '讀'}
-              size={74}
-              bg="rgba(255,255,255,0.14)"
-              color={KT.card}
-              round={22}
-            />
-            <div
-              className="w-20 h-20 rounded-3xl flex items-center justify-center backdrop-blur-xl shadow-lg ring-4 ring-white/10"
-              style={{ background: 'rgba(255,255,255,0.16)' }}
-            >
-              <Icon className="w-9 h-9 text-white" />
-            </div>
-          </div>
-
-          <p
-            className="text-white/80 font-medium inline-block px-4 py-1.5 rounded-full text-sm backdrop-blur-sm border border-white/10 mt-2"
-            style={{ background: 'rgba(255,255,255,0.1)' }}
-          >
-            {isListening
-              ? t('dashboard.topik.mobile.cover.listeningTipShort', {
-                  defaultValue: 'Audio required',
-                })
-              : t('dashboard.topik.mobile.cover.readingTipShort', {
-                  defaultValue: 'Quiet focus recommended',
-                })}
-          </p>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-2 mt-10">
-            <div
-              className="backdrop-blur-md rounded-2xl p-3 border border-white/10"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
-            >
-              <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
-                {t('dashboard.topik.mobile.cover.time', { defaultValue: 'Time' })}
-              </div>
-              <div className="text-xl font-black">
-                {exam.timeLimit}
-                <span className="text-xs font-normal opacity-80 ml-0.5">
-                  {t('dashboard.topik.mobile.minuteShort', {
-                    minutes: exam.timeLimit,
-                    defaultValue: 'm',
-                  })}
-                </span>
-              </div>
-            </div>
-            <div
-              className="backdrop-blur-md rounded-2xl p-3 border border-white/10"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
-            >
-              <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
-                {t('dashboard.topik.mobile.cover.items', { defaultValue: 'Items' })}
-              </div>
-              <div className="text-xl font-black">{exam.questions.length || 50}</div>
-            </div>
-            <div
-              className="backdrop-blur-md rounded-2xl p-3 border border-white/10"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
-            >
-              <div className="text-[10px] uppercase font-bold text-white/60 mb-1 tracking-wider">
-                {t('dashboard.topik.mobile.cover.score', { defaultValue: 'Score' })}
-              </div>
-              <div className="text-xl font-black">100</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Instructions Section */}
-      <div className="flex-1 px-5 -mt-6 z-20 pb-[calc(var(--mobile-safe-bottom)+7rem)]">
+      <div className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+108px)] pt-3">
         <div
-          className="rounded-3xl p-6 border"
+          className="rounded-[24px] border p-4"
           style={{ background: KT.card, borderColor: KT.line, boxShadow: KT.shLg }}
         >
-          <h2 className="text-lg font-bold mb-6 flex items-center gap-2" style={{ color: KT.ink }}>
-            <Info className="w-5 h-5" style={{ color: KT.crimson }} />
-            {t('dashboard.topik.mobile.cover.noticeTitle', {
-              defaultValue: 'Before You Start',
-            })}
+          <div className="mb-3 flex items-center gap-3">
+            <HanjaSeal
+              c={isListening ? '聽' : '讀'}
+              size={54}
+              bg={isListening ? KT.lilacDeep : KT.jade}
+              round={14}
+            />
+            <div
+              className="flex h-[54px] w-[54px] items-center justify-center rounded-[16px]"
+              style={{ background: KT.bg2, color: KT.ink }}
+            >
+              <Icon className="h-7 w-7" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold tracking-[0.08em]" style={{ color: KT.sub }}>
+                {isListening
+                  ? t('dashboard.topik.mobile.cover.listeningTipShort', {
+                      defaultValue: 'Audio required',
+                    })
+                  : t('dashboard.topik.mobile.cover.readingTipShort', {
+                      defaultValue: 'Quiet focus recommended',
+                    })}
+              </div>
+              <div className="mt-1 text-lg font-black" style={{ color: KT.ink }}>
+                TOPIK II · {examTypeLabel}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <CoverMetric
+              label={t('dashboard.topik.mobile.cover.time', { defaultValue: 'Time' })}
+              value={`${exam.timeLimit}`}
+              tone="accent"
+            />
+            <CoverMetric
+              label={t('dashboard.topik.mobile.cover.items', { defaultValue: 'Items' })}
+              value={`${exam.questions.length || 50}`}
+            />
+            <CoverMetric
+              label={t('dashboard.topik.mobile.cover.score', { defaultValue: 'Score' })}
+              value="100"
+            />
+          </div>
+        </div>
+
+        <div
+          className="mt-3 rounded-[24px] border p-4"
+          style={{ background: KT.card, borderColor: KT.line, boxShadow: KT.shSm }}
+        >
+          <h2 className="mb-4 flex items-center gap-2 text-base font-black" style={{ color: KT.ink }}>
+            <Info className="h-5 w-5" style={{ color: KT.crimson }} />
+            {t('dashboard.topik.mobile.cover.noticeTitle', { defaultValue: 'Before You Start' })}
           </h2>
 
-          <div className="space-y-6">
-            <div className="flex gap-4">
-              <div
-                className="w-10 h-10 rounded-full font-bold flex items-center justify-center shrink-0 text-sm border pb-0.5"
-                style={{ background: KT.bg2, borderColor: KT.line, color: KT.crimson }}
-              >
-                1
-              </div>
-              <div>
-                <h3 className="font-bold mb-1" style={{ color: KT.ink }}>
-                  {t('dashboard.topik.mobile.cover.simulationTitle', {
-                    defaultValue: 'Full simulation mode',
-                  })}
-                </h3>
-                <p className="text-sm leading-relaxed font-medium" style={{ color: KT.sub }}>
-                  {t('dashboard.topik.mobile.cover.simulationDesc', {
-                    defaultValue:
-                      'Do not leave the page during the exam. The paper will auto-submit when time runs out.',
-                  })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div
-                className="w-10 h-10 rounded-full font-bold flex items-center justify-center shrink-0 text-sm border pb-0.5"
-                style={{ background: KT.bg2, borderColor: KT.line, color: KT.crimson }}
-              >
-                2
-              </div>
-              <div>
-                <h3 className="font-bold mb-1" style={{ color: KT.ink }}>
-                  {t('dashboard.topik.mobile.cover.submitTitle', {
-                    defaultValue: 'Answer submission',
-                  })}
-                </h3>
-                <p className="text-sm leading-relaxed font-medium" style={{ color: KT.sub }}>
-                  {t('dashboard.topik.mobile.cover.submitDesc', {
-                    defaultValue:
-                      'All questions are single-choice. You can view your score and AI analysis after submission.',
-                  })}
-                </p>
-              </div>
-            </div>
-
+          <div className="space-y-4">
+            <CoverRule
+              index={1}
+              title={t('dashboard.topik.mobile.cover.simulationTitle', {
+                defaultValue: 'Full simulation mode',
+              })}
+              description={t('dashboard.topik.mobile.cover.simulationDesc', {
+                defaultValue:
+                  'Do not leave the page during the exam. The paper will auto-submit when time runs out.',
+              })}
+            />
+            <CoverRule
+              index={2}
+              title={t('dashboard.topik.mobile.cover.submitTitle', {
+                defaultValue: 'Answer submission',
+              })}
+              description={t('dashboard.topik.mobile.cover.submitDesc', {
+                defaultValue:
+                  'All questions are single-choice. You can view your score and AI analysis after submission.',
+              })}
+            />
             <div
-              className="p-4 rounded-xl flex items-start gap-3 text-sm font-medium"
+              className="rounded-xl px-3 py-3 text-sm font-semibold leading-snug"
               style={{
                 background: isListening ? KT.sky : KT.mint,
                 color: isListening ? KT.skyDeep : KT.jade,
               }}
             >
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <p>
-                {isListening
-                  ? t('dashboard.topik.mobile.cover.listeningTip', {
-                      defaultValue:
-                        'Listening section contains audio. Please turn on your sound or use headphones.',
-                    })
-                  : t('dashboard.topik.mobile.cover.readingTip', {
-                      defaultValue:
-                        'Reading passages can be long. A quiet environment is recommended.',
-                    })}
-              </p>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {isListening
+                    ? t('dashboard.topik.mobile.cover.listeningTip', {
+                        defaultValue:
+                          'Listening section contains audio. Please turn on your sound or use headphones.',
+                      })
+                    : t('dashboard.topik.mobile.cover.readingTip', {
+                        defaultValue:
+                          'Reading passages can be long. A quiet environment is recommended.',
+                      })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Sticky Start Button */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-5 pt-4 pb-mobile-safe z-30"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t px-4 pb-mobile-safe pt-3"
         style={{
           background: `${KT.card}ee`,
-          borderTop: `1px solid ${KT.line}`,
+          borderColor: KT.line,
           boxShadow: '0 -12px 34px rgba(31,27,23,0.08)',
         }}
       >
@@ -243,10 +234,10 @@ export const MobileExamCover: React.FC<MobileExamCoverProps> = ({
           variant="ghost"
           size="auto"
           onClick={onStart}
-          className="w-full py-4 text-white text-lg font-bold rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white shadow-lg transition-all active:scale-[0.98]"
           style={{ background: KT.ink, color: KT.card, boxShadow: KT.sh }}
         >
-          <Play className="w-5 h-5 fill-current" />
+          <Play className="h-5 w-5 fill-current" />
           {t('dashboard.topik.mobile.cover.startExam', { defaultValue: 'Start Exam' })}
         </Button>
       </div>

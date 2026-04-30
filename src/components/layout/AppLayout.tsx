@@ -46,12 +46,18 @@ export default function AppLayout() {
 
   const shouldShowMobileHeader = !sidebarHidden && routeUiConfig.hasHeader;
   const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;
-  const shouldShowFooter = !footerHidden && routeUiConfig.hasFooter;
+  const shouldShowFooter = !isMobileViewport && !footerHidden && routeUiConfig.hasFooter;
   const allowRouteMotion = shouldAnimateRoutes();
+  // Desktop padding / max-width must never apply on the mobile viewport, where
+  // pages render their own full-bleed mobile layouts.
   const shouldUseDesktopPadding =
-    routeUiConfig.hasDesktopSidebar && routeUiConfig.useDesktopContainerPadding;
+    !isMobileViewport &&
+    routeUiConfig.hasDesktopSidebar &&
+    routeUiConfig.useDesktopContainerPadding;
   const shouldUseDesktopMaxWidth =
-    routeUiConfig.hasDesktopSidebar && routeUiConfig.useDesktopMaxWidth;
+    !isMobileViewport &&
+    routeUiConfig.hasDesktopSidebar &&
+    routeUiConfig.useDesktopMaxWidth;
   const mainOverflowClass = routeUiConfig.lockMainScroll
     ? 'overflow-y-auto lg:overflow-hidden'
     : 'overflow-y-auto';
@@ -80,6 +86,12 @@ export default function AppLayout() {
     ? {
         ...mobileShellStyle,
         ...mainBackgroundStyle,
+        ...(shouldShowMobileNav
+          ? {
+              height: 'calc(100dvh - var(--mobile-bottom-nav-offset))',
+              maxHeight: 'calc(100dvh - var(--mobile-bottom-nav-offset))',
+            }
+          : {}),
       }
     : mainBackgroundStyle;
 
@@ -99,6 +111,7 @@ export default function AppLayout() {
 
         <div
           data-mobile-page-mode={routeUiConfig.mobilePageMode}
+          data-mobile-bottom-nav-safe={shouldShowMobileNav ? 'true' : undefined}
           className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
           style={mobileShellStyle}
         >

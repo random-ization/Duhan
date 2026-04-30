@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
+  BookOpen,
   ArrowLeft,
   Bell,
   Flame,
   MoreHorizontal,
   Search,
+  ShieldAlert,
   SlidersHorizontal,
   Share2,
   Star,
   Type,
+  UserRoundPlus,
+  Users,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -48,13 +52,16 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   const [bellOpen, setBellOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const unreadCount = useQuery(NOTIFICATIONS.getUnreadCount, user ? {} : 'skip') ?? 0;
+  const latestUnread = useQuery(NOTIFICATIONS.listUnread, user ? { limit: 1 } : 'skip');
   const recentNotifications = useQuery(
     NOTIFICATIONS.listRecent,
-    user && bellOpen ? { limit: 8 } : 'skip'
+    user && bellOpen ? { limit: 30 } : 'skip'
   );
   const markRead = useMutation(NOTIFICATIONS.markRead);
   const markAllRead = useMutation(NOTIFICATIONS.markAllRead);
   const dismissNotification = useMutation(NOTIFICATIONS.dismiss);
+  const latestUnreadIdRef = useRef<string | null>(null);
+  const latestUnreadCreatedAtRef = useRef<number | null>(null);
   const [fontScaleIndex, setFontScaleIndex] = useState(() => {
     if (typeof window === 'undefined') return 1;
     const saved = safeGetLocalStorageItem('mobile_font_scale_index');
@@ -194,6 +201,35 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     } catch {
       // ignore — best-effort dismiss
     }
+  };
+
+  useEffect(() => {
+    if (!latestUnread || latestUnread.length === 0) return;
+    const newest = latestUnread[0];
+    if (latestUnreadIdRef.current === null) {
+      latestUnreadIdRef.current = newest.id;
+      latestUnreadCreatedAtRef.current = newest.createdAt;
+      return;
+    }
+    if (
+      typeof latestUnreadCreatedAtRef.current === 'number' &&
+      newest.createdAt <= latestUnreadCreatedAtRef.current
+    ) {
+      latestUnreadIdRef.current = newest.id;
+      return;
+    }
+    if (latestUnreadIdRef.current === newest.id) return;
+    latestUnreadIdRef.current = newest.id;
+    latestUnreadCreatedAtRef.current = newest.createdAt;
+    notify.info(newest.title);
+  }, [latestUnread]);
+
+  const renderNotificationTypeIcon = (notification: NotificationDto) => {
+    if (notification.category === 'learning') return <BookOpen size={13} />;
+    if (notification.category === 'exam') return <ShieldAlert size={13} />;
+    if (notification.kind === 'friend_request') return <UserRoundPlus size={13} />;
+    if (notification.category === 'social') return <Users size={13} />;
+    return <Bell size={13} />;
   };
 
   const handlePrimaryAction = (action: MobileHeaderAction) => {
@@ -485,15 +521,24 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
                       <span
                         style={{
                           position: 'absolute',
-                          top: 6,
-                          right: 6,
-                          minWidth: 8,
-                          height: 8,
-                          borderRadius: 5,
+                          top: 4,
+                          right: 4,
+                          minWidth: 16,
+                          height: 16,
+                          borderRadius: 8,
                           background: KT.crimson,
+                          color: KT.card,
+                          fontSize: 10,
+                          fontWeight: 800,
+                          display: 'grid',
+                          placeItems: 'center',
+                          lineHeight: 1,
+                          padding: '0 3px',
                           boxShadow: `0 0 0 2px ${KT.card}`,
                         }}
-                      />
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
                     )}
                   </button>
                   {bellOpen && (
@@ -562,92 +607,134 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
                           })}
                         </div>
                       ) : (
-                        recentNotifications.map(n => (
-                          <div
-                            key={n.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 8,
-                              padding: '8px 10px',
-                              borderRadius: 12,
-                              background: n.readAt ? 'transparent' : `${KT.pink}33`,
-                              marginBottom: 2,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => handleOpenNotification(n)}
+                        <>
+                          {recentNotifications.map(n => (
+                            <div
+                              key={n.id}
                               style={{
-                                flex: 1,
-                                textAlign: 'left',
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                minWidth: 0,
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 8,
+                                padding: '8px 10px',
+                                borderRadius: 12,
+                                background: n.readAt
+                                  ? 'transparent'
+                                  : n.priority === 'high'
+                                    ? `${KT.butter}55`
+                                    : `${KT.pink}33`,
+                                marginBottom: 2,
                               }}
                             >
-                              <div
+                              <span
                                 style={{
-                                  fontSize: 13,
-                                  fontWeight: 800,
-                                  color: KT.ink,
-                                  marginBottom: 2,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 11,
+                                  border: `1px solid ${KT.line}`,
+                                  color: KT.sub,
+                                  background: KT.card,
+                                  marginTop: 2,
+                                  flexShrink: 0,
                                 }}
                               >
-                                {n.title}
-                              </div>
-                              <div
+                                {renderNotificationTypeIcon(n)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenNotification(n)}
+                                style={{
+                                  flex: 1,
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  minWidth: 0,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color: KT.ink,
+                                    marginBottom: 2,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {n.title}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: KT.sub,
+                                    lineHeight: 1.3,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  {n.body}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    color: KT.sub,
+                                    marginTop: 3,
+                                    letterSpacing: 1,
+                                    textTransform: 'uppercase',
+                                  }}
+                                >
+                                  {formatNotificationTime(n.createdAt, defaultLabel =>
+                                    t('time.now', { defaultValue: defaultLabel })
+                                  )}
+                                </div>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDismissNotification(n.id)}
+                                aria-label={t('notifications.dismiss', {
+                                  defaultValue: 'Dismiss',
+                                })}
                                 style={{
                                   fontSize: 12,
                                   color: KT.sub,
-                                  lineHeight: 1.3,
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '2px 4px',
+                                  fontWeight: 800,
                                 }}
                               >
-                                {n.body}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  color: KT.sub,
-                                  marginTop: 3,
-                                  letterSpacing: 1,
-                                  textTransform: 'uppercase',
-                                }}
-                              >
-                                {formatNotificationTime(n.createdAt, defaultLabel =>
-                                  t('time.now', { defaultValue: defaultLabel })
-                                )}
-                              </div>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDismissNotification(n.id)}
-                              aria-label={t('notifications.dismiss', {
-                                defaultValue: 'Dismiss',
-                              })}
-                              style={{
-                                fontSize: 12,
-                                color: KT.sub,
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '2px 4px',
-                                fontWeight: 800,
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBellOpen(false);
+                              navigate('/profile?tab=settings');
+                            }}
+                            style={{
+                              width: '100%',
+                              marginTop: 8,
+                              borderRadius: 12,
+                              border: `1px solid ${KT.line}`,
+                              background: KT.bg,
+                              color: KT.ink,
+                              fontSize: 12,
+                              fontWeight: 800,
+                              padding: '8px 10px',
+                            }}
+                          >
+                            {t('notifications.viewAll', { defaultValue: 'View all notifications' })}
+                          </button>
+                        </>
                       )}
                     </div>
                   )}

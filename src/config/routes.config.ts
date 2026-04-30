@@ -52,8 +52,12 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       return {
         hasFooter: false,
         hasHeader: false,
-        useDesktopContainerPadding: false,
-        useDesktopMaxWidth: false,
+        // Restored on desktop so the dashboard cards have container padding +
+        // max-width again. AppLayout already gates these on viewport so mobile
+        // keeps its full-bleed layout.
+        useDesktopContainerPadding: true,
+        useDesktopMaxWidth: true,
+        usePatternBackground: true,
         headerType: 'dashboard',
         headerAction: 'streak',
         headerTitle: 'nav.dashboard',
@@ -90,8 +94,10 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       hasFooter: false,
       hasHeader: false,
       usePatternBackground: !isImmersiveWorkspace,
-      useDesktopContainerPadding: false,
-      useDesktopMaxWidth: false,
+      // Non-immersive course modules (vocab) restore desktop container styling;
+      // immersive ones manage their own scroll/layout.
+      useDesktopContainerPadding: !isImmersiveWorkspace,
+      useDesktopMaxWidth: !isImmersiveWorkspace,
       lockMainScroll: isImmersiveWorkspace,
       headerType: 'detail',
       headerAction: 'more',
@@ -229,8 +235,10 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       hasBottomNav: !isImmersive,
       hasHeader: false,
       usePatternBackground: false,
-      useDesktopContainerPadding: false,
-      useDesktopMaxWidth: false,
+      // Non-immersive vocab routes get desktop container styling back; the
+      // immersive flashcard-like routes stay full-bleed.
+      useDesktopContainerPadding: !isImmersive,
+      useDesktopMaxWidth: !isImmersive,
       allowHiddenChrome: isImmersive,
       mobilePageMode: isImmersive ? 'immersive' : 'workspace',
     };
@@ -239,8 +247,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasFooter: false,
     hasHeader: false,
     usePatternBackground: false,
-    useDesktopContainerPadding: false,
-    useDesktopMaxWidth: false,
+    useDesktopContainerPadding: true,
+    useDesktopMaxWidth: true,
     headerType: 'section',
     headerAction: 'filter',
     headerTitle: 'dashboard.vocab.title',
@@ -319,6 +327,19 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerAction: 'none',
     headerTitle: 'nav.profile',
     headerTitleDefault: 'Profile',
+    mobilePageMode: 'account',
+  }),
+  achievements: () => ({
+    hasFooter: false,
+    hasHeader: false,
+    hasBottomNav: false,
+    usePatternBackground: false,
+    useDesktopContainerPadding: false,
+    useDesktopMaxWidth: false,
+    headerType: 'detail',
+    headerAction: 'none',
+    headerTitle: 'achievements.mobile.title',
+    headerTitleDefault: 'Achievements & Badges',
     mobilePageMode: 'account',
   }),
   dictionary: () => ({

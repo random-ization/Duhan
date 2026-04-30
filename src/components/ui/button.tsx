@@ -63,7 +63,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const { disabled, children, onClick, type, ...rest } = props;
     const isDisabled = Boolean(disabled || loading);
     const buttonType = type ?? 'button';
-    const content = loading ? (
+    const buttonContent = loading ? (
       <>
         <Loader2 className={cn('h-4 w-4 animate-spin', loadingIconClassName)} aria-hidden="true" />
         <span aria-live="polite">{loadingText ?? children}</span>
@@ -83,6 +83,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       const child = children as React.ReactElement<Record<string, unknown>>;
       const childOnClick = child.props.onClick as React.MouseEventHandler<HTMLElement> | undefined;
       const childTabIndex = child.props.tabIndex as number | undefined;
+      const childChildren = child.props.children as React.ReactNode;
+      const childContent = loading ? (
+        <>
+          <Loader2
+            className={cn('h-4 w-4 animate-spin', loadingIconClassName)}
+            aria-hidden="true"
+          />
+          <span aria-live="polite">{loadingText ?? childChildren}</span>
+        </>
+      ) : (
+        childChildren
+      );
       return React.cloneElement(child, {
         ...rest,
         'data-slot': 'button',
@@ -101,7 +113,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           }
           onClick?.(event as React.MouseEvent<HTMLButtonElement>);
         }),
-        children: content,
+        children: childContent,
       });
     }
 
@@ -119,7 +131,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         onClick={onClick}
         {...rest}
       >
-        {content}
+        {buttonContent}
       </button>
     );
   }

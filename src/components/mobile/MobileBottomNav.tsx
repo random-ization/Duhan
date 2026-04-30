@@ -85,7 +85,7 @@ export function MobileBottomNav() {
     {
       key: 'media',
       path: '/media',
-      hanja: '沒',
+      hanja: '浸',
       kr: '몰입',
       labelKey: 'nav.media',
       labelFallback: 'Immerse',
@@ -118,7 +118,8 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/topik') ||
         pathWithoutLang.startsWith('/typing') ||
         pathWithoutLang.startsWith('/vocab-book') ||
-        pathWithoutLang.startsWith('/vocabbook')
+        pathWithoutLang.startsWith('/vocabbook') ||
+        pathWithoutLang.startsWith('/notebook')
       );
     }
     if (tab.key === 'media') {
@@ -132,9 +133,6 @@ export function MobileBottomNav() {
     }
     return (
       pathWithoutLang.startsWith('/profile') ||
-      pathWithoutLang.startsWith('/vocab-book') ||
-      pathWithoutLang.startsWith('/vocabbook') ||
-      pathWithoutLang.startsWith('/notebook') ||
       pathWithoutLang.startsWith('/pricing') ||
       pathWithoutLang.startsWith('/subscription')
     );
@@ -249,3 +247,5 @@ export function MobileBottomNav() {
     </nav>
   );
 }
+
+export default MobileBottomNav;

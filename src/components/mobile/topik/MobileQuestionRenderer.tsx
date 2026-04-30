@@ -1,5 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { TopikQuestion } from '../../../types';
 import { sanitizeStrictHtml } from '../../../utils/sanitize';
 
@@ -194,23 +196,26 @@ function getQuestionVariant(
 
 /* ─────────────── Get Question Type Label ─────────────── */
 function getQuestionTypeLabel(
+  t: TFunction,
   variant: ReturnType<typeof getQuestionVariant>,
   question: TopikQuestion
 ): string {
   switch (variant) {
     case 'visual':
-      return '图表阅读';
+      return t('topik.mobile.questionType.visual', { defaultValue: 'Visual reading' });
     case 'sequence':
-      return '段落排序';
+      return t('topik.mobile.questionType.sequence', { defaultValue: 'Paragraph ordering' });
     case 'insert':
-      return '句子插入';
+      return t('topik.mobile.questionType.insert', { defaultValue: 'Sentence insertion' });
     case 'headline':
-      return '新闻阅读';
+      return t('topik.mobile.questionType.headline', { defaultValue: 'News headlines' });
     case 'fill-blank':
-      return '信息填空';
+      return t('topik.mobile.questionType.fillBlank', { defaultValue: 'Fill in the blank' });
     default:
-      if (question.passage) return '阅读理解';
-      return '选择题';
+      if (question.passage) {
+        return t('topik.mobile.questionType.reading', { defaultValue: 'Reading comprehension' });
+      }
+      return t('topik.mobile.questionType.multipleChoice', { defaultValue: 'Multiple choice' });
   }
 }
 
@@ -270,16 +275,20 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
   onAnswerChange,
   showPassage = false,
 }) => {
+  const { t } = useTranslation();
   const sanitize = (html?: string) => sanitizeStrictHtml(String(html ?? ''));
   const variant = getQuestionVariant(question);
-  const typeLabel = getQuestionTypeLabel(variant, question);
+  const typeLabel = getQuestionTypeLabel(t, variant, question);
   const questionImage = question.imageUrl || question.image;
 
   return (
     <div className="flex flex-col gap-6">
       <style>{EXAM_TACTILE_STYLES}</style>
 
-      <section className="card-paper w-full rounded-[1.5rem] p-5 relative">
+      <section
+        className="relative w-full rounded-[24px] p-5"
+        style={{ background: '#fff', border: '1px solid rgba(31,27,23,0.08)', boxShadow: '0 8px 26px rgba(31,27,23,0.08)' }}
+      >
         {/* ── Header ── */}
         <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
           <span className="bg-slate-800 text-white rounded-full px-2.5 py-0.5 text-[11px] font-black">
@@ -440,10 +449,13 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
                 <button
                   key={idx}
                   onClick={() => onAnswerChange(idx)}
-                  className={clsx(
-                    'topik-option relative rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center active:scale-[0.98] transition-transform select-none touch-manipulation',
-                    isSelected && 'topik-selected'
-                  )}
+                  className="relative aspect-[4/3] select-none overflow-hidden rounded-xl border bg-white transition-transform active:scale-[0.98] touch-manipulation"
+                  style={{
+                    borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                    boxShadow: isSelected
+                      ? '0 0 0 2px rgba(91,132,114,0.15)'
+                      : '0 2px 8px rgba(31,27,23,0.06)',
+                  }}
                 >
                   <img
                     src={imgUrl}
@@ -451,10 +463,12 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
                     className="w-full h-full object-contain"
                   />
                   <span
-                    className={clsx(
-                      'option-num absolute top-2 left-2 w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black',
-                      isSelected && 'bg-blue-500 text-white border-blue-600'
-                    )}
+                    className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-black"
+                    style={{
+                      borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                      background: isSelected ? '#5B8472' : '#FBF8F3',
+                      color: isSelected ? '#fff' : '#1F1B17',
+                    }}
                   >
                     {idx + 1}
                   </span>
@@ -471,15 +485,19 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
                 <button
                   key={idx}
                   onClick={() => onAnswerChange(idx)}
-                  className={clsx(
-                    'topik-option w-full rounded-xl py-3 flex justify-center active:scale-[0.98] transition-transform select-none touch-manipulation',
-                    isSelected && 'topik-selected'
-                  )}
+                  className="flex w-full select-none justify-center rounded-xl border bg-white py-3 transition-transform active:scale-[0.98] touch-manipulation"
+                  style={{
+                    borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                    background: isSelected ? 'rgba(200,220,207,0.6)' : '#fff',
+                  }}
                 >
                   <span
-                    className={clsx(
-                      'option-num w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black'
-                    )}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-black"
+                    style={{
+                      borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                      background: isSelected ? '#5B8472' : '#FBF8F3',
+                      color: isSelected ? '#fff' : '#1F1B17',
+                    }}
                   >
                     {option}
                   </span>
@@ -496,19 +514,29 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
                 <button
                   key={idx}
                   onClick={() => onAnswerChange(idx)}
-                  className={clsx(
-                    'topik-option w-full rounded-[1rem] py-3 px-4 flex items-center text-left active:scale-[0.98] transition-transform select-none touch-manipulation',
-                    isSelected && 'topik-selected'
-                  )}
+                  className="flex w-full select-none items-center rounded-[16px] border px-4 py-3 text-left transition-transform active:scale-[0.98] touch-manipulation"
+                  style={{
+                    borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                    background: isSelected ? 'rgba(200,220,207,0.55)' : '#fff',
+                    boxShadow: '0 2px 8px rgba(31,27,23,0.06)',
+                  }}
                 >
                   <span
-                    className={clsx(
-                      'option-num w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-[11px] font-black shrink-0 mr-3'
-                    )}
+                    className="mr-3 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-black"
+                    style={{
+                      borderColor: isSelected ? '#5B8472' : 'rgba(31,27,23,0.12)',
+                      background: isSelected ? '#5B8472' : '#FBF8F3',
+                      color: isSelected ? '#fff' : '#1F1B17',
+                    }}
                   >
                     {idx + 1}
                   </span>
-                  <span className="option-text font-bold text-[13px] text-slate-700">{option}</span>
+                  <span
+                    className="option-text text-[14px] font-bold"
+                    style={{ color: isSelected ? '#1F1B17' : '#3D3832' }}
+                  >
+                    {option}
+                  </span>
                 </button>
               );
             })}

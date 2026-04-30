@@ -239,7 +239,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                 letterSpacing: -0.6,
               }}
             >
-              {t('notes.v2.page.titleAllNotes', { defaultValue: '스마트 노트' })}
+              {t('notes.v2.page.titleAllNotes', { defaultValue: 'Smart notes' })}
             </div>
             <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
               {t('notes.mobileSubtitle', {
@@ -401,6 +401,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
             title={t('notes.picker.myNotebooks', { defaultValue: 'My Notebooks' })}
           />
           <div
+            className="hide-scroll"
             style={{
               display: 'flex',
               gap: 10,
@@ -528,6 +529,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
               })}
             />
             <div
+              className="hide-scroll"
               style={{
                 display: 'flex',
                 gap: 10,

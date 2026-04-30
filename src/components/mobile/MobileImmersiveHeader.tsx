@@ -26,12 +26,14 @@ export function MobileImmersiveHeader({
   status,
   actions,
   children,
+  className,
   tone = 'default',
 }: Readonly<MobileImmersiveHeaderProps>) {
   const isInverse = tone === 'inverse';
 
   return (
     <header
+      className={className}
       style={{
         flexShrink: 0,
         borderBottom: isInverse ? '1px solid rgba(255,255,255,0.1)' : `1px solid ${KT.line}`,

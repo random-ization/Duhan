@@ -6,7 +6,6 @@ import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';
-import { AchievementGallery } from '../profile/AchievementGallery';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
 import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
@@ -165,38 +164,32 @@ export const MobileProfilePage: React.FC = () => {
       legacyTab
         ? {
             info: {
-              title: t('profile.tabInfoTitle', { defaultValue: 'Profile details' }),
-              subtitle: t('profile.tabInfoSubtitle', {
-                defaultValue:
-                  'Update your identity, avatar, and the personal details tied to your learning.',
-              }),
+              title: labels.profile?.accountHub?.detailsTitle || 'Profile details',
+              subtitle:
+                labels.profile?.accountHub?.detailsDescription ||
+                'Update your identity, avatar, and the personal details tied to your learning.',
             },
             stats: {
-              title: t('profile.tabStatsTitle', { defaultValue: 'Learning overview' }),
-              subtitle: t('profile.tabStatsSubtitle', {
-                defaultValue:
-                  'Review streaks, exam momentum, and the progress signals that matter most.',
-              }),
+              title: labels.profile?.learningHub?.snapshotTitle || 'Learning overview',
+              subtitle:
+                labels.profile?.learningHub?.snapshotDescription ||
+                'Review streaks, exam momentum, and the progress signals that matter most.',
             },
             security: {
-              title: t('profile.tabSecurityTitle', {
-                defaultValue: 'Security and linked accounts',
-              }),
-              subtitle: t('profile.tabSecuritySubtitle', {
-                defaultValue:
-                  'Manage password changes and the sign-in providers connected to this account.',
-              }),
+              title: labels.profile?.securityHub?.title || 'Security and linked accounts',
+              subtitle:
+                labels.profile?.securityHub?.subtitle ||
+                'Manage password changes and the sign-in providers connected to this account.',
             },
             settings: {
-              title: t('profile.tabSettingsTitle', { defaultValue: 'Preferences' }),
-              subtitle: t('profile.tabSettingsSubtitle', {
-                defaultValue:
-                  'Tune notifications, language, and product defaults to fit your routine.',
-              }),
+              title: labels.profile?.settingsCenter?.title || 'Preferences',
+              subtitle:
+                labels.profile?.settingsCenter?.subtitle ||
+                'Tune notifications, language, and product defaults to fit your routine.',
             },
           }[legacyTab]
         : null,
-    [legacyTab, t]
+    [labels, legacyTab]
   );
 
   if (!user) return <Loading fullScreen />;
@@ -255,6 +248,24 @@ export const MobileProfilePage: React.FC = () => {
     },
   ];
 
+  const linkedMethodCount = linkedAccounts?.length ?? 0;
+  const accountItems = [
+    {
+      k: '人',
+      l: copy.profileDetailsTitle,
+      s: copy.profileDetailsSub(displayName, user.email),
+      tone: 'mintDeep',
+      onClick: () => openLegacyTab('info'),
+    },
+    {
+      k: '鑰',
+      l: copy.securityTitle,
+      s: copy.securitySub(linkedMethodCount),
+      tone: 'crimson',
+      onClick: () => openLegacyTab('security'),
+    },
+  ];
+
   const libraryItems = [
     {
       k: '詞',
@@ -284,7 +295,7 @@ export const MobileProfilePage: React.FC = () => {
       l: copy.achievementsTitle,
       s: copy.achievementsSub(examsTaken),
       tone: 'mintDeep',
-      onClick: () => scrollToSection('mobile-profile-achievements'),
+      onClick: () => navigate('/achievements'),
     },
   ];
 
@@ -307,9 +318,41 @@ export const MobileProfilePage: React.FC = () => {
     {
       l: copy.supportTitle,
       s: copy.supportSub,
+      onClick: () => scrollToSection('mobile-profile-contact'),
+    },
+  ];
+
+  const contactItems = [
+    {
+      l: t('footer.contactSupport', { defaultValue: 'Contact support' }),
+      s: 'support@koreanstudy.me',
       onClick: () => {
         if (typeof globalThis.window !== 'undefined') {
           globalThis.window.location.href = 'mailto:support@koreanstudy.me';
+        }
+      },
+    },
+    {
+      l: t('privacyPolicy', { defaultValue: 'Privacy Policy' }),
+      s: t('profile.mobile.legalPrivacyHint', { defaultValue: 'View data and privacy details' }),
+      onClick: () => navigate('/privacy'),
+    },
+    {
+      l: t('termsOfService', { defaultValue: 'Terms of Service' }),
+      s: t('profile.mobile.legalTermsHint', { defaultValue: 'View platform terms and rules' }),
+      onClick: () => navigate('/terms'),
+    },
+    {
+      l: t('refundPolicy', { defaultValue: 'Refund Policy' }),
+      s: t('profile.mobile.legalRefundHint', { defaultValue: 'View subscription refund details' }),
+      onClick: () => navigate('/refund'),
+    },
+    {
+      l: t('footer.joinDiscord', { defaultValue: 'Join our Discord' }),
+      s: t('profile.mobile.discordHint', { defaultValue: 'Join the community and share feedback' }),
+      onClick: () => {
+        if (typeof globalThis.window !== 'undefined') {
+          globalThis.window.open('https://discord.gg/XBURUx5eav', '_blank', 'noopener,noreferrer');
         }
       },
     },
@@ -635,6 +678,66 @@ export const MobileProfilePage: React.FC = () => {
       </div>
 
       <div style={{ padding: '18px 18px 28px' }}>
+        <SectionHead kanji="帳" title={copy.accountTitle} />
+        <Card pad={0}>
+          {accountItems.map((m, i) => {
+            const bg = (KT[m.tone as keyof typeof KT] as string) || KT.ink;
+            return (
+              <button
+                key={m.l}
+                type="button"
+                onClick={m.onClick}
+                style={{
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderBottom: i < accountItems.length - 1 ? `1px solid ${KT.line}` : 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  width: '100%',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: KT.font,
+                }}
+              >
+                <HanjaSeal c={m.k} size={36} bg={bg} round={9} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: KT.ink,
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    {m.l}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: KT.sub,
+                      marginTop: 2,
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {m.s}
+                  </div>
+                </div>
+                <div style={{ color: KT.subLight, fontSize: 18 }}>›</div>
+              </button>
+            );
+          })}
+        </Card>
+      </div>
+
+      <div style={{ padding: '18px 18px 28px' }}>
         <SectionHead kanji="庫" title={copy.libraryTitle} />
         <Card pad={0}>
           {libraryItems.map((m, i) => {
@@ -736,10 +839,46 @@ export const MobileProfilePage: React.FC = () => {
         </Card>
       </div>
 
-      <div id="mobile-profile-achievements" style={{ padding: '0 18px 32px' }}>
-        <SectionHead kanji="旗" title={copy.achievementsTitle} />
-        <Card pad={20}>
-          <AchievementGallery />
+      <div id="mobile-profile-contact" style={{ padding: '0 18px 28px' }}>
+        <SectionHead kanji="絡" title={copy.supportTitle} />
+        <Card pad={0}>
+          {contactItems.map((item, index) => (
+            <button
+              key={item.l}
+              type="button"
+              onClick={item.onClick}
+              style={{
+                padding: '14px 18px',
+                borderBottom: index < contactItems.length - 1 ? `1px solid ${KT.line}` : 'none',
+                background: 'transparent',
+                border: 'none',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                width: '100%',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: KT.font,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: KT.ink }}>{item.l}</div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: KT.sub,
+                    marginTop: 2,
+                    fontWeight: 600,
+                  }}
+                >
+                  {item.s}
+                </div>
+              </div>
+              <div style={{ color: KT.subLight, fontSize: 18 }}>›</div>
+            </button>
+          ))}
         </Card>
       </div>
     </PageShell>
@@ -753,6 +892,11 @@ type MyCopy = {
   statsWords: string;
   statsGrammar: string;
   statsTime: string;
+  accountTitle: string;
+  profileDetailsTitle: string;
+  profileDetailsSub: (name: string, email: string) => string;
+  securityTitle: string;
+  securitySub: (linkedCount: number) => string;
   libraryTitle: string;
   vocabTitle: string;
   vocabSub: (total: number, due: number) => string;
@@ -783,6 +927,11 @@ const getMyCopy = (language: string): MyCopy => {
       statsWords: '认识单词',
       statsGrammar: '掌握语法',
       statsTime: '学习时长',
+      accountTitle: '账号管理',
+      profileDetailsTitle: '资料与邮箱',
+      profileDetailsSub: (name, email) => `${name} · ${email}`,
+      securityTitle: '登录与安全',
+      securitySub: linkedCount => `密码、Google、Kakao · 已绑定 ${linkedCount} 种方式`,
       libraryTitle: '我的资料',
       vocabTitle: '单词本',
       vocabSub: (total, due) => `${total} 个单词 · ${due} 待复习`,
@@ -812,6 +961,11 @@ const getMyCopy = (language: string): MyCopy => {
       statsWords: 'Từ đã học',
       statsGrammar: 'Ngữ pháp',
       statsTime: 'Thời gian',
+      accountTitle: 'Tài khoản',
+      profileDetailsTitle: 'Hồ sơ & email',
+      profileDetailsSub: (name, email) => `${name} · ${email}`,
+      securityTitle: 'Đăng nhập & bảo mật',
+      securitySub: linkedCount => `Mật khẩu, Google, Kakao · ${linkedCount} phương thức`,
       libraryTitle: 'Thư viện của tôi',
       vocabTitle: 'Sổ từ',
       vocabSub: (total, due) => `${total} từ · ${due} chờ ôn`,
@@ -841,6 +995,11 @@ const getMyCopy = (language: string): MyCopy => {
       statsWords: 'Үг мэдлэг',
       statsGrammar: 'Дүрэм',
       statsTime: 'Хугацаа',
+      accountTitle: 'Бүртгэл',
+      profileDetailsTitle: 'Профайл ба имэйл',
+      profileDetailsSub: (name, email) => `${name} · ${email}`,
+      securityTitle: 'Нэвтрэх ба аюулгүй байдал',
+      securitySub: linkedCount => `Нууц үг, Google, Kakao · ${linkedCount} арга`,
       libraryTitle: 'Миний сан',
       vocabTitle: 'Үгсийн дэвтэр',
       vocabSub: (total, due) => `${total} үг · ${due} давтах`,
@@ -869,6 +1028,11 @@ const getMyCopy = (language: string): MyCopy => {
     statsWords: 'Words known',
     statsGrammar: 'Grammar',
     statsTime: 'Study time',
+    accountTitle: 'Account',
+    profileDetailsTitle: 'Profile & email',
+    profileDetailsSub: (name, email) => `${name} · ${email}`,
+    securityTitle: 'Login & security',
+    securitySub: linkedCount => `Password, Google, Kakao · ${linkedCount} linked methods`,
     libraryTitle: 'My library',
     vocabTitle: 'Vocab book',
     vocabSub: (total, due) => `${total} words · ${due} due`,

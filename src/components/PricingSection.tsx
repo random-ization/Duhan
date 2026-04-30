@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { SubscriptionType } from '../types';
+import { SubscriptionType, type User } from '../types';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui';
 import { notify } from '../utils/notify';
 import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
+import type { ViewerAccessSnapshot } from '../utils/entitlements';
 
 function resolvePlanHighlights(language: string) {
   const isZh = language === 'zh' || language.startsWith('zh-');
@@ -51,11 +52,15 @@ function resolvePlanHighlights(language: string) {
 interface PricingSectionProps {
   onSubscribe?: (planId: CheckoutPlan) => void;
   source?: string;
+  authenticatedUser?: User | null;
+  viewerAccessOverride?: ViewerAccessSnapshot | null;
 }
 
 const PricingSection: React.FC<PricingSectionProps> = ({
   onSubscribe,
   source = 'desktop_subscription',
+  authenticatedUser,
+  viewerAccessOverride,
 }) => {
   const { user, viewerAccess } = useAuth();
   const { t, i18n } = useTranslation();
@@ -98,13 +103,15 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   const language = i18n.language;
   const priceConfig = PRICING_MAP[language] || PRICING_MAP['en'];
   const planHighlights = resolvePlanHighlights(language);
+  const effectiveUser = authenticatedUser ?? user;
+  const effectiveViewerAccess = viewerAccessOverride ?? viewerAccess;
 
   const handleSubscribe = (planId: CheckoutPlan) => {
     if (authLoading) {
       return;
     }
 
-    if (!user) {
+    if (!effectiveUser) {
       startUpgradeFlow({
         plan: planId,
         source,
@@ -129,8 +136,8 @@ const PricingSection: React.FC<PricingSectionProps> = ({
     return undefined;
   };
 
-  const currentPlan = viewerAccess?.isPremium
-    ? (user?.subscriptionType ?? SubscriptionType.ANNUAL)
+  const currentPlan = effectiveViewerAccess?.isPremium
+    ? (effectiveUser?.subscriptionType ?? SubscriptionType.ANNUAL)
     : SubscriptionType.FREE;
 
   const plans = [

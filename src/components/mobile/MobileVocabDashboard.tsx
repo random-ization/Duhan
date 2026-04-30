@@ -639,7 +639,7 @@ export const MobileVocabDashboard = ({
                             height: 4,
                             marginTop: 6,
                             borderRadius: 2,
-                            background: KT.line2,
+                            background: 'rgba(162,59,46,0.15)',
                             overflow: 'hidden',
                           }}
                         >

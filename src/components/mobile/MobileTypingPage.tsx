@@ -183,7 +183,7 @@ const MobileLobby = ({
           寫 · TYPING
         </div>
         <div style={{ fontSize: 28, fontWeight: 800, color: KT.ink, letterSpacing: -0.6 }}>
-          {t('typingLobby.title', { defaultValue: '타자 연습' })}
+          {t('typingLobby.title', { defaultValue: 'Typing practice' })}
         </div>
         <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>
           {t('typing.mobile.lobbyIntro', {
@@ -258,7 +258,7 @@ const MobileLobby = ({
                     記錄 · PROGRESS
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 800, color: KT.ink }}>
-                    {t('typing.mobile.personalBest', { defaultValue: '개인 기록' })}
+                    {t('typing.mobile.personalBest', { defaultValue: 'Personal best' })}
                   </div>
                 </div>
                 <Chip tone="sky">
@@ -375,7 +375,7 @@ const MobileLobby = ({
               </div>
               <div style={{ fontSize: 18, fontWeight: 800, color: KT.ink }}>
                 {t('typing.mobile.firstSessionTitle', {
-                  defaultValue: '첫 타자 기록을 만들어 보세요',
+                  defaultValue: 'Set your first typing record',
                 })}
               </div>
               <div
@@ -923,7 +923,7 @@ const MobileSession = ({
               fontWeight: 600,
             }}
           >
-            {t('typingGame.tapToStartTyping', { defaultValue: '문장을 따라 입력하세요' })}
+            {t('typingGame.tapToStartTyping', { defaultValue: 'Type the sentence to start' })}
           </div>
 
           {/* Typing text with character highlighting */}
@@ -1069,8 +1069,8 @@ const MobileResults = ({
                   }}
                 >
                   {isHighScore
-                    ? t('typing.mobile.greatJob', { defaultValue: '잘했어요!' })
-                    : t('typing.mobile.sessionComplete', { defaultValue: '완료' })}
+                    ? t('typing.mobile.greatJob', { defaultValue: 'Great job!' })
+                    : t('typing.mobile.sessionComplete', { defaultValue: 'Complete' })}
                 </div>
                 <div
                   style={{
@@ -1080,7 +1080,7 @@ const MobileResults = ({
                     fontWeight: 600,
                   }}
                 >
-                  {t('typing.mobile.gettingFaster', { defaultValue: '점점 빨라지고 있어요!' })}
+                  {t('typing.mobile.gettingFaster', { defaultValue: "You're getting faster!" })}
                 </div>
               </div>
             </div>

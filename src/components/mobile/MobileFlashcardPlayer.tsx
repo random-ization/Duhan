@@ -1,12 +1,9 @@
-import { useAction } from 'convex/react';
 import { motion } from 'framer-motion';
 import { Bookmark, Check, Volume2, X } from 'lucide-react';
 import type { TouchEvent } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { aRef } from '../../utils/convexRefs';
 import { ExtendedVocabItem } from '../../pages/VocabModulePage';
-import { Button } from '../ui';
 import { Chip, KT } from './ksoft/ksoft';
 
 interface MobileFlashcardPlayerProps {
@@ -26,54 +23,7 @@ interface MobileFlashcardPlayerProps {
   };
 }
 
-type SchedulingPreview = {
-  again: { scheduled_days: number; due: number };
-  hard: { scheduled_days: number; due: number };
-  good: { scheduled_days: number; due: number };
-  easy: { scheduled_days: number; due: number };
-};
-
-type PreviewCardState = {
-  state: number;
-  due: number;
-  stability: number;
-  difficulty: number;
-  elapsed_days: number;
-  scheduled_days: number;
-  learning_steps: number;
-  reps: number;
-  lapses: number;
-  last_review?: number;
-};
-
-type RatingButtonColor = 'again' | 'hard' | 'good' | 'easy';
 type SwipeDirection = 'left' | 'right';
-
-const GRADE_BUTTON_STYLES: Record<
-  RatingButtonColor,
-  { readonly bg: string; readonly fg: string; readonly shadow: string }
-> = {
-  again: {
-    bg: KT.pink,
-    fg: KT.pinkDeep,
-    shadow: '0 10px 24px -18px rgba(201,122,110,0.75)',
-  },
-  hard: {
-    bg: KT.butter,
-    fg: KT.butterDeep,
-    shadow: '0 10px 24px -18px rgba(168,135,46,0.72)',
-  },
-  good: {
-    bg: KT.mint,
-    fg: KT.mintDeep,
-    shadow: '0 10px 24px -18px rgba(91,132,114,0.72)',
-  },
-  easy: {
-    bg: KT.sky,
-    fg: KT.skyDeep,
-    shadow: '0 10px 24px -18px rgba(63,106,133,0.72)',
-  },
-};
 
 const SWIPE_HINT_STYLES: Record<
   SwipeDirection,
@@ -96,68 +46,6 @@ const SWIPE_HINT_STYLES: Record<
     border: `1px solid ${KT.mintDeep}22`,
     icon: Check,
   },
-};
-
-const formatScheduledLabel = (days: number | undefined) => {
-  if (typeof days !== 'number' || !Number.isFinite(days)) {
-    return '...';
-  }
-  if (days <= 0) {
-    return '< 1m';
-  }
-  if (days < 7) {
-    return `${Math.round(days)}d`;
-  }
-  if (days < 30) {
-    return `${Math.round(days / 7)}w`;
-  }
-  if (days < 365) {
-    return `${Math.round(days / 30)}mo`;
-  }
-  return `${Math.round(days / 365)}y`;
-};
-
-const buildPreviewCardState = (
-  word: ExtendedVocabItem | undefined
-): PreviewCardState | undefined => {
-  if (!word) {
-    return undefined;
-  }
-
-  const progress = word.progress;
-  const state =
-    word.state ??
-    (progress?.status === 'MASTERED'
-      ? 2
-      : progress?.status === 'REVIEW'
-        ? 2
-        : progress?.status === 'LEARNING'
-          ? 1
-          : 0);
-
-  const due = progress?.nextReviewAt ?? Date.now();
-
-  const stability = word.stability ?? 0;
-  const difficulty = word.difficulty ?? 5;
-  const elapsedDays = word.elapsed_days ?? 0;
-  const scheduledDays = word.scheduled_days ?? progress?.interval ?? 0;
-  const learningSteps = word.learning_steps ?? 0;
-  const reps = word.reps ?? progress?.streak ?? 0;
-  const lapses = word.lapses ?? 0;
-  const lastReview = word.last_review ?? undefined;
-
-  return {
-    state,
-    due,
-    stability,
-    difficulty,
-    elapsed_days: elapsedDays,
-    scheduled_days: scheduledDays,
-    learning_steps: learningSteps,
-    reps,
-    lapses,
-    last_review: lastReview,
-  };
 };
 
 const getPartOfSpeechLabel = (word: ExtendedVocabItem | undefined, fallback: string) => {
@@ -197,7 +85,6 @@ export default function MobileFlashcardPlayer({
     visible: false,
   });
   const [swipeHint, setSwipeHint] = useState<SwipeDirection | null>(null);
-  const [preview, setPreview] = useState<SchedulingPreview | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const swipeTriggeredRef = useRef(false);
 
@@ -214,44 +101,12 @@ export default function MobileFlashcardPlayer({
     t('vocab.word', { defaultValue: 'Word' })
   );
   const decorativeSeal = getDecorativeSeal(currentWord);
-  const currentCardState = useMemo(() => buildPreviewCardState(currentWord), [currentWord]);
   const isFlipped = flipState.visible && flipState.index === currentIndex;
-
-  const getSchedulingPreview = useAction(
-    aRef<{ currentCard?: PreviewCardState; now?: number }, SchedulingPreview>(
-      'fsrs:getSchedulingPreview'
-    )
-  );
 
   useEffect(() => {
     if (!settings.autoTTS || !korean) return;
     onSpeak(korean);
   }, [currentIndex, korean, onSpeak, settings.autoTTS]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadPreview = async () => {
-      try {
-        const nextPreview = await getSchedulingPreview(
-          currentCardState ? { currentCard: currentCardState } : {}
-        );
-        if (!cancelled) {
-          setPreview(nextPreview);
-        }
-      } catch {
-        if (!cancelled) {
-          setPreview(null);
-        }
-      }
-    };
-
-    void loadPreview();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentCardState, getSchedulingPreview]);
 
   if (!currentWord) {
     return (
@@ -331,49 +186,6 @@ export default function MobileFlashcardPlayer({
       swipeTriggeredRef.current = false;
     }, 160);
   };
-
-  const ratingButtons =
-    settings.ratingMode === 'PASS_FAIL'
-      ? [
-          {
-            quality: 1,
-            label: t('vocab.forgot', { defaultValue: 'Forgot' }),
-            previewLabel: formatScheduledLabel(preview?.again.scheduled_days),
-            color: 'again' as const,
-          },
-          {
-            quality: 3,
-            label: t('vocab.remembered', { defaultValue: 'Remembered' }),
-            previewLabel: formatScheduledLabel(preview?.good.scheduled_days),
-            color: 'good' as const,
-          },
-        ]
-      : [
-          {
-            quality: 1,
-            label: t('vocab.rating.again', { defaultValue: 'Again' }),
-            previewLabel: formatScheduledLabel(preview?.again.scheduled_days),
-            color: 'again' as const,
-          },
-          {
-            quality: 2,
-            label: t('vocab.rating.hard', { defaultValue: 'Hard' }),
-            previewLabel: formatScheduledLabel(preview?.hard.scheduled_days),
-            color: 'hard' as const,
-          },
-          {
-            quality: 3,
-            label: t('vocab.rating.good', { defaultValue: 'Good' }),
-            previewLabel: formatScheduledLabel(preview?.good.scheduled_days),
-            color: 'good' as const,
-          },
-          {
-            quality: 4,
-            label: t('vocab.rating.easy', { defaultValue: 'Easy' }),
-            previewLabel: formatScheduledLabel(preview?.easy.scheduled_days),
-            color: 'easy' as const,
-          },
-        ];
 
   const rightHint = SWIPE_HINT_STYLES.right;
   const leftHint = SWIPE_HINT_STYLES.left;
@@ -479,8 +291,10 @@ export default function MobileFlashcardPlayer({
               x: swipeHint === 'left' ? -12 : swipeHint === 'right' ? 12 : 0,
             }}
             transition={{ duration: 0.28, type: 'spring', stiffness: 240, damping: 20 }}
-            className="relative flex min-h-[66vh] max-h-[72vh] w-full cursor-grab flex-col overflow-hidden rounded-[2rem] active:cursor-grabbing"
+            className="relative flex w-full cursor-grab flex-col overflow-hidden rounded-[2rem] active:cursor-grabbing"
             style={{
+              height: 'min(66vh, 560px)',
+              minHeight: 420,
               background: KT.card,
               boxShadow: KT.shLg,
               border: `1px solid ${KT.line}`,
@@ -838,7 +652,10 @@ export default function MobileFlashcardPlayer({
               marginBottom: 12,
             }}
           >
-            <div
+            <button
+              type="button"
+              disabled={!isFlipped}
+              onClick={() => handleGrade(1)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -848,6 +665,10 @@ export default function MobileFlashcardPlayer({
                 background: `${KT.pink}B3`,
                 color: KT.pinkDeep,
                 border: `1px solid ${KT.pinkDeep}22`,
+                cursor: isFlipped ? 'pointer' : 'default',
+                fontFamily: KT.font,
+                textAlign: 'left',
+                opacity: isFlipped ? 1 : 0.82,
               }}
             >
               <X size={16} />
@@ -859,9 +680,12 @@ export default function MobileFlashcardPlayer({
                   {t('vocab.didNotRecallHint', { defaultValue: 'Use Again / Hard' })}
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div
+            <button
+              type="button"
+              disabled={!isFlipped}
+              onClick={() => handleGrade(3)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -872,6 +696,10 @@ export default function MobileFlashcardPlayer({
                 background: `${KT.mint}B3`,
                 color: KT.mintDeep,
                 border: `1px solid ${KT.mintDeep}22`,
+                cursor: isFlipped ? 'pointer' : 'default',
+                fontFamily: KT.font,
+                textAlign: 'right',
+                opacity: isFlipped ? 1 : 0.82,
               }}
             >
               <div style={{ minWidth: 0, textAlign: 'right' }}>
@@ -883,7 +711,7 @@ export default function MobileFlashcardPlayer({
                 </div>
               </div>
               <Check size={16} />
-            </div>
+            </button>
           </div>
 
           {!isFlipped ? (
@@ -907,99 +735,9 @@ export default function MobileFlashcardPlayer({
             >
               {t('vocab.showMeaning', { defaultValue: 'Show answer' })}
             </button>
-          ) : (
-            <>
-              <p
-                style={{
-                  marginBottom: 10,
-                  textAlign: 'center',
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: KT.sub,
-                  letterSpacing: 1,
-                }}
-              >
-                {t('vocab.rateMemory', { defaultValue: 'Rate your recall' })}
-              </p>
-
-              <div
-                className={
-                  settings.ratingMode === 'PASS_FAIL'
-                    ? 'grid grid-cols-2 gap-2.5'
-                    : 'grid grid-cols-4 gap-2.5'
-                }
-              >
-                {ratingButtons.map(button => (
-                  <GradeButton
-                    key={`${button.color}-${button.quality}`}
-                    label={button.label}
-                    previewLabel={button.previewLabel}
-                    color={button.color}
-                    onClick={() => handleGrade(button.quality)}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+          ) : null}
         </div>
       </footer>
     </div>
-  );
-}
-
-function GradeButton({
-  label,
-  previewLabel,
-  color,
-  onClick,
-}: {
-  readonly label: string;
-  readonly previewLabel: string;
-  readonly color: RatingButtonColor;
-  readonly onClick: () => void;
-}) {
-  const style = GRADE_BUTTON_STYLES[color];
-
-  return (
-    <Button
-      variant="ghost"
-      size="auto"
-      type="button"
-      onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-2 py-3 transition-transform duration-100 active:scale-[0.98]"
-      style={{
-        background: style.bg,
-        color: style.fg,
-        boxShadow: style.shadow,
-        border: 'none',
-      }}
-    >
-      <span
-        style={{
-          fontSize: 13,
-          fontWeight: 800,
-          color: style.fg,
-          letterSpacing: -0.2,
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          display: 'inline-block',
-          fontSize: 10,
-          fontWeight: 800,
-          color: style.fg,
-          background: 'rgba(255,255,255,0.55)',
-          padding: '2px 8px',
-          borderRadius: 999,
-          letterSpacing: 0.3,
-          minWidth: 36,
-          textAlign: 'center',
-        }}
-      >
-        {previewLabel}
-      </span>
-    </Button>
   );
 }
