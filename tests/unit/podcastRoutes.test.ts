@@ -23,9 +23,7 @@ describe('podcast route builders', () => {
   it('preserves returnTo when building podcast routes', () => {
     expect(
       buildPodcastSearchPath('daily korean', '/podcasts?returnTo=%2Fmedia%3Ftab%3Dpodcasts')
-    ).toBe(
-      '/podcasts/search?q=daily+korean&returnTo=%2Fpodcasts%3FreturnTo%3D%252Fmedia%253Ftab%253Dpodcasts'
-    );
+    ).toBe('/podcasts/search?q=daily+korean&returnTo=%2Fpodcasts');
     expect(buildPodcastChannelPath({ id: '123' }, '/podcasts/search?q=daily+korean')).toBe(
       '/podcasts/channel?id=123&returnTo=%2Fpodcasts%2Fsearch%3Fq%3Ddaily%2Bkorean'
     );

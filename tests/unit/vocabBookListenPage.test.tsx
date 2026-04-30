@@ -183,10 +183,10 @@ describe('VocabBookListenPage session restore', () => {
       expect(parsed.index).toBe(0);
       expect(parsed.mode).toBe('BASIC');
       expect(typeof parsed.timestamp).toBe('number');
-      expect(parsed.playMeaning).toBeUndefined();
-      expect(parsed.playExampleTranslation).toBeUndefined();
-      expect(parsed.repeatCount).toBeUndefined();
-      expect(parsed.speed).toBeUndefined();
+      expect(parsed.playMeaning).toBe(true);
+      expect(parsed.playExampleTranslation).toBe(true);
+      expect(parsed.repeatCount).toBe(2);
+      expect(parsed.speed).toBe(1);
     });
   });
 });

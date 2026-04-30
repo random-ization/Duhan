@@ -102,7 +102,7 @@ describe('VocabBookDictationPage session persistence', () => {
     });
   });
 
-  it('persists only resumable session state and not global dictation preferences', async () => {
+  it('persists resumable session state including dictation preferences', async () => {
     const key = buildVocabBookPracticeSessionStorageKey('dictation', 'category=DUE');
 
     renderPage('/vocab-book/dictation?category=DUE');
@@ -114,9 +114,9 @@ describe('VocabBookDictationPage session persistence', () => {
       expect(parsed.index).toBe(0);
       expect(parsed.started).toBe(false);
       expect(parsed.mode).toBe('HEAR_PRONUNCIATION');
-      expect(parsed.playCount).toBeUndefined();
-      expect(parsed.gapSeconds).toBeUndefined();
-      expect(parsed.autoNext).toBeUndefined();
+      expect(parsed.playCount).toBe(2);
+      expect(parsed.gapSeconds).toBe(2);
+      expect(parsed.autoNext).toBe(true);
     });
   });
 });

@@ -6,7 +6,7 @@ vi.mock('../../src/components/topik/QuestionRenderer', () => ({
   QuestionRenderer: () => <div>Question Renderer Stub</div>,
 }));
 
-const { MobileExamSession } = await import('../../src/components/mobile/MobileExamSession');
+const { MobileExamSession } = await import('../../src/components/mobile/topik/MobileExamSession');
 
 beforeAll(() => {
   if (!HTMLElement.prototype.scrollTo) {
@@ -46,8 +46,7 @@ describe('MobileExamSession', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /passage/i }));
-
+    // In the new split-view/inline design, the passage is rendered automatically if present
     expect(screen.getByText('Safe Passage')).toBeInTheDocument();
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('img')).toBeNull();

@@ -29,7 +29,7 @@ describe('MobileLearnMode', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /one/i }));
-    fireEvent.click(screen.getByRole('button', { name: /下一个/i }));
+    fireEvent.click(screen.getByRole('button', { name: /下一题/i }));
     fireEvent.click(screen.getByRole('button', { name: /two/i }));
 
     expect(onFsrsReview).toHaveBeenNthCalledWith(1, 'word-1', true);

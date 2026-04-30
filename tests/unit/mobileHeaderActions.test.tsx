@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RouteUiConfig } from '../../src/config/routes.config';
@@ -18,6 +18,7 @@ vi.mock('../../src/contexts/AuthContext', () => ({
 
 vi.mock('convex/react', () => ({
   useQuery: vi.fn(() => null),
+  useMutation: vi.fn(() => async () => undefined),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -105,7 +106,7 @@ describe('MobileHeader action behavior', () => {
     expect(navigateMock).toHaveBeenCalledWith('/media?tab=podcasts');
   });
 
-  it('navigates dictionary search with encoded returnTo on search action', () => {
+  it('opens the search sheet when search action is triggered', async () => {
     renderHeader({
       routeUiConfig: { ...baseConfig, headerAction: 'search', headerTitleDefault: 'Courses' },
       path: '/courses?level=1',
@@ -115,7 +116,9 @@ describe('MobileHeader action behavior', () => {
     const searchButton = screen.getByRole('button', { name: /search/i });
     fireEvent.click(searchButton);
 
-    expect(navigateMock).toHaveBeenCalledWith('/dictionary/search?returnTo=%2Fcourses%3Flevel%3D1');
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-state', 'open');
+    });
   });
 
   it('falls back to showing the URL when share APIs are unavailable', async () => {

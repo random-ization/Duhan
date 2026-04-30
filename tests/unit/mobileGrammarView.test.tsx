@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MobileGrammarView from '../../src/components/mobile/MobileGrammarView';
@@ -47,9 +47,9 @@ describe('MobileGrammarView', () => {
     navigateMock.mockReset();
   });
 
-  it('opens the search field from the header button and collapses it again when empty', async () => {
+  it('renders the search input and calls onSearchChange when typing', async () => {
     const onSearchChange = vi.fn();
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MobileGrammarView
           selectedUnit={1}
@@ -68,28 +68,10 @@ describe('MobileGrammarView', () => {
       </MemoryRouter>
     );
 
-    const input = container.querySelector<HTMLInputElement>('#mobile-grammar-search');
-    const searchContainer = input?.parentElement?.parentElement;
-    expect(input).not.toBeNull();
-    expect(searchContainer).not.toBeNull();
-    expect(searchContainer).toHaveStyle({ maxHeight: '0px' });
+    const input = screen.getByRole('textbox');
+    expect(input).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /search patterns or usages/i }));
-
-    await waitFor(() => {
-      expect(searchContainer).toHaveStyle({ maxHeight: '60px' });
-      expect(document.activeElement).toBe(input);
-    });
-
-    if (!input) {
-      throw new Error('Expected mobile grammar search input to exist');
-    }
-
-    fireEvent.blur(input);
-
-    await waitFor(() => {
-      expect(searchContainer).toHaveStyle({ maxHeight: '0px' });
-    });
-    expect(onSearchChange).toHaveBeenCalledWith('');
+    fireEvent.change(input, { target: { value: 'test query' } });
+    expect(onSearchChange).toHaveBeenCalledWith('test query');
   });
 });

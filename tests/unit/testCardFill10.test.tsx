@@ -25,17 +25,17 @@ describe('TestCardFill10', () => {
     fireEvent.click(screen.getByRole('button', { name: /one/i }));
 
     expect(
-      screen.getAllByText((_content, element) => element?.textContent === '已连线 1/2').length
+      screen.getAllByText((_content, element) => element?.textContent === 'Answered 1/2').length
     ).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /둘/i }));
     fireEvent.click(screen.getByRole('button', { name: /two/i }));
 
     expect(
-      screen.getAllByText((_content, element) => element?.textContent === '已连线 2/2').length
+      screen.getAllByText((_content, element) => element?.textContent === 'Answered 2/2').length
     ).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /下一题/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Next/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith(['word-1', 'word-2'], 'KR_TO_NATIVE');
