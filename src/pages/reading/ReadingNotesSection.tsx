@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui';
 import { Textarea } from '../../components/ui';
-import type { NoteVisualState, ReaderNote, DraftNote } from './types';
+import type { NoteVisualState, ReaderNote, DraftNote, NoteColor } from './types';
 import { noteColorDotClass, noteUnderlineClass } from './helpers';
 
 const ReadingNotesSection: React.FC<{
@@ -51,7 +51,7 @@ const ReadingNotesSection: React.FC<{
         <blockquote
           className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded bg-muted p-3 text-sm text-muted-foreground ${noteUnderlineClass(draftNote.color, getNoteVisualState('draft'))}`}
         >
-          {`"${draftNote.quote}"`}
+          “{draftNote.quote}”
         </blockquote>
         <Textarea
           value={draftNote.comment}
@@ -113,7 +113,7 @@ const ReadingNotesSection: React.FC<{
             <p
               className={`whitespace-normal break-words [overflow-wrap:anywhere] font-semibold ${noteUnderlineClass(note.color, getNoteVisualState(note.id))}`}
             >
-              {`"${note.quote}"`}
+              “{note.quote}”
             </p>
             <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
               {note.comment ||

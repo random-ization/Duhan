@@ -97,7 +97,7 @@ export const READING_LIBRARY = {
   getPublicShelf: qRef<{ limit?: number; cursor?: string }, PublicShelfResponse>(
     'readingLibrary:getPublicShelf'
   ),
-  getBookDetail: qRef<{ slug: string; shareToken?: string }, EpubBookDetailResponse>(
+  getBookDetail: qRef<{ slug: string; shareToken?: string }, EpubBookDetailResponse | null>(
     'readingLibrary:getBookDetail'
   ),
   getReaderChapter: qRef<
