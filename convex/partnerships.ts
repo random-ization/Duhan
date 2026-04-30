@@ -22,6 +22,7 @@ import { makeFunctionReference, type FunctionReference } from 'convex/server';
 import type { Id } from './_generated/dataModel';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
 import { ONE_DAY_MS, computeStreak, startOfDay } from './userStatsHelpers';
+import { buildPartnerAcceptedCopy, resolveNotificationLanguage } from './notificationCopy';
 
 /** Window we scan back through `learning_events` when deriving a partner's
  * streak. 35 days is enough for the longest realistic streak chain without
@@ -270,11 +271,13 @@ export const acceptPartnership = mutation({
       acceptedAt: now,
     });
 
+    const language = await resolveNotificationLanguage(ctx, row.userA);
+    const copy = buildPartnerAcceptedCopy(language);
     await ctx.scheduler.runAfter(0, enqueueNotificationMutation, {
       userId: row.userA,
       kind: 'partner_milestone',
-      title: 'Your study buddy joined',
-      body: 'Your partnership is now active. Start a session together today.',
+      title: copy.title,
+      body: copy.body,
       linkPath: '/dashboard',
       metadata: {
         partnershipId: String(args.partnershipId),

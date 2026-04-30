@@ -2,7 +2,14 @@ import { ConvexError, v } from 'convex/values';
 import { type FunctionReference, makeFunctionReference } from 'convex/server';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import { internal } from './_generated/api';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
+import {
+  buildBecameFriendsCopy,
+  buildFriendAcceptedCopy,
+  buildFriendRequestCopy,
+  resolveNotificationLanguage,
+} from './notificationCopy';
 
 type FriendNotificationArgs = {
   userId: Id<'users'>;
@@ -437,20 +444,28 @@ export const sendRequestByCode = mutation({
       const inviterName = await loadActorName(ctx, viewerId);
       if (reverse) {
         // Reverse exists → this completes the bidirectional friendship.
+        await Promise.all([
+          ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: viewerId }),
+          ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: target._id }),
+        ]);
+        const language = await resolveNotificationLanguage(ctx, target._id);
+        const copy = buildBecameFriendsCopy({ language, friendName: inviterName });
         await scheduleNotification(ctx, {
           userId: target._id,
           kind: 'friend_accepted',
-          title: '친구 추가됨',
-          body: `${inviterName} 와(과) 친구가 되었습니다.`,
+          title: copy.title,
+          body: copy.body,
           linkPath: '/community',
           metadata: { friendId: viewerId },
         });
       } else {
+        const language = await resolveNotificationLanguage(ctx, target._id);
+        const copy = buildFriendRequestCopy({ language, inviterName });
         await scheduleNotification(ctx, {
           userId: target._id,
           kind: 'friend_request',
-          title: '친구 요청',
-          body: `${inviterName} 님이 친구 요청을 보냈습니다.`,
+          title: copy.title,
+          body: copy.body,
           linkPath: '/community',
           metadata: { friendId: viewerId },
         });
@@ -652,24 +667,34 @@ export const sendRequest = mutation({
 
     const inviterName = await loadActorName(ctx, viewerId);
     if (reverse) {
+      await Promise.all([
+        ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: viewerId }),
+        ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: args.targetUserId }),
+      ]);
+      const language = await resolveNotificationLanguage(ctx, args.targetUserId);
+      const copy = buildBecameFriendsCopy({ language, friendName: inviterName });
       await scheduleNotification(ctx, {
         userId: args.targetUserId,
         kind: 'friend_accepted',
-        title: '친구 추가됨',
-        body: `${inviterName} 와(과) 친구가 되었습니다.`,
+        title: copy.title,
+        body: copy.body,
         linkPath: '/community',
         metadata: { friendId: viewerId },
       });
       return { status: 'already_friends' };
     }
-    await scheduleNotification(ctx, {
-      userId: args.targetUserId,
-      kind: 'friend_request',
-      title: '친구 요청',
-      body: `${inviterName} 님이 친구 요청을 보냈습니다.`,
-      linkPath: '/community',
-      metadata: { friendId: viewerId },
-    });
+    {
+      const language = await resolveNotificationLanguage(ctx, args.targetUserId);
+      const copy = buildFriendRequestCopy({ language, inviterName });
+      await scheduleNotification(ctx, {
+        userId: args.targetUserId,
+        kind: 'friend_request',
+        title: copy.title,
+        body: copy.body,
+        linkPath: '/community',
+        metadata: { friendId: viewerId },
+      });
+    }
     return { status: 'sent' };
   },
 });
@@ -699,12 +724,18 @@ export const respondRequest = mutation({
           createdAt: Date.now(),
         });
       }
+      await Promise.all([
+        ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: viewerId }),
+        ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: args.targetUserId }),
+      ]);
       const accepterName = await loadActorName(ctx, viewerId);
+      const language = await resolveNotificationLanguage(ctx, args.targetUserId);
+      const copy = buildFriendAcceptedCopy({ language, accepterName });
       await scheduleNotification(ctx, {
         userId: args.targetUserId,
         kind: 'friend_accepted',
-        title: '친구 요청 수락됨',
-        body: `${accepterName} 님이 친구 요청을 수락했습니다.`,
+        title: copy.title,
+        body: copy.body,
         linkPath: '/community',
         metadata: { friendId: viewerId },
       });

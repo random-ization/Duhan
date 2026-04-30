@@ -281,15 +281,17 @@ export const getBookDetail = query({
       .unique();
 
     if (!book) {
-      throw new ConvexError({ code: 'NOT_FOUND', message: 'Book not found' });
+      return null;
     }
 
-    const { isOwner, isAdmin, isSharedAccess } = await assertBookReadable(
-      ctx,
-      book,
-      userId,
-      shareToken
-    );
+    let accessResult: { isOwner: boolean; isAdmin: boolean; isSharedAccess: boolean };
+    try {
+      accessResult = await assertBookReadable(ctx, book, userId, shareToken);
+    } catch {
+      // Access denied — return null instead of crashing the UI
+      return null;
+    }
+    const { isOwner, isAdmin, isSharedAccess } = accessResult;
     const chapters = await ctx.db
       .query('reading_library_chapters')
       .withIndex('by_book', q => q.eq('bookId', book._id))

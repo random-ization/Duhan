@@ -2,6 +2,7 @@ import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
 import { requireAdmin } from './utils';
+import { internal } from './_generated/api';
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -187,6 +188,7 @@ export const saveRecord = mutation({
       ...args,
       createdAt: Date.now(),
     });
+    await ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId: userRecord._id });
   },
 });
 

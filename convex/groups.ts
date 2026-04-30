@@ -14,7 +14,9 @@ import { ConvexError, v } from 'convex/values';
 import { type FunctionReference, makeFunctionReference } from 'convex/server';
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/server';
+import { internal } from './_generated/api';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
+import { buildGroupAcceptedCopy, buildGroupInviteCopy, resolveNotificationLanguage } from './notificationCopy';
 import { getCurrentWeekIdentifier } from './xp';
 
 const MAX_GROUPS_PER_USER = 5;
@@ -215,6 +217,7 @@ export const create = mutation({
       role: 'owner',
       joinedAt: now,
     });
+    await ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId });
     return { groupId };
   },
 });
@@ -340,11 +343,17 @@ export const invite = mutation({
     });
 
     const inviterName = await loadUserName(ctx, userId);
+    const inviteeLanguage = await resolveNotificationLanguage(ctx, args.targetUserId);
+    const inviteCopy = buildGroupInviteCopy({
+      language: inviteeLanguage,
+      inviterName,
+      groupName: group.name,
+    });
     await scheduleNotification(ctx, {
       userId: args.targetUserId,
       kind: 'group_invite',
-      title: '학습 모임 초대',
-      body: `${inviterName} 님이 “${group.name}” 모임에 초대했습니다.`,
+      title: inviteCopy.title,
+      body: inviteCopy.body,
       linkPath: '/community',
       metadata: { groupId: args.groupId, inviteId },
     });
@@ -401,13 +410,20 @@ export const respondInvite = mutation({
       await ctx.db.patch(group._id, { memberCount: group.memberCount + 1 });
     }
     await ctx.db.patch(invite._id, { status: 'accepted', respondedAt: Date.now() });
+    await ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId });
 
     const accepterName = await loadUserName(ctx, userId);
+    const inviterLanguage = await resolveNotificationLanguage(ctx, invite.inviterId);
+    const acceptedCopy = buildGroupAcceptedCopy({
+      language: inviterLanguage,
+      accepterName,
+      groupName: group.name,
+    });
     await scheduleNotification(ctx, {
       userId: invite.inviterId,
       kind: 'group_accepted',
-      title: '모임 초대 수락',
-      body: `${accepterName} 님이 “${group.name}” 모임에 참여했습니다.`,
+      title: acceptedCopy.title,
+      body: acceptedCopy.body,
       linkPath: '/community',
       metadata: { groupId: invite.groupId },
     });

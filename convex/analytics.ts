@@ -2,6 +2,7 @@ import { mutation, type MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from './utils';
+import { internal } from './_generated/api';
 
 const metadataValueValidator = v.union(v.string(), v.number(), v.boolean());
 const metadataValidator = v.optional(v.record(v.string(), metadataValueValidator));
@@ -251,6 +252,8 @@ export async function appendActivitySummary(
     totalStudyMinutes: (user.totalStudyMinutes || 0) + durationMinutes,
     ...buildLastActivityPatch(module, now),
   });
+
+  await ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId });
 }
 
 export const trackLearningEvent = mutation({
@@ -274,6 +277,7 @@ export const trackLearningEvent = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     await appendLearningEvent(ctx, userId, args);
+    await ctx.runMutation(internal.achievements.evaluateUserAchievements, { userId });
     return { success: true };
   },
 });

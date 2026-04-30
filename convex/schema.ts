@@ -1268,19 +1268,21 @@ export default defineSchema({
       v.literal('DIAMOND')
     ),
     milestoneValue: v.number(),
+    badgeId: v.optional(v.string()),
+    rewardXp: v.optional(v.number()),
+    titleKey: v.optional(v.string()),
+    descriptionKey: v.optional(v.string()),
+    iconKey: v.optional(v.string()),
+    progressValue: v.optional(v.number()),
+    targetValue: v.optional(v.number()),
     unlockedAt: v.number(),
     isNew: v.boolean(), // Core state machine: controls frontend popup
-    metadata: v.optional(
-      v.object({
-        wpm: v.optional(v.number()),
-        accuracy: v.optional(v.number()),
-        vocabCount: v.optional(v.number()),
-      })
-    ),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
   })
     .index('by_user', ['userId'])
     .index('by_user_and_new', ['userId', 'isNew'])
-    .index('by_user_category_tier', ['userId', 'category', 'tier']),
+    .index('by_user_category_tier', ['userId', 'category', 'tier'])
+    .index('by_user_badgeId', ['userId', 'badgeId']),
 
   daily_challenges: defineTable({
     date: v.string(),
@@ -1333,7 +1335,8 @@ export default defineSchema({
       v.literal('TYPING_TEST'),
       v.literal('PODCAST'),
       v.literal('TOPIK_MOCK'),
-      v.literal('DAILY_CHALLENGE')
+      v.literal('DAILY_CHALLENGE'),
+      v.literal('ACHIEVEMENT')
     ),
     timestamp: v.number(),
   }).index('by_user_timestamp', ['userId', 'timestamp']),
@@ -1495,17 +1498,63 @@ export default defineSchema({
       v.literal('group_invite'),
       v.literal('group_accepted')
     ),
+    category: v.optional(
+      v.union(
+        v.literal('learning'),
+        v.literal('exam'),
+        v.literal('social'),
+        v.literal('system')
+      )
+    ),
+    priority: v.optional(v.union(v.literal('low'), v.literal('normal'), v.literal('high'))),
     title: v.string(),
     body: v.string(),
     /** Optional deep-link the UI should navigate to when tapped. */
     linkPath: v.optional(v.string()),
     /** Free-form metadata (examId, streakDays, partnerId, etc.). */
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))),
     readAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
+    pushSentAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index('by_user_createdAt', ['userId', 'createdAt'])
     .index('by_user_read', ['userId', 'readAt']),
+
+  notification_preferences: defineTable({
+    userId: v.id('users'),
+    enabled: v.boolean(),
+    inAppEnabled: v.boolean(),
+    pwaEnabled: v.boolean(),
+    learningEnabled: v.boolean(),
+    examEnabled: v.boolean(),
+    socialEnabled: v.boolean(),
+    systemEnabled: v.boolean(),
+    dailyReminderLocalTime: v.string(), // HH:mm
+    timezone: v.string(), // IANA timezone (e.g. Asia/Seoul)
+    quietHoursEnabled: v.boolean(),
+    quietHoursStart: v.string(), // HH:mm
+    quietHoursEnd: v.string(), // HH:mm
+    updatedAt: v.number(),
+    createdAt: v.number(),
+  }).index('by_user', ['userId']),
+
+  push_subscriptions: defineTable({
+    userId: v.id('users'),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    expirationTime: v.optional(v.number()),
+    userAgent: v.optional(v.string()),
+    lastSeenAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_endpoint', ['userId', 'endpoint'])
+    .index('by_endpoint', ['endpoint']),
 
   /**
    * Study partnerships (D4).

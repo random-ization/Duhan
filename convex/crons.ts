@@ -28,6 +28,10 @@ const sendExamCountdownMutation = makeFunctionReference<'mutation', EmptyArgs, u
   'notifications:sendExamCountdown'
 ) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
 
+const sendFriendActivityDigestMutation = makeFunctionReference<'mutation', EmptyArgs, unknown>(
+  'notifications:sendFriendActivityDigest'
+) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
+
 const leagueSettleIfNeededMutation = makeFunctionReference<'mutation', EmptyArgs, unknown>(
   'league:settleIfNeeded'
 ) as unknown as FunctionReference<'mutation', 'internal', EmptyArgs, unknown>;
@@ -70,15 +74,21 @@ crons.interval('news_project_to_course_daily', { minutes: 1440 }, projectBatchMu
 
 // Notification pipeline (E3)
 crons.interval(
-  'notifications_send_streak_reminder_daily',
-  { minutes: 1440 },
+  'notifications_send_streak_reminder_hourly',
+  { minutes: 60 },
   sendStreakReminderMutation,
   {}
 );
 crons.interval(
-  'notifications_send_exam_countdown_daily',
-  { minutes: 1440 },
+  'notifications_send_exam_countdown_hourly',
+  { minutes: 60 },
   sendExamCountdownMutation,
+  {}
+);
+crons.interval(
+  'notifications_send_friend_activity_digest_daily',
+  { minutes: 1440 },
+  sendFriendActivityDigestMutation,
   {}
 );
 

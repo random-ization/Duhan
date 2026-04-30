@@ -8,6 +8,7 @@ const XP_SOURCES = [
   'PODCAST',
   'TOPIK_MOCK',
   'DAILY_CHALLENGE',
+  'ACHIEVEMENT',
 ] as const;
 type XpSource = (typeof XP_SOURCES)[number];
 
