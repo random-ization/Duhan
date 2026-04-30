@@ -1,6 +1,7 @@
 import { Institute } from '../types';
 
 export type LearningFlowModule = 'grammar' | 'vocabulary' | 'listening' | 'reading';
+export const TOPIK_GRAMMAR_COURSE_ID = 'topik-grammar';
 export type LearningMaterialSelection = {
   instituteId: string;
   level: number;
@@ -84,6 +85,13 @@ export const buildLearningModulePath = (
   return `/course/${instituteId}/reading`;
 };
 
+export const buildMobileCourseDefaultPath = (instituteId: string): string => {
+  if (instituteId === TOPIK_GRAMMAR_COURSE_ID) {
+    return buildLearningModulePath('grammar', instituteId);
+  }
+  return buildLearningModulePath('vocabulary', instituteId);
+};
+
 export const buildLearningPickerPath = (module: LearningFlowModule): string =>
   `/courses?module=${module}`;
 
@@ -97,4 +105,49 @@ export const normalizeLearningFlowModule = (
   if (normalized === 'listening') return 'listening';
   if (normalized === 'reading') return 'reading';
   return null;
+};
+
+export type VocabStage = 'learn' | 'flashcard' | 'test';
+
+type VocabStageInput = {
+  state?: number;
+  stability?: number;
+  mastered?: boolean;
+};
+
+const MATURE_STABILITY_DAYS = 7;
+
+export const recommendVocabStage = (words: ReadonlyArray<VocabStageInput>): VocabStage => {
+  if (!words || words.length === 0) return 'learn';
+
+  let newCount = 0;
+  let learningCount = 0;
+  let matureCount = 0;
+  let masteredCount = 0;
+
+  for (const w of words) {
+    if (w.mastered) {
+      masteredCount++;
+      continue;
+    }
+    const state = typeof w.state === 'number' ? w.state : undefined;
+    if (state === undefined || state === 0) {
+      newCount++;
+      continue;
+    }
+    const stability = typeof w.stability === 'number' ? w.stability : 0;
+    if (state === 2 && stability >= MATURE_STABILITY_DAYS) {
+      matureCount++;
+    } else {
+      learningCount++;
+    }
+  }
+
+  const total = words.length;
+  const reviewable = total - masteredCount;
+  if (reviewable === 0) return 'test';
+
+  if (newCount / total >= 0.4) return 'learn';
+  if (matureCount / Math.max(reviewable, 1) >= 0.6) return 'test';
+  return 'flashcard';
 };

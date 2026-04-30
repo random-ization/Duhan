@@ -161,6 +161,26 @@ export async function callPublicConvexQuery<TArgs extends Record<string, unknown
 }
 
 /**
+ * Call a Convex query with a bearer token read from localStorage.
+ *
+ * This keeps public pages such as pricing lightweight while still letting
+ * signed-in users see account-specific state after hydration.
+ */
+export async function callAuthenticatedConvexQuery<
+  TArgs extends Record<string, unknown>,
+  TResult,
+>(path: string, args: TArgs, options: { signal?: AbortSignal } = {}): Promise<TResult> {
+  const authToken = readConvexAuthJwt();
+  if (!authToken) {
+    throw new Error('NOT_AUTHENTICATED');
+  }
+  return callConvexEndpoint<TArgs, TResult>('query', path, args, {
+    ...options,
+    authToken,
+  });
+}
+
+/**
  * Call a Convex action with a bearer token read from localStorage.
  *
  * This is for actions that **logically** require a signed-in user but

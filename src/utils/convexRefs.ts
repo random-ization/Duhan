@@ -1003,14 +1003,23 @@ export type RecentAnnotation = {
 
 import type { NextBestAction } from '../../convex/recommendations';
 import type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
-import type { NotificationDto } from '../../convex/notifications';
+import type {
+  NotificationDto,
+  NotificationPreferencesDto,
+} from '../../convex/notifications';
 import type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
 import type { PartnershipDto, ActivePartnershipDto } from '../../convex/partnerships';
 import type { SearchAllResult } from '../../convex/search';
 
 export type { NextBestAction, NextBestActionKind } from '../../convex/recommendations';
 export type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
-export type { NotificationDto, NotificationKind } from '../../convex/notifications';
+export type {
+  NotificationDto,
+  NotificationKind,
+  NotificationPreferencesDto,
+  NotificationCategory,
+  NotificationPriority,
+} from '../../convex/notifications';
 export type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
 export type {
   PartnershipDto,
@@ -1054,6 +1063,46 @@ export const WEAK_POINTS = {
 };
 
 export const NOTIFICATIONS = {
+  getPreferences: qRef<NoArgs, NotificationPreferencesDto>('notifications:getPreferences'),
+  updatePreferences: mRef<
+    {
+      enabled?: boolean;
+      channels?: {
+        inApp?: boolean;
+        pwa?: boolean;
+      };
+      categories?: {
+        learning?: boolean;
+        exam?: boolean;
+        social?: boolean;
+        system?: boolean;
+      };
+      dailyReminderLocalTime?: string;
+      timezone?: string;
+      quietHours?: {
+        enabled?: boolean;
+        start?: string;
+        end?: string;
+      };
+    },
+    NotificationPreferencesDto
+  >('notifications:updatePreferences'),
+  subscribePush: mRef<
+    {
+      subscription: {
+        endpoint: string;
+        expirationTime?: number | null;
+        keys: {
+          p256dh: string;
+          auth: string;
+        };
+      };
+      userAgent?: string;
+    },
+    { ok: true }
+  >('notifications:subscribePush'),
+  unsubscribePush: mRef<{ endpoint?: string }, { ok: true }>('notifications:unsubscribePush'),
+  getVapidPublicKey: qRef<NoArgs, string | null>('notifications:getVapidPublicKey'),
   listUnread: qRef<{ limit?: number }, NotificationDto[]>('notifications:listUnread'),
   listRecent: qRef<{ limit?: number }, NotificationDto[]>('notifications:listRecent'),
   getUnreadCount: qRef<NoArgs, number>('notifications:getUnreadCount'),

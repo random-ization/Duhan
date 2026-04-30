@@ -15,16 +15,37 @@ export const translations: Record<Language, Labels> = {
 };
 
 export const getLabels = (language: Language): Labels => {
-  // Get raw resource bundle from i18next
-  // Note: This requires the language to be loaded.
-  const target = i18n.getResourceBundle(language, 'translation') || {};
-  const basis = i18n.getResourceBundle('en', 'translation') || {};
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+  const deepMerge = (base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> => {
+    const result: Record<string, unknown> = { ...base };
+    for (const [key, overrideValue] of Object.entries(override)) {
+      const baseValue = result[key];
+      if (isRecord(baseValue) && isRecord(overrideValue)) {
+        result[key] = deepMerge(baseValue, overrideValue);
+        continue;
+      }
+      result[key] = overrideValue;
+    }
+    return result;
+  };
+
+  const mergeNamespaces = (lang: Language): Record<string, unknown> => {
+    const publicBundle = i18n.getResourceBundle(lang, 'public');
+    const appBundle = i18n.getResourceBundle(lang, 'app');
+    const publicRecord = isRecord(publicBundle) ? publicBundle : {};
+    const appRecord = isRecord(appBundle) ? appBundle : {};
+    return deepMerge(publicRecord, appRecord);
+  };
+
+  const target = mergeNamespaces(language);
+  const basis = mergeNamespaces('en');
 
   if (language === 'en')
     return (Object.keys(basis).length > 0 ? basis : target) as unknown as Labels;
 
-  // Simple shallow merge approach to ensure missing keys fall back to English
-  return { ...basis, ...target } as unknown as Labels;
+  return deepMerge(basis, target) as unknown as Labels;
 };
 
 export const getLabel = (labels: Labels, path: readonly string[]): string | undefined => {

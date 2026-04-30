@@ -15,3 +15,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&:where(.dark, .dark *));
+
+@media (max-width: 767px) {
+  [data-mobile-bottom-nav-safe='true'] {
+    scroll-padding-bottom: calc(var(--mobile-bottom-nav-offset) + 16px);
+  }
+
+  [data-mobile-bottom-nav-safe='true'] .overflow-y-auto,
+  [data-mobile-bottom-nav-safe='true'] .overflow-auto {
+    padding-bottom: calc(var(--mobile-bottom-nav-offset) + 16px);
+    scroll-padding-bottom: calc(var(--mobile-bottom-nav-offset) + 16px);
+  }
+}
