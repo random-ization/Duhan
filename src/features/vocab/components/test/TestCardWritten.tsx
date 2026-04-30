@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Keyboard, Check, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Keyboard, X } from 'lucide-react';
 import type { Language } from '../../../../types';
-import { Button } from '../../../../components/ui';
+import { getLabels } from '../../../../utils/i18n';
+import { KT } from '../../../../components/mobile/ksoft/ksoft';
 
 type Answer = {
   input: string;
@@ -21,78 +22,131 @@ type Props = Readonly<{
 const normalizeText = (s: string) => s.trim().replaceAll(/\s+/g, ' ').toLowerCase();
 
 export default function TestCardWritten({
+  language,
   prompt,
   answered,
   mode = 'test',
   correctAnswer,
   onSubmit,
 }: Props) {
+  const labels = getLabels(language);
   const [input, setInput] = useState(() => answered?.input ?? '');
   const isReview = mode === 'review' && typeof correctAnswer === 'string';
   const isCorrectReview =
     isReview && correctAnswer ? normalizeText(input) === normalizeText(correctAnswer) : null;
 
+  useEffect(() => {
+    const nextValue = answered?.input ?? '';
+    const schedule =
+      typeof globalThis.queueMicrotask === 'function'
+        ? globalThis.queueMicrotask
+        : (callback: () => void) => {
+            globalThis.setTimeout(callback, 0);
+          };
+    schedule(() => setInput(nextValue));
+  }, [answered?.input]);
+
   const submit = () => {
-    const v = input.trim();
-    if (v.length > 0) onSubmit(v);
+    const value = input.trim();
+    if (value.length > 0) {
+      onSubmit(value);
+    }
   };
 
   return (
     <div className="flex flex-col">
-      <div className="text-center mb-8">
-        <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] mb-4">根据释义拼写单词</p>
-        <h4 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">{prompt}</h4>
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ marginBottom: 8, fontSize: 12, fontWeight: 800, color: KT.sub, letterSpacing: 0.5 }}>
+          {labels.vocabTest?.writtenAnswer || 'Written answer'}
+        </p>
+        <h4 style={{ fontSize: 38, fontWeight: 900, color: KT.ink, lineHeight: 1.14 }}>{prompt}</h4>
       </div>
 
-      <div className={`vt-inset-slot rounded-[1.2rem] p-2 flex items-center mb-6 transition-all ${isReview ? (isCorrectReview ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200') : 'focus-within:ring-2 focus-within:ring-blue-500/50'}`}>
-        <div className={`w-10 h-10 rounded-[10px] bg-white border flex items-center justify-center shadow-sm shrink-0 ${isReview ? (isCorrectReview ? 'text-emerald-500 border-emerald-100' : 'text-rose-500 border-rose-100') : 'text-slate-400 border-slate-200'}`}>
-          <Keyboard className="w-4 h-4" />
-        </div>
+      <div
+        style={{
+          marginBottom: 12,
+          borderRadius: 18,
+          border: `1px solid ${KT.line}`,
+          background: KT.card,
+          padding: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <span
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 11,
+            background: KT.bg2,
+            color: KT.sub,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Keyboard size={16} />
+        </span>
         <input
           type="text"
           value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="输入拼写..."
+          onChange={event => setInput(event.target.value)}
+          placeholder={labels.vocabTest?.writtenPlaceholder || 'Type your answer...'}
           disabled={isReview}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') submit();
+          onKeyDown={event => {
+            if (event.key === 'Enter') {
+              submit();
+            }
           }}
-          className={`w-full bg-transparent border-none text-center text-2xl font-black placeholder-slate-300 focus:outline-none px-2 ${isReview ? (isCorrectReview ? 'text-emerald-700' : 'text-rose-700') : 'text-slate-900'}`}
+          style={{
+            width: '100%',
+            border: 'none',
+            background: 'transparent',
+            color: KT.ink,
+            fontSize: 22,
+            fontWeight: 900,
+            outline: 'none',
+          }}
         />
       </div>
 
       {isReview ? (
-        <div className={`p-4 rounded-xl border text-center ${isCorrectReview ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-rose-50/50 border-rose-100 text-rose-800'}`}>
-          <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-60">
-            {isCorrectReview ? '拼写正确' : '正确答案'}
-          </p>
-          <p className="text-xl font-black">{correctAnswer}</p>
-          {!isCorrectReview && (
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold opacity-70">
-                  <X className="w-3 h-3" />
-                  <span>你的输入: {input || '(未填写)'}</span>
-              </div>
-          )}
-          {isCorrectReview && (
-              <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold opacity-70">
-                  <Check className="w-3 h-3" />
-                  <span>Perfect Score</span>
-              </div>
-          )}
+        <div
+          style={{
+            borderRadius: 16,
+            border: `1px solid ${isCorrectReview ? KT.mintDeep : KT.pinkDeep}`,
+            background: isCorrectReview ? `${KT.mint}55` : `${KT.pink}55`,
+            padding: '12px 14px',
+            color: isCorrectReview ? KT.mintDeep : KT.pinkDeep,
+          }}
+        >
+          <div className="mb-1 flex items-center gap-2 text-sm font-extrabold">
+            {isCorrectReview ? <Check size={16} /> : <X size={16} />}
+            <span>{isCorrectReview ? (labels.vocabTest?.correct || 'Correct') : (labels.vocabTest?.wrong || 'Wrong')}</span>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{correctAnswer}</div>
         </div>
       ) : (
-        <Button
-          variant="ghost"
-          size="auto"
+        <button
           type="button"
           onClick={submit}
           disabled={input.trim().length === 0}
-          className="w-full text-[13px] font-black text-white bg-slate-900 py-3.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.2)] active:scale-95 transition-transform tracking-widest disabled:opacity-40 disabled:pointer-events-none hover:bg-slate-900 hover:text-white"
+          style={{
+            width: '100%',
+            minHeight: 48,
+            borderRadius: 14,
+            border: 'none',
+            background: KT.ink,
+            color: KT.card,
+            fontSize: 14,
+            fontWeight: 800,
+            opacity: input.trim().length === 0 ? 0.45 : 1,
+          }}
         >
-          提交答案
-        </Button>
+          {labels.vocabTest?.confirm || 'Confirm'}
+        </button>
       )}
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
-import { Trophy, RefreshCw, Settings, X, Check, ChevronRight } from 'lucide-react';
+import { Trophy, RefreshCw, Settings, X, Check, ChevronRight, Volume2 } from 'lucide-react';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useTTS } from '../../../hooks/useTTS';
 import { getLabels, Labels } from '../../../utils/i18n';
@@ -457,7 +457,7 @@ const WritingSubmitButton: React.FC<{
       type="button"
       onClick={handleWritingSubmit}
       disabled={!writingInput.trim()}
-      className="w-full mt-4 py-4 bg-primary text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all disabled:opacity-50"
+      className="w-full mt-4 py-4 bg-primary text-white font-black rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50"
     >
       {labels.dashboard?.quiz?.submit || 'Submit Answer'}
     </Button>
@@ -486,7 +486,7 @@ const WritingInput: React.FC<WritingInputProps> = ({
   return (
     <div className="mb-6">
       <div
-        className={`rounded-2xl border-2 ${isLearn ? 'p-5' : 'p-6'} ${getWritingStateClass(writingState)}`}
+        className={`rounded-2xl border p-5 ${getWritingStateClass(writingState)}`}
       >
         <Input
           ref={inputRef}
@@ -496,7 +496,7 @@ const WritingInput: React.FC<WritingInputProps> = ({
           onKeyDown={e => e.key === 'Enter' && writingState === 'INPUT' && handleWritingSubmit()}
           placeholder={placeholder}
           disabled={writingState !== 'INPUT'}
-          className={`w-full !h-auto !px-0 !py-0 !border-0 !bg-transparent !shadow-none ${isLearn ? 'text-xl' : 'text-2xl'} font-bold text-center outline-none focus-visible:!ring-0`}
+          className="w-full !h-auto !px-0 !py-0 !border-0 !bg-transparent !shadow-none text-xl font-bold text-center outline-none focus-visible:!ring-0"
           autoFocus
         />
         <WritingFeedback
@@ -533,45 +533,62 @@ const MCOptions: React.FC<MCOptionsProps> = ({
   isLocked,
   isLearn,
 }) => {
-  const getOptionStateClass = (state: OptionState) => {
-    if (state === 'correct') return 'bg-green-200 text-green-700';
-    if (state === 'wrong') return 'bg-red-200 text-red-600';
-    return 'bg-muted text-muted-foreground';
-  };
-
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 ${isLearn ? 'gap-3' : 'gap-4'} mb-6`}>
+    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
       {options.map((option, index) => {
         const state = optionStates[index];
         const displayText = direction === 'KR_TO_NATIVE' ? option.english : option.korean;
-        let btnClass = `w-full bg-card border-2 border-foreground border-b-[6px] rounded-2xl text-foreground ${
-          isLearn ? 'p-4' : 'p-5'
-        } flex items-center gap-4 text-left transition-all`;
-        if (state === 'normal')
-          btnClass += ' hover:bg-muted active:border-b-2 active:translate-y-1';
-        else if (state === 'selected') btnClass += ' bg-yellow-50 border-yellow-400';
-        else if (state === 'correct') btnClass += ' bg-green-50 border-green-500 text-green-700';
-        else if (state === 'wrong')
-          btnClass += ' bg-red-50 border-red-500 text-red-600 animate-shake';
+        const correct = state === 'correct' || state === 'selected';
+        const wrong = state === 'wrong';
+        
+        let bg = '#FFFFFF';
+        let border = '1px solid #EBE8E2';
+        let badgeBg = '#FAF7F2';
+        let badgeColor = '#232220';
+        
+        if (correct) {
+          bg = '#E5ECE499';
+          border = '2px solid #5B8A72';
+          badgeBg = '#5B8A72';
+          badgeColor = '#FFFFFF';
+        } else if (wrong) {
+          bg = '#F5E6E4';
+          border = '2px solid #C05C46';
+          badgeBg = '#C05C46';
+          badgeColor = '#FFFFFF';
+        }
 
         return (
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
+            type="button"
             key={`${option.id}:${index}`}
             onClick={() => handleOptionClick(index)}
             disabled={isLocked}
-            className={btnClass}
+            style={{
+              padding: '14px 16px', borderRadius: 16,
+              background: bg, border: border,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              display: 'flex', alignItems: 'center', gap: 14,
+              cursor: isLocked ? 'default' : 'pointer',
+              width: '100%',
+              textAlign: 'left'
+            }}
           >
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${getOptionStateClass(state)}`}
-            >
-              {String.fromCodePoint(65 + index)}
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: badgeBg, color: badgeColor,
+              display: 'grid', placeItems: 'center',
+              fontSize: 13, fontWeight: 800, flexShrink: 0,
+              transition: 'all 0.2s'
+            }}>
+              {String.fromCharCode(65 + index)}
             </div>
-            <span className={`font-bold ${isLearn ? 'text-base' : 'text-lg'}`}>{displayText}</span>
-            {state === 'correct' && <span className="ml-auto text-2xl">✓</span>}
-            {state === 'wrong' && <span className="ml-auto text-2xl">✕</span>}
-          </Button>
+            <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: '#232220' }}>
+              {displayText}
+            </div>
+            {correct && <div style={{ fontSize: 14, color: '#5B8A72', fontWeight: 800 }}>✓</div>}
+            {wrong && <div style={{ fontSize: 14, color: '#C05C46', fontWeight: 800 }}>×</div>}
+          </button>
         );
       })}
     </div>
@@ -611,6 +628,7 @@ interface QuestionDisplayProps {
   questionText: string;
   isLearn: boolean;
   targetWord?: VocabItem;
+  onSpeak?: (text: string) => void;
 }
 
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
@@ -618,25 +636,31 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   questionText,
   isLearn,
   targetWord,
+  onSpeak,
 }) => (
-  <div
-    className={`text-center flex flex-col items-center justify-center ${isLearn ? 'mb-8' : 'mb-10'}`}
-  >
-    <p className={`text-sm text-muted-foreground font-bold uppercase ${isLearn ? 'mb-3' : 'mb-4'}`}>
+  <div style={{ padding: 24, borderRadius: 24, background: `linear-gradient(180deg, #FDF3D040 0%, #FFFFFF 70%)`, border: '1px solid #EBE8E2', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 14 }}>
+    <div style={{ fontSize: 11, color: '#8E877B', fontWeight: 800, letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
       {promptText}
-    </p>
-    <div className="flex flex-col items-center gap-3">
-      <h2 className={`${isLearn ? 'text-4xl sm:text-5xl' : 'text-6xl'} font-black text-foreground`}>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+      <div style={{ fontSize: 40, fontWeight: 800, color: '#232220', letterSpacing: -1.2, lineHeight: 1 }}>
         {questionText}
-      </h2>
-      {(targetWord?.partOfSpeech || targetWord?.pos) && (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase inline-block ${getPosColorClass(targetWord.partOfSpeech || targetWord.pos)}`}
+      </div>
+      {onSpeak && (
+        <button 
+          type="button" 
+          onClick={() => onSpeak(questionText)}
+          style={{ width: 38, height: 38, borderRadius: 19, border: 'none', background: '#232220', color: '#FAF7F2', fontSize: 14, cursor: 'pointer', display: 'grid', placeItems: 'center' }}
         >
-          {targetWord.partOfSpeech || targetWord.pos}
-        </span>
+          <Volume2 className="w-4 h-4" />
+        </button>
       )}
     </div>
+    {(targetWord?.partOfSpeech || targetWord?.pos) && (
+      <div style={{ fontSize: 13, color: '#8E877B', marginTop: 8, fontStyle: 'italic' }}>
+        “{targetWord.partOfSpeech || targetWord.pos}”
+      </div>
+    )}
   </div>
 );
 
@@ -647,22 +671,7 @@ interface ScoreBadgeProps {
   isLearn: boolean;
 }
 
-const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting, isLearn }) => (
-  <div
-    className={`text-center flex items-center justify-center gap-3 ${isLearn ? 'mb-3' : 'mb-4'}`}
-  >
-    <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full font-bold text-sm">
-      ✓ {correctCount} {labels.dashboard?.quiz?.correct || 'Correct'}
-    </span>
-    <span
-      className={`px-3 py-1 rounded-full font-bold text-xs ${isWriting ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}
-    >
-      {isWriting
-        ? `✏️ ${labels.dashboard?.quiz?.writing || 'Writing'}`
-        : `📝 ${labels.dashboard?.quiz?.select || 'Select'}`}
-    </span>
-  </div>
-);
+const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting }) => null;
 
 interface ProgressHeaderProps {
   labels: Labels;
@@ -672,6 +681,8 @@ interface ProgressHeaderProps {
   settingsLocked: boolean;
   setShowSettings: (show: boolean) => void;
   isLearn: boolean;
+  questions?: readonly QuizQuestion[];
+  wrongWords?: readonly VocabItem[];
 }
 
 const ProgressHeader: React.FC<ProgressHeaderProps> = ({
@@ -682,40 +693,52 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   settingsLocked,
   setShowSettings,
   isLearn,
+  questions,
+  wrongWords,
 }) => (
-  <div className={isLearn ? 'mb-6' : 'mb-8'}>
-    <div className="flex justify-between items-center text-xs font-bold text-muted-foreground mb-1">
-      <div className="flex items-center gap-2">
-        <span>{labels.dashboard?.quiz?.progress || 'Progress'}</span>
-        {currentBatchNum > 1 && (
-          <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-[10px]">
-            {labels.dashboard?.quiz?.round?.replace('{n}', currentBatchNum.toString()) ||
-              `Round ${currentBatchNum}`}
-          </span>
-        )}
+  <div style={{ width: '100%' }}>
+    <div style={{ padding: '24px 0 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <button 
+        type="button"
+        onClick={() => !settingsLocked && setShowSettings(true)}
+        style={{ width: 36, height: 36, borderRadius: 18, border: 'none', background: '#FFFFFF', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', color: '#232220', fontWeight: 700, display: 'grid', placeItems: 'center' }}
+      >
+        ×
+      </button>
+      <div style={{ flex: 1, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#8E877B', fontWeight: 700, letterSpacing: 1 }}>
+          {isLearn ? `${labels.learn}模式 · 學` : `${labels.vocab?.quiz || 'QUIZ'}模式 · 試`}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#232220', marginTop: 2 }}>
+          第 {questionIndex + 1} 题 / {totalQuestions}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span>
-          {questionIndex + 1} / {totalQuestions}
-        </span>
-        {!settingsLocked && (
-          <Button
-            variant="ghost"
-            size="auto"
-            type="button"
-            onClick={() => setShowSettings(true)}
-            className="p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        )}
+      <div style={{ padding: '6px 10px', borderRadius: 14, background: '#232220', color: '#FAF7F2', fontSize: 12, fontWeight: 800 }}>
+        02:14
       </div>
     </div>
-    <div className="h-2 bg-muted rounded-full overflow-hidden">
-      <div
-        className="h-full bg-[#4ADE80] transition-all"
-        style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
-      />
+
+    {/* Progress pellets */}
+    <div style={{ padding: '6px 0 12px', display: 'flex', gap: 3, width: '100%' }}>
+      {Array.from({ length: totalQuestions }).map((_, i) => {
+        const done = i < questionIndex;
+        const cur = i === questionIndex;
+        
+        let background = '#DCD9CE';
+        if (cur) background = '#232220';
+        else if (done) {
+          const targetWordId = questions?.[i]?.targetWord?.id;
+          const wasWrong = wrongWords?.some(w => w.id === targetWordId);
+          background = wasWrong ? '#C05C46' : '#5B8A72';
+        }
+        
+        return (
+          <div key={i} style={{
+            flex: 1, height: 5, borderRadius: 3,
+            background: background, transition: 'all 0.2s'
+          }} />
+        );
+      })}
     </div>
   </div>
 );
@@ -766,25 +789,25 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
   const finishedText = getFinishedText(labels, variant);
 
   return (
-    <div className="bg-card rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8 text-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-green-50" />
+    <div className="bg-card rounded-3xl border border-border shadow-sm p-8 text-center relative overflow-hidden max-w-4xl mx-auto">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/80 to-transparent" />
       <div className="relative z-10">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-          <Trophy className="w-12 h-12 text-green-600" />
+        <div className="w-20 h-20 mx-auto mb-5 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shadow-sm">
+          <Trophy className="w-10 h-10 text-emerald-600" />
         </div>
-        <h2 className="text-4xl font-black text-foreground mb-2">{completeTitle}</h2>
-        <p className="text-muted-foreground mb-6">{finishedText}</p>
-        <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
-          <div className="bg-card border-2 border-border rounded-xl p-4">
-            <div className="text-3xl font-black text-foreground">
+        <h2 className="text-3xl font-black text-foreground mb-2">{completeTitle}</h2>
+        <p className="text-muted-foreground mb-6 text-sm">{finishedText}</p>
+        <div className="grid grid-cols-2 gap-3 mb-8 max-w-sm mx-auto">
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <div className="text-2xl font-black text-foreground">
               {correctCount}/{finalTotal}
             </div>
             <div className="text-xs text-muted-foreground font-bold">
               {labels.dashboard?.quiz?.correctCount || 'Correct'}
             </div>
           </div>
-          <div className="bg-card border-2 border-border rounded-xl p-4">
-            <div className="text-3xl font-black text-foreground">{percentage}%</div>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <div className="text-2xl font-black text-foreground">{percentage}%</div>
             <div className="text-xs text-muted-foreground font-bold">
               {labels.dashboard?.quiz?.accuracy || 'Accuracy'}
             </div>
@@ -795,18 +818,18 @@ const CompleteScreen: React.FC<CompleteScreenProps> = ({
             variant="ghost"
             size="auto"
             onClick={restartGame}
-            className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-card border-2 border-foreground text-foreground font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border text-foreground font-black rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
           >
-            <RefreshCw className="w-5 h-5" /> {labels.dashboard?.quiz?.again || 'Try Again'}
+            <RefreshCw className="w-4 h-4" /> {labels.dashboard?.quiz?.again || 'Try Again'}
           </Button>
           {hasNextUnit && onNextUnit && (
             <Button
               variant="ghost"
               size="auto"
               onClick={onNextUnit}
-              className="inline-flex items-center justify-center gap-2 px-6 py-4 bg-green-500 border-2 border-green-600 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] hover:-translate-y-1 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
             >
-              {labels.dashboard?.quiz?.nextUnit || 'Next Unit'} <ChevronRight className="w-5 h-5" />
+              {labels.dashboard?.quiz?.nextUnit || 'Next Unit'} <ChevronRight className="w-4 h-4" />
             </Button>
           )}
         </div>
@@ -1534,6 +1557,8 @@ interface QuizContentProps {
   setWritingInput: (value: string) => void;
   writingState: WritingState;
   handleWritingSubmit: () => void;
+  questions?: readonly QuizQuestion[];
+  wrongWords?: readonly VocabItem[];
 }
 
 function getQuizPromptText(
@@ -1551,25 +1576,41 @@ function getQuizPromptText(
     : labels.dashboard?.quiz?.questionKorean || 'What is the Korean word?';
 }
 
-const DontKnowAction: React.FC<{
-  visible: boolean;
-  handleDontKnow: () => void;
+const ExplanationBanner: React.FC<{
+  targetWord: VocabItem;
+  direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
   isLocked: boolean;
-  labels: Labels;
-}> = ({ visible, handleDontKnow, isLocked, labels }) => {
-  if (!visible) return null;
+  language: Language;
+}> = ({ targetWord, direction, isLocked, language }) => {
+  if (!isLocked) return null;
+  
+  const wordText = targetWord.korean;
+  const meaningText = targetWord.english;
+  
+  const expText = language === 'zh'
+    ? `「${wordText}」的意思是「${meaningText}」。`
+    : language === 'en'
+    ? `The meaning of "${wordText}" is "${meaningText}".`
+    : `"${wordText}" translates to "${meaningText}".`;
+    
   return (
-    <div className="flex items-center justify-end">
-      <Button
-        variant="ghost"
-        size="auto"
-        type="button"
-        onClick={handleDontKnow}
-        disabled={isLocked}
-        className="text-sm font-black text-blue-600 hover:text-blue-700 disabled:opacity-50"
-      >
-        {labels.vocabQuiz?.dontKnow || "I don't know"}
-      </Button>
+    <div style={{ padding: 14, marginTop: 12, background: '#E5ECE440', borderRadius: 16, border: 'none', marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 9, background: '#5B8A72', color: '#FFFFFF',
+          display: 'grid', placeItems: 'center', fontFamily: 'serif', fontSize: 14, fontWeight: 500, flexShrink: 0
+        }}>
+          解
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#5B8A72', fontWeight: 800, letterSpacing: 1 }}>
+            {language === 'zh' ? '答案解析' : 'Explanation'}
+          </div>
+          <div style={{ fontSize: 12, color: '#3A3937', marginTop: 3, lineHeight: 1.5, fontWeight: 500 }}>
+            {expText}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1597,6 +1638,8 @@ const QuizContent: React.FC<QuizContentProps> = ({
   setWritingInput,
   writingState,
   handleWritingSubmit,
+  questions,
+  wrongWords,
 }) => {
   const isWriting = currentQuestion.type === 'WRITING';
   const questionText =
@@ -1604,83 +1647,93 @@ const QuizContent: React.FC<QuizContentProps> = ({
       ? currentQuestion.targetWord.english
       : currentQuestion.targetWord.korean;
   const promptText = getQuizPromptText(currentQuestion, labels, isWriting);
-  const containerClass = isLearn
-    ? 'rounded-3xl border border-border shadow-sm p-6 sm:p-7 max-w-4xl mx-auto'
-    : 'rounded-[2.5rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-8';
-  const showDontKnow = isLearn && !pendingAdvance && !isWriting && Boolean(currentQuestion.options);
+  const showSkip = !isWriting && !isLocked && !pendingAdvance && Boolean(currentQuestion.options);
+  const { speak: speakTTS } = useTTS();
 
   return (
-    <div className={`bg-card ${containerClass}`}>
-      <ProgressHeader
-        labels={labels}
-        currentBatchNum={currentBatchNum}
-        questionIndex={questionIndex}
-        totalQuestions={totalQuestions}
-        settingsLocked={settingsLocked}
-        setShowSettings={setShowSettings}
-        isLearn={isLearn}
-      />
-
-      <ScoreBadge
-        correctCount={correctCount}
-        labels={labels}
-        isWriting={isWriting}
-        isLearn={isLearn}
-      />
-
-      <QuestionDisplay
-        promptText={promptText}
-        questionText={questionText}
-        isLearn={isLearn}
-        targetWord={currentQuestion.targetWord}
-      />
-
-      {!isWriting && currentQuestion.options && (
-        <MCOptions
-          options={currentQuestion.options}
-          direction={currentQuestion.direction}
-          optionStates={optionStates}
-          handleOptionClick={handleOptionClick}
-          isLocked={isLocked}
-          isLearn={isLearn}
-        />
-      )}
-
-      <DontKnowAction
-        visible={showDontKnow}
-        handleDontKnow={handleDontKnow}
-        isLocked={isLocked}
-        labels={labels}
-      />
-
-      {pendingAdvance ? (
-        <PendingAdvanceBanner
-          language={language}
-          onContinue={() => {
-            setPendingAdvanceReason(null);
-            nextQuestionRef.current?.();
-          }}
-        />
-      ) : null}
-
-      {isWriting && (
-        <WritingInput
-          inputRef={inputRef}
-          writingInput={writingInput}
-          setWritingInput={setWritingInput}
-          writingState={writingState}
-          handleWritingSubmit={handleWritingSubmit}
-          direction={currentQuestion.direction}
-          targetWord={currentQuestion.targetWord}
+    <div style={{ position: 'absolute', inset: 0, background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, padding: '0 22px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <ProgressHeader
           labels={labels}
+          currentBatchNum={currentBatchNum}
+          questionIndex={questionIndex}
+          totalQuestions={totalQuestions}
+          settingsLocked={settingsLocked}
+          setShowSettings={setShowSettings}
           isLearn={isLearn}
+          questions={questions}
+          wrongWords={wrongWords}
         />
-      )}
 
-      <style>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
-      `}</style>
+        <QuestionDisplay
+          promptText={promptText}
+          questionText={questionText}
+          isLearn={isLearn}
+          targetWord={currentQuestion.targetWord}
+          onSpeak={speakTTS}
+        />
+
+        <ExplanationBanner 
+          targetWord={currentQuestion.targetWord}
+          direction={currentQuestion.direction}
+          isLocked={isLocked}
+          language={language}
+        />
+
+        {!isWriting && currentQuestion.options && (
+          <MCOptions
+            options={currentQuestion.options}
+            direction={currentQuestion.direction}
+            optionStates={optionStates}
+            handleOptionClick={handleOptionClick}
+            isLocked={isLocked}
+            isLearn={isLearn}
+          />
+        )}
+
+        {isWriting && (
+          <WritingInput
+            inputRef={inputRef}
+            writingInput={writingInput}
+            setWritingInput={setWritingInput}
+            writingState={writingState}
+            handleWritingSubmit={handleWritingSubmit}
+            direction={currentQuestion.direction}
+            targetWord={currentQuestion.targetWord}
+            labels={labels}
+            isLearn={isLearn}
+          />
+        )}
+      </div>
+
+      <div style={{ padding: '12px 22px 32px', borderTop: '1px solid #EBE8E2', background: '#FFFFFF', display: 'flex', gap: 8 }}>
+        {showSkip ? (
+          <button
+            type="button"
+            onClick={handleDontKnow}
+            style={{ flex: 0.35, padding: 14, borderRadius: 16, border: '1px solid #DCD9CE', background: '#FFFFFF', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: '#232220' }}
+          >
+            {language === 'zh' ? '跳过' : 'Skip'}
+          </button>
+        ) : (
+          <div style={{ flex: 0.35 }} />
+        )}
+
+        {pendingAdvance ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPendingAdvanceReason(null);
+              nextQuestionRef.current?.();
+            }}
+            style={{ flex: 1, padding: 14, borderRadius: 16, border: 'none', background: '#232220', color: '#FAF7F2', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
+          >
+            {language === 'zh' ? '下一题 →' : 'Next Question →'}
+          </button>
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
+      </div>
     </div>
   );
 };
@@ -1983,6 +2036,8 @@ function VocabQuizComponent({
         setWritingInput={setWritingInput}
         writingState={writingState}
         handleWritingSubmit={handleWritingSubmit}
+        questions={questions}
+        wrongWords={wrongWords}
       />
     </>
   );

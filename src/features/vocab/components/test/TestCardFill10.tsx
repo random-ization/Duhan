@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Info, ChevronRight } from 'lucide-react';
 import type { Language } from '../../../../types';
-import { Button } from '../../../../components/ui';
+import { getLabels } from '../../../../utils/i18n';
+import { KT } from '../../../../components/mobile/ksoft/ksoft';
 
 type Pair = { korean: string; native: string };
 
@@ -81,12 +82,14 @@ function buildReviewPairs(answered: Answer | undefined, items: readonly Item[]):
 }
 
 export default function TestCardFill10({
+  language,
   items,
   initialDirection,
   answered,
   mode = 'test',
   onSubmit,
 }: Props) {
+  const labels = getLabels(language);
   const isReview = mode === 'review' && !!answered;
   const direction = answered?.directionUsed || initialDirection;
 
@@ -162,15 +165,20 @@ export default function TestCardFill10({
 
   return (
     <div className="flex flex-col">
-      <div className="mb-6 text-center">
-        <p className="mb-1 text-[11px] font-black tracking-[0.2em] text-slate-500">十选一配对</p>
-        <p className="text-[10px] font-bold tracking-widest text-slate-400">
-          请将左侧韩语与右侧释义一一对应
+      <div className="mb-4 text-center">
+        <p style={{ marginBottom: 4, fontSize: 12, fontWeight: 800, color: KT.sub, letterSpacing: 0.5 }}>
+          {labels.vocabTest?.fillPrompt || 'Complete the blanks'}
+        </p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: KT.sub }}>
+          {labels.vocabTest?.pickFromList || 'Pick from the list below'}
         </p>
       </div>
 
-      <div className="relative grid grid-cols-2 gap-x-4 gap-y-3 pb-6">
-        <div className="pointer-events-none absolute bottom-6 left-1/2 top-0 -translate-x-[1px] border-l-2 border-dashed border-slate-200" />
+      <div className="relative grid grid-cols-2 gap-x-3 gap-y-2.5 pb-4">
+        <div
+          className="pointer-events-none absolute bottom-4 left-1/2 top-0 -translate-x-[1px]"
+          style={{ borderLeft: `1px dashed ${KT.line2}` }}
+        />
 
         <div className="flex flex-col space-y-3">
           {leftCol.map(item => {
@@ -178,21 +186,48 @@ export default function TestCardFill10({
             const isSelected = selectedLeft === item.id;
 
             return (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={item.id}
                 type="button"
                 onClick={() => handleKeyClick('left', item.id)}
-                className={`vt-match-key w-full rounded-xl px-2 py-3.5 flex items-center justify-center transition-all ${isSelected ? 'selected' : ''} ${pairNum ? 'paired hover:bg-[#F1F5F9]' : 'hover:bg-gradient-to-b hover:from-white hover:to-[#F8F9FA]'}`}
+                style={{
+                  width: '100%',
+                  minHeight: 54,
+                  borderRadius: 14,
+                  border:
+                    pairNum != null
+                      ? `1px solid ${KT.mintDeep}`
+                      : isSelected
+                        ? `1px solid ${KT.mintDeep}`
+                        : `1px solid ${KT.line}`,
+                  background: pairNum != null || isSelected ? `${KT.mint}55` : KT.card,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  padding: '0 8px',
+                }}
               >
-                <span className="text-[15px] font-black tracking-wide">{item.text}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: KT.ink }}>{item.text}</span>
                 <div
-                  className={`absolute right-0 top-0 rounded-bl-lg bg-blue-500 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm transition-all duration-200 ${pairNum ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: 6,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    background: pairNum != null ? KT.mintDeep : 'transparent',
+                    color: KT.card,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
                 >
-                  {pairNum || ''}
+                  {pairNum ?? ''}
                 </div>
-              </Button>
+              </button>
             );
           })}
         </div>
@@ -203,48 +238,86 @@ export default function TestCardFill10({
             const isSelected = selectedRight === item.id;
 
             return (
-              <Button
-                variant="ghost"
-                size="auto"
+              <button
                 key={item.id}
                 type="button"
                 onClick={() => handleKeyClick('right', item.id)}
-                className={`vt-match-key w-full rounded-xl px-2 py-3.5 flex items-center justify-center transition-all ${isSelected ? 'selected' : ''} ${pairNum ? 'paired hover:bg-[#F1F5F9]' : 'hover:bg-gradient-to-b hover:from-white hover:to-[#F8F9FA]'}`}
+                style={{
+                  width: '100%',
+                  minHeight: 54,
+                  borderRadius: 14,
+                  border:
+                    pairNum != null
+                      ? `1px solid ${KT.mintDeep}`
+                      : isSelected
+                        ? `1px solid ${KT.mintDeep}`
+                        : `1px solid ${KT.line}`,
+                  background: pairNum != null || isSelected ? `${KT.mint}55` : KT.card,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  padding: '0 8px',
+                }}
               >
-                <span className="text-center text-[14px] font-bold tracking-wide text-slate-700">
+                <span style={{ textAlign: 'center', fontSize: 14, fontWeight: 700, color: KT.ink }}>
                   {item.text}
                 </span>
                 <div
-                  className={`absolute right-0 top-0 rounded-bl-lg bg-blue-500 px-1.5 py-0.5 text-[10px] font-black text-white shadow-sm transition-all duration-200 ${pairNum ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: 6,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    background: pairNum != null ? KT.mintDeep : 'transparent',
+                    color: KT.card,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
                 >
-                  {pairNum || ''}
+                  {pairNum ?? ''}
                 </div>
-              </Button>
+              </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-5">
-        <div className="flex items-center space-x-2 text-[11px] font-bold text-slate-400">
+      <div className="mt-3 flex items-center justify-between border-t pt-4" style={{ borderColor: KT.line }}>
+        <div className="flex items-center space-x-2 text-[11px] font-bold" style={{ color: KT.sub }}>
           <Info className="h-3.5 w-3.5" />
           <span>
-            已连线 <span className="font-black text-blue-600">{progress}</span>/{items.length}
+            {labels.vocabTest?.answered || 'Answered'}{' '}
+            <span style={{ fontWeight: 900, color: KT.mintDeep }}>{progress}</span>/{items.length}
           </span>
         </div>
 
         {!isReview && (
-          <Button
-            variant="ghost"
-            size="auto"
+          <button
             type="button"
             onClick={handleSubmit}
             disabled={!isAllPaired}
-            className={`disable-hover-state flex items-center space-x-1.5 rounded-xl px-6 py-3 text-[13px] font-black tracking-widest text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)] transition-all active:scale-95 ${isAllPaired ? 'bg-blue-600 hover:bg-blue-600 hover:text-white' : 'pointer-events-none bg-slate-900 opacity-40 hover:bg-slate-900'}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              borderRadius: 12,
+              padding: '10px 16px',
+              fontSize: 13,
+              fontWeight: 800,
+              border: 'none',
+              color: KT.card,
+              background: KT.ink,
+              opacity: isAllPaired ? 1 : 0.42,
+            }}
           >
-            <span>下一题</span>
+            <span>{labels.vocabTest?.nextQuestion || 'Next'}</span>
             <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         )}
       </div>
     </div>

@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../component
 import { Button } from '../components/ui';
 import { Switch } from '../components/ui';
 import { buildVocabBookPath } from '../utils/vocabBookRoutes';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   matchesVocabBookPracticeCategory,
   normalizeVocabBookPracticeCategory,
@@ -401,7 +402,11 @@ const DictationContent = ({
 };
 
 const DictationPageShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-[#F5EFE2] text-[#1F1B17]">{children}</div>
+  <div className="min-h-screen bg-[#F5EFE2] text-[#1F1B17] lg:bg-k-bg lg:min-h-[calc(100vh-64px)]">
+    <div className="lg:max-w-4xl lg:mx-auto lg:py-8">
+      {children}
+    </div>
+  </div>
 );
 
 const DictationTopBar = ({
@@ -536,6 +541,7 @@ const DictationSettingsDialog = ({
 const VocabBookDictationPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
+  const isMobile = useIsMobile();
   const labels = useMemo(() => getLabels(language), [language]);
   const meaningVoice = useMemo(() => resolveMeaningVoice(language), [language]);
   const [params] = useSearchParams();

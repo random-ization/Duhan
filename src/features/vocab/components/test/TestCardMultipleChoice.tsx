@@ -1,5 +1,7 @@
-import { Button } from '../../../../components/ui';
+import { Check } from 'lucide-react';
 import type { Language } from '../../../../types';
+import { getLabels } from '../../../../utils/i18n';
+import { KT } from '../../../../components/mobile/ksoft/ksoft';
 
 type Answer = {
   selectedIndex: number;
@@ -17,78 +19,99 @@ type Props = Readonly<{
   onSubmit: (selectedIndex: number) => void;
 }>;
 
-const OptionButton = ({
-  opt,
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
+
+function OptionButton({
+  text,
   idx,
   isSelected,
   isReview,
   correctIndex,
   onSelect,
-}: {
-  opt: string;
+}: Readonly<{
+  text: string;
   idx: number;
   isSelected: boolean;
   isReview: boolean;
   correctIndex?: number;
-  onSelect: (idx: number) => void;
-}) => {
-  const isCorrect = idx === correctIndex;
-  const isCorrectChoice = isReview && isSelected && isCorrect;
-  const isWrongChoice = isReview && isSelected && !isCorrect;
-  const isCorrectNotSelected = isReview && isCorrect && !isSelected;
+  onSelect: (index: number) => void;
+}>) {
+  const isCorrect = typeof correctIndex === 'number' && idx === correctIndex;
+  const showCorrect = isReview && isCorrect;
+  const showWrong = isReview && isSelected && !isCorrect;
 
-  let containerClass = 'vt-test-option w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between group transition-all';
-  let letterClass = 'w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-[11px] font-black transition-colors';
-  let labelClass = 'font-bold text-[15px] tracking-wide transition-colors';
+  let border: string = `1px solid ${KT.line}`;
+  let background: string = KT.card;
+  let letterBg: string = KT.bg2;
+  let letterColor: string = KT.ink;
+  let textColor: string = KT.ink;
+  let iconColor: string = 'transparent';
 
-  if (isSelected || isCorrectChoice) {
-    containerClass += ' selected';
+  if (isSelected && !isReview) {
+    border = `1px solid ${KT.mintDeep}`;
+    background = `${KT.mint}66`;
+    letterBg = KT.mintDeep;
+    letterColor = KT.card;
   }
 
-  // Handle Review colors override
-  if (isReview) {
-    if (isCorrectChoice) {
-      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between bg-emerald-50 border-emerald-500 shadow-sm transition-all';
-      labelClass = 'option-label font-bold text-[15px] tracking-wide text-emerald-700';
-      letterClass = 'option-letter w-7 h-7 rounded-full bg-emerald-500 border-emerald-600 flex items-center justify-center text-[11px] font-black text-white';
-    } else if (isWrongChoice) {
-      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between bg-rose-50 border-rose-500 shadow-sm transition-all';
-      labelClass = 'option-label font-bold text-[15px] tracking-wide text-rose-700';
-      letterClass = 'option-letter w-7 h-7 rounded-full bg-rose-500 border-rose-600 flex items-center justify-center text-[11px] font-black text-white';
-    } else if (isCorrectNotSelected) {
-      containerClass = 'w-full rounded-[1.2rem] py-4 px-5 flex items-center justify-between border-dashed border-emerald-300 bg-emerald-50/30 transition-all';
-      labelClass = 'option-label font-bold text-[15px] tracking-wide text-emerald-600';
-      letterClass = 'option-letter w-7 h-7 rounded-full border border-emerald-300 flex items-center justify-center text-[11px] font-black text-emerald-500';
-    } else {
-      labelClass += ' option-label text-slate-400';
-      letterClass += ' option-letter text-slate-300 bg-slate-50';
-    }
-  } else if (isSelected) {
-    labelClass += ' option-label';
-    letterClass += ' option-letter';
-  } else {
-    labelClass += ' option-label text-slate-700';
-    letterClass += ' option-letter text-slate-400 bg-white';
+  if (showCorrect) {
+    border = `2px solid ${KT.mintDeep}`;
+    background = `${KT.mint}66`;
+    letterBg = KT.mintDeep;
+    letterColor = KT.card;
+    iconColor = KT.mintDeep;
+  } else if (showWrong) {
+    border = `2px solid ${KT.pinkDeep}`;
+    background = `${KT.pink}66`;
+    letterBg = KT.pinkDeep;
+    letterColor = KT.card;
+    textColor = KT.pinkDeep;
   }
-
-  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return (
-    <Button
-      variant="ghost"
-      size="auto"
+    <button
       type="button"
-      disabled={isReview}
       onClick={() => onSelect(idx)}
-      className={containerClass}
+      disabled={isReview}
+      style={{
+        width: '100%',
+        minHeight: 66,
+        borderRadius: 18,
+        border,
+        background,
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        textAlign: 'left',
+      }}
     >
-      <span className={labelClass}>{opt}</span>
-      <span className={letterClass}>{letters[idx] || '?'}</span>
-    </Button>
+      <span
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          background: letterBg,
+          color: letterColor,
+          fontSize: 22,
+          fontFamily: KT.serif,
+          fontWeight: 600,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+          lineHeight: 1,
+        }}
+      >
+        {LETTERS[idx] || '?'}
+      </span>
+      <span style={{ flex: 1, color: textColor, fontSize: 16, fontWeight: 800 }}>{text}</span>
+      <Check size={18} color={iconColor} />
+    </button>
   );
-};
+}
 
 export default function TestCardMultipleChoice({
+  language,
   prompt,
   options,
   answered,
@@ -96,21 +119,24 @@ export default function TestCardMultipleChoice({
   correctIndex,
   onSubmit,
 }: Props) {
+  const labels = getLabels(language);
   const isReview = mode === 'review' && typeof correctIndex === 'number';
 
   return (
     <div className="flex flex-col">
-      <div className="text-center mb-8">
-        <p className="text-[11px] font-black text-slate-500 tracking-[0.2em] mb-4">选择正确的含义</p>
-        <h4 className="text-5xl font-black text-slate-900 tracking-tight">{prompt}</h4>
+      <div style={{ marginBottom: 14 }}>
+        <p style={{ marginBottom: 8, fontSize: 12, fontWeight: 800, color: KT.sub, letterSpacing: 0.5 }}>
+          {labels.vocabTest?.chooseAnswer || 'Choose an answer'}
+        </p>
+        <h4 style={{ fontSize: 44, fontWeight: 900, color: KT.ink, lineHeight: 1.08 }}>{prompt}</h4>
       </div>
 
-      <div className="space-y-3.5">
+      <div className="space-y-3">
         {options.map((opt, idx) => (
           <OptionButton
-            key={`${opt}-${idx}`}
+            key={`${idx}-${opt}`}
             idx={idx}
-            opt={opt}
+            text={opt}
             isSelected={answered?.selectedIndex === idx}
             isReview={isReview}
             correctIndex={correctIndex}
@@ -121,4 +147,3 @@ export default function TestCardMultipleChoice({
     </div>
   );
 }
-
