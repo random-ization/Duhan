@@ -4,7 +4,6 @@ import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { LocalizedLink } from '../components/LocalizedLink';
-import { Button } from '../components/ui';
 import {
   getLearnGuideKeyBySlug,
   getLearnGuideMeta,
@@ -110,14 +109,12 @@ const LearnGuidePage: React.FC = () => {
         <div className="mx-auto flex max-w-2xl flex-col items-center px-6 py-24 text-center">
           <h1 className="text-3xl font-black">{pageCopy.guideNotFoundHeading}</h1>
           <p className="mt-3 text-slate-600">{pageCopy.guideNotFoundBody}</p>
-          <Button
-            asChild
-            variant="ghost"
-            size="auto"
-            className="mt-6 rounded-xl border border-slate-200 bg-white px-4 py-2"
+          <LocalizedLink
+            to="/learn"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
           >
-            <LocalizedLink to="/learn">{pageCopy.backToLearnHub}</LocalizedLink>
-          </Button>
+            {pageCopy.backToLearnHub}
+          </LocalizedLink>
         </div>
       </div>
     );
@@ -259,17 +256,13 @@ const LearnGuidePage: React.FC = () => {
       />
 
       <article className="mx-auto max-w-4xl px-6 py-14 md:py-18">
-        <Button
-          asChild
-          variant="ghost"
-          size="auto"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+        <LocalizedLink
+          to="/learn"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
         >
-          <LocalizedLink to="/learn">
-            <ArrowLeft className="h-4 w-4" />
-            {hub.title}
-          </LocalizedLink>
-        </Button>
+          <ArrowLeft className="h-4 w-4" />
+          {hub.title}
+        </LocalizedLink>
 
         <header className="mt-6 border-b border-slate-200 pb-8">
           <h1 className="text-3xl font-black leading-tight md:text-5xl">{guide.title}</h1>
@@ -365,17 +358,13 @@ const LearnGuidePage: React.FC = () => {
             <h2 className="text-xl font-black">{pageCopy.readyTitle}</h2>
             <p className="mt-2 text-sm text-slate-600 md:text-base">{pageCopy.readyBody}</p>
           </div>
-          <Button
-            asChild
-            variant="ghost"
-            size="auto"
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white md:mt-0"
+          <LocalizedLink
+            to={guide.ctaTo}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white transition hover:bg-slate-800 md:mt-0"
           >
-            <LocalizedLink to={guide.ctaTo}>
-              {guide.ctaLabel}
-              <ArrowRight className="h-4 w-4" />
-            </LocalizedLink>
-          </Button>
+            {guide.ctaLabel}
+            <ArrowRight className="h-4 w-4" />
+          </LocalizedLink>
         </section>
       </article>
     </div>

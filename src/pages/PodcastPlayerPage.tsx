@@ -60,6 +60,14 @@ import { resolveSafeReturnTo } from '../utils/navigation';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { normalizePublicAssetUrl } from '../utils/imageSrc';
 import { KT } from '../components/mobile/ksoft/ksoft';
+import { lazy, Suspense } from 'react';
+import { ContentSkeleton } from '../components/common';
+
+const DesktopPodcastPlayerPage = lazy(() =>
+  import('./desktop/DesktopPodcastPlayerPage').then(module => ({
+    default: module.DesktopPodcastPlayerPage,
+  }))
+);
 
 // Types
 interface TranscriptLine {
@@ -1594,6 +1602,14 @@ const PodcastPlayerPage: React.FC = () => {
     [state, searchParams]
   );
   const channel = useMemo(() => resolvePodcastChannel(state), [state]);
+  const breadcrumbItems = useMemo(
+    () => [
+      { label: 'Media', path: buildMediaPath('podcast') },
+      { label: channel.title, path: backPath },
+      { label: episode.title },
+    ],
+    [channel.title, episode.title, backPath]
+  );
 
   useEffect(() => {
     if (!episode.audioUrl) {
@@ -2606,6 +2622,81 @@ const PodcastPlayerPage: React.FC = () => {
     const match = episode.title.match(/(\d{1,3})/);
     return match ? match[1] : '—';
   })();
+
+  if (!isMobile) {
+    return (
+      <Suspense fallback={<ContentSkeleton />}>
+        <DesktopPodcastPlayerPage
+          navigate={navigate}
+          returnToPath={backPath}
+          channel={channel}
+          episode={episode}
+          breadcrumbItems={breadcrumbItems}
+          copy={copy}
+          showTranscriptResetConfirm={showTranscriptResetConfirm}
+          setShowTranscriptResetConfirm={setShowTranscriptResetConfirm}
+          isGeneratingTranscript={isGeneratingTranscript}
+          transcriptLoading={transcriptLoading}
+          handleConfirmRegenerateTranscript={handleConfirmRegenerateTranscript}
+          showPlaylist={showPlaylist}
+          setShowPlaylist={setShowPlaylist}
+          playlist={playlist}
+          playEpisode={playEpisode}
+          formatTime={formatTime}
+          analyzingLine={analyzingLine}
+          showAnalysis={showAnalysis}
+          analysisLoading={analysisLoading}
+          analysisData={analysisData}
+          setShowAnalysis={setShowAnalysis}
+          scrollRef={scrollRef}
+          showTranscriptLoader={showTranscriptLoader}
+          transcriptError={transcriptError}
+          transcript={transcript}
+          activeLineIndex={activeLineIndex}
+          currentTime={currentTime}
+          showTranslation={showTranslation}
+          setShowTranslation={setShowTranslation}
+          translationLabel={translationLabel}
+          translationStatusLabel={translationStatusLabel}
+          onRegenerate={() => setShowTranscriptResetConfirm(true)}
+          onToggleSubscription={toggleSubscription}
+          subscriptionPending={subscriptionPending}
+          isSubscribed={isSubscribed}
+          onShare={handleShareEpisode}
+          progressPercent={progressPercent}
+          effectiveDuration={effectiveDuration}
+          seekTo={seekTo}
+          safeCurrentTime={safeCurrentTime}
+          remainingTime={remainingTime}
+          speed={speed}
+          changeSpeed={changeSpeed}
+          toggleLoop={toggleLoop}
+          getAbLoopClassName={getAbLoopClassName}
+          getAbLoopLabel={getAbLoopLabel}
+          skip={skip}
+          togglePlay={togglePlay}
+          isPlaying={isPlaying}
+          volume={volume}
+          setVolume={setVolume}
+          audioRef={audioRef}
+          handleTimeUpdate={handleTimeUpdate}
+          setDuration={setDuration}
+          fallbackDuration={fallbackDuration}
+          setIsLoading={setIsLoading}
+          setIsPlaying={setIsPlaying}
+          viewerAccess={viewerAccess}
+          onRetry={() => loadTranscriptChunked(true)}
+          onSeek={seekTo}
+          onAnalyze={analyze}
+          TranscriptStreamBody={TranscriptStreamBody}
+          EpisodeUtilityControls={EpisodeUtilityControls}
+          PlaylistSheetBody={PlaylistSheetBody}
+          PlayPauseIcon={PlayPauseIcon}
+          AnalysisDialog={AnalysisDialog}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <div

@@ -19,6 +19,8 @@ import { appendReturnToPath, hasSafeReturnTo } from '../../utils/navigation';
 import { MobileExamSession } from '../mobile/topik/MobileExamSession';
 import { MobileExamReview } from '../mobile/topik/MobileExamReview';
 import { MobileExamCover } from '../mobile/topik/MobileExamCover';
+import { MobileExamHistory } from '../mobile/topik/MobileExamHistory';
+import { MobileExamResult } from '../mobile/topik/MobileExamResult';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +29,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
   AlertDialogTitle,
 } from '../ui';
 
@@ -89,30 +93,57 @@ const ExitExamConfirmDialog = ({
   labels: ReturnType<typeof getLabels>;
 }) => (
   <AlertDialog open={open} onOpenChange={onOpenChange}>
-    <AlertDialogContent className="w-[90%] max-w-sm border border-slate-100 bg-[#FCFCFA] rounded-[24px] shadow-[0_24px_40px_-8px_rgba(0,0,0,0.1),_0_0_2px_rgba(0,0,0,0.05)] p-6 gap-6 outline-none">
-      <AlertDialogHeader className="space-y-3">
-        <AlertDialogTitle className="font-black text-xl text-slate-800 text-center">
-          {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
-        </AlertDialogTitle>
-        <AlertDialogDescription className="text-[15px] font-medium text-slate-500 text-center leading-relaxed">
-          {labels.dashboard?.topik?.confirmEnd || 'Are you sure you want to end the exam? Your progress will be saved.'}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter className="flex-col sm:flex-row gap-3 pt-2">
-        <AlertDialogCancel 
-          onClick={() => onOpenChange(false)}
-          className="mt-0 w-full rounded-xl py-6 bg-slate-100 border-none text-slate-600 font-bold hover:bg-slate-200 active:scale-[0.98] transition-transform"
-        >
-          {labels.common?.cancel || 'Cancel'}
-        </AlertDialogCancel>
-        <AlertDialogAction 
-          onClick={onConfirm}
-          className="w-full rounded-xl py-6 bg-emerald-600 text-white font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-700 active:scale-[0.98] transition-transform"
-        >
-          {labels.common?.confirm || 'Confirm'}
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
+    <AlertDialogPortal>
+      <AlertDialogOverlay
+        unstyled
+        className="fixed inset-0 z-[120] bg-[rgba(10,10,14,0.72)] backdrop-blur-[1px]"
+      />
+      <AlertDialogContent
+        unstyled
+        className="fixed left-1/2 top-1/2 z-[121] w-[calc(100%-2rem)] max-w-[348px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[24px] border border-[rgba(31,27,23,0.14)] p-0 shadow-[0_28px_60px_-18px_rgba(18,14,10,0.55)] outline-none"
+        style={{ backgroundColor: '#FFFCF8', opacity: 1 }}
+      >
+        <div className="border-b border-[rgba(31,27,23,0.08)] px-5 pb-3.5 pt-4 text-center">
+          <div
+            className="mb-1.5 inline-flex rounded-full bg-[rgba(31,27,23,0.08)] px-2.5 py-1 text-[10px] font-extrabold tracking-[0.12em] !text-[#111111]"
+            style={{ color: '#111111', opacity: 1 }}
+          >
+            TOPIK
+          </div>
+          <AlertDialogHeader className="space-y-1.5">
+            <AlertDialogTitle
+              className="text-center text-[24px] font-black leading-[1.1] tracking-[-0.01em] !text-[#111111]"
+              style={{ color: '#111111', opacity: 1 }}
+            >
+              {labels.dashboard?.topik?.confirmEndTitle || 'End exam now?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription
+              className="text-center text-[14px] font-semibold leading-[1.45] text-[#1F1B17]"
+              style={{ color: '#1F1B17' }}
+            >
+              {labels.dashboard?.topik?.confirmEnd ||
+                'Are you sure you want to end the exam? Your progress will be saved.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </div>
+
+        <AlertDialogFooter className="grid grid-cols-2 gap-2.5 px-4 pb-4 pt-3 sm:!grid sm:!grid-cols-2">
+          <AlertDialogCancel
+            onClick={() => onOpenChange(false)}
+            className="mt-0 h-12 w-full rounded-[12px] border border-[#D4CDC0] bg-[#F4EFE6] text-[18px] font-black text-[#1F1B17] transition-transform hover:bg-[#ECE4D7] active:scale-[0.98]"
+            style={{ color: '#1F1B17' }}
+          >
+            {labels.common?.cancel || 'Cancel'}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="h-12 w-full rounded-[12px] border-none bg-[#08A06A] text-[18px] font-black text-white shadow-[0_10px_20px_rgba(8,160,106,0.28)] transition-transform hover:bg-[#089360] active:scale-[0.98]"
+          >
+            {labels.common?.confirm || 'Confirm'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialogPortal>
   </AlertDialog>
 );
 
@@ -208,6 +239,16 @@ const TopikViewRenderer = ({
   }
 
   if (view === 'HISTORY_LIST') {
+    if (isMobile) {
+      return (
+        <MobileExamHistory
+          history={history}
+          onBack={onToggleHistory}
+          onReview={attempt => onReviewAttempt(attempt)}
+          onDelete={onDeleteHistory}
+        />
+      );
+    }
     return (
       <ExamList
         exams={exams}
@@ -292,6 +333,18 @@ const TopikViewRenderer = ({
   }
 
   if (view === 'RESULT' && examResult) {
+    if (isMobile) {
+      return (
+        <MobileExamResult
+          exam={currentExam}
+          result={examResult}
+          language={language}
+          onReview={onReviewResult}
+          onTryAgain={onTryAgain}
+          onBackToList={onResetExam}
+        />
+      );
+    }
     return (
       <ExamResultView
         exam={currentExam}

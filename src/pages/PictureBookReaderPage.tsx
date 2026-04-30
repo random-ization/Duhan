@@ -1,6 +1,7 @@
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAction, useQuery } from 'convex/react';
 import {
+  AlertCircle,
   ArrowLeft,
   BookOpen,
   ChevronLeft,
@@ -10,12 +11,14 @@ import {
   RotateCcw,
   Languages,
   Loader2,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { READING_BOOKS, AI } from '../utils/convexRefs';
 import type { PictureBook, PictureBookPage } from '../types';
 import { cn } from '../lib/utils';
@@ -41,20 +44,29 @@ type BookPageQuery = {
 const PLAYBACK_RATES = [0.8, 1, 1.2, 1.5] as const;
 type ReaderLayout = 'stacked' | 'split';
 
+function isPictureBookTranslationDailyLimitCode(errorCode: string | undefined) {
+  return errorCode === 'DAILY_LIMIT_REACHED';
+}
+
+function isPictureBookTranslationDailyLimitError(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw.includes('DAILY_LIMIT_REACHED') || raw.includes('ai_credits_daily');
+}
+
 function toPictureBookTranslationError(error: unknown, t: ReturnType<typeof useTranslation>['t']) {
   const raw = error instanceof Error ? error.message : String(error);
-  if (raw.includes('DAILY_LIMIT_REACHED') || raw.includes('ai_credits_daily')) {
+  if (isPictureBookTranslationDailyLimitError(error)) {
     return t('pictureBookReader.translationDailyLimit', {
-      defaultValue: "Today's AI translation quota has been used up. Please try again tomorrow.",
+      defaultValue: "You've reached today's AI translation limit. Try again tomorrow.",
     });
   }
   if (raw.includes('UNAUTHORIZED')) {
     return t('pictureBookReader.translationAuthRequired', {
-      defaultValue: 'Please sign in to use translation.',
+      defaultValue: 'Please sign in to use translations.',
     });
   }
   return t('pictureBookReader.translationFailed', {
-    defaultValue: 'Translation failed. Please check your connection.',
+    defaultValue: 'Translation failed. Check your connection and try again.',
   });
 }
 
@@ -62,18 +74,18 @@ function toPictureBookTranslationErrorFromCode(
   errorCode: string | undefined,
   t: ReturnType<typeof useTranslation>['t']
 ) {
-  if (errorCode === 'DAILY_LIMIT_REACHED') {
+  if (isPictureBookTranslationDailyLimitCode(errorCode)) {
     return t('pictureBookReader.translationDailyLimit', {
-      defaultValue: "Today's AI translation quota has been used up. Please try again tomorrow.",
+      defaultValue: "You've reached today's AI translation limit. Try again tomorrow.",
     });
   }
   if (errorCode === 'UNAUTHORIZED' || errorCode === 'FORBIDDEN') {
     return t('pictureBookReader.translationAuthRequired', {
-      defaultValue: 'Please sign in to use translation.',
+      defaultValue: 'Please sign in to use translations.',
     });
   }
   return t('pictureBookReader.translationFailed', {
-    defaultValue: 'Translation is currently unavailable. Please try again later.',
+    defaultValue: 'Translation service is temporarily unavailable. Please try again later.',
   });
 }
 
@@ -146,6 +158,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const { t } = useTranslation('public');
   const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
+  const { startUpgradeFlow } = useUpgradeFlow();
   const isMobile = useIsMobile();
   const backPath = useMemo(
     () =>
@@ -179,6 +192,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const [translationFailedPages, setTranslationFailedPages] = useState<Record<number, boolean>>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+  const [showTranslationUpgradeCta, setShowTranslationUpgradeCta] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const activeSentenceBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -219,6 +233,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       if (sentences.length === 0) return;
 
       setTranslationError(null);
+      setShowTranslationUpgradeCta(false);
       setIsTranslating(true);
       const timeoutId = setTimeout(() => {
         setIsTranslating(prev => {
@@ -228,6 +243,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               defaultValue: 'Translation timed out. Please try again.',
             })
           );
+          setShowTranslationUpgradeCta(false);
           return false;
         });
       }, 30000);
@@ -243,6 +259,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           const hasAny = result.translations.some(item => item.trim().length > 0);
           if (!hasAny) {
             setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+            setShowTranslationUpgradeCta(isPictureBookTranslationDailyLimitCode(result.errorCode));
             setTranslationError(toPictureBookTranslationErrorFromCode(result.errorCode, t));
             return;
           }
@@ -260,10 +277,12 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         }
 
         setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+        setShowTranslationUpgradeCta(isPictureBookTranslationDailyLimitCode(result?.errorCode));
         setTranslationError(toPictureBookTranslationErrorFromCode(result?.errorCode, t));
       } catch (err) {
         console.error('Translation failed:', err);
         setTranslationFailedPages(prev => ({ ...prev, [targetPageIndex]: true }));
+        setShowTranslationUpgradeCta(isPictureBookTranslationDailyLimitError(err));
         setTranslationError(toPictureBookTranslationError(err, t));
       } finally {
         clearTimeout(timeoutId);
@@ -281,6 +300,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
     setShowTranslations(true);
     setTranslationError(null);
+    setShowTranslationUpgradeCta(false);
     setTranslationFailedPages(prev => {
       if (!prev[effectivePageIndex]) return prev;
       const next = { ...prev };
@@ -990,12 +1010,43 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         )}
 
         {translationError && (
-          <div className="absolute inset-x-4 top-20 z-30 flex justify-center">
+          <div
+            className="pointer-events-none fixed inset-x-3 z-[120] lg:hidden"
+            style={{ top: 'calc(env(safe-area-inset-top) + 78px)' }}
+          >
             <div
-              className="rounded-full border border-amber-200 bg-amber-50/95 px-4 py-2 text-sm font-semibold text-amber-700 shadow-lg backdrop-blur cursor-pointer"
-              onClick={() => setTranslationError(null)}
+              className="pointer-events-auto mx-auto flex w-full max-w-[34rem] items-start gap-2 rounded-2xl border border-[#3a3128] bg-[#1f1b17] px-3 py-2.5 text-[#f8f4ec] shadow-[0_14px_30px_-18px_rgba(0,0,0,0.55)]"
             >
-              {translationError}
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#f2c94c]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold leading-5">{translationError}</p>
+              </div>
+              <div className="flex items-center gap-1.5 pl-1">
+                {showTranslationUpgradeCta ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => {
+                      startUpgradeFlow({
+                        source: 'picture_book_translation_daily_limit',
+                      });
+                      setTranslationError(null);
+                    }}
+                    className="h-7 rounded-full border border-[#f2c94c]/70 bg-[#f2c94c]/16 px-2.5 text-[11px] font-bold text-[#f8f4ec] hover:bg-[#f2c94c]/24"
+                  >
+                    {t('pictureBookReader.upgradeNow', { defaultValue: 'Upgrade' })}
+                  </Button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setTranslationError(null)}
+                  className="grid h-7 w-7 place-items-center rounded-full border border-[#5a4e41] text-[#ddd3c7] transition-colors hover:bg-white/10"
+                  aria-label={t('common.gotIt', { defaultValue: 'Got it' })}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}

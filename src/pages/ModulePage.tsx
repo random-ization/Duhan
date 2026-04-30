@@ -16,7 +16,7 @@ import { qRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
+import { TOPIK_GRAMMAR_COURSE_ID, resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { KT, PageShell } from '../components/mobile/ksoft/ksoft';
 import { KsoftImmersiveHeader } from '../components/mobile/ksoft/KsoftMobilePrimitives';
 
@@ -196,9 +196,20 @@ const shouldRedirectForMissingSelection = ({
 
 const getModuleRedirectSubPath = (
   currentModule: LearningModuleType | null,
-  isCustomList: boolean
+  isCustomList: boolean,
+  instituteId?: string | null
 ): 'grammar' | 'vocab' | null => {
   if (currentModule === LearningModuleType.GRAMMAR) return 'grammar';
+  // topik-grammar is a grammar-only course — redirect reading/listening/vocab to grammar
+  if (instituteId === TOPIK_GRAMMAR_COURSE_ID) {
+    if (
+      currentModule === LearningModuleType.READING ||
+      currentModule === LearningModuleType.LISTENING ||
+      (currentModule === LearningModuleType.VOCABULARY && !isCustomList)
+    ) {
+      return 'grammar';
+    }
+  }
   if (currentModule === LearningModuleType.VOCABULARY && !isCustomList) return 'vocab';
   return null;
 };
@@ -397,7 +408,7 @@ const ModulePage: React.FC = () => {
   }
 
   const courseBase = effectiveInstitute ? `/course/${effectiveInstitute}` : '/courses';
-  const subPath = getModuleRedirectSubPath(currentModule, isCustomList);
+  const subPath = getModuleRedirectSubPath(currentModule, isCustomList, effectiveInstitute);
 
   if (subPath) {
     return <Navigate to={`${courseBase}/${subPath}`} replace />;

@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -9,9 +9,6 @@ import { NEWS, READING_BOOKS } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui';
-import { PictureBookShelf } from '../components/reading/PictureBookShelf';
-import { ReadingDiscoverySection } from '../components/reading/ReadingDiscoverySection';
-import { cn } from '../lib/utils';
 import type { PictureBook } from '../types';
 import {
   buildEpubLibraryPath,
@@ -30,6 +27,8 @@ const LazyMobileMediaPage = lazy(() =>
     default: module.MobileMediaPage,
   }))
 );
+
+const DesktopReadingDiscoveryPage = lazy(() => import('./desktop/DesktopReadingDiscoveryPage'));
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 
@@ -588,195 +587,31 @@ export default function ReadingDiscoveryPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-2 pb-16 pt-4 sm:px-4 lg:px-6">
-      <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
-            {t('readingDiscovery.title', { defaultValue: 'Reading Discovery' })}
-          </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground md:text-base">
-            {t('readingDiscovery.subtitle', {
-              defaultValue: 'Sync real Korean news and build a long-term reading library',
-            })}
-          </p>
-        </div>
-        <div className="flex items-center gap-6 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm">
-          <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              {t('readingDiscovery.stats.weeklyRead', { defaultValue: 'Fresh this week' })}
-            </span>
-            <span className="text-xl font-black text-muted-foreground">
-              {weeklyReadCount}{' '}
-              <span className="text-sm font-medium text-muted-foreground">
-                {t('readingDiscovery.stats.articles', { defaultValue: 'articles' })}
-              </span>
-            </span>
-          </div>
-          <div className="h-8 w-px bg-muted" />
-          <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              {t('readingDiscovery.stats.estimatedWords', { defaultValue: 'Estimated new words' })}
-            </span>
-            <span className="text-xl font-black text-primary">
-              {estimatedWords}{' '}
-              <span className="text-sm font-medium text-muted-foreground">
-                {t('readingDiscovery.stats.words', { defaultValue: 'words' })}
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <section className="mb-14">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-2xl font-black text-foreground">
-              🎨 {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Picture Books' })}
-            </h2>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {t('readingDiscovery.pictureBooks.subtitle', {
-                defaultValue:
-                  'Open a storybook, listen line by line, and follow sentence-level highlighting.',
-              })}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground">
-            {pictureBooks?.length ?? 0}/{pictureBooks?.length ?? 0}{' '}
-            {t('readingDiscovery.pictureBooks.count', { defaultValue: 'books ready' })}
-          </div>
-        </div>
-
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {pictureBookLevelOptions.map(option => (
-            <Button
-              key={option.value}
-              type="button"
-              variant="ghost"
-              onClick={() => updateFilterParams({ level: option.value })}
-              className={cn(
-                'shrink-0 rounded-full border px-4 py-2 text-left transition',
-                pictureBookLevelFilter === option.value
-                  ? 'border-foreground/20 bg-foreground text-background shadow-sm'
-                  : 'border-border bg-card/80 text-foreground hover:border-foreground/15'
-              )}
-            >
-              <div className="flex min-w-[128px] items-center justify-between gap-3">
-                <div className="text-sm font-black">{option.label}</div>
-                <div
-                  className={cn(
-                    'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-black',
-                    pictureBookLevelFilter === option.value
-                      ? 'bg-background/15 text-background'
-                      : 'bg-muted text-foreground'
-                  )}
-                >
-                  {option.count}
-                </div>
-              </div>
-            </Button>
-          ))}
-        </div>
-
-        <PictureBookShelf
-          books={filteredPictureBooks}
-          loading={pictureBooks === undefined}
-          onOpen={slug => navigate(buildPictureBookPath(slug, currentPath))}
-          emptyStateText={t('readingDiscovery.pictureBooks.emptyFiltered', {
-            defaultValue:
-              'No picture books are available in this level yet. Swipe to another level.',
-          })}
-        />
-      </section>
-
-      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
-
-      <section className="mb-14">
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="flex items-center gap-2 text-2xl font-black text-foreground">
-              <span>📰 {t('readingDiscovery.news.title', { defaultValue: 'Live News' })}</span>
-              <span className="animate-pulse rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/50 dark:text-red-300">
-                LIVE
-              </span>
-            </h2>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {t('readingDiscovery.news.subtitle', {
-                defaultValue:
-                  'Auto-ingested by RSS, great for extensive reading and current affairs',
-              })}
-            </p>
-            {refreshMessage && (
-              <p className="mt-2 text-xs font-semibold text-primary">{refreshMessage}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {userId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => {
-                  void onManualRefresh();
-                }}
-                disabled={manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0}
-                loading={manualRefreshing}
-                loadingText={
-                  <>
-                    {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
-                    <span className="text-[11px]">
-                      {feed?.refresh.manualRefreshRemaining ?? 0}/3
-                    </span>
-                  </>
-                }
-                loadingIconClassName="w-[13px] h-[13px]"
-                className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                  manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0
-                    ? 'cursor-not-allowed border-border bg-muted text-muted-foreground'
-                    : 'border-primary/35 bg-primary/10 text-primary hover:border-primary/50 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground'
-                }`}
-              >
-                <RefreshCcw size={13} className={manualRefreshing ? 'animate-spin' : ''} />
-                {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
-                <span className="text-[11px]">{feed?.refresh.manualRefreshRemaining ?? 0}/3</span>
-              </Button>
-            )}
-            <DifficultyFilterButtons
-              difficultyFilter={difficultyFilter}
-              onSelect={item => updateFilterParams({ difficulty: item })}
-              t={t}
-            />
-          </div>
-        </div>
-        <LiveNewsContent
-          feedReady={feedReady}
-          feed={feed}
-          topNews={topNews}
-          featuredNews={featuredNews}
-          secondaryNews={secondaryNews}
-          language={language}
-          t={t}
-          onOpen={id => navigate(buildReadingArticlePath(id, currentPath))}
-        />
-      </section>
-
-      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
-
-      <section>
-        <ReadingDiscoverySection
-          wikiArticles={wikiArticles}
-          wikiLoading={feedReady && featuredArticles === undefined}
-          onViewWiki={id => navigate(buildReadingArticlePath(id, currentPath))}
-          onViewBook={slug => navigate(buildEpubLibraryPath(slug, currentPath))}
-        />
-      </section>
-
-      <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-muted-foreground">
-        <Clock3 size={14} />
-        {t('readingDiscovery.footer', {
-          defaultValue:
-            'Powered by Convex `newsIngestion:getUserFeed` (auto refresh after 24h post-read, manual refresh up to 3/day)',
-        })}
-      </div>
-    </div>
+    <Suspense fallback={<ContentSkeleton />}>
+      <DesktopReadingDiscoveryPage
+        t={t}
+        language={language}
+        weeklyReadCount={weeklyReadCount}
+        estimatedWords={estimatedWords}
+        pictureBooks={pictureBooks}
+        pictureBookLevelOptions={pictureBookLevelOptions}
+        pictureBookLevelFilter={pictureBookLevelFilter}
+        filteredPictureBooks={filteredPictureBooks}
+        feedReady={feedReady}
+        feed={feed}
+        topNews={topNews}
+        featuredNews={featuredNews}
+        secondaryNews={secondaryNews}
+        wikiArticles={wikiArticles}
+        userId={userId}
+        manualRefreshing={manualRefreshing}
+        refreshMessage={refreshMessage}
+        difficultyFilter={difficultyFilter}
+        currentPath={currentPath}
+        updateFilterParams={updateFilterParams}
+        onManualRefresh={onManualRefresh}
+        navigate={navigate}
+      />
+    </Suspense>
   );
 }

@@ -7,7 +7,7 @@
  * Route: /topik/writing/:examId
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -25,6 +25,8 @@ import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeade
 import { appendReturnToPath } from '../utils/navigation';
 
 import { api } from '../../convex/_generated/api';
+
+const DesktopTopikWritingPage = React.lazy(() => import('./desktop/DesktopTopikWritingPage'));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,19 +155,6 @@ const TopikWritingPage: React.FC = () => {
   }
 
   // ── Render report ───────────────────────────────────────────────────────────
-  if (state.phase === 'report') {
-    return (
-      <div className="min-h-screen bg-background">
-        <WritingEvaluationReport
-          sessionId={state.sessionId}
-          originalAnswers={state.answers}
-          onBack={() => navigate(topikLobbyPath)}
-        />
-      </div>
-    );
-  }
-
-  // ── Render exam ─────────────────────────────────────────────────────────────
   // Fallback placeholder when no writing questions have been uploaded yet.
   const placeholderQuestions = [
     {
@@ -223,40 +212,84 @@ const TopikWritingPage: React.FC = () => {
           }))
       : placeholderQuestions;
 
-  return (
-    <WritingExamSession
-      sessionId={state.sessionId}
-      examId={examId}
-      endTime={state.endTime}
-      questions={resolvedQuestions}
-      initialAnswers={state.initialAnswers}
-      onSubmitError={error => {
-        const entitlementError = getEntitlementErrorData(error);
-        if (entitlementError?.upgradeSource) {
-          startUpgradeFlow({
-            plan: 'ANNUAL',
-            source: entitlementError.upgradeSource,
-            returnTo: writingReturnPath,
+  if (isMobile) {
+    if (state.phase === 'report') {
+      const reportState = state as Extract<typeof state, { phase: 'report' }>;
+      return (
+        <div className="min-h-screen bg-background">
+          <WritingEvaluationReport
+            sessionId={reportState.sessionId}
+            originalAnswers={reportState.answers}
+            onBack={() => navigate(topikLobbyPath)}
+          />
+        </div>
+      );
+    }
+    const examState = state as Extract<typeof state, { phase: 'exam' }>;
+
+    return (
+      <WritingExamSession
+        sessionId={examState.sessionId}
+        examId={examId}
+        endTime={examState.endTime}
+        questions={resolvedQuestions}
+        initialAnswers={examState.initialAnswers}
+        onSubmitError={error => {
+          const entitlementError = getEntitlementErrorData(error);
+          if (entitlementError?.upgradeSource) {
+            startUpgradeFlow({
+              plan: 'ANNUAL',
+              source: entitlementError.upgradeSource,
+              returnTo: writingReturnPath,
+            });
+            return;
+          }
+          notify.error(
+            t('topikWriting.session.submitFailed', {
+              defaultValue: 'Unable to submit this writing exam right now.',
+            })
+          );
+        }}
+        onSubmitted={submittedAnswers => {
+          setPageState({
+            phase: 'report',
+            sessionId: state.sessionId,
+            answers: submittedAnswers,
           });
-          return;
-        }
-        notify.error(
-          t('topikWriting.session.submitFailed', {
-            defaultValue: 'Unable to submit this writing exam right now.',
-          })
-        );
-      }}
-      onSubmitted={submittedAnswers => {
-        setPageState({
-          phase: 'report',
-          sessionId: state.sessionId,
-          answers: submittedAnswers,
-        });
-      }}
-      onExit={() => {
-        navigate(topikLobbyPath);
-      }}
-    />
+        }}
+        onExit={() => {
+          navigate(topikLobbyPath);
+        }}
+      />
+    );
+  }
+
+  const loadingContent = (
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      <p className="font-bold text-muted-foreground text-sm">
+        {t('topikWriting.session.loadingExam', { defaultValue: 'Preparing writing exam...' })}
+      </p>
+    </div>
+  );
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DesktopTopikWritingPage
+        state={state}
+        loadingContent={loadingContent}
+        resolvedQuestions={resolvedQuestions}
+        examId={examId}
+        topikLobbyPath={topikLobbyPath}
+        writingReturnPath={writingReturnPath}
+        navigate={navigate}
+        setPageState={setPageState}
+        startUpgradeFlow={startUpgradeFlow}
+        getEntitlementErrorData={getEntitlementErrorData}
+        notify={notify}
+        t={t}
+      />
+    </Suspense>
   );
 };
 

@@ -47,7 +47,9 @@ import {
 } from '../components/layout/contextualSidebarBlocks';
 
 const OfficialTiptapEditor = lazy(() => import('../components/notebook/OfficialTiptapEditor'));
+const DesktopNotebookV2Page = lazy(() => import('./desktop/DesktopNotebookV2Page'));
 const LazyMobileNotebookPage = lazy(() =>
+
   import('../components/mobile/MobileNotebookPage').then(module => ({
     default: module.MobileNotebookPage,
   }))
@@ -94,7 +96,103 @@ export type SearchItem = {
 
 export type SearchResult = {
   items: SearchItem[];
-  nextCursor: number | null;
+  nextCursor: string | null;
+};
+
+const EMPTY_SEARCH_RESULT: SearchResult = { items: [], nextCursor: null };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const stringOrUndefined = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
+
+const numberOrFallback = (value: unknown, fallback: number): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+const stringArrayOrEmpty = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+const normalizeNotebookListResult = (value: unknown): NotebookListResult => {
+  if (!isRecord(value)) {
+    return { notebooks: [], totals: { notebooks: 0, notes: 0, unassigned: 0 } };
+  }
+
+  const rawNotebooks = Array.isArray(value.notebooks) ? value.notebooks : [];
+  const rawTotals = isRecord(value.totals) ? value.totals : {};
+
+  return {
+    notebooks: rawNotebooks
+      .map((notebook): NotebookListResult['notebooks'][number] | null => {
+        if (!isRecord(notebook)) return null;
+        const id = stringOrUndefined(notebook.id);
+        const title = stringOrUndefined(notebook.title);
+        if (!id || !title) return null;
+        return {
+          id: id as Id<'note_pages'>,
+          title,
+          icon: stringOrUndefined(notebook.icon),
+          noteCount: numberOrFallback(notebook.noteCount, 0),
+          reviewCount: numberOrFallback(notebook.reviewCount, 0),
+          updatedAt: numberOrFallback(notebook.updatedAt, 0),
+        };
+      })
+      .filter((notebook): notebook is NotebookListResult['notebooks'][number] => notebook !== null),
+    totals: {
+      notebooks: numberOrFallback(rawTotals.notebooks, rawNotebooks.length),
+      notes: numberOrFallback(rawTotals.notes, 0),
+      unassigned: numberOrFallback(rawTotals.unassigned, 0),
+    },
+  };
+};
+
+const noteKindOrUndefined = (value: unknown): NoteKind | undefined =>
+  value === 'quote_card' || value === 'longform_page' ? value : undefined;
+
+const normalizeSearchItem = (value: unknown): SearchItem | null => {
+  if (!isRecord(value)) return null;
+  const id = stringOrUndefined(value.id);
+  const title = stringOrUndefined(value.title);
+  if (!id || !title) return null;
+
+  return {
+    id: id as Id<'note_pages'>,
+    title,
+    icon: stringOrUndefined(value.icon),
+    tags: stringArrayOrEmpty(value.tags),
+    status: stringOrUndefined(value.status) ?? 'Inbox',
+    pinned: typeof value.pinned === 'boolean' ? value.pinned : false,
+    sourceModule: stringOrUndefined(value.sourceModule),
+    noteType: stringOrUndefined(value.noteType),
+    noteKind: noteKindOrUndefined(value.noteKind),
+    quoteText: stringOrUndefined(value.quoteText),
+    noteText: stringOrUndefined(value.noteText),
+    sourceRef: isRecord(value.sourceRef) ? value.sourceRef : undefined,
+    updatedAt: numberOrFallback(value.updatedAt, 0),
+    createdAt: numberOrFallback(value.createdAt, 0),
+    snippet: stringOrUndefined(value.snippet) ?? '',
+  };
+};
+
+export const normalizeSearchResult = (value: unknown): SearchResult => {
+  if (!isRecord(value)) return EMPTY_SEARCH_RESULT;
+  const rawItems = Array.isArray(value.items)
+    ? value.items
+    : Array.isArray(value.pages)
+      ? value.pages
+      : [];
+  const rawNextCursor = value.nextCursor;
+  const nextCursor =
+    typeof rawNextCursor === 'string'
+      ? rawNextCursor
+      : typeof rawNextCursor === 'number' && Number.isFinite(rawNextCursor)
+        ? String(rawNextCursor)
+        : null;
+
+  return {
+    items: rawItems.map(normalizeSearchItem).filter((item): item is SearchItem => item !== null),
+    nextCursor,
+  };
 };
 
 export type NoteBlock = {
@@ -385,7 +483,6 @@ export default function NotebookV2Page() {
   );
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
-  const migrationDoneRef = useRef(false);
   const hydratedPageIdRef = useRef<Id<'note_pages'> | null>(null);
   const lastSyncedRef = useRef<{
     pageId: Id<'note_pages'> | null;
@@ -401,23 +498,20 @@ export default function NotebookV2Page() {
     noteText: '',
   });
 
-  const notebooksResult = (useQuery(NOTE_PAGES.listNotebooks, {}) as
-    | NotebookListResult
-    | undefined) || {
-    notebooks: [],
-    totals: { notebooks: 0, notes: 0, unassigned: 0 },
-  };
+  const notebooksResult = normalizeNotebookListResult(useQuery(NOTE_PAGES.listNotebooks, {}));
 
-  const baseSearchResult = (useQuery(
-    NOTE_PAGES.search,
-    insightQueryReady
-      ? {
-          query: query.trim() || undefined,
+  const baseSearchResult = normalizeSearchResult(
+    useQuery(
+      NOTE_PAGES.search,
+      insightQueryReady
+        ? {
+          query: query.trim(),
           notebookId: activeNotebookId || undefined,
           limit: 500,
         }
-      : 'skip'
-  ) as SearchResult | undefined) || { items: [], nextCursor: null };
+        : 'skip'
+    )
+  );
 
   const selectedPagePayload = useQuery(
     NOTE_PAGES.getPage,
@@ -430,8 +524,6 @@ export default function NotebookV2Page() {
   const saveEditorDoc = useMutation(NOTE_PAGES.saveEditorDoc);
   const togglePin = useMutation(NOTE_PAGES.togglePin);
   const archivePage = useMutation(NOTE_PAGES.archivePage);
-  const migrateNotesIntoSourceNotebooks = useMutation(NOTE_PAGES.migrateNotesIntoSourceNotebooks);
-
   const hydrateEditorFromPayload = React.useCallback((payload: PagePayload) => {
     const pageId = payload.page.id;
     if (hydratedPageIdRef.current === pageId) return;
@@ -510,14 +602,6 @@ export default function NotebookV2Page() {
   }, []);
 
   useEffect(() => {
-    if (migrationDoneRef.current) return;
-    migrationDoneRef.current = true;
-    void migrateNotesIntoSourceNotebooks({ limit: 8000 }).catch(() => {
-      // idempotent best-effort
-    });
-  }, [migrateNotesIntoSourceNotebooks]);
-
-  useEffect(() => {
     if (activeNotebookId) return;
     if (notebooksResult.notebooks.length === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initialize default notebook once list query resolves
@@ -568,14 +652,14 @@ export default function NotebookV2Page() {
             pageId: selectedPageId,
             upsertBlocks: nextNoteText
               ? [
-                  {
-                    blockKey: 'note',
-                    blockType: 'paragraph',
-                    content: { text: nextNoteText },
-                    props: { source: 'notebook' },
-                    sortOrder: 1,
-                  },
-                ]
+                {
+                  blockKey: 'note',
+                  blockType: 'paragraph',
+                  content: { text: nextNoteText },
+                  props: { source: 'notebook' },
+                  sortOrder: 1,
+                },
+              ]
               : undefined,
             deleteBlockKeys: nextNoteText ? undefined : ['note'],
           });
@@ -645,12 +729,14 @@ export default function NotebookV2Page() {
     return target.modules;
   }, [sourceSummary, sourceFilter]);
 
-  const searchResult = (useQuery(NOTE_PAGES.search, {
-    query: query.trim() || undefined,
-    sourceModules: selectedSourceModules,
-    notebookId: activeNotebookId || undefined,
-    limit: 500,
-  }) as SearchResult | undefined) || { items: [], nextCursor: null };
+  const searchResult = normalizeSearchResult(
+    useQuery(NOTE_PAGES.search, {
+      query: query.trim(),
+      sourceModules: selectedSourceModules,
+      notebookId: activeNotebookId || undefined,
+      limit: 500,
+    })
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- keep selected note valid when filtered list changes
@@ -730,14 +816,14 @@ export default function NotebookV2Page() {
           pageId: selectedPageId,
           upsertBlocks: nextNoteText
             ? [
-                {
-                  blockKey: 'note',
-                  blockType: 'paragraph',
-                  content: { text: nextNoteText },
-                  props: { source: 'notebook' },
-                  sortOrder: 1,
-                },
-              ]
+              {
+                blockKey: 'note',
+                blockType: 'paragraph',
+                content: { text: nextNoteText },
+                props: { source: 'notebook' },
+                sortOrder: 1,
+              },
+            ]
             : undefined,
           deleteBlockKeys: nextNoteText ? undefined : ['note'],
         });
@@ -904,538 +990,53 @@ export default function NotebookV2Page() {
   }
 
   return (
-    <div className="w-full min-h-full bg-background text-foreground font-sans rounded-3xl border border-border overflow-hidden">
-      <main className="p-6 lg:p-8 bg-card min-h-full">
-        <div className="mb-8 relative">
-          <h1 className="text-4xl font-extrabold text-foreground">
-            {t('notes.v2.page.titleAllNotes', { defaultValue: 'All Notes' })}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {t('notes.v2.page.subtitleAllNotes', {
-              defaultValue: 'Manage all your learning assets here and launch smart review.',
-            })}
-          </p>
-        </div>
-
-        <div className="bg-accent border border-border p-5 rounded-xl mb-10 flex items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <CheckCircle2 className="h-7 w-7 text-primary" />
-            <div>
-              <p className="font-semibold text-foreground">
-                {t('notes.v2.page.todayReviewTitle', { defaultValue: 'Today’s Review Queue' })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t('notes.v2.page.todayReviewSummary', {
-                  count: pendingReviewCount,
-                  defaultValue: 'You have {{count}} item(s) to review today.',
-                })}
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="default"
-            size="auto"
-            onClick={() => navigate('/review')}
-            className="px-5 py-2.5 rounded-lg font-bold shadow-sm transition-all"
-          >
-            {t('notes.v2.context.startSmartReview', { defaultValue: 'Start Smart Review' })}
-          </Button>
-        </div>
-
-        <div className="flex items-center justify-between mb-8 border-b border-border pb-3 gap-3 flex-wrap">
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('gallery')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'gallery'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Grid3X3 className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewGallery', { defaultValue: 'Gallery View' })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'list'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <List className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewList', { defaultValue: 'List View' })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('table')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'table'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Table className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewTable', { defaultValue: 'Table View' })}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder={t('notes.v2.page.searchPlaceholder', {
-                  defaultValue: 'Search quote or note...',
-                })}
-                className="w-full bg-card border border-border rounded-xl py-2 pl-10 pr-4 text-sm"
-              />
-            </div>
-
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <Select
-                value={sourceFilter}
-                onChange={event => setSourceFilter(event.target.value)}
-                className="h-10 rounded-lg text-sm border border-border bg-card pl-9 pr-8 text-muted-foreground"
-              >
-                <option value="">
-                  {t('notes.v2.sidebar.allSources', { defaultValue: 'All sources' })}
-                </option>
-                {sourceSummary.map(source => (
-                  <option key={source.key} value={source.key}>
-                    {t('notes.v2.page.sourceOption', {
-                      label: source.label,
-                      count: source.count,
-                      defaultValue: '{{label}} ({{count}})',
-                    })}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <Button
-              type="button"
-              variant="default"
-              size="auto"
-              onClick={handleCreateNote}
-              className="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />{' '}
-              {t('notes.v2.page.newNoteButton', { defaultValue: 'New Note' })}
-            </Button>
-          </div>
-        </div>
-
-        {searchResult.items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-10 text-center text-muted-foreground">
-            {t('notes.v2.page.emptyNotes', {
-              defaultValue: 'No notes yet. Click “New Note” to start capturing your learning.',
-            })}
-          </div>
-        ) : null}
-
-        {searchResult.items.length > 0 && viewMode === 'gallery' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {searchResult.items.map(item => {
-              const cardType = toCardType(item, t);
-              const status = toStatusBadge(item.status || 'Inbox', t);
-              const snippetHtml = toPreviewHtml(item.snippet);
-              const quoteHtml = toPreviewHtml(item.quoteText);
-              const noteHtml = toPreviewHtml(item.noteText || item.snippet);
-              return (
-                <Button
-                  key={item.id}
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => {
-                    setSelectedPageId(item.id);
-                    setEditorExpanded(false);
-                    setEditorOpen(true);
-                  }}
-                  className="!block bg-card p-5 rounded-2xl border border-border hover:shadow-lg hover:-translate-y-1 transition-all text-left h-full !whitespace-normal"
-                >
-                  <div className="flex justify-between items-start mb-3 gap-2">
-                    <div className="flex items-center gap-2">
-                      <span>{cardType.icon}</span>
-                      <span
-                        className={`text-xs font-bold px-2 py-1 rounded tracking-wide ${cardType.badgeClass}`}
-                      >
-                        {cardType.label}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${status.className}`}
-                    >
-                      {status.label}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1">
-                    {toPlainText(item.title) || item.title}
-                  </h3>
-                  {item.noteKind === 'quote_card' && quoteHtml ? (
-                    <blockquote
-                      className={`mb-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground line-clamp-3 ${QUOTE_CARD_RICH_CLASS} ${RICH_TEXT_CLASS}`}
-                      dangerouslySetInnerHTML={{ __html: quoteHtml }}
-                    />
-                  ) : null}
-                  {noteHtml ? (
-                    <div
-                      className={`text-muted-foreground text-sm mb-4 flex-grow line-clamp-2 ${RICH_TEXT_CLASS}`}
-                      dangerouslySetInnerHTML={{
-                        __html: item.noteKind === 'quote_card' ? noteHtml : snippetHtml || noteHtml,
-                      }}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow line-clamp-2">
-                      {t('notes.v2.page.clickToViewAndEdit', {
-                        defaultValue: 'Click to view and edit content',
-                      })}
-                    </p>
-                  )}
-
-                  <div className="flex gap-2 mt-auto flex-wrap">
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                      {toSourceLabel(item.sourceModule, t)}
-                    </span>
-                    {(item.tags || []).slice(0, 2).map(tag => (
-                      <span
-                        key={tag}
-                        className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {searchResult.items.length > 0 && viewMode === 'list' ? (
-          <div className="space-y-3">
-            {searchResult.items.map(item => {
-              const snippetHtml = toPreviewHtml(item.snippet);
-              const quoteHtml = toPreviewHtml(item.quoteText);
-              const noteHtml = toPreviewHtml(item.noteText || item.snippet);
-              return (
-                <Button
-                  key={item.id}
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => {
-                    setSelectedPageId(item.id);
-                    setEditorExpanded(false);
-                    setEditorOpen(true);
-                  }}
-                  className="w-full rounded-xl border border-border bg-card p-4 text-left hover:bg-muted/30 !justify-start !whitespace-normal h-auto"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-2">
-                      <p className="font-semibold text-foreground line-clamp-1">
-                        {toPlainText(item.title) || item.title}
-                      </p>
-                      {item.noteKind === 'quote_card' && quoteHtml ? (
-                        <blockquote
-                          className={`rounded-lg px-3 py-2 text-sm font-medium text-foreground line-clamp-2 ${QUOTE_CARD_RICH_CLASS} ${RICH_TEXT_CLASS}`}
-                          dangerouslySetInnerHTML={{ __html: quoteHtml }}
-                        />
-                      ) : null}
-                      {noteHtml ? (
-                        <div
-                          className={`text-sm text-muted-foreground line-clamp-1 mt-1 ${RICH_TEXT_CLASS}`}
-                          dangerouslySetInnerHTML={{
-                            __html:
-                              item.noteKind === 'quote_card' ? noteHtml : snippetHtml || noteHtml,
-                          }}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                          {t('notes.v2.page.clickToViewAndEdit', {
-                            defaultValue: 'Click to view and edit content',
-                          })}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground shrink-0">
-                      {toSourceLabel(item.sourceModule, t)}
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {searchResult.items.length > 0 && viewMode === 'table' ? (
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    {t('notes.v2.page.table.title', { defaultValue: 'Title' })}
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    {t('notes.v2.page.table.quote', { defaultValue: 'Quote' })}
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    {t('notes.v2.page.table.source', { defaultValue: 'Source' })}
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    {t('notes.v2.page.table.status', { defaultValue: 'Status' })}
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    {t('notes.v2.page.table.updatedAt', { defaultValue: 'Updated' })}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {searchResult.items.map(item => (
-                  <tr
-                    key={item.id}
-                    onClick={() => {
-                      setSelectedPageId(item.id);
-                      setEditorExpanded(false);
-                      setEditorOpen(true);
-                    }}
-                    className="border-t border-border hover:bg-muted/30 cursor-pointer"
-                  >
-                    <td className="px-4 py-3">{toPlainText(item.title) || item.title}</td>
-                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
-                      {toPlainText(item.quoteText) ||
-                        t('notes.v2.page.table.emptyQuote', { defaultValue: '—' })}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {toSourceLabel(item.sourceModule, t)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {toStatusBadge(item.status || 'Inbox', t).label}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatTime(item.updatedAt, dateLocale)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </main>
-
-      <Sheet open={editorOpen} onOpenChange={handleEditorOpenChange}>
-        <SheetPortal>
-          <SheetOverlay className="fixed inset-0 z-40 bg-foreground/30" />
-          <SheetContent
-            className={`fixed right-0 top-0 z-50 h-screen overflow-y-auto border-l border-border bg-card p-0 shadow-2xl transition-[width] duration-200 ${
-              editorExpanded ? 'w-[min(1280px,98vw)]' : 'w-[min(760px,96vw)]'
-            }`}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
-              <SheetTitle className="text-base font-bold text-foreground">
-                {t('notes.v2.page.editNote', { defaultValue: 'Edit Note' })}
-              </SheetTitle>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => setEditorExpanded(prev => !prev)}
-                  className="rounded-md px-2 py-1 text-muted-foreground hover:bg-muted"
-                >
-                  {editorExpanded ? (
-                    <>
-                      <Minimize2 className="mr-1 h-4 w-4" />{' '}
-                      {t('notes.v2.page.restore', { defaultValue: 'Restore' })}
-                    </>
-                  ) : (
-                    <>
-                      <Maximize2 className="mr-1 h-4 w-4" />{' '}
-                      {t('notes.v2.page.expand', { defaultValue: 'Expand' })}
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEditorOpenChange(false)}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {!selectedPagePayload ? (
-              <div className="px-6 py-12 text-sm text-muted-foreground flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />{' '}
-                {t('notes.v2.editor.loading', { defaultValue: 'Loading editor...' })}
-              </div>
-            ) : (
-              <div className="px-6 py-6">
-                <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {saveState === 'saving'
-                      ? t('notes.v2.page.saveState.saving', { defaultValue: 'Saving...' })
-                      : null}
-                    {saveState === 'dirty'
-                      ? t('notes.v2.page.saveState.dirty', { defaultValue: 'Unsaved changes' })
-                      : null}
-                    {saveState === 'saved'
-                      ? t('notes.v2.page.saveState.saved', { defaultValue: 'Saved' })
-                      : null}
-                    {saveState === 'error'
-                      ? t('notes.v2.page.saveState.error', { defaultValue: 'Save failed' })
-                      : null}
-                  </span>
-                  <span>{lastSavedAt ? formatTime(lastSavedAt, dateLocale) : ''}</span>
-                </div>
-
-                <Input
-                  value={title}
-                  onChange={event => setTitle(event.target.value)}
-                  className="h-auto border-0 px-0 text-4xl font-extrabold shadow-none focus-visible:ring-0"
-                  placeholder={t('notes.titlePlaceholder', { defaultValue: 'Untitled' })}
-                />
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() =>
-                      selectedSearchItem &&
-                      togglePin({
-                        pageId: selectedSearchItem.id,
-                        pinned: !selectedSearchItem.pinned,
-                      })
-                    }
-                  >
-                    {selectedSearchItem?.pinned ? (
-                      <>
-                        <PinOff className="w-4 h-4 mr-1" />{' '}
-                        {t('notes.v2.actions.unpin', { defaultValue: 'Unpin' })}
-                      </>
-                    ) : (
-                      <>
-                        <Pin className="w-4 h-4 mr-1" />{' '}
-                        {t('notes.v2.actions.pin', { defaultValue: 'Pin' })}
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    disabled={!toSourcePath(selectedSearchItem?.sourceRef)}
-                    onClick={handleOpenSource}
-                  >
-                    <ArrowUpRight className="w-4 h-4 mr-1" />{' '}
-                    {t('notes.v2.actions.openSource', { defaultValue: 'Open Source' })}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => handleDeletePage(selectedPagePayload.page.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />{' '}
-                    {t('notes.v2.actions.delete', { defaultValue: 'Delete' })}
-                  </Button>
-
-                  {saveState === 'error' ? (
-                    <Button type="button" variant="ghost" size="auto" onClick={handleRetrySave}>
-                      {t('notes.v2.page.retrySave', { defaultValue: 'Retry Save' })}
-                    </Button>
-                  ) : null}
-                </div>
-
-                <div className="mt-6">
-                  {selectedIsQuoteCard ? (
-                    <div className="space-y-4">
-                      <div
-                        className={`rounded-2xl border border-border p-4 ${QUOTE_CARD_RICH_CLASS}`}
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                            {t('notes.v2.page.quoteSectionTitle', { defaultValue: 'Quote' })}
-                          </p>
-                          <span className="text-[11px] text-muted-foreground">
-                            {t('notes.v2.page.quoteSectionHint', {
-                              defaultValue: 'Keep source emphasis styling',
-                            })}
-                          </span>
-                        </div>
-                        {toRichHtml(quoteText) ? (
-                          <div className="relative">
-                            <span className="pointer-events-none absolute -left-1 -top-2 text-4xl font-black leading-none text-primary/25">
-                              &ldquo;
-                            </span>
-                            <blockquote
-                              className={`whitespace-pre-wrap pl-4 text-base font-medium leading-relaxed text-foreground ${RICH_TEXT_CLASS}`}
-                              dangerouslySetInnerHTML={{ __html: toRichHtml(quoteText) }}
-                            />
-                          </div>
-                        ) : (
-                          <blockquote className="whitespace-pre-wrap text-base font-medium leading-relaxed text-foreground">
-                            {t('notes.v2.page.quoteMissing', {
-                              defaultValue: 'Original quote not found',
-                            })}
-                          </blockquote>
-                        )}
-                      </div>
-                      <div>
-                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                          {t('notes.v2.page.myNote', { defaultValue: 'My Note' })}
-                        </p>
-                        <Suspense fallback={editorFallback}>
-                          <OfficialTiptapEditor
-                            value={editorDoc}
-                            onChange={setEditorDoc}
-                            placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
-                              defaultValue:
-                                'Write your understanding, questions, or translation for this quote.',
-                            })}
-                            preset="study"
-                          />
-                        </Suspense>
-                      </div>
-                    </div>
-                  ) : (
-                    <Suspense fallback={editorFallback}>
-                      <OfficialTiptapEditor
-                        value={editorDoc}
-                        onChange={setEditorDoc}
-                        placeholder={t('notes.v2.page.editorPlaceholder', {
-                          defaultValue: 'Start writing your thoughts here...',
-                        })}
-                        preset="full"
-                      />
-                    </Suspense>
-                  )}
-                </div>
-              </div>
-            )}
-          </SheetContent>
-        </SheetPortal>
-      </Sheet>
-    </div>
+    <Suspense fallback={<div className="min-h-[50vh]" />}>
+      <DesktopNotebookV2Page
+        {...{
+          t,
+          navigate,
+          dateLocale,
+          activeNotebookId,
+          setActiveNotebookId,
+          selectedPageId,
+          setSelectedPageId,
+          query,
+          setQuery,
+          sourceFilter,
+          setSourceFilter,
+          viewMode,
+          setViewMode,
+          editorOpen,
+          setEditorOpen,
+          handleEditorOpenChange,
+          editorExpanded,
+          setEditorExpanded,
+          title,
+          setTitle,
+          noteKind,
+          setNoteKind,
+          quoteText,
+          setQuoteText,
+          editorDoc,
+          setEditorDoc,
+          saveState,
+          lastSavedAt,
+          notebooksResult,
+          sourceSummary,
+          searchResult,
+          pendingReviewCount,
+          selectedSearchItem,
+          selectedIsQuoteCard,
+          selectedPagePayload,
+          handleCreateNote,
+          handleDeletePage,
+          handleOpenSource,
+          handleRetrySave,
+          editorFallback,
+          togglePin,
+          OfficialTiptapEditor,
+        }}
+      />
+    </Suspense>
   );
 }
