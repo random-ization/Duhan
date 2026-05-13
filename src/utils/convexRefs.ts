@@ -12,6 +12,7 @@ import type {
   StoredGlobalUserSettings,
 } from '../types/globalUserSettings';
 import type { LearnerStatsDto, CourseDashboardDto } from '../../convex/learningStats';
+import type { CommunityUserProfileDto } from '../../convex/userProfile';
 
 export type NoArgs = Record<string, never>;
 
@@ -958,6 +959,101 @@ export const COMMUNITY = {
       userAvatar: string | null;
     }>
   >('community:getComments'),
+};
+
+// --- Q&A Forum ---
+import type { QAQuestionDto, QAQuestionDetailDto } from '../../convex/qaForum';
+
+export const QA_FORUM = {
+  listQuestions: qRef<
+    { topicSlug?: string; sort?: 'recent' | 'unanswered' | 'top'; limit?: number },
+    QAQuestionDto[]
+  >('qaForum:listQuestions'),
+  getQuestion: qRef<
+    { questionId: Id<'qa_questions'> },
+    QAQuestionDetailDto | null
+  >('qaForum:getQuestion'),
+  createQuestion: mRef<
+    { title: string; content: string; topicSlug: string },
+    Id<'qa_questions'>
+  >('qaForum:createQuestion'),
+  createAnswer: mRef<
+    { questionId: Id<'qa_questions'>; content: string },
+    Id<'qa_answers'>
+  >('qaForum:createAnswer'),
+  incrementViewCount: mRef<
+    { questionId: Id<'qa_questions'> },
+    void
+  >('qaForum:incrementViewCount'),
+  voteOnTarget: mRef<
+    { target: 'question' | 'answer'; targetId: string; value: 1 | -1 },
+    { ok: boolean }
+  >('qaForum:voteOnTarget'),
+  acceptAnswer: mRef<
+    { answerId: Id<'qa_answers'> },
+    { accepted: boolean }
+  >('qaForum:acceptAnswer'),
+  editQuestion: mRef<
+    { questionId: Id<'qa_questions'>; title: string; content: string; topicSlug: string },
+    { ok: true }
+  >('qaForum:editQuestion'),
+  editAnswer: mRef<
+    { answerId: Id<'qa_answers'>; content: string },
+    { ok: true }
+  >('qaForum:editAnswer'),
+  deleteQuestion: mRef<
+    { questionId: Id<'qa_questions'> },
+    { ok: true }
+  >('qaForum:deleteQuestion'),
+  deleteAnswer: mRef<
+    { answerId: Id<'qa_answers'> },
+    { ok: true }
+  >('qaForum:deleteAnswer'),
+  searchQuestions: qRef<
+    { searchQuery: string; topicSlug?: string; limit?: number },
+    QAQuestionDto[]
+  >('qaForum:searchQuestions'),
+  getMyVotes: qRef<
+    { targetIds: string[] },
+    Record<string, number>
+  >('qaForum:getMyVotes'),
+};
+
+export const QA_TOPICS = {
+  listTopics: qRef<
+    Record<string, never>,
+    Array<{ _id: string; slug: string; nameKey: string; icon: string; order: number; isActive: boolean }>
+  >('qaTopics:listTopics'),
+};
+
+export const QA_REPORTS = {
+  reportContent: mRef<
+    {
+      target: 'question' | 'answer' | 'post' | 'comment';
+      targetId: string;
+      reason: string;
+      details?: string;
+    },
+    { ok: true }
+  >('reports:reportContent'),
+  listReports: qRef<
+    { status?: 'open' | 'resolved' | 'dismissed'; limit?: number },
+    Array<{
+      _id: string;
+      target: 'question' | 'answer' | 'post' | 'comment';
+      targetId: string;
+      reason: string;
+      details?: string;
+      status: 'open' | 'resolved' | 'dismissed';
+      createdAt: number;
+    }>
+  >('reports:listReports'),
+};
+
+export const USER_PROFILE = {
+  getUserProfile: qRef<{ userId: Id<'users'> }, CommunityUserProfileDto | null>(
+    'userProfile:getUserProfile'
+  ),
 };
 
 export const FRIENDS = {

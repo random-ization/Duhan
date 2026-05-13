@@ -9,6 +9,8 @@ export const DICTATION_GAP_SECOND_VALUES = [2, 4, 6, 8] as const;
 export const DAILY_GOAL_MINUTE_VALUES = [15, 20, 30, 45, 60] as const;
 export const MEDIA_SUBTITLE_MODE_VALUES = ['SOURCE_ONLY', 'BILINGUAL'] as const;
 export const FONT_SCALE_VALUES = ['compact', 'comfortable', 'relaxed'] as const;
+export const TOPIK_FILTER_TYPE_VALUES = ['ALL', 'READING', 'LISTENING'] as const;
+export const VOCAB_ACTIVE_TAB_VALUES = ['courses', 'my-vocab'] as const;
 
 export type FlashcardFront = (typeof FLASHCARD_FRONT_VALUES)[number];
 export type FlashcardRatingMode = (typeof FLASHCARD_RATING_MODE_VALUES)[number];
@@ -49,6 +51,10 @@ export interface GlobalUserSettings
   displayLanguage: Language;
   fontScale: FontScale;
   dailyGoalMinutes: DailyGoalMinutes;
+  topikFilterType: (typeof TOPIK_FILTER_TYPE_VALUES)[number];
+  vocabActiveTab: (typeof VOCAB_ACTIVE_TAB_VALUES)[number];
+  grammarAiPanelOpen: boolean;
+  routeFavorites: string[];
 }
 
 export type StoredGlobalUserSettings = Partial<GlobalUserSettings>;
@@ -77,6 +83,10 @@ export const DEFAULT_GLOBAL_USER_SETTINGS: GlobalUserSettings = {
   dictationGapSeconds: 2,
   dictationAutoNext: true,
   dailyGoalMinutes: 30,
+  topikFilterType: 'ALL',
+  vocabActiveTab: 'courses',
+  grammarAiPanelOpen: false,
+  routeFavorites: [],
 };
 
 export const toFlashcardPreferenceState = (

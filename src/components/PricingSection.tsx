@@ -7,7 +7,7 @@ import { notify } from '../utils/notify';
 import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import type { ViewerAccessSnapshot } from '../utils/entitlements';
-import { Check, Star, Zap } from 'lucide-react';
+import { Check, Star } from 'lucide-react';
 
 function resolvePlanHighlights(language: string) {
   const isZh = language === 'zh' || language.startsWith('zh-');

@@ -61,4 +61,26 @@ describe('getUpgradeFlowDecision', () => {
       target: '/pricing/details?plan=LIFETIME&source=upgrade_prompt&returnTo=%2Fdashboard',
     });
   });
+
+  it('preserves a localized return target for signed-out users', () => {
+    expect(
+      getUpgradeFlowDecision(
+        {
+          authLoading: false,
+          hasUser: false,
+          isPremiumUser: false,
+        },
+        {
+          plan: 'ANNUAL',
+          source: 'topik_locked',
+          returnTo: '/zh/topik',
+        },
+        '/zh/dashboard'
+      )
+    ).toEqual({
+      kind: 'auth',
+      target:
+        '/auth?redirect=%2Fpricing%2Fdetails%3Fplan%3DANNUAL%26source%3Dtopik_locked%26returnTo%3D%252Fzh%252Ftopik',
+    });
+  });
 });

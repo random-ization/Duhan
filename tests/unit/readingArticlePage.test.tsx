@@ -173,8 +173,8 @@ describe('ReadingArticlePage session restore', () => {
 
     renderPage('/reading/article-1');
 
-    expect(await screen.findByText('Date unavailable')).toBeInTheDocument();
-    expect(screen.getAllByText('Unknown source').length).toBeGreaterThan(0);
+    expect(await screen.findByText(/Date unavailable/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Unknown source/).length).toBeGreaterThan(0);
     expect(screen.queryByText('Invalid Date')).not.toBeInTheDocument();
   });
 });

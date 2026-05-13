@@ -203,7 +203,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     setShowSaveToast(false);
   }, [currentQuestionIndex]);
 
-  const handleAIAnalysis = async (question: TopikQuestion) => {
+  const handleAIAnalysis = React.useCallback(async (question: TopikQuestion) => {
     if (aiLoading || aiAnalysis) return;
 
     setAiLoading(true);
@@ -243,9 +243,9 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [aiLoading, aiAnalysis, analyzeQuestionAction, currentQuestionIndex, language, t]);
 
-  const handleSaveToNotebook = async (question: TopikQuestion) => {
+  const handleSaveToNotebook = React.useCallback(async (question: TopikQuestion) => {
     if (!aiAnalysis || isSaving || isSaved) return;
 
     setIsSaving(true);
@@ -329,7 +329,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [aiAnalysis, isSaving, isSaved, t, currentQuestionIndex, exam.id, pickNotebook, ingestFromSource]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -414,6 +414,7 @@ export const MobileExamReview: React.FC<MobileExamReviewProps> = ({
     currentQuestionIndex,
     exam.questions,
     viewMode,
+    handleAIAnalysis,
   ]);
 
   const handleNext = () => {

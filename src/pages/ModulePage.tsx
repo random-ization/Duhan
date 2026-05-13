@@ -13,12 +13,13 @@ import { useUserActions } from '../hooks/useUserActions';
 import BackButton from '../components/ui/BackButton';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { qRef } from '../utils/convexRefs';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useCurrentLanguage, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { AppBreadcrumb } from '../components/common/AppBreadcrumb';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { TOPIK_GRAMMAR_COURSE_ID, resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { KT, PageShell } from '../components/mobile/ksoft/ksoft';
 import { KsoftImmersiveHeader } from '../components/mobile/ksoft/KsoftMobilePrimitives';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 type SavedWordRow = {
   id: string;
@@ -298,6 +299,7 @@ const ModulePage: React.FC = () => {
   } = useLearningActions();
   const { institutes, isLoading: institutesLoading } = useData();
   const navigate = useLocalizedNavigate();
+  const currentLanguage = useCurrentLanguage();
   const location = useLocation();
   const { moduleParam, instituteId } = useParams<{ moduleParam: string; instituteId?: string }>();
   const [searchParams] = useSearchParams();
@@ -393,7 +395,7 @@ const ModulePage: React.FC = () => {
     user?.lastUnit,
   ]);
 
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to={localizeInternalPath('/', currentLanguage)} replace />;
 
   if (
     shouldRedirectForMissingSelection({
@@ -404,14 +406,14 @@ const ModulePage: React.FC = () => {
     })
   ) {
     const redirectPath = isCourseRoute && instituteId ? `/course/${instituteId}` : '/dashboard';
-    return <Navigate to={redirectPath} replace />;
+    return <Navigate to={localizeInternalPath(redirectPath, currentLanguage)} replace />;
   }
 
   const courseBase = effectiveInstitute ? `/course/${effectiveInstitute}` : '/courses';
   const subPath = getModuleRedirectSubPath(currentModule, isCustomList, effectiveInstitute);
 
   if (subPath) {
-    return <Navigate to={`${courseBase}/${subPath}`} replace />;
+    return <Navigate to={localizeInternalPath(`${courseBase}/${subPath}`, currentLanguage)} replace />;
   }
   const moduleContent = renderModuleContent({
     currentModule,

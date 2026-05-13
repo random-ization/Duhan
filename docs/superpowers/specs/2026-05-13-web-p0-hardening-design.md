@@ -4,7 +4,8 @@
 
 - Date: 2026-05-13
 - Scope: Web P0 only
-- Goal: Fix the highest-risk Web regressions without mixing in broader P1/P2 refactors
+- Status: Completed
+- Goal: [x] Fix the highest-risk Web regressions without mixing in broader P1/P2 refactors
 
 ## Problem Statement
 

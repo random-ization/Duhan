@@ -6,9 +6,6 @@ function hasFatalErrorText(pageText: string) {
   return /application error|internal server error|unexpected application error/i.test(pageText);
 }
 
-function isAuthRedirect(url: string) {
-  return /\/(auth|login|register)(\?|$)/.test(url);
-}
 
 test.describe('Mobile Media Interactions', () => {
   test('media page renders without fatal errors', async ({ page }) => {

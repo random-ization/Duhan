@@ -12,7 +12,7 @@ import { getLocalizedContent } from '../../utils/languageUtils';
 import { Card, Chip, HanjaSeal, KT, PageShell, SectionHead } from './ksoft/ksoft';
 
 interface MobileVocabDashboardProps {
-  readonly savedWordsCount: number;
+  readonly language?: string;
   readonly onOpenSavedWords: () => void;
   readonly onOpenMistakes: () => void;
 }
@@ -276,7 +276,7 @@ const getHeatmapCellStyle = (cell: VocabActivityHeatmapCellDto) => {
 };
 
 export const MobileVocabDashboard = ({
-  savedWordsCount,
+  language: languageOverride,
   onOpenSavedWords,
   onOpenMistakes,
 }: MobileVocabDashboardProps) => {
@@ -284,7 +284,7 @@ export const MobileVocabDashboard = ({
   const { i18n, t } = useTranslation();
   const { user } = useAuth();
   const { recentMaterials } = useLearningSelection();
-  const language = i18n.resolvedLanguage || i18n.language || 'en';
+  const language = languageOverride || i18n.resolvedLanguage || i18n.language || 'en';
   const copy = getCopy(language);
 
   const learnerStats =
@@ -350,6 +350,7 @@ export const MobileVocabDashboard = ({
   const memoryBars = useMemo(() => getMemoryBars(heatmap), [heatmap]);
   const retentionRate30d = dashboardInsights?.retentionRate30d ?? null;
   const dueReviews = learnerStats.vocabStats.dueReviews ?? 0;
+  const savedWordsCount = learnerStats.reviewStats.savedWords ?? learnerStats.vocabStats.total ?? 0;
   const showBackButton =
     typeof window !== 'undefined' &&
     window.history.length > 1 &&

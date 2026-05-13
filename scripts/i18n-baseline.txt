@@ -40,9 +40,9 @@ src/components/subscription/MemberSubscriptionManagement.tsx
 src/features/vocab/components/VocabMatch.tsx
 src/features/vocab/components/VocabQuiz.tsx
 src/features/vocab/components/VocabTest.tsx
+src/hooks/usePricingPlans.ts
 src/pages/AchievementsPage.tsx
 src/pages/CommunityAddPage.tsx
-src/pages/CommunityPage.tsx
 src/pages/desktop/DesktopCommunityPage.tsx
 src/pages/desktop/DesktopCourseDashboard.tsx
 src/pages/desktop/DesktopCoursesOverviewPage.tsx
@@ -56,6 +56,7 @@ src/pages/desktop/DesktopPodcastChannelPage.tsx
 src/pages/desktop/DesktopPodcastDashboard.tsx
 src/pages/desktop/DesktopPodcastPlayerPage.tsx
 src/pages/desktop/DesktopProfilePage.tsx
+src/pages/desktop/DesktopQAListPage.tsx
 src/pages/desktop/DesktopReadingArticlePage.tsx
 src/pages/desktop/DesktopReadingDiscoveryPage.tsx
 src/pages/desktop/DesktopReviewDashboardPage.tsx
@@ -88,7 +89,6 @@ src/pages/reading/ReadingComponents.tsx
 src/pages/ReviewDashboardPage.tsx
 src/pages/ReviewQuizPage.tsx
 src/pages/TopikPage.tsx
-src/pages/VocabBookDictationPage.tsx
 src/pages/VocabBookPracticePage.tsx
 src/pages/VocabModulePage.tsx
 src/utils/grammarDisplaySanitizer.ts

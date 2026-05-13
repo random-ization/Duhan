@@ -1,65 +1,39 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { usePublicMembershipSnapshot } from '../../hooks/usePublicMembershipSnapshot';
-import {
-  callAuthenticatedConvexAction,
-  callPublicConvexAction,
-} from '../../utils/publicConvexClient';
+import { callAuthenticatedConvexAction } from '../../utils/publicConvexClient';
 import { runConvexActionWithRetry } from '../../utils/convexActionRetry';
 import {
   isSafeCheckoutUrl,
   type LemonSqueezyCheckoutRequest,
   type LemonSqueezyCheckoutResult,
-  type LemonSqueezyVariantPrices,
 } from '../../utils/lemonsqueezy';
 import { logger } from '../../utils/logger';
 import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
 import { buildPricingDetailsPath } from '../../utils/subscriptionPlan';
 import { trackEvent } from '../../utils/analytics';
-import { ArrowLeft, Check, Star, Zap, Crown, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, Star } from 'lucide-react';
 import { getSubscriptionPageCopy } from '../../utils/subscriptionPageCopy';
 import { Button } from '../ui';
-import { KT, HanjaSeal, Card, PageShell } from './ksoft/ksoft';
-import { MemberSubscriptionManagement } from '../subscription/MemberSubscriptionManagement';
+import { Card, PageShell } from './ksoft/ksoft';
+import { usePricingPlans } from '../../hooks/usePricingPlans';
 
 export const MobileSubscriptionPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { user, loading: authLoading } = useAuth();
-  const membership = usePublicMembershipSnapshot();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('ANNUAL');
   const [loading, setLoading] = useState(false);
-  const [prices, setPrices] = useState<LemonSqueezyVariantPrices | null>(null);
-
-  const effectiveUser = membership.user ?? user;
-  const isPremiumMember = Boolean(membership.viewerAccess?.isPremium);
-
-  const showLocalizedPromo =
-    i18n.language === 'zh' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn' ||
-    i18n.language.startsWith('zh-');
-    
-  const priceRegion = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
-  
-  const PRICING_MAP: Record<string, any> = {
-    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', unitM: '/ mo', unitA: '/ yr' },
-    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', unitM: '/ 月', unitA: '/ 年' },
-    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', unitM: '/ 月', unitA: '/ 年' },
-    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', unitM: '/ 月', unitA: '/ 年' },
-  };
-
-  const config = PRICING_MAP[i18n.language] || PRICING_MAP['en'];
+  const { plans, region } = usePricingPlans(i18n.language);
   const baseLang = (i18n.language || 'en').split('-')[0];
   const languageLabel = getLanguageLabel(baseLang as 'en' | 'zh' | 'vi' | 'mn');
   const pageCopy = useMemo(() => getSubscriptionPageCopy(i18n.language), [i18n.language]);
 
   const handleSubscribe = async () => {
     if (authLoading) return;
-    const plan = billingInterval as any;
+    const plan: LemonSqueezyCheckoutRequest['plan'] = billingInterval;
 
     trackEvent('checkout_start', {
       language: i18n.language,
@@ -67,7 +41,7 @@ export const MobileSubscriptionPage: React.FC = () => {
       source: 'mobile_subscription_v2',
     });
 
-    if (!effectiveUser) {
+    if (!user) {
       navigate('/auth', { state: { from: location.pathname, plan } });
       return;
     }
@@ -76,10 +50,10 @@ export const MobileSubscriptionPage: React.FC = () => {
     try {
       const checkoutArgs: LemonSqueezyCheckoutRequest = {
         plan: plan,
-        userId: effectiveUser.id?.toString() || '',
-        userEmail: effectiveUser.email || '',
-        userName: effectiveUser.name || '',
-        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        userId: user.id?.toString() || '',
+        userEmail: user.email || '',
+        userName: user.name || '',
+        region,
         locale: i18n.language,
         source: 'mobile_subscription_v2',
         returnTo: '/dashboard',
@@ -101,19 +75,6 @@ export const MobileSubscriptionPage: React.FC = () => {
       setLoading(false);
     }
   };
-
-  if (membership.hasStoredSession && (membership.loading || isPremiumMember)) {
-    return (
-      <MemberSubscriptionManagement
-        user={effectiveUser}
-        viewerAccess={membership.viewerAccess}
-        variant="mobile"
-        loading={membership.loading}
-        error={membership.error}
-        onRefresh={membership.refresh}
-      />
-    );
-  }
 
   const commonFeatures = [
     t('landing.v2.pricing.pro.f1', { defaultValue: '无限新学 + 无限复习' }),
@@ -185,12 +146,14 @@ export const MobileSubscriptionPage: React.FC = () => {
         {/* Selected Plan Price Focus */}
         <div className="mb-12 text-center">
           <div className="flex items-baseline justify-center gap-1 mb-2">
-            <span className="font-k-serif text-[24px] font-medium text-k-ink/30">{config.symbol}</span>
+            <span className="font-k-serif text-[24px] font-medium text-k-ink/30">
+              {plans[billingInterval].currencySymbol}
+            </span>
             <span className="font-k-serif text-[72px] font-black leading-none tracking-tighter text-k-ink">
-              {billingInterval === 'MONTHLY' ? config.monthly : billingInterval === 'ANNUAL' ? config.annual : config.lifetime}
+              {plans[billingInterval].displayAmount}
             </span>
             <span className="text-[15px] font-bold text-k-sub opacity-50">
-              {billingInterval === 'MONTHLY' ? config.unitM : billingInterval === 'ANNUAL' ? config.unitA : t('period.once')}
+              {plans[billingInterval].displayUnit}
             </span>
           </div>
           {billingInterval === 'ANNUAL' && (

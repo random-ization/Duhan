@@ -6,6 +6,8 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningSelection } from '../contexts/LearningContext';
 import { buildMobileCourseDefaultPath } from '../utils/learningFlow';
+import { useCurrentLanguage } from '../hooks/useLocalizedNavigate';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 const DesktopCourseDashboard = lazy(() => import('./desktop/DesktopCourseDashboard'));
 
@@ -14,6 +16,7 @@ export default function CourseDashboard() {
   const { instituteId } = useParams<{ instituteId: string }>();
   const { user } = useAuth();
   const { selectedInstitute } = useLearningSelection();
+  const currentLanguage = useCurrentLanguage();
 
   const activeCourseId = instituteId || selectedInstitute || user?.lastInstitute || null;
 
@@ -25,13 +28,13 @@ export default function CourseDashboard() {
 
   if (!instituteId) {
     if (activeCourseId) {
-      return <Navigate to={`/course/${activeCourseId}`} replace />;
+      return <Navigate to={localizeInternalPath(`/course/${activeCourseId}`, currentLanguage)} replace />;
     }
-    return <Navigate to="/courses" replace />;
+    return <Navigate to={localizeInternalPath('/courses', currentLanguage)} replace />;
   }
 
   if (isMobile && instituteId) {
-    return <Navigate to={buildMobileCourseDefaultPath(instituteId)} replace />;
+    return <Navigate to={localizeInternalPath(buildMobileCourseDefaultPath(instituteId), currentLanguage)} replace />;
   }
 
   return (

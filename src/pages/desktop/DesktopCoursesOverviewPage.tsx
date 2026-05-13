@@ -1,27 +1,21 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
-  ChevronDown, 
   Search, 
   ChevronRight, 
-  Layers, 
   BookMarked, 
   Sparkles, 
   BookOpen, 
-  PenLine, 
-  Clock3, 
-  Compass, 
-  GraduationCap,
-  LayoutGrid,
-  Type,
   Award,
-  Library,
   LucideIcon,
   Eye,
   EyeOff,
   Lightbulb,
   HelpCircle,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  LayoutGrid,
+  Type,
+  Library
 } from 'lucide-react';
 import { RedEyeBlock, MarkdownRenderer } from './DesktopGrammarModulePage';
 import { useQuery, useMutation } from 'convex/react';
@@ -43,7 +37,8 @@ import { cn } from '../../lib/utils';
 import BackButton from '../../components/ui/BackButton';
 import type { Institute } from '../../types';
 
-import type { LearnerStatsDto, CourseDashboardDto } from '../../../convex/learningStats';
+
+// import type { LearnerStatsDto, CourseDashboardDto } from '../../../convex/learningStats';
 
 import type { UnitGrammarDto, GrammarItemDto } from '../../../convex/grammars';
 
@@ -124,7 +119,7 @@ const TAB_HANJA: Record<LearnTabKey, string> = {
   topik: '考',
 };
 
-const PRIORITY_COURSE_ID = TOPIK_GRAMMAR_COURSE_ID;
+// const PRIORITY_COURSE_ID = TOPIK_GRAMMAR_COURSE_ID;
 
 // --- Helper Functions ---
 
@@ -148,10 +143,10 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
   
   const activeTab = (searchParams.get('tab') as LearnTabKey) || 'mine';
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedPublisher, setExpandedPublisher] = useState<string | null>(null);
+  const [_expandedPublisher, _setExpandedPublisher] = useState<string | null>(null);
 
   const { recentMaterials, selectedInstitute } = useLearningSelection();
-  const { setRecentMaterial, setSelectedInstitute, setSelectedLevel } = useLearningActions();
+  const { setRecentMaterial: _, setSelectedInstitute, setSelectedLevel: _2 } = useLearningActions();
   const [manualActiveCourseId, setActiveCourseId] = useState<string | null>(() => {
     return localStorage.getItem('last_selected_course_id');
   });
@@ -194,7 +189,7 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
     }
     return level;
   }, []);
-  const publishersData = useQuery(qRef<NoArgs, Publisher[]>('publishers:getAll'));
+  const _publishersData = useQuery(qRef<NoArgs, Publisher[]>('publishers:getAll'));
   
   // Typing 数据
   const typingStats = useQuery(TYPING.getUserStats) as TypingStats | null;
@@ -216,7 +211,7 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
     return topikExams.page?.[0];
   }, [topikExams]);
 
-  const isLoading = courses === undefined;
+  const _isLoading = courses === undefined;
 
 
   // --- Logic ---
@@ -255,7 +250,7 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
   }, [activeCourseId, activeTab, courses, selectedInstitute, recentMaterials, stats]);
 
   // 获取当前课程的单元列表
-  const currentCourseUnits = useQuery(
+  const _currentCourseUnits = useQuery(
     qRef<{ courseId: string }, TextbookUnit[]>('units:getByCourse'),
     currentCourse ? { courseId: currentCourse.id } : 'skip'
   );
@@ -357,7 +352,7 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
     return `${months[d.getMonth()]} ${d.getDate()} · ${map[d.getDay()]}`;
   }, [i18n.language]);
 
-  const courseProgress = useMemo(() => {
+  const _courseProgress = useMemo(() => {
     if (!stats?.courseProgress || !currentCourse) return null;
     return stats.courseProgress.find((p) => p.courseId === currentCourse.id);
   }, [stats?.courseProgress, currentCourse]);

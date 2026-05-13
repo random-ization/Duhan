@@ -248,9 +248,9 @@ export const getStats = query({
         const byId = await ctx.db
           .query('institutes')
           .withIndex('by_legacy_id', q => q.eq('id', courseId))
-          .first();
+          .unique();
         if (byId) return byId;
-        
+
         // 2. Try Convex _id
         const normalizedId = ctx.db.normalizeId('institutes', courseId);
         if (normalizedId) {
@@ -263,13 +263,15 @@ export const getStats = query({
         return null;
       })
     );
-    const institutesMap = new Map(
-      institutesArray.filter((i): i is Doc<'institutes'> => !!i && 'name' in i).map(institute => [institute.id || String(institute._id), institute])
-    );
-    // Also map by _id for robust lookup
-    institutesArray.filter((i): i is Doc<'institutes'> => !!i && 'name' in i).forEach(inst => {
-      institutesMap.set(String(inst._id), inst);
-    });
+
+    const institutesMap = new Map<string, Doc<'institutes'>>();
+    for (const inst of institutesArray) {
+      if (inst && 'name' in inst && 'id' in inst) {
+        const institute = inst as Doc<'institutes'>;
+        institutesMap.set(institute.id, institute);
+        institutesMap.set(String(institute._id), institute);
+      }
+    }
 
     const courseDetails = courseProgress.map(progress => {
       const institute = institutesMap.get(progress.courseId);
@@ -494,12 +496,14 @@ export const getCourseDashboard = query({
         if (!institute) {
           const normalizedId = ctx.db.normalizeId('institutes', p.courseId);
           if (normalizedId) {
-            try { 
+            try {
               const result = await ctx.db.get(normalizedId);
               if (result && 'name' in result) {
-                institute = result;
+                institute = result as Doc<'institutes'>;
               }
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
           }
         }
 

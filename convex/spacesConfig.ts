@@ -92,7 +92,6 @@ export function normalizeStoragePublicUrl(
   try {
     const currentUrl = new URL(inputUrl);
     const targetBase = cdnUrl.endsWith('/') ? cdnUrl.slice(0, -1) : cdnUrl;
-    const targetUrl = new URL(targetBase);
     const endpointHost = `${spaces.bucket}.${getSpacesHost(spaces.endpoint)}`;
 
     const host = currentUrl.host.toLowerCase();

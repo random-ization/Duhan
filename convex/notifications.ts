@@ -37,6 +37,9 @@ export type NotificationKind =
   | 'exam_countdown'
   | 'partner_milestone'
   | 'achievement_unlocked'
+  | 'answer_received'
+  | 'answer_accepted'
+  | 'mention'
   | 'friend_activity'
   | 'friend_request'
   | 'friend_accepted'
@@ -89,6 +92,9 @@ const KIND_VALIDATOR = v.union(
   v.literal('exam_countdown'),
   v.literal('partner_milestone'),
   v.literal('achievement_unlocked'),
+  v.literal('answer_received'),
+  v.literal('answer_accepted'),
+  v.literal('mention'),
   v.literal('friend_activity'),
   v.literal('friend_request'),
   v.literal('friend_accepted'),
@@ -257,7 +263,14 @@ function isSubscriptionExpired(
 }
 
 function resolveCategoryFromKind(kind: NotificationKind): NotificationCategory {
-  if (kind === 'streak_reminder') return 'learning';
+  if (
+    kind === 'streak_reminder' ||
+    kind === 'answer_received' ||
+    kind === 'answer_accepted' ||
+    kind === 'mention'
+  ) {
+    return 'learning';
+  }
   if (kind === 'exam_countdown') return 'exam';
   if (
     kind === 'friend_activity' ||
@@ -278,6 +291,13 @@ function resolvePriorityFromKind(kind: NotificationKind): NotificationPriority {
   }
   if (kind === 'achievement_unlocked') return 'low';
   return 'normal';
+}
+
+export async function enqueueNotificationFromMutation(
+  ctx: MutationCtx,
+  args: EnqueueNotificationArgs
+): Promise<EnqueueNotificationResult> {
+  return enqueueNotificationInternal(ctx, args);
 }
 
 function toPreferencesDto(row?: Doc<'notification_preferences'> | null): NotificationPreferencesDto {

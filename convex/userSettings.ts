@@ -38,6 +38,8 @@ const profileVisibilityValidator = v.union(
   v.literal('friends'),
   v.literal('private')
 );
+const topikFilterTypeValidator = v.union(v.literal('ALL'), v.literal('READING'), v.literal('LISTENING'));
+const vocabActiveTabValidator = v.union(v.literal('courses'), v.literal('my-vocab'));
 
 type UserSettingsDoc = Doc<'user_settings'>;
 type StoredUserSettings = Omit<UserSettingsDoc, '_id' | '_creationTime' | 'userId' | 'updatedAt'>;
@@ -60,6 +62,10 @@ const DEFAULT_USER_SETTINGS: Required<StoredUserSettings> = {
   dictationGapSeconds: 2,
   dictationAutoNext: true,
   dailyGoalMinutes: 30,
+  topikFilterType: 'ALL',
+  vocabActiveTab: 'courses',
+  grammarAiPanelOpen: false,
+  routeFavorites: [],
   privacy: {
     profileVisibility: 'public',
     leaderboardOptOut: false,
@@ -144,6 +150,10 @@ export const updateSettings = mutation({
     dictationGapSeconds: v.optional(dictationGapSecondsValidator),
     dictationAutoNext: v.optional(v.boolean()),
     dailyGoalMinutes: v.optional(dailyGoalMinutesValidator),
+    topikFilterType: v.optional(topikFilterTypeValidator),
+    vocabActiveTab: v.optional(vocabActiveTabValidator),
+    grammarAiPanelOpen: v.optional(v.boolean()),
+    routeFavorites: v.optional(v.array(v.string())),
     privacy: v.optional(
       v.object({
         profileVisibility: v.optional(profileVisibilityValidator),

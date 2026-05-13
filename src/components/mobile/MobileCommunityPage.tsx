@@ -19,6 +19,7 @@ import {
 } from './ksoft/ksoft';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
+import { UserAvatar } from '../common';
 import { 
   Heart, 
   MessageCircle, 
@@ -39,6 +40,11 @@ import type { Id } from '../../../convex/_generated/dataModel';
 // --- Helpers ---
 
 type FriendRelationOverride = 'already_requested' | 'already_friends';
+type CommunityViewer = {
+  _id: Id<'users'>;
+  name?: string;
+  avatar: string | null;
+};
 
 const getActivityTone = (moduleName: string): { emoji: string; tag: string; tone: any; bg: string } => {
   const lower = (moduleName || '').toLowerCase();
@@ -63,7 +69,7 @@ const PostComposer = ({
   user, 
   onSuccess 
 }: { 
-  user: any; 
+  user: CommunityViewer | null | undefined;
   onSuccess: () => void 
 }) => {
   const { t } = useTranslation();
@@ -123,13 +129,11 @@ const PostComposer = ({
   return (
     <Card pad={16} className="mb-6 shadow-k-sh-sm border border-k-line/5">
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-xl bg-k-bg2 overflow-hidden border border-k-line/10 shrink-0">
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-lg">👤</div>
-          )}
-        </div>
+        <UserAvatar
+          user={user}
+          className="w-10 h-10 rounded-xl bg-k-bg2 border border-k-line/10 shrink-0"
+          fallbackClassName="text-lg"
+        />
         <div className="flex-1 min-w-0">
           <textarea
             value={content}
@@ -281,7 +285,7 @@ const CommunityItem = ({ item, t }: { item: any; t: any }) => {
 export default function MobileCommunityPage() {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
-  const [activeTab, setActiveTab] = useState<'feed' | 'rank'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'qa' | 'rank'>('feed');
   const language = i18n.resolvedLanguage || 'en';
 
   // Search State
@@ -361,7 +365,16 @@ export default function MobileCommunityPage() {
           >
             {t('community.tabs.feed', { defaultValue: '动态' })}
           </button>
-          <button 
+          <button
+            onClick={() => { setActiveTab('qa'); navigate('/community/qa'); }}
+            className={cn(
+              "flex-1 py-2.5 rounded-xl text-[13px] font-black transition-all",
+              activeTab === 'qa' ? "bg-k-card text-k-ink shadow-sm" : "text-k-sub"
+            )}
+          >
+            {t('qa.tabQA', { defaultValue: 'Q&A' })}
+          </button>
+          <button
             onClick={() => setActiveTab('rank')}
             className={cn(
               "flex-1 py-2.5 rounded-xl text-[13px] font-black transition-all",

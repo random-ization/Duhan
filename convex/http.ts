@@ -268,7 +268,7 @@ http.route({
         status: 200,
         headers: MOBILE_CORS_HEADERS,
       });
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       return new Response(JSON.stringify({ error: 'REFRESH_FAILED' }), {
         status: 401,
         headers: MOBILE_CORS_HEADERS,

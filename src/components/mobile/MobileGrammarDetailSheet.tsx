@@ -1006,6 +1006,7 @@ const ReaderDisplayControls: React.FC<{
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
+            aria-label={t(option.titleKey, { defaultValue: `Font size: ${option.titleDefault}` })}
             className="flex h-9 px-3 items-center justify-center rounded-xl transition-all active:scale-95"
             style={{
               background: active ? KT.ink : 'transparent',
@@ -1025,6 +1026,7 @@ const ReaderDisplayControls: React.FC<{
     <button
       type="button"
       onClick={onToggleRedEye}
+      aria-label={t('grammarDetail.redEyeMode', { defaultValue: 'Red eye mode' })}
       className="flex h-9 w-12 items-center justify-center rounded-xl transition-all active:scale-95"
       style={{
         background: redEyeEnabled ? `${KT.pink}88` : 'transparent',
@@ -1473,6 +1475,34 @@ export default function MobileGrammarDetailSheet({
                     <MarkdownRenderer content={markdownDocument} redEyeEnabled={redEyeEnabled} />
                   </div>
                 </Card>
+              ) : null}
+
+              {grammar.sourceMeta ? (
+                <div 
+                  style={{ 
+                    marginTop: 24, 
+                    padding: '0 4px 40px',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    opacity: 0.6,
+                    letterSpacing: 0.5
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: KT.ink }}>SOURCE TYPE:</span>
+                    <span>{grammar.sourceMeta.sourceType}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: KT.ink }}>SOURCE PATH:</span>
+                    <span className="truncate">{grammar.sourceMeta.sourcePath}</span>
+                  </div>
+                  {importedAtLabel && (
+                    <div className="mt-1">
+                      IMPORTED: {importedAtLabel}
+                    </div>
+                  )}
+                </div>
               ) : null}
 
               {renderedRules.length > 0 ? (

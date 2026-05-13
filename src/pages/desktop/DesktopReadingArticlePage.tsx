@@ -4,7 +4,7 @@ import {
   Volume2,
   Languages,
   Type,
-  ChevronRight,
+//   ChevronRight,
   Layout,
   Bookmark,
   Share2,
@@ -34,30 +34,30 @@ type DesktopReadingArticleProps = {
   activeWord: string;
 };
 
-function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
-  return (
-    <div className="mb-8">
-      <div className="mb-4 flex items-center px-1">
-        {kanji && (
-          <span className="mr-2 font-k-serif text-[18px] font-medium text-k-crimson">
-            {kanji}
-          </span>
-        )}
-        <span className="text-[12px] font-black uppercase tracking-wider text-k-ink">
-          {title}
-        </span>
-        {action && (
-          <button className="ml-auto text-[10px] font-bold text-k-sub hover:text-k-crimson transition-colors">
-            {action}
-          </button>
-        )}
-      </div>
-      <div className="rounded-[24px] bg-k-card border border-k-line/5 shadow-k-sh-sm overflow-hidden" style={{ padding: pad }}>
-        {children}
-      </div>
-    </div>
-  );
-}
+// function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
+//   return (
+//     <div className="mb-8">
+//       <div className="mb-4 flex items-center px-1">
+//         {kanji && (
+//           <span className="mr-2 font-k-serif text-[18px] font-medium text-k-crimson">
+//             {kanji}
+//           </span>
+//         )}
+//         <span className="text-[12px] font-black uppercase tracking-wider text-k-ink">
+//           {title}
+//         </span>
+//         {action && (
+//           <button className="ml-auto text-[10px] font-bold text-k-sub hover:text-k-crimson transition-colors">
+//             {action}
+//           </button>
+//         )}
+//       </div>
+//       <div className="rounded-[24px] bg-k-card border border-k-line/5 shadow-k-sh-sm overflow-hidden" style={{ padding: pad }}>
+//         {children}
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function DesktopReadingArticlePage({
   t,
@@ -108,7 +108,7 @@ export default function DesktopReadingArticlePage({
           <div className="w-8 h-8 rounded-full border border-k-line flex items-center justify-center group-hover:bg-k-ink group-hover:text-k-bg transition-all">
             <ArrowLeft size={16} />
           </div>
-          <span>返回</span>
+          <span>{t('common.back', { defaultValue: 'Back' })}</span>
         </button>
 
         <div className="h-4 w-px bg-k-line" />
@@ -129,7 +129,7 @@ export default function DesktopReadingArticlePage({
               speaking ? "bg-k-crimson text-white" : "hover:bg-k-line text-k-ink"
             )}
           >
-            <Volume2 size={16} /> {speaking ? '正在朗读...' : '朗读'}
+            <Volume2 size={16} /> {speaking ? t('readingArticle.controls.speaking', { defaultValue: 'Speaking...' }) : t('readingArticle.controls.speak', { defaultValue: 'Speak' })}
           </button>
           <button
             onClick={onToggleTranslation}
@@ -138,7 +138,7 @@ export default function DesktopReadingArticlePage({
               translationEnabled ? "bg-k-ink text-white" : "hover:bg-k-line text-k-ink"
             )}
           >
-            <Languages size={16} /> {translationEnabled ? '显示韩文' : '对照翻译'}
+            <Languages size={16} /> {translationEnabled ? t('readingArticle.controls.hideTranslation', { defaultValue: 'Hide translation' }) : t('readingArticle.controls.showTranslation', { defaultValue: 'Show translation' })}
           </button>
           <button
             onClick={increaseFontSize}
@@ -184,7 +184,7 @@ export default function DesktopReadingArticlePage({
 
           <div className="bg-k-card/30 rounded-[40px] p-12 border border-k-line/5 shadow-k-sh-sm">
             <div className="flex items-center gap-2 mb-10 text-[11px] font-black text-k-sub uppercase tracking-[2px]">
-              <Layout size={14} className="text-k-crimson" /> START READING
+              <Layout size={14} className="text-k-crimson" /> {t('readingArticle.startReading', { defaultValue: 'START READING' })}
             </div>
 
             <div className="space-y-8">
@@ -230,13 +230,13 @@ export default function DesktopReadingArticlePage({
                   <Share2 size={18} />
                 </div>
                 <span className="text-[12px] font-bold text-k-sub">
-                  {sourceDisplayLabel} · {wordCount} 词
+                  {sourceDisplayLabel} · {wordCount} {t('readingArticle.meta.wordCount', { defaultValue: 'words' })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[12px] font-bold text-k-sub mr-2">阅读进度 {Math.round(scrollProgress)}%</span>
                 <button className="px-6 py-2.5 bg-k-ink text-k-bg rounded-xl text-[13px] font-black hover:bg-k-crimson transition-all">
-                  标记已读
+                  {t('readingArticle.markAsRead', { defaultValue: 'Mark as Read' })}
                 </button>
               </div>
             </div>

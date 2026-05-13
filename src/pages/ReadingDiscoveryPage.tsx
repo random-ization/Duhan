@@ -21,14 +21,12 @@ import {
   normalizeReadingDifficultyFilter,
   resolvePictureBookLevelFilter,
 } from '../utils/readingDiscoveryFilters';
-
 const LazyMobileMediaPage = lazy(() =>
   import('../components/mobile/MobileMediaPage').then(module => ({
     default: module.MobileMediaPage,
   }))
 );
-
-const DesktopReadingDiscoveryPage = lazy(() => import('./desktop/DesktopReadingDiscoveryPage'));
+import DesktopReadingDiscoveryPage from './desktop/DesktopReadingDiscoveryPage';
 
 type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
 

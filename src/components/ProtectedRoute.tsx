@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loading } from './common/Loading';
 import { ensureLocaleNamespaces } from '../utils/i18nNamespaceLoader';
 import { DEFAULT_LANGUAGE, isValidLanguage } from './LanguageRouter';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 // NOTE: We used to call `useConvexAuth()` directly here. That pulled
 // `convex/react` into the entry chunk because `routes.tsx` imports
@@ -90,7 +91,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Step 4: Admin role check
   if (requireAdmin && user.role !== 'ADMIN') {
-    return <Navigate to={redirectTo || '/dashboard'} replace />;
+    const nextTarget = redirectTo || localizeInternalPath('/dashboard', lang || DEFAULT_LANGUAGE);
+    return <Navigate to={nextTarget} replace />;
   }
 
   // Step 5: All checks passed

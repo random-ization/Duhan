@@ -25,7 +25,7 @@ export const EpubReader: React.FC = () => {
   // epub.js refs
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<any>(null);
-  const renditionRef = useRef<any>(null);
+  const [rendition, setRendition] = useState<any>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [readerSettings, setReaderSettings] = useState<{
@@ -110,42 +110,12 @@ export const EpubReader: React.FC = () => {
           flow: 'paginated',
           allowScriptedContent: false,
         });
-        renditionRef.current = rendition;
-
-        rendition.hooks.content.register((contents: any) => {
-          const doc = contents?.document as Document | undefined;
-          if (!doc) return;
-
-          const styleTag = doc.createElement('style');
-          styleTag.textContent = `
-            html, body {
-              background: ${readerSettings.theme === 'dark' ? '#09090b' : readerSettings.theme === 'sepia' ? '#f8f1df' : '#f8fafc'} !important;
-              overflow: hidden !important;
-            }
-            body {
-              margin: 0 !important;
-              -webkit-font-smoothing: antialiased;
-              text-rendering: optimizeLegibility;
-            }
-            img, svg, canvas {
-              max-width: 100% !important;
-              height: auto !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              background: transparent !important;
-            }
-            * {
-              animation: none !important;
-              transition: none !important;
-            }
-          `;
-          doc.head.appendChild(styleTag);
-        });
+        setRendition(rendition);
 
         const lastCfi = bookDetail?.userProgress?.blockId;
         const displayPromise = lastCfi ? rendition.display(lastCfi) : rendition.display();
-        displayPromise.catch(err => {
-          logError('Failed to display EPUB location', err);
+        displayPromise.catch(_err => {
+          logError('Failed to display EPUB location', _err);
           rendition.display().catch(innerErr => logError('Failed to display EPUB start', innerErr));
         });
 
@@ -161,13 +131,13 @@ export const EpubReader: React.FC = () => {
                   if (!isMounted) return;
                   logInfo('EPUB locations generated', { length: book.locations.length() });
                 })
-                .catch((err: any) => {
-                  logError('EPUB locations generation error', err);
+                .catch((_err: any) => {
+                  logError('EPUB locations generation error', _err);
                 });
             }, 0);
           })
-          .catch((err: any) => {
-            logError('Failed to initialize EPUB reader', err);
+          .catch((_err: any) => {
+            logError('Failed to initialize EPUB reader', _err);
             if (isMounted) {
               setIsBooting(false);
             }
@@ -185,47 +155,31 @@ export const EpubReader: React.FC = () => {
         rendition.on('rendered', () => {
           if (!isMounted) return;
           setIsBooting(false);
-          
-          // Add selection listener
-          const iframe = viewerRef.current?.querySelector('iframe');
-          if (iframe) {
-            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (iDoc) {
-              iDoc.addEventListener('mouseup', () => {
-                const selection = iframe.contentWindow?.getSelection()?.toString().trim();
-                if (selection && selection.length < 50) {
-                  // Handle selection (e.g. open dictionary)
-                  logInfo('EPUB selection', { selection });
-                  // We can't easily trigger the parent's dictionary from here without a shared state or event
-                  // But for now, we'll log it. 
-                }
-              });
-            }
-          }
         });
       })
-      .catch(err => {
-        logError('Failed to load epub.js dynamically', err);
+      .catch(_err => {
+        logError('Failed to load epub.js dynamically', _err);
         if (isMounted) {
           setIsBooting(false);
         }
       });
-
     return () => {
       isMounted = false;
       if (bookRef.current) {
         bookRef.current.destroy();
         bookRef.current = null;
       }
-      renditionRef.current = null;
+      setRendition(null);
     };
-  }, [epubUrl, bookDetail?.userProgress?.blockId, handleProgressSave, readerSettings.theme]);
+  }, [epubUrl, bookDetail?.userProgress?.blockId, handleProgressSave]);
 
-  // Apply Theme Settings
+  // Apply Theme & Style Settings
   useEffect(() => {
-    const rendition = renditionRef.current;
     if (!rendition) return;
 
+    logInfo('Applying EPUB styles', { theme: readerSettings.theme, fontSize: readerSettings.fontSize });
+
+    // Register themes if not already
     rendition.themes.register('light', {
       body: { background: '#f8fafc', color: '#18181b' },
       a: { color: '#1d4ed8' },
@@ -238,6 +192,7 @@ export const EpubReader: React.FC = () => {
       body: { background: '#f8f1df', color: '#4b3521' },
       a: { color: '#92400e' },
     });
+    
     rendition.themes.select(readerSettings.theme);
 
     let fontSizePx = '18px';
@@ -250,15 +205,30 @@ export const EpubReader: React.FC = () => {
     if (readerSettings.lineHeight === 'compact') lineH = '1.3';
     if (readerSettings.lineHeight === 'relaxed') lineH = '2.0';
     rendition.themes.override('line-height', lineH);
-  }, [readerSettings]);
+
+    // Update injected styles in hooks if any
+    rendition.hooks.content.register((contents: any) => {
+      const doc = contents?.document as Document | undefined;
+      if (!doc) return;
+      const styleTag = doc.getElementById('epub-reader-custom-style') || doc.createElement('style');
+      styleTag.id = 'epub-reader-custom-style';
+      styleTag.textContent = `
+        html, body {
+          background: ${readerSettings.theme === 'dark' ? '#09090b' : readerSettings.theme === 'sepia' ? '#f8f1df' : '#f8fafc'} !important;
+          overflow: hidden !important;
+        }
+      `;
+      if (!styleTag.parentElement) doc.head.appendChild(styleTag);
+    });
+  }, [rendition, readerSettings]);
 
   const handleNextPage = useCallback(() => {
-    renditionRef.current?.next();
-  }, []);
+    rendition?.next();
+  }, [rendition]);
 
   const handlePrevPage = useCallback(() => {
-    renditionRef.current?.prev();
-  }, []);
+    rendition?.prev();
+  }, [rendition]);
 
   const getThemeClasses = () => {
     if (readerSettings.theme === 'dark') {

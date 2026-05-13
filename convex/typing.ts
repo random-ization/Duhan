@@ -206,11 +206,11 @@ export const getUserStats = query({
 });
 
 async function buildUserStats(ctx: QueryCtx, userId: Id<'users'>) {
-    const records = await ctx.db
-      .query('typing_records')
-      .withIndex('by_user', q => q.eq('userId', userId))
-      .order('desc')
-      .take(100);
+  const records = await ctx.db
+    .query('typing_records')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .order('desc')
+    .take(100);
 
     if (records.length === 0) {
       return {
@@ -229,22 +229,22 @@ async function buildUserStats(ctx: QueryCtx, userId: Id<'users'>) {
 
     const weekStart = Date.now() - ONE_WEEK_MS;
 
-    const [totalTests, recentWeeklyRecords] = await Promise.all([
+    const [totalTestsCount, recentWeeklyRecords] = await Promise.all([
       ctx.db
         .query('typing_records')
-        .withIndex('by_user', q => q.eq('userId', userId))
+        .withIndex('by_user', (q) => q.eq('userId', userId))
         .collect()
-        .then(res => res.length),
+        .then((res) => res.length),
       ctx.db
         .query('typing_records')
-        .withIndex('by_user_createdAt', q =>
+        .withIndex('by_user_createdAt', (q) =>
           q.eq('userId', userId).gte('createdAt', weekStart)
         )
         .collect(),
     ]);
 
     const totalTime = records.reduce((acc, r) => acc + r.duration, 0);
-    const highestWpm = Math.max(...records.map(r => r.wpm));
+    const highestWpm = Math.max(...records.map((r) => r.wpm));
     const averageWpm = Math.round(records.reduce((acc, r) => acc + r.wpm, 0) / records.length);
     const averageAccuracy = Math.round(
       records.reduce((acc, r) => acc + r.accuracy, 0) / records.length
@@ -252,12 +252,12 @@ async function buildUserStats(ctx: QueryCtx, userId: Id<'users'>) {
     const latestRecord = records[0] ?? null;
 
     return {
-      totalTests,
+      totalTests: totalTestsCount,
       averageWpm,
       averageAccuracy,
       highestWpm,
       totalTime,
-      recentWpm: records.slice(0, 10).map(r => ({ wpm: r.wpm, date: r.createdAt })),
+      recentWpm: records.slice(0, 10).map((r) => ({ wpm: r.wpm, date: r.createdAt })),
       sessionsThisWeek: recentWeeklyRecords.length,
       lastPracticeMode: latestRecord?.practiceMode ?? null,
       lastCategoryId: latestRecord?.categoryId ?? null,

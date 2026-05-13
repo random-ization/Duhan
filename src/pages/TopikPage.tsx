@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useState } from 'react';
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useCurrentLanguage, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTopikExams } from '../hooks/useTopikExams';
 import { useUserActions } from '../hooks/useUserActions';
@@ -42,6 +42,7 @@ import {
   ContextualPrimaryActionButton,
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 const TopikModule = lazy(() => import('../components/topik'));
 
@@ -58,6 +59,7 @@ const TopikPage: React.FC = () => {
   const { saveExamAttempt, saveAnnotation, deleteExamAttempt } = useUserActions();
   const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
+  const currentLanguage = useCurrentLanguage();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -206,7 +208,7 @@ const TopikPage: React.FC = () => {
   }, [filterType]);
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={localizeInternalPath('/', currentLanguage)} replace />;
   }
 
   // If examId is present, show the actual exam module (or if TopikModule handles it)

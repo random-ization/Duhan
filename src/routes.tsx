@@ -61,6 +61,14 @@ const CommunityAddPage = lazy(() => import('./pages/CommunityAddPage'));
 const DesktopCommunityPage = lazy(() => import('./pages/desktop/DesktopCommunityPage'));
 const MobileCommunityPage = lazy(() => import('./components/mobile/MobileCommunityPage'));
 const DesktopLeaderboardPage = lazy(() => import('./pages/desktop/DesktopLeaderboardPage'));
+const DesktopQAListPage = lazy(() => import('./pages/desktop/DesktopQAListPage'));
+const DesktopQADetailPage = lazy(() => import('./pages/desktop/DesktopQADetailPage'));
+const DesktopAskQuestionPage = lazy(() => import('./pages/desktop/DesktopAskQuestionPage'));
+const MobileQAListPage = lazy(() => import('./components/mobile/MobileQAListPage'));
+const MobileQADetailPage = lazy(() => import('./components/mobile/MobileQADetailPage'));
+const MobileAskQuestionPage = lazy(() => import('./components/mobile/MobileAskQuestionPage'));
+const DesktopUserProfilePage = lazy(() => import('./pages/desktop/DesktopUserProfilePage'));
+const MobileUserProfilePage = lazy(() => import('./components/mobile/MobileUserProfilePage'));
 
 import { useIsMobile } from './hooks/useIsMobile';
 
@@ -124,6 +132,26 @@ const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
 const CommunityPageRoute = () => {
   const isMobile = useIsMobile();
   return isMobile ? <MobileCommunityPage /> : <DesktopCommunityPage />;
+};
+
+const QAListRoute = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileQAListPage /> : <DesktopQAListPage />;
+};
+
+const QADetailRoute = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileQADetailPage /> : <DesktopQADetailPage />;
+};
+
+const AskQuestionRoute = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileAskQuestionPage /> : <DesktopAskQuestionPage />;
+};
+
+const CommunityUserProfileRoute = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileUserProfilePage /> : <DesktopUserProfilePage />;
 };
 
 // Inner routes component that uses language from URL params
@@ -227,6 +255,10 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="dictionary/search" element={<DictionarySearchPage />} />
             <Route path="community" element={<CommunityPageRoute />} />
             <Route path="community/add" element={<CommunityAddPage />} />
+            <Route path="community/qa" element={<QAListRoute />} />
+            <Route path="community/qa/ask" element={<AskQuestionRoute />} />
+            <Route path="community/qa/:questionId" element={<QADetailRoute />} />
+            <Route path="community/u/:userId" element={<CommunityUserProfileRoute />} />
             <Route path="leaderboard" element={<DesktopLeaderboardPage />} />
             <Route path="history" element={<HistoryPage />} />
           </Route>

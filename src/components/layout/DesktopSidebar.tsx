@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,7 +7,6 @@ import { getLocalizedPath, useCurrentLanguage, useLocalizedNavigate } from '../.
 import { Button } from '../ui/button';
 import { useLayoutActions, useLayoutChromeState } from '../../contexts/LayoutContext';
 import { getPathWithoutLang } from '../../utils/pathname';
-import { HanjaSeal } from '../desktop/ui/HanjaSeal';
 import { Settings } from 'lucide-react';
 import { UserAvatar } from '../common';
 import { cn } from '../../lib/utils';
@@ -82,7 +81,7 @@ function useDesktopSidebarNav(currentLanguage: string, selectedInstitute: string
 export default function DesktopSidebar() {
   const { user, viewerAccess } = useAuth();
   const isPremium = Boolean(viewerAccess?.isPremium);
-  const { t } = useTranslation();
+  useTranslation();
   const { sidebarHidden, sidebarCollapsed } = useLayoutChromeState();
   const { toggleSidebar } = useLayoutActions();
   const { selectedInstitute } = useLearningSelection();
@@ -142,6 +141,7 @@ export default function DesktopSidebar() {
       {/* Collapse Toggle Button */}
       <button
         onClick={toggleSidebar}
+        aria-label="Toggle sidebar"
         className="absolute right-0 top-16 translate-x-1/2 w-6 h-6 rounded-full bg-k-card border border-k-line flex items-center justify-center shadow-sm z-50 hover:bg-k-bg2 transition-colors"
       >
         <motion.div

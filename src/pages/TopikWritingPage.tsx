@@ -10,7 +10,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useCurrentLanguage, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTopikExams } from '../hooks/useTopikExams';
@@ -23,6 +23,7 @@ import { notify } from '../utils/notify';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 import { appendReturnToPath } from '../utils/navigation';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 import { api } from '../../convex/_generated/api';
 
@@ -62,6 +63,7 @@ const TopikWritingPage: React.FC = () => {
   const { user } = useAuth();
   const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
+  const currentLanguage = useCurrentLanguage();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
@@ -114,7 +116,7 @@ const TopikWritingPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, user, exam, navigate, startUpgradeFlow, t, topikLobbyPath, writingReturnPath]);
 
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to={localizeInternalPath('/', currentLanguage)} replace />;
   if (!examId) return <Navigate to={topikLobbyPath} replace />;
 
   // ── Render loading ──────────────────────────────────────────────────────────

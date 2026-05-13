@@ -5,6 +5,7 @@ import type { TFunction } from 'i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COMMUNITY, FRIENDS, LEADERBOARD, STORAGE } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { UserAvatar } from '../../components/common';
 import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
 import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { DRail } from '../../components/desktop/ui/DRail';
@@ -350,17 +351,11 @@ export default function DesktopCommunityPage() {
               : "border-k-line/10 hover:border-k-line/30 shadow-k-sh-sm bg-k-card/80"
           )}
         >
-          <div
-            className="w-12 h-12 rounded-2xl overflow-hidden shadow-inner flex-shrink-0 bg-k-bg2 border border-k-line/5"
-          >
-            {viewer?.avatar ? (
-              <img src={viewer.avatar} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl" style={{ background: 'linear-gradient(135deg, #FDE8E5 0%, #FFF4DB 100%)' }}>
-                🌸
-              </div>
-            )}
-          </div>
+          <UserAvatar
+            user={viewer}
+            className="w-12 h-12 rounded-2xl shadow-inner flex-shrink-0 bg-k-bg2 border border-k-line/5"
+            fallbackClassName="text-2xl"
+          />
           <div className="flex-1 space-y-4">
             <div className="relative">
               <textarea
@@ -894,9 +889,27 @@ export default function DesktopCommunityPage() {
   );
 
   return (
-    <div className="max-w-[1280px] mx-auto px-8 py-12 flex font-sans bg-k-bg/30">
-      <div className="flex-1 min-w-0">{content}</div>
-      {right}
+    <div className="max-w-[1280px] mx-auto px-8 py-12 font-sans bg-k-bg/30">
+      {/* Community Tab Bar */}
+      <div className="flex items-center gap-1 mb-6 bg-k-bg2/60 rounded-full p-1 w-fit">
+        <button
+          type="button"
+          className="px-5 py-2 rounded-full text-[13px] font-extrabold bg-k-card text-k-ink shadow-k-shSm"
+        >
+          {t('qa.tabFeed', { defaultValue: 'Feed' })}
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/community/qa')}
+          className="px-5 py-2 rounded-full text-[13px] font-extrabold text-k-sub hover:text-k-ink transition-colors"
+        >
+          {t('qa.tabQA', { defaultValue: 'Q&A' })}
+        </button>
+      </div>
+      <div className="flex">
+        <div className="flex-1 min-w-0">{content}</div>
+        {right}
+      </div>
     </div>
   );
 }

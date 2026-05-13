@@ -26,6 +26,11 @@ describe('sanitizeHtml', () => {
     const input = '<a href="javascript:alert(1)">Link</a>';
     expect(sanitizeHtml(input)).toBe('<a>Link</a>');
   });
+
+  it('should strip inline event handlers from image payloads', () => {
+    const input = '<img src="x" onerror="alert(1)" /><span>safe</span>';
+    expect(sanitizeHtml(input)).toBe('<span>safe</span>');
+  });
 });
 
 describe('sanitizeStrictHtml', () => {

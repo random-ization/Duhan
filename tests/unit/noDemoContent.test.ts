@@ -25,7 +25,7 @@ const listFilesRecursively = (dirRelativeToRepo: string): string[] => {
 
 describe('no demo content in production paths', () => {
   it('should not ship demo podcast episode defaults', () => {
-    const content = readProjectFile('src/pages/PodcastPlayerPage.tsx');
+    const content = readProjectFile('src/pages/desktop/DesktopPodcastPlayerPage.tsx');
     expect(content).not.toContain('Demo Episode');
     expect(content).not.toContain('SoundHelix-Song-1');
   });

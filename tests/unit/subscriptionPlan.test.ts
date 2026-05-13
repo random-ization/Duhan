@@ -23,6 +23,15 @@ describe('buildPricingDetailsPath', () => {
       })
     ).toBe('/pricing/details?plan=ANNUAL&source=dashboard_banner&returnTo=%2Ftopik');
   });
+
+  it('preserves localized return targets', () => {
+    expect(
+      buildPricingDetailsPath({
+        plan: 'LIFETIME',
+        returnTo: '/zh/topik',
+      })
+    ).toBe('/pricing/details?plan=LIFETIME&returnTo=%2Fzh%2Ftopik');
+  });
 });
 
 describe('isCheckoutPlan', () => {

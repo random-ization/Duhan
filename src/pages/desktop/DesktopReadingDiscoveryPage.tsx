@@ -6,6 +6,7 @@ import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { 
   BookOpen, 
   Newspaper, 
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet';
+import { Button } from '../../components/ui';
 
 type ReadingTab = 'all' | 'picture_books' | 'news' | 'epubs';
 
@@ -32,6 +34,7 @@ export default function DesktopReadingDiscoveryPage() {
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [showAllBooks, setShowAllBooks] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // --- DATA FETCHING ---
   const books = useQuery(READING_BOOKS.listPublishedBooks, {});
@@ -45,10 +48,27 @@ export default function DesktopReadingDiscoveryPage() {
   const isLoadingNews = newsFeed === undefined;
   const isLoadingEpubs = user?.id ? myUploads === undefined : false;
 
-  const featuredList = useMemo(() => books?.slice(0, 3) || [], [books]);
+  const difficultyFilter = searchParams.get('difficulty') || 'ALL';
+
+  const featuredList = useMemo(() => {
+    if (!books) return [];
+    return books.slice(0, 3);
+  }, [books]);
+
   const featured = featuredList[featuredIndex] || null;
-  const catalog = books && books.length > 0 ? books : [];
-  const news = newsFeed?.news || [];
+
+  const catalog = useMemo(() => {
+    if (!books) return [];
+    return books;
+  }, [books]);
+
+  const news = useMemo(() => {
+    const list = newsFeed?.news || [];
+    return difficultyFilter === 'ALL'
+      ? list
+      : list.filter(n => n.difficultyLevel === difficultyFilter);
+  }, [newsFeed, difficultyFilter]);
+
   const epubs = myUploads || [];
 
   const categorizedBooks = useMemo(() => {
@@ -63,7 +83,7 @@ export default function DesktopReadingDiscoveryPage() {
 
     const groups: Record<string, any[]> = {};
     filtered.forEach(book => {
-      const level = book.levelLabel || '未分级';
+      const level = book.levelLabel || t('readingDiscovery.pictureBooks.unclassified', { defaultValue: 'Unclassified' });
       if (!groups[level]) groups[level] = [];
       groups[level].push(book);
     });
@@ -80,11 +100,26 @@ export default function DesktopReadingDiscoveryPage() {
     return () => clearInterval(timer);
   }, [featuredList.length]);
 
+  const setDifficulty = (d: string) => {
+    if (d === 'ALL') {
+      searchParams.delete('difficulty');
+    } else {
+      searchParams.set('difficulty', d);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const filteredNews = useMemo(() => {
+    if (!news) return [];
+    if (difficultyFilter === 'ALL') return news;
+    return news.filter(n => n.difficultyLevel === difficultyFilter);
+  }, [news, difficultyFilter]);
+
   const tabs: { id: ReadingTab; label: string; icon: any }[] = [
-    { id: 'all', label: '全部', icon: Layers },
-    { id: 'picture_books', label: '绘本', icon: BookOpen },
-    { id: 'news', label: '新闻', icon: Newspaper },
-    { id: 'epubs', label: '电子书', icon: BookMarked },
+    { id: 'all', label: t('readingDiscovery.tabs.all', { defaultValue: 'All' }), icon: Layers },
+    { id: 'picture_books', label: t('readingDiscovery.tabs.pictureBooks', { defaultValue: 'Books' }), icon: BookOpen },
+    { id: 'news', label: t('readingDiscovery.tabs.news', { defaultValue: 'News' }), icon: Newspaper },
+    { id: 'epubs', label: t('readingDiscovery.tabs.epubs', { defaultValue: 'Library' }), icon: BookMarked },
   ];
 
   const renderPictureBooks = (limit?: number) => {
@@ -95,14 +130,14 @@ export default function DesktopReadingDiscoveryPage() {
         <div className="flex items-baseline justify-between">
           <div className="flex items-baseline">
             <span className="mr-2 font-k-serif text-[20px] font-medium text-k-crimson">冊</span>
-            <span className="text-[16px] font-extrabold text-k-ink">精选绘本</span>
+            <span className="text-[16px] font-extrabold text-k-ink">{t('readingDiscovery.pictureBooks.featured', { defaultValue: 'Featured Books' })}</span>
           </div>
           {activeTab === 'all' && (
             <button 
               onClick={() => setShowAllBooks(true)}
               className="text-[12px] font-bold text-k-sub hover:text-k-crimson transition-colors flex items-center gap-1"
             >
-              查看全部绘本 <ChevronRight size={14} />
+              {t('readingDiscovery.pictureBooks.viewAll', { defaultValue: 'View all' })} <ChevronRight size={14} />
             </button>
           )}
         </div>
@@ -125,30 +160,30 @@ export default function DesktopReadingDiscoveryPage() {
                   </div>
                 )}
                 <div className="absolute left-6 top-6">
-                  <DesignChip tone="ink" size="sm" className="backdrop-blur-md bg-k-ink/80">本周精选</DesignChip>
+                  <DesignChip tone="ink" size="sm" className="backdrop-blur-md bg-k-ink/80">{t('readingDiscovery.pictureBooks.weeklyFeatured', { defaultValue: 'Weekly Featured' })}</DesignChip>
                 </div>
               </div>
               <div className="flex-1 p-10 flex flex-col justify-center animate-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center gap-3 mb-4">
                   <DesignChip tone="butter" size="sm">
-                    {featured.levelLabel || '中级'}
+                    {featured.levelLabel || t('readingDiscovery.difficulty.intermediate', { defaultValue: 'Intermediate' })}
                   </DesignChip>
                   <span className="text-[12px] font-bold text-k-sub flex items-center gap-1.5">
-                    <Clock size={14} /> {featured.readingMinutes || 5} 分钟阅读
+                    <Clock size={14} /> {featured.readingMinutes || 5} {t('readingDiscovery.pictureBooks.readingMinutes', { defaultValue: 'min read' })}
                   </span>
                 </div>
                 <h2 className="font-k-serif text-[36px] font-medium tracking-tight text-k-ink leading-tight mb-4 line-clamp-1">
                   {featured.title}
                 </h2>
                 <p className="text-k-sub text-[15px] font-medium mb-8 line-clamp-2 max-w-[500px]">
-                  探索精彩的韩语故事，提升阅读理解能力。
+                  {t('readingDiscovery.pictureBooks.description', { defaultValue: 'Explore wonderful Korean stories and improve your reading comprehension.' })}
                 </p>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => navigate(`/reading/books/${featured.slug}`)}
                     className="w-fit flex items-center gap-2 px-8 py-3 bg-k-ink text-k-bg rounded-xl font-bold hover:bg-k-crimson transition-all transform hover:-translate-y-1 active:scale-95"
                   >
-                    开始阅读 <ArrowRight size={18} />
+                    {t('readingDiscovery.articles.startReading', { defaultValue: 'Start Reading' })} <ArrowRight size={18} />
                   </button>
                   
                   {/* Indicators */}
@@ -203,7 +238,7 @@ export default function DesktopReadingDiscoveryPage() {
                 )}
                 <div className="absolute right-3 top-3">
                   <DesignChip tone="ink" size="sm" className="backdrop-blur-md bg-k-ink/70">
-                    {p.levelLabel || '阅读'}
+                    {p.levelLabel || t('readingDiscovery.meta.reading', { defaultValue: 'Reading' })}
                   </DesignChip>
                 </div>
               </div>
@@ -212,9 +247,9 @@ export default function DesktopReadingDiscoveryPage() {
                   {p.title}
                 </h4>
                 <div className="flex items-center gap-3 text-[11px] font-bold text-k-sub">
-                   <span>{p.readingMinutes || 5} 分钟</span>
+                   <span>{p.readingMinutes || 5} {t('readingDiscovery.meta.minutes', { defaultValue: 'min' })}</span>
                    <span className="w-1 h-1 rounded-full bg-k-line" />
-                   <span>{p.pageCount || 0} 页</span>
+                   <span>{p.pageCount || 0} {t('readingDiscovery.meta.pages', { defaultValue: 'pages' })}</span>
                 </div>
               </div>
             </DesktopCard>
@@ -242,16 +277,38 @@ export default function DesktopReadingDiscoveryPage() {
         <div className="flex items-baseline justify-between border-b border-k-line pb-4">
           <div className="flex items-baseline gap-3">
             <span className="font-k-serif text-[24px] font-medium text-k-crimson">新</span>
-            <span className="text-[20px] font-extrabold text-k-ink">实时新闻</span>
+            <span className="text-[20px] font-extrabold text-k-ink">{t('readingDiscovery.news.liveTitle', { defaultValue: 'Live News' })}</span>
             <span className="ml-2 text-[12px] font-bold text-k-sub bg-k-bg2 px-2 py-0.5 rounded-full">
-              {news.length} 篇最新资讯
+              {filteredNews.length} {t('readingDiscovery.news.countSuffix', { defaultValue: 'latest updates' })}
             </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {(['ALL', 'L1', 'L2', 'L3'] as const).map((level) => (
+              <Button
+                key={level}
+                onClick={() => setDifficulty(level)}
+                variant="ghost"
+                size="auto"
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-[11px] font-black transition-all border",
+                  difficultyFilter === level 
+                    ? "bg-k-ink text-k-bg border-k-ink" 
+                    : "bg-k-card text-k-sub border-k-line/20 hover:border-k-line"
+                )}
+              >
+                {level === 'ALL' ? t('readingDiscovery.filters.all', { defaultValue: 'All' }) : 
+                 level === 'L1' ? t('readingDiscovery.filters.l1', { defaultValue: 'Beginner' }) :
+                 level === 'L2' ? t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' }) :
+                 t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' })}
+              </Button>
+            ))}
           </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-10">
-          {news.length > 0 ? (
-            news.map((item) => {
+          {filteredNews.length > 0 ? (
+            filteredNews.map((item) => {
               const source = getSourceInfo(item.sourceKey || '');
               return (
                 <div 
@@ -269,8 +326,11 @@ export default function DesktopReadingDiscoveryPage() {
                       </div>
                       <span className="text-[11px] font-bold text-k-sub/60 flex items-center gap-1.5">
                         <Clock size={12} />
-                        {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : '刚刚'}
+                        {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : t('readingDiscovery.news.justNow', { defaultValue: 'Just now' })}
                       </span>
+                      <DesignChip tone="butter" size="sm" className="scale-75 origin-left">
+                        {item.difficultyLevel === 'L1' ? 'A2' : item.difficultyLevel === 'L2' ? 'B2' : 'C1'}
+                      </DesignChip>
                     </div>
                     
                     <h3 className="text-[19px] font-black text-k-ink group-hover:text-k-crimson transition-colors line-clamp-2 leading-[1.4] tracking-tight">
@@ -278,12 +338,12 @@ export default function DesktopReadingDiscoveryPage() {
                     </h3>
                     
                     <p className="text-[13px] font-medium text-k-sub line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                      {item.summary || item.bodyText || '点击阅读全文，获取更多精彩内容和韩语学习要点。'}
+                      {item.summary || item.bodyText || t('readingDiscovery.news.readMorePlaceholder', { defaultValue: 'Click to read full article, get more highlights and Korean learning points.' })}
                     </p>
 
                     <div className="flex items-center gap-4 pt-1">
                       <span className="text-[11px] font-bold text-k-crimson opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
-                        阅读更多 →
+                        {t('readingDiscovery.articles.readMore', { defaultValue: 'Read more' })} →
                       </span>
                     </div>
                   </div>
@@ -314,7 +374,7 @@ export default function DesktopReadingDiscoveryPage() {
             <div className="col-span-full py-20 flex flex-col items-center justify-center text-k-sub opacity-50 bg-k-bg2/30 rounded-3xl border border-dashed border-k-line">
                <Newspaper size={48} className="mb-4 opacity-20" />
                <p className="text-[14px] font-bold">
-                 {isLoadingNews ? '正在更新新闻...' : '暂无新闻资讯'}
+                 {isLoadingNews ? t('readingDiscovery.news.updating', { defaultValue: 'Updating news...' }) : t('readingDiscovery.news.empty', { defaultValue: 'No news available' })}
                </p>
             </div>
           )}
@@ -328,13 +388,13 @@ export default function DesktopReadingDiscoveryPage() {
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline">
           <span className="mr-2 font-k-serif text-[20px] font-medium text-k-crimson">庫</span>
-          <span className="text-[16px] font-extrabold text-k-ink">我的电子书柜</span>
+          <span className="text-[16px] font-extrabold text-k-ink">{t('readingDiscovery.epubs.title', { defaultValue: 'My Library' })}</span>
         </div>
         <button 
           onClick={() => navigate('/reading/upload')}
           className="flex items-center gap-2 px-4 py-2 bg-k-bg2 rounded-xl text-[13px] font-bold text-k-ink hover:bg-k-line transition-all"
         >
-          <Upload size={16} /> 上传 EPUB
+          <Upload size={16} /> {t('readingDiscovery.epubs.upload', { defaultValue: 'Upload EPUB' })}
         </button>
       </div>
 
@@ -343,13 +403,13 @@ export default function DesktopReadingDiscoveryPage() {
           <div className="w-16 h-16 rounded-full bg-k-card flex items-center justify-center mb-4 shadow-sm">
             <BookMarked size={32} className="text-k-sub" />
           </div>
-          <h3 className="text-[18px] font-bold text-k-ink mb-2">私人书库</h3>
-          <p className="text-k-sub text-sm mb-6 max-w-[300px]">登录以管理您的私人电子书库，支持随时随地继续阅读。</p>
+          <h3 className="text-[18px] font-bold text-k-ink mb-2">{t('readingDiscovery.epubs.privateLibrary', { defaultValue: 'Private Library' })}</h3>
+          <p className="text-k-sub text-sm mb-6 max-w-[300px]">{t('readingDiscovery.epubs.loginPrompt', { defaultValue: 'Log in to manage your private library...' })}</p>
           <button 
             onClick={() => navigate('/auth')}
             className="px-6 py-2 bg-k-crimson text-k-bg rounded-full font-bold shadow-lg shadow-k-crimson/20 hover:scale-105 active:scale-95 transition-all"
           >
-            立即登录
+            {t('auth.login', { defaultValue: 'Log in' })}
           </button>
         </div>
       ) : (
@@ -400,13 +460,13 @@ export default function DesktopReadingDiscoveryPage() {
                <div className="w-16 h-16 rounded-full bg-k-card flex items-center justify-center mb-6 shadow-k-sh-sm">
                  <BookMarked size={32} className="text-k-sub/30" />
                </div>
-               <h3 className="text-[18px] font-black text-k-ink mb-2">书库还是空的</h3>
-               <p className="text-[13px] font-medium text-k-sub mb-8 opacity-60">导入您的第一本 EPUB 电子书，开始沉浸式学习之旅</p>
+               <h3 className="text-[18px] font-black text-k-ink mb-2">{t('readingDiscovery.epubs.empty', { defaultValue: 'Library is empty' })}</h3>
+               <p className="text-[13px] font-medium text-k-sub mb-8 opacity-60">{t('readingDiscovery.epubs.emptyPrompt', { defaultValue: 'Import your first EPUB...' })}</p>
                <button 
                  onClick={() => navigate('/reading/upload')}
                  className="px-8 py-3 bg-k-ink text-k-bg rounded-2xl text-[13px] font-black hover:bg-k-crimson transition-all shadow-k-sh-sm"
                >
-                 立即上传
+                 {t('readingDiscovery.epubs.uploadNow', { defaultValue: 'Upload now' })}
                </button>
             </div>
           )}
@@ -423,7 +483,7 @@ export default function DesktopReadingDiscoveryPage() {
           <div className="text-[11px] font-black text-k-crimson uppercase tracking-[0.2em] mb-1">
             Immersive Reading
           </div>
-          <h1 className="text-[28px] font-black text-k-ink tracking-tighter">沉浸阅读发现</h1>
+          <h1 className="text-[28px] font-black text-k-ink tracking-tighter">{t('readingDiscovery.title', { defaultValue: 'Immersive Reading' })}</h1>
         </div>
         
         <div className="flex bg-k-bg2/50 p-1 rounded-2xl border border-k-line/10">
@@ -457,7 +517,7 @@ export default function DesktopReadingDiscoveryPage() {
       {(isLoadingBooks || isLoadingNews || isLoadingEpubs) && activeTab === 'all' && (
         <div className="pt-10 pb-20 text-center">
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-k-bg2 rounded-full text-k-sub font-bold animate-pulse">
-            <RefreshCw className="w-5 h-5 animate-spin" /> 正在加载更多精彩内容...
+            <RefreshCw className="w-5 h-5 animate-spin" /> {t('readingDiscovery.news.loadingMore', { defaultValue: 'Loading more content...' })}
           </div>
         </div>
       )}
@@ -469,7 +529,7 @@ export default function DesktopReadingDiscoveryPage() {
     return (
       <Sheet open={showAllBooks} onOpenChange={setShowAllBooks}>
         <SheetContent className="fixed inset-y-0 right-0 w-[85vw] max-w-[1200px] p-0 bg-k-bg border-l border-k-line overflow-hidden flex flex-col">
-          <SheetTitle className="sr-only">全部绘本</SheetTitle>
+          <SheetTitle className="sr-only">{t('readingDiscovery.pictureBooks.catalogTitle', { defaultValue: 'All Books' })}</SheetTitle>
           
           <div className="shrink-0 h-20 px-8 flex items-center justify-between border-b border-k-line bg-k-card/50 backdrop-blur-md">
             <div className="flex items-center gap-4">
@@ -484,7 +544,7 @@ export default function DesktopReadingDiscoveryPage() {
                    圖 · CATALOG
                 </div>
                 <div className="text-[18px] font-black text-k-ink">
-                   全部绘本资源
+                   {t('readingDiscovery.pictureBooks.catalogTitle', { defaultValue: 'All Books' })}
                 </div>
               </div>
             </div>
@@ -493,7 +553,7 @@ export default function DesktopReadingDiscoveryPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-k-sub" size={16} />
               <input 
                 type="text" 
-                placeholder="搜索绘本..."
+                placeholder={t('readingDiscovery.pictureBooks.searchPlaceholder', { defaultValue: 'Search books...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-k-bg2/50 border border-k-line rounded-xl py-2 pl-10 pr-4 text-[13px] focus:outline-none focus:ring-1 focus:ring-k-crimson/30 transition-all"
@@ -507,7 +567,7 @@ export default function DesktopReadingDiscoveryPage() {
                 <div className="flex items-center gap-3 mb-6">
                   <DesignChip tone="crimson" size="md">{level}</DesignChip>
                   <div className="h-px flex-1 bg-gradient-to-r from-k-line to-transparent" />
-                  <span className="text-[12px] font-bold text-k-sub">{groupBooks.length} 本书</span>
+                  <span className="text-[12px] font-bold text-k-sub">{groupBooks.length} {t('readingDiscovery.pictureBooks.countSuffix', { defaultValue: 'books' })}</span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -529,7 +589,7 @@ export default function DesktopReadingDiscoveryPage() {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                           <span className="text-white text-[11px] font-bold">开始阅读 →</span>
+                           <span className="text-white text-[11px] font-bold">{t('readingDiscovery.articles.startReading', { defaultValue: 'Start Reading' })} →</span>
                         </div>
                       </div>
                       <div className="mt-3">

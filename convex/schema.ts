@@ -1372,6 +1372,76 @@ export default defineSchema({
   })
     .index('by_post_createdAt', ['postId', 'createdAt']),
 
+  qa_topics: defineTable({
+    slug: v.string(),
+    nameKey: v.string(),
+    icon: v.string(),
+    order: v.number(),
+    isActive: v.boolean(),
+  })
+    .index('by_slug', ['slug'])
+    .index('by_order', ['order']),
+
+  qa_questions: defineTable({
+    userId: v.id('users'),
+    title: v.string(),
+    content: v.string(),
+    topicSlug: v.string(),
+    answerCount: v.number(),
+    voteScore: v.number(),
+    viewCount: v.number(),
+    acceptedAnswerId: v.optional(v.id('qa_answers')),
+    isEdited: v.boolean(),
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_topic_createdAt', ['topicSlug', 'createdAt'])
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_voteScore', ['voteScore'])
+    .index('by_createdAt', ['createdAt'])
+    .searchIndex('search_title', { searchField: 'title', filterFields: ['topicSlug'] }),
+
+  qa_answers: defineTable({
+    questionId: v.id('qa_questions'),
+    userId: v.id('users'),
+    content: v.string(),
+    voteScore: v.number(),
+    isAccepted: v.boolean(),
+    isEdited: v.boolean(),
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_question_createdAt', ['questionId', 'createdAt'])
+    .index('by_user_createdAt', ['userId', 'createdAt']),
+
+  qa_votes: defineTable({
+    userId: v.id('users'),
+    target: v.union(v.literal('question'), v.literal('answer')),
+    targetId: v.string(),
+    value: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_user_target', ['userId', 'target', 'targetId'])
+    .index('by_target', ['target', 'targetId']),
+
+  content_reports: defineTable({
+    reporterId: v.id('users'),
+    target: v.union(
+      v.literal('question'),
+      v.literal('answer'),
+      v.literal('post'),
+      v.literal('comment')
+    ),
+    targetId: v.string(),
+    reason: v.string(),
+    details: v.optional(v.string()),
+    status: v.union(v.literal('open'), v.literal('resolved'), v.literal('dismissed')),
+    createdAt: v.number(),
+  }).index('by_status_createdAt', ['status', 'createdAt']),
 
   xp_logs: defineTable({
     userId: v.id('users'),
@@ -1523,6 +1593,10 @@ export default defineSchema({
     dailyGoalMinutes: v.optional(
       v.union(v.literal(15), v.literal(20), v.literal(30), v.literal(45), v.literal(60))
     ),
+    topikFilterType: v.optional(v.union(v.literal('ALL'), v.literal('READING'), v.literal('LISTENING'))),
+    vocabActiveTab: v.optional(v.union(v.literal('courses'), v.literal('my-vocab'))),
+    grammarAiPanelOpen: v.optional(v.boolean()),
+    routeFavorites: v.optional(v.array(v.string())),
     privacy: v.optional(
       v.object({
         profileVisibility: v.optional(
@@ -1555,6 +1629,9 @@ export default defineSchema({
       v.literal('exam_countdown'),
       v.literal('partner_milestone'),
       v.literal('achievement_unlocked'),
+      v.literal('answer_received'),
+      v.literal('answer_accepted'),
+      v.literal('mention'),
       v.literal('friend_activity'),
       v.literal('friend_request'),
       v.literal('friend_accepted'),

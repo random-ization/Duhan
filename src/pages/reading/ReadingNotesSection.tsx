@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui';
 import { Textarea } from '../../components/ui';
-import type { NoteVisualState, ReaderNote, DraftNote, NoteColor } from './types';
+import type { NoteVisualState, ReaderNote, DraftNote } from './types';
 import { noteColorDotClass, noteUnderlineClass } from './helpers';
 
 const ReadingNotesSection: React.FC<{

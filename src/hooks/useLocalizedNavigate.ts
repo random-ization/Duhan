@@ -1,28 +1,14 @@
 import { useNavigate, useParams, NavigateOptions, To } from 'react-router-dom';
 import { useCallback } from 'react';
-import {
-  SUPPORTED_LANGUAGES,
-  DEFAULT_LANGUAGE,
-  isValidLanguage,
-} from '../components/LanguageRouter';
+import { DEFAULT_LANGUAGE, isValidLanguage } from '../components/LanguageRouter';
 import { matchesMediaQuery } from '../utils/mediaQuery';
+import { localizeInternalPath } from '../utils/localizedRouting';
 
 /**
  * getLocalizedPath - Helper function to add language prefix to a path
  */
 export const getLocalizedPath = (path: string, lang: string): string => {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-  // Check if already has language prefix
-  const hasLangPrefix = SUPPORTED_LANGUAGES.some(
-    l => normalizedPath === `/${l}` || normalizedPath.startsWith(`/${l}/`)
-  );
-
-  if (hasLangPrefix) {
-    return normalizedPath;
-  }
-
-  return `/${lang}${normalizedPath}`;
+  return localizeInternalPath(path, lang);
 };
 
 /**

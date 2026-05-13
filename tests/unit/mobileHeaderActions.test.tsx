@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
   }),
+  withTranslation: () => (component: any) => component,
 }));
 
 vi.mock('../../src/utils/notify', () => ({

@@ -121,7 +121,6 @@ export const recommendVocabStage = (words: ReadonlyArray<VocabStageInput>): Voca
   if (!words || words.length === 0) return 'learn';
 
   let newCount = 0;
-  let learningCount = 0;
   let matureCount = 0;
   let masteredCount = 0;
 
@@ -138,8 +137,6 @@ export const recommendVocabStage = (words: ReadonlyArray<VocabStageInput>): Voca
     const stability = typeof w.stability === 'number' ? w.stability : 0;
     if (state === 2 && stability >= MATURE_STABILITY_DAYS) {
       matureCount++;
-    } else {
-      learningCount++;
     }
   }
 

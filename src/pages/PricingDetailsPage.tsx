@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SEO as Seo } from '../seo/SEO';
@@ -7,18 +7,16 @@ import { LocalizedLink } from '../components/LocalizedLink';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import {
   callAuthenticatedConvexAction,
-  callPublicConvexAction,
 } from '../utils/publicConvexClient';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import {
   isSafeCheckoutUrl,
   type LemonSqueezyCheckoutRequest,
   type LemonSqueezyCheckoutResult,
-  type LemonSqueezyVariantPrices,
 } from '../utils/lemonsqueezy';
 import { notify } from '../utils/notify';
 import { logger } from '../utils/logger';
-import { buildPricingDetailsPath, type CheckoutPlan } from '../utils/subscriptionPlan';
+import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useAuth } from '../contexts/AuthContext';
 import { SubscriptionType } from '../types';
 import { trackEvent } from '../utils/analytics';
@@ -36,12 +34,8 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '../components/ui';
-import { HanjaSeal } from '../components/desktop/ui/HanjaSeal';
 
 type BillingCycle = 'monthly' | 'quarterly' | 'annual';
-type PlanKey = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
-type VariantPrices = LemonSqueezyVariantPrices;
-type ProPrice = { amount: string; period: string; saving: string };
 type PricingOverviewCard = {
   title: string;
   badge: string;
@@ -222,7 +216,7 @@ function parseSelectedPlanFromSearch(search: string): {
 }
 
 export default function PricingDetailsPage() {
-  const { user, loading: authLoading, viewerAccess } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
@@ -237,33 +231,7 @@ export default function PricingDetailsPage() {
     return cycle ?? 'annual';
   });
 
-  const [prices, setPrices] = useState<VariantPrices | null>(null);
   const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<CheckoutPlan | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    runConvexActionWithRetry(
-      () => callPublicConvexAction<Record<string, never>, VariantPrices>(
-        'lemonsqueezy:getVariantPrices',
-        {},
-        { signal: controller.signal }
-      ),
-      undefined,
-      { retries: 2 }
-    ).then(setPrices).catch(() => {});
-    return () => controller.abort();
-  }, []);
-
-  const proPlanId = (billingCycle === 'monthly' ? 'MONTHLY' : billingCycle === 'quarterly' ? 'QUARTERLY' : 'ANNUAL') as CheckoutPlan;
-
-  const PRICING_MAP: Record<string, any> = {
-    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', unitM: '/ mo', unitA: '/ yr' },
-    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', unitM: '/ 月', unitA: '/ 年' },
-    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', unitM: '/ 月', unitA: '/ 年' },
-    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', unitM: '/ 月', unitA: '/ 年' },
-  };
-
-  const config = PRICING_MAP[i18n.language] || PRICING_MAP['en'];
   const pricingCopy = useMemo(() => resolvePricingCopy(i18n.language), [i18n.language]);
 
   const startCheckout = async (plan: CheckoutPlan) => {

@@ -12,8 +12,7 @@ import {
   TooltipContent,
   TooltipPortal,
   TooltipTrigger,
-  Button,
-  Textarea
+  Button
 } from '../../components/ui';
 import { cn } from '../../lib/utils';
 import type {
@@ -30,13 +29,9 @@ import type {
   SelectionToolbarState
 } from './types';
 import { 
-  difficultyLabel, 
-  difficultyClass, 
   getDictionaryMeaning, 
-  noteColorDotClass, 
   noteUnderlineClass,
-  normalizeInlineWhitespace,
-  resolveReadingNoteVisualState
+  normalizeInlineWhitespace
 } from './helpers';
 import { ReadingNotesSection } from './ReadingNotesSection';
 import { ContextualSection, ContextualCountBadge } from '../../components/layout/contextualSidebarBlocks';

@@ -21,6 +21,7 @@ import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { getSubscriptionPageCopy } from '../utils/subscriptionPageCopy';
 import { Check, Star, ShieldCheck, Zap } from 'lucide-react';
 import { HanjaSeal } from '../components/desktop/ui/HanjaSeal';
+import { usePricingPlans } from '../hooks/usePricingPlans';
 
 type PricingMode = 'MONTHLY' | 'ANNUAL' | 'LIFETIME';
 
@@ -33,24 +34,9 @@ const DesktopSubscriptionPage: React.FC = () => {
   const meta = getRouteMeta(location.pathname);
   const [mode, setMode] = useState<PricingMode>('ANNUAL');
   const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<CheckoutPlan | null>(null);
+  const { plans, region } = usePricingPlans(i18n.language);
 
   const pageCopy = useMemo(() => getSubscriptionPageCopy(i18n.language), [i18n.language]);
-  
-  const showLocalizedPromo =
-    i18n.language === 'zh' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn' ||
-    i18n.language.startsWith('zh-');
-
-  // Pricing configuration based on language
-  const PRICING_MAP: Record<string, any> = {
-    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', unitM: '/ mo', unitA: '/ yr' },
-    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', unitM: '/ 月', unitA: '/ 年' },
-    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', unitM: '/ 月', unitA: '/ 年' },
-    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', unitM: '/ 月', unitA: '/ 年' },
-  };
-
-  const config = PRICING_MAP[i18n.language] || PRICING_MAP['en'];
 
   const handleSubscribe = async (plan: PricingMode) => {
     const checkoutPlan = plan as CheckoutPlan;
@@ -75,7 +61,7 @@ const DesktopSubscriptionPage: React.FC = () => {
         userId: user.id?.toString() || '',
         userEmail: user.email || '',
         userName: user.name || '',
-        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        region,
         locale: i18n.language,
         source: 'desktop_subscription_v2',
         returnTo: '/dashboard',
@@ -195,9 +181,9 @@ const DesktopSubscriptionPage: React.FC = () => {
               <p className="mt-2 text-[14px] text-k-sub font-medium opacity-70">{t('pricing.monthlyDesc', '适合短期突击学习')}</p>
             </div>
             <div className="mb-10 flex items-baseline gap-1.5">
-              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{config.symbol}</span>
-              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{config.monthly}</span>
-              <span className="text-[14px] font-bold text-k-sub opacity-50">{config.unitM}</span>
+              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{plans.MONTHLY.currencySymbol}</span>
+              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{plans.MONTHLY.displayAmount}</span>
+              <span className="text-[14px] font-bold text-k-sub opacity-50">{plans.MONTHLY.displayUnit}</span>
             </div>
             <ul className="mb-12 space-y-5 flex-1">
               {commonFeatures.map((f, i) => (
@@ -230,9 +216,9 @@ const DesktopSubscriptionPage: React.FC = () => {
                   <p className="mt-2 text-[14px] text-white/60 font-medium">{t('pricing.annualDesc', '最受核心学习者欢迎')}</p>
                 </div>
                 <div className="mb-10 flex items-baseline gap-1.5">
-                  <span className="font-k-serif text-[28px] font-medium text-white/40">{config.symbol}</span>
-                  <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter">{config.annual}</span>
-                  <span className="text-[14px] font-bold text-white/50">{config.unitA}</span>
+                  <span className="font-k-serif text-[28px] font-medium text-white/40">{plans.ANNUAL.currencySymbol}</span>
+                  <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter">{plans.ANNUAL.displayAmount}</span>
+                  <span className="text-[14px] font-bold text-white/50">{plans.ANNUAL.displayUnit}</span>
                 </div>
                 <ul className="mb-12 space-y-5 flex-1">
                   {commonFeatures.map((f, i) => (
@@ -263,9 +249,9 @@ const DesktopSubscriptionPage: React.FC = () => {
               <p className="mt-2 text-[14px] text-k-sub font-medium opacity-70">{t('pricing.lifetimeDesc', '终身解锁，无后顾之忧')}</p>
             </div>
             <div className="mb-10 flex items-baseline gap-1.5">
-              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{config.symbol}</span>
-              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{config.lifetime}</span>
-              <span className="text-[14px] font-bold text-k-sub opacity-50">{t('period.once', 'once')}</span>
+              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{plans.LIFETIME.currencySymbol}</span>
+              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{plans.LIFETIME.displayAmount}</span>
+              <span className="text-[14px] font-bold text-k-sub opacity-50">{plans.LIFETIME.displayUnit}</span>
             </div>
             <ul className="mb-12 space-y-5 flex-1">
               {commonFeatures.map((f, i) => (

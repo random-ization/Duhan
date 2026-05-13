@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import type { Id } from '../../../convex/_generated/dataModel';
+
 import { COMMUNITY } from '../../utils/convexRefs';
 import { KT } from '../mobile/ksoft/ksoft';
 

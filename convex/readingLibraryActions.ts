@@ -120,7 +120,7 @@ function sanitizeChapterHtml(input: string): string {
     .replaceAll(/<img[^>]*>/gi, '')
     .replaceAll(/\son[a-z]+="[^"]*"/gi, '')
     .replaceAll(/\son[a-z]+='[^']*'/gi, '')
-    .replaceAll(/\s(href|src)=("|')javascript:[^"']*(["'])/gi, ' $1="#"');
+    .replaceAll(/\s(href|src)=["']javascript:[^"']*(["'])/gi, ' $1="#"');
 }
 
 function htmlToPlainText(input: string): string {

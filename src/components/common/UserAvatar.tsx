@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { User as UserIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { getSafeImageSrc } from '../../utils/imageSrc';
 
 interface UserAvatarProps {
   user?: {
     name?: string;
-    avatar?: string;
+    avatar?: string | null;
+    image?: string | null;
   } | null;
   className?: string;
   fallbackClassName?: string;
@@ -20,16 +22,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   showNameFallback = true,
   isUploading = false,
 }) => {
-  const avatarUrl = user?.avatar;
-  // Reset error when avatar URL changes - use key pattern instead of effect
-  const [error, setError] = useState(() => false);
-  const [prevAvatarUrl, setPrevAvatarUrl] = useState(avatarUrl);
-  
-  // Sync: reset error when URL actually changes
-  if (avatarUrl !== prevAvatarUrl) {
-    setPrevAvatarUrl(avatarUrl);
-    if (error) setError(false);
-  }
+  const avatarUrl = getSafeImageSrc(user?.avatar, user?.image);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   const name = user?.name || 'User';
   const initial = name.trim().charAt(0).toUpperCase();
@@ -64,13 +58,13 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         className
       )}
     >
-      {avatarUrl && !error ? (
+      {avatarUrl && failedUrl !== avatarUrl ? (
         <div className="relative h-full w-full">
           <img
             src={avatarUrl}
             alt={name}
             className="h-full w-full object-cover"
-            onError={() => setError(true)}
+            onError={() => setFailedUrl(avatarUrl)}
           />
           {isUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-k-card/60 backdrop-blur-sm">

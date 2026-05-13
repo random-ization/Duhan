@@ -156,7 +156,7 @@ async function fetchCommunityFeed(ctx: QueryCtx, limit: number, filter: string):
       posts = perUser.flat();
     } else {
       // For specific category filters (not 'all' or 'following'), still respect userIds
-      const perUser = await Promise.all(userIds.map(id => 
+      const perUser = await Promise.all(userIds.map(_id => 
         ctx.db.query('community_posts')
           .withIndex('by_type_createdAt', q => q.eq('type', filter as 'all' | 'following' | 'milestones' | 'qa' | 'resources'))
           .order('desc')

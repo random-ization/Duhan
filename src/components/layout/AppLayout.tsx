@@ -1,5 +1,6 @@
 import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import DesktopSidebar from './DesktopSidebar';
 import Footer from './Footer';
@@ -15,6 +16,7 @@ import { ContentSkeleton } from '../common';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
 import { DesktopHeader } from './DesktopHeader';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { getAuthedDocumentTitle } from '../../utils/appTitle';
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
@@ -30,6 +32,7 @@ const shouldAnimateRoutes = () => {
 
 export default function AppLayout() {
   const location = useLocation();
+  const { t } = useTranslation();
   const { sidebarHidden, footerHidden } = useLayoutChromeState();
   const { setSidebarHidden } = useLayoutActions();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
@@ -45,6 +48,10 @@ export default function AppLayout() {
       setSidebarHidden(false);
     }
   }, [pathWithoutLang, sidebarHidden, setSidebarHidden]);
+
+  useEffect(() => {
+    document.title = getAuthedDocumentTitle(pathWithoutLang, t);
+  }, [pathWithoutLang, t]);
 
   const shouldShowMobileHeader = !sidebarHidden && routeUiConfig.hasHeader;
   const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;

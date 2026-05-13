@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft, Volume2, BookOpen, Languages, Star, Check } from 'lucide-react';
 import { TFunction } from 'i18next';
 import { NavigateFunction } from 'react-router-dom';
-import { Button } from '../../components/ui/button';
+// import { Button } from '../../components/ui/button';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal, SheetTitle } from '../../components/ui';
 import { KT } from '../../components/mobile/ksoft/ksoft';
 import {
@@ -70,8 +70,8 @@ export default function MobileReadingArticlePage({
   sourceDisplayLabel,
   increaseFontSize,
   toggleSpeak,
-  speaking,
-  speakingLoading,
+  speaking: _speaking,
+  speakingLoading: _speakingLoading,
   ttsError,
   translationError,
   translationLoading,

@@ -1,9 +1,8 @@
 import React from 'react';
 import { 
-  Play, Pause, SkipBack, SkipForward, Rewind, FastForward, 
-  Share2, Heart, ListMusic, RefreshCw, Languages, Repeat, X
+  Play, Pause, Rewind, FastForward, 
+  Share2, Heart, ListMusic, RefreshCw, Repeat, X
 } from 'lucide-react';
-import { DesktopCard } from './DesktopCard';
 import { DesignChip } from './DesignChip';
 import { cn } from '../../../lib/utils';
 
@@ -54,11 +53,8 @@ interface DesktopPodcastPlayerViewProps {
   getAbLoopClassName: () => string;
   showTranslation: boolean;
   setShowTranslation: (v: boolean) => void;
-  translationLabel: string;
-  translationStatusLabel: string | null;
   onRegenerate: () => void;
   onToggleSubscription: () => void;
-  subscriptionPending: boolean;
   isSubscribed: boolean;
   onShare: () => void;
   showPlaylist: boolean;
@@ -90,11 +86,8 @@ export const DesktopPodcastPlayerView: React.FC<DesktopPodcastPlayerViewProps> =
   getAbLoopClassName,
   showTranslation,
   setShowTranslation,
-  translationLabel,
-  translationStatusLabel,
   onRegenerate,
   onToggleSubscription,
-  subscriptionPending,
   isSubscribed,
   onShare,
   showPlaylist,

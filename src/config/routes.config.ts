@@ -118,19 +118,27 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitleDefault: 'Practice',
     mobilePageMode: 'hub',
   }),
-  community: segments => ({
-    hasFooter: false,
-    hasHeader: false,
-    usePatternBackground: false,
-    useDesktopContainerPadding: false,
-    useDesktopMaxWidth: false,
-    hasBottomNav: segments[1] !== 'add',
-    headerType: segments[1] === 'add' ? 'detail' : 'section',
-    headerAction: 'none',
-    headerTitle: 'community.title',
-    headerTitleDefault: 'Community',
-    mobilePageMode: segments[1] === 'add' ? 'workspace' : 'hub',
-  }),
+  community: segments => {
+    const sub = segments[1];
+    const isAdd = sub === 'add';
+    const isQA = sub === 'qa';
+    const isQADetail = isQA && segments.length >= 3 && segments[2] !== 'ask';
+    const isQAAsk = isQA && segments[2] === 'ask';
+    const isUserProfile = sub === 'u' && segments.length >= 3;
+    return {
+      hasFooter: false,
+      hasHeader: false,
+      usePatternBackground: false,
+      useDesktopContainerPadding: false,
+      useDesktopMaxWidth: false,
+      hasBottomNav: !isAdd && !isQAAsk && !isQADetail && !isUserProfile,
+      headerType: (isAdd || isQADetail || isQAAsk || isUserProfile) ? 'detail' : 'section',
+      headerAction: 'none',
+      headerTitle: isQA ? 'qa.title' : isUserProfile ? 'qa.communityProfile' : 'community.title',
+      headerTitleDefault: isQA ? 'Q&A' : isUserProfile ? 'Community Profile' : 'Community',
+      mobilePageMode: (isAdd || isQAAsk || isQADetail || isUserProfile) ? 'workspace' : 'hub',
+    };
+  },
   leaderboard: () => ({
     hasFooter: false,
     hasHeader: false,

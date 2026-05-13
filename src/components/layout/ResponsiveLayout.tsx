@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { getPathWithoutLang } from '../../utils/pathname';
 import { getRouteUiConfig } from '../../config/routes.config';

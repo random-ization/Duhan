@@ -1,18 +1,18 @@
 import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy } from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import {
-  BookOpen,
-  Check,
-  Languages,
-  Star,
-} from 'lucide-react';
+// import {
+//   BookOpen,
+//   Check,
+//   Languages,
+//   Star,
+// } from 'lucide-react';
 import { AI, DICTIONARY, NEWS, VOCAB } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTTS } from '../hooks/useTTS';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../components/ui';
+// import { Button } from '../components/ui';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
 import { buildMediaPath } from '../utils/mediaRoutes';
@@ -60,7 +60,7 @@ import type {
   NoteVisualState,
   NoteAnchor,
   VocabularyItem,
-  GrammarItem,
+//   GrammarItem,
   DictionaryEntry,
   DictionarySearchResult,
   ReadingAiResult,
@@ -157,7 +157,7 @@ export default function ReadingArticlePage() {
   const [noteSyncError, setNoteSyncError] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [mobileParagraphProgress, setMobileParagraphProgress] = useState(1);
+  const [_mobileParagraphProgress, setMobileParagraphProgress] = useState(1);
 
   const analyzeReadingArticle = useAction(AI.analyzeReadingArticle);
   const explainWordFallback = useAction(AI.explainWordFallback);
@@ -168,7 +168,7 @@ export default function ReadingArticlePage() {
   const { speak, stop, isLoading: speakingLoading, error: ttsError } = useTTS();
 
   const translationLang = useMemo(() => resolveReadingTranslationLanguage(language), [language]);
-  const translationLabel = useMemo(
+  const _translationLabel = useMemo(
     () => translationLanguageLabel(translationLang),
     [translationLang]
   );
