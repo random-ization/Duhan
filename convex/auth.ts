@@ -6,6 +6,7 @@ import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { compareSync, hashSync } from 'bcryptjs';
 import type { Id } from './_generated/dataModel';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 // Custom bcrypt crypto for Password provider (to match legacy password hashes)
 const bcryptCrypto = {
@@ -13,7 +14,12 @@ const bcryptCrypto = {
     return hashSync(password, 10);
   },
   async verifySecret(password: string, storedHash: string): Promise<boolean> {
-    return compareSync(password, storedHash);
+    try {
+      return compareSync(password, storedHash);
+    } catch (e) {
+      console.error('Password verification error:', e);
+      return false;
+    }
   },
 };
 
@@ -134,9 +140,13 @@ export const updateProfile = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error('Not authenticated');
 
-    const updates: { name?: string; avatar?: string } = {};
+    const updates: { name?: string; avatar?: string; image?: string } = {};
     if (args.name !== undefined) updates.name = args.name;
-    if (args.avatar !== undefined) updates.avatar = args.avatar;
+    if (args.avatar !== undefined) {
+      const normalized = normalizeStoragePublicUrl(args.avatar) || args.avatar;
+      updates.avatar = normalized;
+      updates.image = normalized; // Sync with Auth image field
+    }
 
     await ctx.db.patch(userId, updates);
   },

@@ -13,7 +13,7 @@ export function GlobalModalContainer() {
   return (
     <>
       {profileSetupOpen ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm"><div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" /></div>}>
           <LazyProfileSetupModal
             isOpen={profileSetupOpen}
             onClose={() => hideModal('profile-setup')}

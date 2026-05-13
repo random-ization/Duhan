@@ -5,64 +5,40 @@ import {
   useCurrentLanguage,
   useLocalizedNavigate,
 } from '../hooks/useLocalizedNavigate';
-import { LocalizedLink } from '../components/LocalizedLink';
-import { ArrowRight, Sparkles, AlertCircle, Mail, Lock, User, HelpCircle } from 'lucide-react';
+import { Sparkles, AlertCircle, Mail, Lock, User } from 'lucide-react';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { useQuery } from 'convex/react';
-import { qRef } from '../utils/convexRefs';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../components/ui';
-import { Input } from '../components/ui';
 import { trackEvent } from '../utils/analytics';
 import { resolveAuthErrorMessage } from '../utils/authErrors';
-
-// Google OAuth Config - Removed legacy config
-// const GOOGLE_CLIENT_ID ...
-// const REDIRECT_URI ...
+import { KT, HanjaSeal } from '../components/mobile/ksoft/ksoft';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DesktopAuthPage() {
   const navigate = useLocalizedNavigate();
   const currentLanguage = useCurrentLanguage();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth(); // Assume loading is available
+  const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const redirectPath = resolveSafeReturnTo(searchParams.get('redirect'), '/dashboard');
-
-  // Determine which page we're on for SEO
+  const redirectPath = resolveSafeReturnTo(searchParams.get('redirect'), '/dashboard/course');
   const meta = getRouteMeta(location.pathname);
 
-  // Auto-redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
       navigate(redirectPath);
     }
   }, [user, authLoading, navigate, redirectPath]);
 
-  /* Refactored: Legacy manual callback handling removed. ConvexAuthProvider handles this.
-  // Handle Google OAuth callback
-  useEffect(() => {
-    const code = searchParams.get('code');
-    if (code && !user && !googleLoading) {
-      handleGoogleCallback(code);
-    }
-  }, [searchParams, user]);
-  */
-
   const { signIn } = useAuthActions();
-  const logoSetting = useQuery(
-    qRef<{ key: string }, { value?: { url?: string } } | null>('settings:getSetting'),
-    { key: 'logo' }
-  );
   const postAuthRedirectPath = getLocalizedPath(redirectPath, currentLanguage);
   const postAuthRedirectUrl = `${globalThis.location.origin}${postAuthRedirectPath}`;
 
@@ -80,33 +56,14 @@ export default function DesktopAuthPage() {
     });
   };
 
-  const handleGoogleLogin = async () => {
+  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     if (!isLogin) {
-      trackEvent('signup_start', {
-        language: currentLanguage,
-        method: 'google',
-        platform: 'desktop',
-      });
+      trackEvent('signup_start', { language: currentLanguage, method: provider, platform: 'desktop' });
     }
     try {
-      await signIn('google', { redirectTo: postAuthRedirectUrl });
+      await signIn(provider, { redirectTo: postAuthRedirectUrl });
     } catch (e: unknown) {
-      setError(toAuthErrorMessage(e, 'auth.googleLoginFailed'));
-    }
-  };
-
-  const handleKakaoLogin = async () => {
-    if (!isLogin) {
-      trackEvent('signup_start', {
-        language: currentLanguage,
-        method: 'kakao',
-        platform: 'desktop',
-      });
-    }
-    try {
-      await signIn('kakao', { redirectTo: postAuthRedirectUrl });
-    } catch (e: unknown) {
-      setError(toAuthErrorMessage(e, 'auth.loginFailed'));
+      setError(toAuthErrorMessage(e, `auth.${provider}LoginFailed`));
     }
   };
 
@@ -115,17 +72,8 @@ export default function DesktopAuthPage() {
     setLoading(true);
     setError(null);
 
-    if (!isLogin) {
-      trackEvent('signup_start', {
-        language: currentLanguage,
-        method: 'password',
-        platform: 'desktop',
-      });
-    }
-
     try {
       if (isLogin) {
-        // Login with email/password
         await signIn('password', {
           email: formData.email,
           password: formData.password,
@@ -133,7 +81,6 @@ export default function DesktopAuthPage() {
           redirectTo: postAuthRedirectUrl,
         });
       } else {
-        // Register with email/password
         await signIn('password', {
           email: formData.email,
           password: formData.password,
@@ -141,15 +88,9 @@ export default function DesktopAuthPage() {
           flow: 'signUp',
           redirectTo: postAuthRedirectUrl,
         });
-
-        trackEvent('signup_success', {
-          language: currentLanguage,
-          method: 'password',
-          platform: 'desktop',
-        });
+        trackEvent('signup_success', { language: currentLanguage, method: 'password', platform: 'desktop' });
       }
     } catch (e: unknown) {
-      console.error('Auth error:', e);
       setError(toAuthErrorMessage(e, 'auth.loginFailed'));
     } finally {
       setLoading(false);
@@ -157,210 +98,236 @@ export default function DesktopAuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4F8] p-4 md:p-12 flex items-center justify-center font-sans">
+    <div className="h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden" style={{ fontFamily: KT.font }}>
       <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
         noIndex={meta.noIndex}
       />
-      <div className="max-w-5xl w-full bg-white rounded-3xl md:rounded-[3rem] border-2 border-slate-900 shadow-pop overflow-hidden flex flex-col md:flex-row min-h-0 md:min-h-[650px]">
-        {/* Left: Visuals (Game Cover) */}
-        <div className="w-full md:w-1/2 bg-indigo-600 relative flex flex-col items-center justify-center p-6 md:p-10 text-white overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 10px)',
-            }}
-          ></div>
 
-          <div className="relative z-10 text-center">
-            {logoSetting?.value?.url ? (
-              <img
-                src={logoSetting.value.url}
-                alt={t('common.alt.logo')}
-                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl"
-              />
-            ) : (
-              <img
-                src="/logo.png"
-                alt={t('common.alt.logo')}
-                className="w-32 h-32 object-contain mb-6 mx-auto drop-shadow-2xl rounded-3xl"
-              />
-            )}
-            <h1 className="text-5xl font-black font-display mb-2">{t('auth.brand')}</h1>
-            <p className="text-indigo-200 font-bold text-lg tracking-wide">{t('auth.slogan')}</p>
-          </div>
+      {/* Left Side: Immersive Hero - FIXED HEIGHT & REFINED */}
+      <div 
+        className="hidden md:flex w-1/2 h-full flex-col justify-between p-16 relative overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${KT.crimson} 0%, ${KT.indigo} 100%)` }}
+      >
+        {/* Grain Texture Overlay */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay grain-overlay" />
+        
+        {/* Rim Light Effect */}
+        <div className="absolute inset-0 border-r border-white/5 pointer-events-none" />
 
-          {/* 3D Rocket Decoration */}
-          <div className="absolute bottom-10 -left-10 animate-bounce duration-[2000ms]">
-            <img
-              src="/emojis/Rocket.png"
-              className="w-32 h-32 drop-shadow-xl"
-              alt={t('auth.alt.rocket')}
-            />
+        {/* Large background traditional kanji - Reduced size & repositioned for balance */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 0.12, scale: 1 }}
+          transition={{ duration: 2, ease: "easeOut" }}
+          className="absolute right-0 top-10 font-serif font-medium pointer-events-none select-none"
+          style={{ 
+            fontSize: '480px', 
+            lineHeight: 1, 
+            color: '#fff',
+            WebkitMaskImage: 'radial-gradient(circle at 60% 40%, black 10%, transparent 90%)',
+            maskImage: 'radial-gradient(circle at 60% 40%, black 10%, transparent 90%)'
+          }}
+        >
+          韓
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10"
+        >
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <div className="absolute -inset-2 bg-white/10 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition duration-500" />
+              <img src="/logo.svg" alt="Duhan Logo" width={60} height={60} className="rounded-2xl shadow-sm" />
+            </div>
+            <div>
+              <div className="text-3xl font-black text-white tracking-tighter">Duhan</div>
+              <div className="text-[10px] font-bold text-white/50 uppercase tracking-[0.3em] mt-1">讀韓 · 重新认识韩语</div>
+            </div>
           </div>
+        </motion.div>
+
+        <div className="relative z-10">
+          <motion.h1 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-[68px] font-black text-white leading-[1.05] tracking-tight"
+          >
+            한 글자가<br/>
+            <span className="text-white/90">하루를 바꾼다</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-10 text-xl font-medium text-white/60 leading-relaxed max-w-md"
+          >
+            每个字，都让你离这门语言更近一步。<br/>
+            沉浸学习，与 <span className="text-white font-bold">三万</span> 学韩者同行。
+          </motion.p>
         </div>
+      </div>
 
-        {/* Right: Console (Form) */}
-        <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-white relative">
-          <h2 className="text-3xl font-black mb-6 text-slate-900 flex items-center gap-2">
-            {isLogin ? t('auth.welcomeBack') : t('auth.createCharacter')}{' '}
-            <Sparkles className="text-yellow-400 dark:text-amber-300 fill-current" />
-          </h2>
+      {/* Right Side: Auth Form - SCROLLABLE & STABLE */}
+      <div className="w-full md:w-1/2 h-full flex flex-col items-center justify-center p-8 md:p-12 lg:p-24 overflow-y-auto bg-white scrollbar-hide">
+        <div className="w-full max-w-md py-12">
+          {/* Mode Switcher */}
+          <div className="flex bg-k-bg2 p-1 rounded-2xl w-fit mb-12 shadow-inner">
+            <button 
+              onClick={() => setIsLogin(true)}
+              className={`px-10 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${isLogin ? 'bg-k-ink text-white shadow-xl scale-[1.02]' : 'text-k-sub hover:text-k-ink'}`}
+            >
+              登录
+            </button>
+            <button 
+              onClick={() => setIsLogin(false)}
+              className={`px-10 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${!isLogin ? 'bg-k-ink text-white shadow-xl scale-[1.02]' : 'text-k-sub hover:text-k-ink'}`}
+            >
+              注册
+            </button>
+          </div>
+
+          <div className="mb-10 min-h-[90px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={isLogin ? 'login' : 'signup'}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <h2 className="text-[34px] font-black tracking-tighter text-k-ink leading-tight">
+                    {isLogin ? '欢迎回来' : '开始学习'}
+                  </h2>
+                  <span className="text-[28px] font-serif text-k-crimson opacity-70">
+                    {isLogin ? '다시 만나서 반갑습니다' : '환영합니다'}
+                  </span>
+                </div>
+                <p className="mt-2 text-k-sub font-bold opacity-80">
+                  {isLogin ? '继续你的韩语之旅' : '加入三万名韩语学习者'}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl border-2 flex items-center gap-2 font-bold text-sm bg-red-50 text-red-600 border-red-100 dark:bg-rose-400/12 dark:text-rose-200 dark:border-rose-300/30">
-              <AlertCircle size={18} /> {error}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 rounded-2xl border-2 border-red-100 bg-red-50 text-red-600 text-sm font-black flex items-center gap-3 shadow-sm"
+            >
+              <AlertCircle size={20} className="shrink-0" />
+              {error}
+            </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <AnimatePresence mode="popLayout">
+              {!isLogin && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em] px-1">昵称</label>
+                  <div className="relative group">
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                    <input
+                      type="text"
+                      placeholder="输入你的昵称"
+                      className="w-full bg-k-bg2/30 px-14 py-4 rounded-2xl border-2 border-k-line/50 font-bold text-k-ink placeholder:text-k-sub focus:border-k-ink focus:bg-white outline-none transition-all shadow-sm focus:shadow-md"
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      required={!isLogin}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em] px-1">邮箱</label>
               <div className="relative group">
-                <User
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
-                  size={20}
-                />
-                <Input
-                  id="desktop-auth-name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder={t('auth.placeholderName')}
-                  className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                <input
+                  type="email"
+                  placeholder="haeun@email.com"
+                  className="w-full bg-k-bg2/30 px-14 py-4 rounded-2xl border-2 border-k-line/50 font-bold text-k-ink placeholder:text-k-sub focus:border-k-ink focus:bg-white outline-none transition-all shadow-sm focus:shadow-md"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
               </div>
-            )}
-
-            <div className="relative group">
-              <Mail
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
-                size={20}
-              />
-              <Input
-                id="desktop-auth-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder={t('auth.placeholderEmail')}
-                className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
-                value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
             </div>
 
-            <div className="relative group">
-              <Lock
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition"
-                size={20}
-              />
-              <Input
-                id="desktop-auth-password"
-                name="password"
-                type="password"
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                placeholder={t('auth.placeholderPassword')}
-                className="h-auto w-full bg-slate-50 shadow-none border-2 border-slate-200 rounded-xl pl-12 pr-4 py-3 font-bold focus:outline-none focus:border-indigo-500 focus:bg-white transition text-slate-900 placeholder:text-slate-400"
-                value={formData.password}
-                onChange={e => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-            </div>
-
-            {/* Forgot Password Link */}
-            {isLogin && (
-              <div className="flex justify-end">
-                <LocalizedLink
-                  to="/forgot-password"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 transition hover:text-indigo-600"
-                >
-                  <HelpCircle size={14} />
-                  <span>{t('auth.forgotPassword')}</span>
-                </LocalizedLink>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em]">密码</label>
+                {isLogin && (
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/forgot-password')}
+                    className="text-[10px] font-black text-k-crimson hover:underline tracking-tight uppercase"
+                  >
+                    忘记密码?
+                  </button>
+                )}
               </div>
-            )}
+              <div className="relative group">
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="w-full bg-k-bg2/30 px-14 py-4 rounded-2xl border-2 border-k-line/50 font-bold text-k-ink placeholder:text-k-sub focus:border-k-ink focus:bg-white outline-none transition-all shadow-sm focus:shadow-md"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
 
-            <Button
+            <button
               type="submit"
-              variant="ghost"
-              size="auto"
-              loading={loading}
-              loadingText={isLogin ? t('auth.loginButton') : t('auth.signupButton')}
-              className="w-full mt-4 bg-slate-900 text-white font-black py-4 rounded-xl border-b-4 border-black hover:translate-y-1 hover:border-b-0 hover:mb-1 transition shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 active:shadow-none"
+              disabled={loading}
+              style={{ background: KT.crimson }}
+              className="w-full py-5 mt-4 rounded-2xl text-white font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-k-crimson/30 disabled:opacity-50"
             >
-              {isLogin ? t('auth.loginButton') : t('auth.signupButton')}
-              <ArrowRight size={20} />
-            </Button>
+              {loading ? '处理中...' : (isLogin ? '登录 →' : '立即加入 →')}
+            </button>
           </form>
 
-          {/* Social Login Divider */}
-          <div className="my-8 flex items-center gap-4">
-            <div className="h-px bg-slate-200 flex-1"></div>
-            <span className="text-xs font-bold text-slate-400 uppercase">
-              {t('auth.orContinue')}
-            </span>
-            <div className="h-px bg-slate-200 flex-1"></div>
+          <div className="my-12 flex items-center gap-6">
+            <div className="h-px bg-k-line flex-1"></div>
+            <span className="text-[10px] font-black text-k-sub uppercase tracking-[0.3em] opacity-60">或者使用</span>
+            <div className="h-px bg-k-line flex-1"></div>
           </div>
 
-          {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-4">
-            <Button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              loading={loading}
-              loadingText={t('auth.social.google')}
-              loadingIconClassName="w-4 h-4"
-              variant="ghost"
-              size="auto"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            <button
+              onClick={() => handleSocialLogin('kakao')}
+              className="flex items-center justify-center gap-3 py-4 border-2 border-k-line/60 rounded-2xl font-bold text-k-ink hover:bg-k-bg2/40 hover:border-k-ink/20 transition-all shadow-sm"
             >
-              <img
-                src="https://www.svgrepo.com/show/475656/google-color.svg"
-                className="w-5 h-5"
-                alt={t('auth.social.google')}
-              />
-              {t('auth.social.google')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleKakaoLogin}
-              disabled={loading}
-              loading={loading}
-              loadingText={t('auth.social.kakao')}
-              loadingIconClassName="w-4 h-4"
-              variant="ghost"
-              size="auto"
-              className="flex items-center justify-center gap-2 py-3 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
+              <div className="bg-[#FEE500] text-black text-[9px] font-black w-5 h-5 rounded-md flex items-center justify-center">K</div>
+              <span className="text-sm">Kakao</span>
+            </button>
+            <button
+              onClick={() => handleSocialLogin('google')}
+              className="flex items-center justify-center gap-3 py-4 border-2 border-k-line/60 rounded-2xl font-bold text-k-ink hover:bg-k-bg2/40 hover:border-k-ink/20 transition-all shadow-sm"
             >
-              <span className="bg-yellow-400 text-slate-900 font-black text-xs px-1 rounded">
-                K
-              </span>
-              {t('auth.social.kakao')}
-            </Button>
+              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+              <span className="text-sm">Google</span>
+            </button>
           </div>
 
-          <div className="mt-8 text-center text-xs font-bold text-slate-400">
-            {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
-            <Button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-              }}
-              disabled={loading}
-              variant="ghost"
-              size="auto"
-              className="text-indigo-600 hover:underline uppercase"
-            >
-              {isLogin ? t('auth.registerAction') : t('auth.loginAction')}
-            </Button>
+          <div className="mt-14 text-center text-[12px] font-bold text-k-sub leading-relaxed opacity-70">
+            继续即表示同意 <button className="text-k-ink font-black hover:underline underline-offset-4 decoration-k-line">服务条款</button> 与 <button className="text-k-ink font-black hover:underline underline-offset-4 decoration-k-line">隐私政策</button>
           </div>
         </div>
       </div>

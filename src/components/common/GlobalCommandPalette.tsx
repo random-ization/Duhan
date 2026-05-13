@@ -171,10 +171,10 @@ export function GlobalCommandPalette() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="z-[100] bg-foreground/40 backdrop-blur-sm" />
+        <DialogOverlay className="z-[70] bg-foreground/40 backdrop-blur-sm" />
         <DialogContent
           unstyled
-          className="fixed left-1/2 top-24 z-[101] w-[min(680px,calc(100vw-2rem))] -translate-x-1/2 pointer-events-auto"
+          className="fixed left-1/2 top-24 z-[71] w-[min(680px,calc(100vw-2rem))] -translate-x-1/2 pointer-events-auto"
         >
           <div className="bg-card border-2 border-foreground rounded-2xl shadow-pop overflow-hidden">
             <div className="flex items-center gap-3 border-b border-border px-4 py-3">

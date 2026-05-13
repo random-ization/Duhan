@@ -6,7 +6,8 @@ import {
 } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthActions } from '@convex-dev/auth/react';
-import { ShieldCheck, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { LogoIcon } from '../components/ui/Logo';
 import { resolveAuthErrorMessage } from '../utils/authErrors';
 
 const AdminLoginPage: React.FC = () => {
@@ -115,8 +116,8 @@ const AdminLoginPage: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Logo / Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-zinc-900 rounded-2xl border-4 border-zinc-700 mb-4">
-            <ShieldCheck className="w-10 h-10 text-lime-400" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <LogoIcon size={80} />
           </div>
           <h1 className="text-2xl font-black text-white">管理员登录</h1>
           <p className="text-zinc-500 text-sm mt-1">DuHan 内容管理系统</p>
@@ -190,7 +191,6 @@ const AdminLoginPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <ShieldCheck size={20} />
                   登录管理后台
                 </>
               )}

@@ -2,7 +2,7 @@ import { mutation, query, internalMutation } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { paginationOptsValidator, makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
-import { getAuthUserId, requireAdmin } from './utils';
+import { getAuthUserId, getOptionalAuthUserId, requireAdmin } from './utils';
 import type { Doc, Id } from './_generated/dataModel';
 import { normalizeAnswerMap } from './validation';
 import { topikLogger } from './logger';
@@ -393,6 +393,131 @@ export const getSession = query({
       answers: session.answers || {},
       score: session.score,
       completedAt: session.completedAt,
+    };
+  },
+});
+
+// Get recent completed exam sessions for current user
+export const getMyHistory = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const limit = Math.max(1, Math.min(args.limit ?? 10, 50));
+
+    const sessions = await ctx.db
+      .query('exam_sessions')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+
+    const completedSessions = sessions
+      .filter(
+        session =>
+          (session.status === 'COMPLETED' || session.status === 'AUTO_SUBMITTED') &&
+          typeof session.score === 'number'
+      )
+      .sort((a, b) => {
+        const bTime = b.completedAt ?? b.createdAt;
+        const aTime = a.completedAt ?? a.createdAt;
+        return bTime - aTime;
+      })
+      .slice(0, limit);
+
+    if (completedSessions.length === 0) {
+      return [];
+    }
+
+    const uniqueExamIds = [...new Set(completedSessions.map(session => String(session.examId)))];
+    const examPairs = await Promise.all(
+      uniqueExamIds.map(async examId => {
+        const examDoc = await ctx.db.get(examId as Id<'topik_exams'>);
+        return [examId, examDoc] as const;
+      })
+    );
+    const examMap = new Map(examPairs);
+
+    return completedSessions.map(session => {
+      const exam = examMap.get(String(session.examId));
+      return {
+        id: String(session._id),
+        examId: exam?.legacyId?.trim() || String(session.examId),
+        examTitle: exam?.title || 'TOPIK 模拟题',
+        score: session.score ?? 0,
+        submittedAt: session.completedAt ?? session.createdAt,
+        status: session.status,
+      };
+    });
+  },
+});
+
+export const getLobbyStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    const now = Date.now();
+
+    // 1. Get upcoming exam
+    const upcoming = await ctx.db
+      .query('topik_exams')
+      .withIndex('by_scheduledAt', q => q.gte('scheduledAt', now))
+      .order('asc')
+      .first();
+
+    // 2. Get past performance for weak points
+    let weakAreas: Array<{ type: string; score: number; label: string; subLabel: string }> = [];
+
+    if (userId) {
+      const objectiveSessions = await ctx.db
+        .query('exam_sessions')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .filter(q => q.neq(q.field('status'), 'IN_PROGRESS'))
+        .collect();
+
+      const writingSessions = await ctx.db
+        .query('topik_writing_sessions')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .filter(q => q.neq(q.field('status'), 'IN_PROGRESS'))
+        .collect();
+
+      // Aggregate by type
+      const statsByType: Record<string, { totalScore: number; count: number; maxScore: number }> = {};
+
+      for (const s of objectiveSessions) {
+        const exam = await ctx.db.get(s.examId);
+        if (!exam) continue;
+        const type = exam.type; // READING or LISTENING
+        if (!statsByType[type]) statsByType[type] = { totalScore: 0, count: 0, maxScore: 0 };
+        statsByType[type].totalScore += s.score ?? 0;
+        statsByType[type].count += 1;
+        statsByType[type].maxScore += 100; // Assuming 100 for now
+      }
+
+      for (const s of writingSessions) {
+        if (!statsByType['WRITING']) statsByType['WRITING'] = { totalScore: 0, count: 0, maxScore: 0 };
+        statsByType['WRITING'].totalScore += s.totalScore ?? 0;
+        statsByType['WRITING'].count += 1;
+        statsByType['WRITING'].maxScore += 100;
+      }
+
+      weakAreas = Object.entries(statsByType)
+        .map(([type, stats]) => ({
+          type,
+          score: Math.round((stats.totalScore / stats.maxScore) * 100),
+          label: type === 'READING' ? '읽기' : type === 'LISTENING' ? '듣기' : '쓰기',
+          subLabel: type === 'READING' ? '长文章' : type === 'LISTENING' ? '高级听力' : '论说文', // Simplified fallback
+        }))
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 3);
+    }
+
+    return {
+      upcomingExam: upcoming ? {
+        round: upcoming.round,
+        date: upcoming.scheduledAt,
+        title: upcoming.title,
+      } : null,
+      weakAreas,
     };
   },
 });

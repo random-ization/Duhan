@@ -57,6 +57,7 @@ interface VocabQuizProps {
   readonly settingsLocked?: boolean;
   readonly resumeSnapshot?: LearningSessionSnapshot | null;
   readonly onSessionSnapshot?: (snapshot: LearningSessionSnapshot) => void;
+  readonly onClose?: () => void;
 }
 
 type QuestionType = 'MULTIPLE_CHOICE' | 'WRITING';
@@ -110,12 +111,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <Dialog open={showSettings} onOpenChange={setShowSettings}>
       <DialogPortal>
-        <DialogOverlay unstyled className="fixed inset-0 z-50 bg-black/50" />
+        <DialogOverlay unstyled className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm" />
         <DialogContent
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className="fixed inset-0 z-[51] flex items-center justify-center p-4 pointer-events-none"
+          className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
         >
           <div className="pointer-events-auto bg-card rounded-2xl p-6 w-full max-w-md shadow-2xl relative z-10">
             <SettingsModalHeader
@@ -683,6 +684,7 @@ interface ProgressHeaderProps {
   isLearn: boolean;
   questions?: readonly QuizQuestion[];
   wrongWords?: readonly VocabItem[];
+  onClose?: () => void;
 }
 
 const ProgressHeader: React.FC<ProgressHeaderProps> = ({
@@ -695,15 +697,23 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   isLearn,
   questions,
   wrongWords,
+  onClose,
 }) => (
   <div style={{ width: '100%' }}>
     <div style={{ padding: '24px 0 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <button 
         type="button"
+        onClick={onClose}
+        style={{ width: 36, height: 36, borderRadius: 18, border: 'none', background: '#FFFFFF', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', color: '#232220', fontWeight: 700, display: 'grid', placeItems: 'center' }}
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <button 
+        type="button"
         onClick={() => !settingsLocked && setShowSettings(true)}
         style={{ width: 36, height: 36, borderRadius: 18, border: 'none', background: '#FFFFFF', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', color: '#232220', fontWeight: 700, display: 'grid', placeItems: 'center' }}
       >
-        ×
+        <Settings className="w-5 h-5" />
       </button>
       <div style={{ flex: 1, textAlign: 'center' }}>
         <div style={{ fontSize: 11, color: '#8E877B', fontWeight: 700, letterSpacing: 1 }}>
@@ -1559,6 +1569,7 @@ interface QuizContentProps {
   handleWritingSubmit: () => void;
   questions?: readonly QuizQuestion[];
   wrongWords?: readonly VocabItem[];
+  onClose?: () => void;
 }
 
 function getQuizPromptText(
@@ -1640,6 +1651,7 @@ const QuizContent: React.FC<QuizContentProps> = ({
   handleWritingSubmit,
   questions,
   wrongWords,
+  onClose,
 }) => {
   const isWriting = currentQuestion.type === 'WRITING';
   const questionText =
@@ -1653,17 +1665,19 @@ const QuizContent: React.FC<QuizContentProps> = ({
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, padding: '0 22px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <ProgressHeader
-          labels={labels}
-          currentBatchNum={currentBatchNum}
-          questionIndex={questionIndex}
-          totalQuestions={totalQuestions}
-          settingsLocked={settingsLocked}
-          setShowSettings={setShowSettings}
-          isLearn={isLearn}
-          questions={questions}
-          wrongWords={wrongWords}
-        />
+        <div className="max-w-[800px] mx-auto w-full flex-1 flex flex-col">
+          <ProgressHeader
+            labels={labels}
+            currentBatchNum={currentBatchNum}
+            questionIndex={questionIndex}
+            totalQuestions={totalQuestions}
+            settingsLocked={settingsLocked}
+            setShowSettings={setShowSettings}
+            isLearn={isLearn}
+            questions={questions}
+            wrongWords={wrongWords}
+            onClose={onClose}
+          />
 
         <QuestionDisplay
           promptText={promptText}
@@ -1705,19 +1719,21 @@ const QuizContent: React.FC<QuizContentProps> = ({
           />
         )}
       </div>
+    </div>
 
-      <div style={{ padding: '12px 22px 32px', borderTop: '1px solid #EBE8E2', background: '#FFFFFF', display: 'flex', gap: 8 }}>
-        {showSkip ? (
-          <button
-            type="button"
-            onClick={handleDontKnow}
-            style={{ flex: 0.35, padding: 14, borderRadius: 16, border: '1px solid #DCD9CE', background: '#FFFFFF', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: '#232220' }}
-          >
-            {language === 'zh' ? '跳过' : 'Skip'}
-          </button>
-        ) : (
-          <div style={{ flex: 0.35 }} />
-        )}
+      <div style={{ padding: '12px 22px 32px', borderTop: '1px solid #EBE8E2', background: '#FFFFFF' }}>
+        <div className="max-w-[800px] mx-auto w-full flex items-center gap-3">
+          {showSkip ? (
+            <button
+              type="button"
+              onClick={handleDontKnow}
+              style={{ flex: 0.35, padding: 14, borderRadius: 16, border: '1px solid #DCD9CE', background: '#FFFFFF', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: '#232220' }}
+            >
+              {language === 'zh' ? '跳过' : 'Skip'}
+            </button>
+          ) : (
+            <div style={{ flex: 0.35 }} />
+          )}
 
         {pendingAdvance ? (
           <button
@@ -1735,7 +1751,8 @@ const QuizContent: React.FC<QuizContentProps> = ({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 function VocabQuizComponent({
@@ -1753,6 +1770,7 @@ function VocabQuizComponent({
   settingsLocked = false,
   resumeSnapshot,
   onSessionSnapshot,
+  onClose,
 }: VocabQuizProps) {
   const labels = getLabels(language);
   const isLearn = variant === 'learn';
@@ -1845,13 +1863,18 @@ function VocabQuizComponent({
     speakWord,
   });
 
+  const lastSpokenIndexRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {
+      if (lastSpokenIndexRef.current === questionIndex) return;
+      
       if (currentQuestion.direction === 'KR_TO_NATIVE') {
         speakWord(currentQuestion.targetWord.korean);
+        lastSpokenIndexRef.current = questionIndex;
       }
     }
-  }, [questionIndex, questions, settings.autoTTS, gameState, speakWord, currentQuestion]);
+  }, [questionIndex, settings.autoTTS, gameState, speakWord, currentQuestion]);
 
   const hasInitRef = useRef(false);
   useEffect(() => {
@@ -2038,6 +2061,7 @@ function VocabQuizComponent({
         handleWritingSubmit={handleWritingSubmit}
         questions={questions}
         wrongWords={wrongWords}
+        onClose={onClose}
       />
     </>
   );

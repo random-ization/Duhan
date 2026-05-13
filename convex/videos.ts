@@ -268,3 +268,49 @@ export const remove = mutation({
     return { id: args.id };
   },
 });
+
+export const saveProgress = mutation({
+  args: {
+    videoId: v.id('videos'),
+    progress: v.number(),
+    duration: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const existing = await ctx.db
+      .query('video_watch_progress')
+      .withIndex('by_user_video', q => q.eq('userId', userId).eq('videoId', args.videoId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        progress: args.progress,
+        ...(args.duration !== undefined ? { duration: args.duration } : {}),
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert('video_watch_progress', {
+        userId,
+        videoId: args.videoId,
+        progress: args.progress,
+        duration: args.duration,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const getProgress = query({
+  args: { videoId: v.id('videos') },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    return await ctx.db
+      .query('video_watch_progress')
+      .withIndex('by_user_video', q => q.eq('userId', userId).eq('videoId', args.videoId))
+      .unique();
+  },
+});

@@ -7,22 +7,13 @@ import { DesktopWeakPointsCard } from './DesktopWeakPointsCard';
 
 export function DesktopKsoftDashboardRail({
   language,
+  className,
 }: Readonly<{
   language: string;
+  className?: string;
 }>) {
   return (
-    <aside
-      className="hidden xl:block"
-      style={{
-        position: 'fixed',
-        right: 24,
-        top: 110,
-        width: 330,
-        maxHeight: 'calc(100vh - 140px)',
-        overflowY: 'auto',
-        paddingBottom: 24,
-      }}
-    >
+    <aside className={className}>
       <div style={{ display: 'grid', gap: 12 }}>
         <DesktopDailyChallengeCard language={language} />
         <DesktopLeaderboardWidget />

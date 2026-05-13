@@ -14,9 +14,10 @@ export function buildVocabBookPath(search?: SearchInput): string {
 }
 
 export function buildVocabBookModePath(
-  mode: 'immerse' | 'listen' | 'dictation' | 'spelling',
+  mode: 'flashcard' | 'learn' | 'test' | 'match',
   search?: SearchInput
 ): string {
-  const query = toQueryString(search);
-  return query ? `/vocab-book/${mode}?${query}` : `/vocab-book/${mode}`;
+  const params = new URLSearchParams(toQueryString(search));
+  params.set('mode', mode);
+  return `/vocab-book/practice?${params.toString()}`;
 }

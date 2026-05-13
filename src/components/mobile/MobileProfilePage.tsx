@@ -2,21 +2,24 @@ import React, { useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
-import { ArrowLeft, Camera, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
 import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
 import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
-import { ProfileSettingsTab } from '../../pages/profile/tabs/ProfileSettingsTab';
+import {
+  ProfileSettingsTab,
+  type SettingsSection,
+} from '../../pages/profile/tabs/ProfileSettingsTab';
 import toast from 'react-hot-toast';
 import { useMutation, useAction, useQuery } from 'convex/react';
 import { aRef, mRef, NoArgs, qRef } from '../../utils/convexRefs';
 import { useExamStats } from '../../pages/profile/hooks/useExamStats';
 import { ExamAttempt } from '../../types';
 import { toErrorMessage } from '../../utils/errors';
-import { Loading } from '../common/Loading';
+import { Loading, UserAvatar } from '../common';
 import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
 import { Input } from '../ui';
@@ -27,9 +30,14 @@ import {
   validateAvatarFile,
 } from '../../utils/storageUpload';
 import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
+import { getPathWithoutLang } from '../../utils/pathname';
 import { KT, Chip, Card, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
 
 type LegacyTab = 'info' | 'stats' | 'security' | 'settings';
+const settingsSectionFromParam = (raw: string | null): SettingsSection => {
+  if (raw === 'notifications' || raw === 'language') return raw;
+  return 'all';
+};
 
 const tabFromParam = (raw: string | null): LegacyTab | null => {
   if (raw === 'info' || raw === 'stats' || raw === 'security' || raw === 'settings') return raw;
@@ -37,15 +45,31 @@ const tabFromParam = (raw: string | null): LegacyTab | null => {
 };
 
 export const MobileProfilePage: React.FC = () => {
-  const { user, updateUser, language, viewerAccess } = useAuth();
+  const { user, updateUser, logout, language, viewerAccess } = useAuth();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { signIn } = useAuthActions();
   const { t } = useTranslation();
   const labels = getLabels(language);
 
-  const legacyTab = tabFromParam(searchParams.get('tab'));
+  const pathWithoutLang = getPathWithoutLang(location.pathname);
+  const profileRouteSegments = pathWithoutLang
+    .replace(/^\/profile\/?/, '')
+    .split('/')
+    .filter(Boolean);
+  const legacyTabFromRoute = tabFromParam(profileRouteSegments[0] ?? null);
+  const settingsSectionFromRoute =
+    legacyTabFromRoute === 'settings' ? settingsSectionFromParam(profileRouteSegments[1] ?? null) : 'all';
+  const legacyTabFromQuery = tabFromParam(searchParams.get('tab'));
+  const settingsSectionFromQuery = settingsSectionFromParam(searchParams.get('section'));
+  const legacyTab = legacyTabFromRoute ?? legacyTabFromQuery;
+  const settingsSection =
+    legacyTabFromRoute === 'settings'
+      ? settingsSectionFromRoute
+      : legacyTab === 'settings'
+        ? settingsSectionFromQuery
+        : 'all';
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +183,8 @@ export const MobileProfilePage: React.FC = () => {
     toast.success(t('profileUpdated', { defaultValue: 'Profile updated' }));
   };
 
+  const copy = getMyCopy(language);
+
   const legacyMeta = useMemo(
     () =>
       legacyTab
@@ -182,14 +208,31 @@ export const MobileProfilePage: React.FC = () => {
                 'Manage password changes and the sign-in providers connected to this account.',
             },
             settings: {
-              title: labels.profile?.settingsCenter?.title || 'Preferences',
+              title:
+                settingsSection === 'notifications'
+                  ? copy.notificationsTitle
+                  : settingsSection === 'language'
+                    ? copy.languageTitle
+                    : labels.profile?.settingsCenter?.title || 'Preferences',
               subtitle:
-                labels.profile?.settingsCenter?.subtitle ||
-                'Tune notifications, language, and product defaults to fit your routine.',
+                settingsSection === 'notifications'
+                  ? copy.notificationsSub
+                  : settingsSection === 'language'
+                    ? copy.languageSub
+                    : labels.profile?.settingsCenter?.subtitle ||
+                      'Tune notifications, language, and product defaults to fit your routine.',
             },
           }[legacyTab]
         : null,
-    [labels, legacyTab]
+    [
+      copy.languageSub,
+      copy.languageTitle,
+      copy.notificationsSub,
+      copy.notificationsTitle,
+      labels,
+      legacyTab,
+      settingsSection,
+    ]
   );
 
   if (!user) return <Loading fullScreen />;
@@ -202,18 +245,31 @@ export const MobileProfilePage: React.FC = () => {
   const totalHours = Math.round(totalMinutes / 60);
   const isPremium = Boolean(viewerAccess?.isPremium);
 
-  const copy = getMyCopy(language);
-
-  const closeLegacy = () => {
+  const buildProfilePath = (tab?: LegacyTab, section?: Exclude<SettingsSection, 'all'>) => {
     const next = new URLSearchParams(searchParams);
     next.delete('tab');
-    setSearchParams(next);
+    next.delete('section');
+    let nextPath = '/profile';
+    if (tab) {
+      nextPath += `/${tab}`;
+      if (tab === 'settings' && section) {
+        nextPath += `/${section}`;
+      }
+    }
+    const query = next.toString();
+    return query ? `${nextPath}?${query}` : nextPath;
+  };
+
+  const closeLegacy = () => {
+    navigate(buildProfilePath());
   };
 
   const openLegacyTab = (tab: LegacyTab) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', tab);
-    setSearchParams(next);
+    navigate(buildProfilePath(tab));
+  };
+
+  const openSettingsSection = (section: Exclude<SettingsSection, 'all'>) => {
+    navigate(buildProfilePath('settings', section));
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -256,6 +312,18 @@ export const MobileProfilePage: React.FC = () => {
       s: copy.profileDetailsSub(displayName, user.email),
       tone: 'mintDeep',
       onClick: () => openLegacyTab('info'),
+    },
+    {
+      k: '學',
+      l:
+        labels.profile?.learningHub?.tabLabel ||
+        labels.profile?.learningHub?.title ||
+        'Learning overview',
+      s:
+        labels.profile?.learningHub?.subtitle ||
+        `${copy.streakChip(dayStreak)} · ${examsTaken} ${labels.examsTaken || 'exams'}`,
+      tone: 'butterDeep',
+      onClick: () => openLegacyTab('stats'),
     },
     {
       k: '鑰',
@@ -308,17 +376,24 @@ export const MobileProfilePage: React.FC = () => {
     {
       l: copy.notificationsTitle,
       s: copy.notificationsSub,
-      onClick: () => openLegacyTab('settings'),
+      onClick: () => openSettingsSection('notifications'),
     },
     {
       l: copy.languageTitle,
       s: copy.languageSub,
-      onClick: () => openLegacyTab('settings'),
+      onClick: () => openSettingsSection('language'),
     },
     {
       l: copy.supportTitle,
       s: copy.supportSub,
       onClick: () => scrollToSection('mobile-profile-contact'),
+    },
+    {
+      l: copy.signOutTitle,
+      s: copy.signOutSub,
+      onClick: () => {
+        void logout();
+      },
     },
   ];
 
@@ -500,7 +575,9 @@ export const MobileProfilePage: React.FC = () => {
                   toErrorMessage={toErrorMessage}
                 />
               )}
-              {legacyTab === 'settings' && <ProfileSettingsTab labels={labels} />}
+              {legacyTab === 'settings' && (
+                <ProfileSettingsTab labels={labels} section={settingsSection} />
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -542,33 +619,12 @@ export const MobileProfilePage: React.FC = () => {
         )}
         <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
-            <motion.div
-              whileHover={{ scale: 1.03 }}
-              style={{
-                width: 68,
-                height: 68,
-                borderRadius: 20,
-                background: `linear-gradient(135deg, ${KT.pink} 0%, ${KT.butter} 100%)`,
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: 30,
-                boxShadow: KT.sh,
-                overflow: 'hidden',
-                position: 'relative',
-              }}
-            >
-              {isUploadingAvatar ? (
-                <Loading size="sm" />
-              ) : user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={displayName}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <UserIcon size={28} color={KT.ink} />
-              )}
-            </motion.div>
+            <UserAvatar 
+              user={user}
+              isUploading={isUploadingAvatar}
+              className="w-[68px] h-[68px] rounded-[20px] shadow-k-sh"
+              fallbackClassName="text-[28px]"
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -916,6 +972,8 @@ type MyCopy = {
   supportSub: string;
   languageTitle: string;
   languageSub: string;
+  signOutTitle: string;
+  signOutSub: string;
 };
 
 const getMyCopy = (language: string): MyCopy => {
@@ -951,6 +1009,8 @@ const getMyCopy = (language: string): MyCopy => {
       supportSub: '联系支持团队',
       languageTitle: '显示语言',
       languageSub: '切换界面和学习内容的显示语言。',
+      signOutTitle: '退出登录',
+      signOutSub: '结束当前账号会话',
     };
   }
   if (language.startsWith('vi')) {
@@ -985,6 +1045,8 @@ const getMyCopy = (language: string): MyCopy => {
       supportSub: 'Liên hệ đội hỗ trợ',
       languageTitle: 'Ngôn ngữ hiển thị',
       languageSub: 'Đổi ngôn ngữ giao diện và nội dung học tập.',
+      signOutTitle: 'Đăng xuất',
+      signOutSub: 'Kết thúc phiên đăng nhập hiện tại',
     };
   }
   if (language.startsWith('mn')) {
@@ -1019,6 +1081,8 @@ const getMyCopy = (language: string): MyCopy => {
       supportSub: 'Дэмжлэгтэй холбогдох',
       languageTitle: 'Харагдах хэл',
       languageSub: 'Интерфейс ба сургалтын хэлээ солих.',
+      signOutTitle: 'Гарах',
+      signOutSub: 'Одоогийн бүртгэлээс гарах',
     };
   }
   return {
@@ -1052,5 +1116,7 @@ const getMyCopy = (language: string): MyCopy => {
     supportSub: 'Contact support',
     languageTitle: 'Display language',
     languageSub: 'Change the language for the interface and learning content.',
+    signOutTitle: 'Sign out',
+    signOutSub: 'End the current account session',
   };
 };

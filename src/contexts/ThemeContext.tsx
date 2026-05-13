@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import { getMediaQueryList, matchesMediaQuery, subscribeToMediaQuery } from '../utils/mediaQuery';
 
@@ -82,17 +82,24 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     return subscribeToMediaQuery(mediaQuery, handleSystemChange);
   }, [theme]);
 
-  const setTheme = (nextTheme: Theme) => {
+  const setTheme = useCallback((nextTheme: Theme) => {
     setThemeState(nextTheme);
     safeSetLocalStorageItem(storageKey, nextTheme);
-  };
+  }, [storageKey]);
 
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-  };
+  const toggleTheme = useCallback(() => {
+    const nextTheme: Theme = resolvedTheme === 'dark' ? 'light' : 'dark';
+    setThemeState(nextTheme);
+    safeSetLocalStorageItem(storageKey, nextTheme);
+  }, [resolvedTheme, storageKey]);
+
+  const contextValue = useMemo<ThemeContextValue>(
+    () => ({ theme, resolvedTheme, setTheme, toggleTheme }),
+    [theme, resolvedTheme, setTheme, toggleTheme],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

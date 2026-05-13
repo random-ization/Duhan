@@ -7,7 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import MobileUnitSelector from './MobileUnitSelector';
 import MobileFlashcardPlayer from './MobileFlashcardPlayer';
 import { MobileLearnMode } from './MobileLearnMode';
-import VocabTest from '../../features/vocab/components/VocabTest';
+import VocabTest, { VocabTestSessionSnapshot } from '../../features/vocab/components/VocabTest';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { Language } from '../../types';
 import { getLabels } from '../../utils/i18n';
@@ -55,7 +55,7 @@ interface MobileVocabViewProps {
   readonly flashcardResume?: MobileVocabResume;
   readonly learnResume?: MobileVocabResume;
   readonly testResume?: MobileVocabResume;
-  readonly testResumeSnapshot?: any; // VocabTestSessionSnapshot
+  readonly testResumeSnapshot?: VocabTestSessionSnapshot | null;
   readonly onAbandonActiveSession?: (mode: StageId) => void;
   readonly onSessionSnapshot?: (mode: StageId, completed: number, total: number) => void;
   readonly onCompleteSession?: (mode: StageId) => void;

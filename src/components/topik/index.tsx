@@ -96,11 +96,11 @@ const ExitExamConfirmDialog = ({
     <AlertDialogPortal>
       <AlertDialogOverlay
         unstyled
-        className="fixed inset-0 z-[120] bg-[rgba(10,10,14,0.72)] backdrop-blur-[1px]"
+        className="fixed inset-0 z-50 bg-[rgba(10,10,14,0.72)] backdrop-blur-[1px]"
       />
       <AlertDialogContent
         unstyled
-        className="fixed left-1/2 top-1/2 z-[121] w-[calc(100%-2rem)] max-w-[348px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[24px] border border-[rgba(31,27,23,0.14)] p-0 shadow-[0_28px_60px_-18px_rgba(18,14,10,0.55)] outline-none"
+        className="fixed left-1/2 top-1/2 z-[51] w-[calc(100%-2rem)] max-w-[348px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[24px] border border-[rgba(31,27,23,0.14)] p-0 shadow-[0_28px_60px_-18px_rgba(18,14,10,0.55)] outline-none"
         style={{ backgroundColor: '#FFFCF8', opacity: 1 }}
       >
         <div className="border-b border-[rgba(31,27,23,0.08)] px-5 pb-3.5 pt-4 text-center">

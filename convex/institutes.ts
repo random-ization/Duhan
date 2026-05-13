@@ -1,4 +1,4 @@
-import { query, type QueryCtx } from './_generated/server';
+import { query, mutation, type QueryCtx } from './_generated/server';
 import { v } from 'convex/values';
 import type { Doc } from './_generated/dataModel';
 import { normalizeStoragePublicUrl } from './spacesConfig';
@@ -22,6 +22,7 @@ export type InstituteClientDto = {
   publisher?: string;
   displayLevel?: string;
   totalUnits?: number;
+  estimatedTotalMinutes?: number;
   volume?: string;
 };
 
@@ -84,6 +85,7 @@ const normalizeInstitute = (institute: InstituteDoc): InstituteClientDto => ({
   publisher: institute.publisher,
   displayLevel: institute.displayLevel,
   totalUnits: institute.totalUnits,
+  estimatedTotalMinutes: (institute as { estimatedTotalMinutes?: number }).estimatedTotalMinutes,
   volume: institute.volume,
 });
 
@@ -208,3 +210,18 @@ async function processCourseIntegrity(
   }
   return null;
 }
+export const archive = mutation({
+  args: { id: v.id('institutes') },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { isArchived: true });
+    return { success: true };
+  },
+});
+
+export const updateDisplayLevel = mutation({
+  args: { id: v.id('institutes'), displayLevel: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { displayLevel: args.displayLevel });
+    return { success: true };
+  },
+});

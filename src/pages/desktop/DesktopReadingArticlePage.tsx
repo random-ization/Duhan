@@ -1,241 +1,262 @@
-import React from 'react';
-import { ChevronLeft, VolumeX, Volume2 } from 'lucide-react';
-import { TFunction } from 'i18next';
-import { NavigateFunction } from 'react-router-dom';
-import { Button } from '../../components/ui/button';
-import { AppBreadcrumb } from '../../components/common/AppBreadcrumb';
-import { KT } from '../../components/mobile/ksoft/ksoft';
-
-// Import local components from the parent page
+import React, { useState, useEffect } from 'react';
 import {
-  ReadingTranslationToggleButton,
-  ReadingParagraphBlocks,
-  ReadingSelectionToolbar,
-} from '../reading/ReadingComponents';
-import type {
-  NewsArticle,
-  NoteVisualState,
-  ReaderNote,
-  DraftNote,
-  SelectionToolbarState,
-  NoteColor,
-} from '../reading/types';
+  ArrowLeft,
+  Volume2,
+  Languages,
+  Type,
+  ChevronRight,
+  Layout,
+  Bookmark,
+  Share2,
+  Clock
+} from 'lucide-react';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { cn } from '../../lib/utils';
 
-interface DesktopReadingArticlePageProps {
-  t: TFunction;
-  navigate: NavigateFunction;
-  backPath: string;
-  resolvedArticle: NewsArticle;
-  difficultyClass: (level: string) => string;
-  difficultyLabel: (level: string, t: TFunction) => string;
+type DesktopReadingArticleProps = {
+  t: any;
+  navigate: any;
+  resolvedArticle: any;
+  difficultyLabel: any;
   sourceDisplayLabel: string;
   increaseFontSize: () => void;
-  toggleSpeak: () => Promise<void>;
+  toggleSpeak: () => void;
   speaking: boolean;
-  speakingLoading: boolean;
-  ttsError: string | null;
-  translationError: string | null;
-  translationLoading: boolean;
-  translationEnabled: boolean;
   onToggleTranslation: () => void;
+  translationEnabled: boolean;
   fontSize: number;
   paragraphs: string[];
   translations: string[];
-  draftNote: DraftNote | null;
-  notes: ReaderNote[];
-  getNoteVisualState: (noteId: string) => NoteVisualState;
-  focusNote: (noteId: string) => void;
-  setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
-  contentRef: React.RefObject<HTMLDivElement | null>;
   wordCount: number;
-  translationLabel: string;
   publishedDateLabel: string;
-  readingSidebarContent: React.ReactNode;
-  selectionToolbar: SelectionToolbarState;
-  noteColor: NoteColor;
-  setNoteColor: (color: NoteColor) => void;
-  onLookupSelection: () => void;
-  onSaveSelectionWord: (text: string) => Promise<void>;
-  startNoteFromSelection: () => void;
-  setSelectionToolbar: React.Dispatch<React.SetStateAction<SelectionToolbarState>>;
-}
+  readingSidebarContent: any;
+  onWordClick: (word: string) => void;
+  activeWord: string;
+};
 
+function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
+  return (
+    <div className="mb-8">
+      <div className="mb-4 flex items-center px-1">
+        {kanji && (
+          <span className="mr-2 font-k-serif text-[18px] font-medium text-k-crimson">
+            {kanji}
+          </span>
+        )}
+        <span className="text-[12px] font-black uppercase tracking-wider text-k-ink">
+          {title}
+        </span>
+        {action && (
+          <button className="ml-auto text-[10px] font-bold text-k-sub hover:text-k-crimson transition-colors">
+            {action}
+          </button>
+        )}
+      </div>
+      <div className="rounded-[24px] bg-k-card border border-k-line/5 shadow-k-sh-sm overflow-hidden" style={{ padding: pad }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function DesktopReadingArticlePage({
   t,
   navigate,
-  backPath,
   resolvedArticle,
-  difficultyClass,
   difficultyLabel,
   sourceDisplayLabel,
   increaseFontSize,
   toggleSpeak,
   speaking,
-  speakingLoading,
-  ttsError,
-  translationError,
-  translationLoading,
-  translationEnabled,
   onToggleTranslation,
+  translationEnabled,
   fontSize,
   paragraphs,
   translations,
-  draftNote,
-  notes,
-  getNoteVisualState,
-  focusNote,
-  setHoveredNoteId,
-  contentRef,
   wordCount,
-  translationLabel,
   publishedDateLabel,
   readingSidebarContent,
-  selectionToolbar,
-  noteColor,
-  setNoteColor,
-  onLookupSelection,
-  onSaveSelectionWord,
-  startNoteFromSelection,
-  setSelectionToolbar,
-}: DesktopReadingArticlePageProps) {
+  onWordClick,
+  activeWord,
+}: DesktopReadingArticleProps) {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const winScroll = document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+      setScrollProgress(scrolled);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const title = resolvedArticle?.title || '';
+  const level = difficultyLabel(resolvedArticle?.difficultyLevel || 'L1', t);
+  const category = resolvedArticle?.section || 'Reading';
+  const readTime = Math.max(1, Math.ceil(wordCount / 200));
+
   return (
-    <div className="relative h-full min-h-full overflow-hidden border border-border bg-muted">
-      <main className="relative z-10 flex h-full min-h-full flex-col border-border bg-card">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-4">
-            <AppBreadcrumb
-              className="hidden 2xl:block max-w-[360px]"
-              items={[
-                { label: t('nav.media', { defaultValue: 'Media' }), to: '/media' },
-                {
-                  label: t('readingArticle.backToDiscovery', { defaultValue: 'Reading' }),
-                  to: backPath,
-                },
-                { label: resolvedArticle.title },
-              ]}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => navigate(backPath)}
-              className="flex items-center gap-1 text-sm font-semibold text-muted-foreground transition hover:text-muted-foreground"
-            >
-              <ChevronLeft size={16} />
-              {t('readingArticle.backToDiscovery', { defaultValue: 'Back to discovery' })}
-            </Button>
-            <span
-              className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${difficultyClass(resolvedArticle.difficultyLevel)}`}
-            >
-              {difficultyLabel(resolvedArticle.difficultyLevel, t)} ({sourceDisplayLabel})
-            </span>
+    <div className="min-h-screen bg-k-bg font-sans selection:bg-k-butter selection:text-k-ink pb-20">
+      {/* Sticky Top Header */}
+      <header className="sticky top-0 z-[100] h-16 bg-k-bg/80 backdrop-blur-xl border-b border-k-line flex items-center px-8 gap-6 animate-in slide-in-from-top-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="group flex items-center gap-2 text-[13px] font-black text-k-sub hover:text-k-ink transition-colors"
+        >
+          <div className="w-8 h-8 rounded-full border border-k-line flex items-center justify-center group-hover:bg-k-ink group-hover:text-k-bg transition-all">
+            <ArrowLeft size={16} />
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={increaseFontSize}
-              className="rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted"
-            >
-              Aa
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => {
-                void toggleSpeak();
-              }}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted"
-            >
-              {speaking || speakingLoading ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              {speaking || speakingLoading
-                ? t('readingArticle.tts.stop', { defaultValue: 'Stop' })
-                : t('readingArticle.tts.play', { defaultValue: 'Read aloud' })}
-            </Button>
-            <ReadingTranslationToggleButton
-              t={t}
-              translationError={translationError}
-              translationLoading={translationLoading}
-              translationEnabled={translationEnabled}
-              onToggleTranslation={onToggleTranslation}
-            />
+          <span>返回</span>
+        </button>
+
+        <div className="h-4 w-px bg-k-line" />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-0.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">READING · ARTICLE</div>
+            <DesignChip tone="butter" size="sm">{level}</DesignChip>
           </div>
-        </header>
-
-        <div className="flex-1 overflow-hidden">
-          <div className="flex h-full min-h-0">
-            <div
-              className="min-w-0 flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12"
-              ref={contentRef}
-            >
-              <div className="mx-auto w-full max-w-4xl">
-                <h1 className="mb-6 text-3xl font-black leading-tight text-foreground">
-                  {resolvedArticle.title}
-                </h1>
-                <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-muted-foreground">
-                  <span>{publishedDateLabel}</span>
-                  <span>{sourceDisplayLabel}</span>
-                  <span>
-                    {t('readingArticle.meta.words', '{{count}} chars', {
-                      count: Number(wordCount),
-                    })}
-                  </span>
-                  <span>
-                    {t('readingArticle.meta.translationTarget', {
-                      defaultValue: 'Translation: {{language}}',
-                      language: translationLabel,
-                    })}
-                  </span>
-                </div>
-                {ttsError && (
-                  <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/35 dark:text-rose-300">
-                    {t('readingArticle.tts.status', { defaultValue: 'TTS status' })}: {ttsError}
-                  </div>
-                )}
-                {translationError && (
-                  <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-300">
-                    {t('readingArticle.translation.status', { defaultValue: 'Translation status' })}
-                    : {translationError}
-                  </div>
-                )}
-
-                <div style={{ lineHeight: 2.05, fontSize }}>
-                  <ReadingParagraphBlocks
-                    t={t}
-                    paragraphs={paragraphs}
-                    translations={translations}
-                    translationEnabled={translationEnabled}
-                    translationLoading={translationLoading}
-                    translationError={translationError}
-                    draftNote={draftNote}
-                    notes={notes}
-                    getNoteVisualState={getNoteVisualState}
-                    focusNote={focusNote}
-                    setHoveredNoteId={setHoveredNoteId}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <aside className="hidden w-[360px] shrink-0 border-l border-border bg-muted/20 p-4 lg:block xl:w-[380px]">
-              <div className="h-full overflow-y-auto pr-1">{readingSidebarContent}</div>
-            </aside>
-          </div>
+          <div className="text-[14px] font-black text-k-ink truncate">{title}</div>
         </div>
 
-        <ReadingSelectionToolbar
-          t={t}
-          selectionToolbar={selectionToolbar}
-          noteColor={noteColor}
-          setNoteColor={setNoteColor}
-          onLookupSelection={onLookupSelection}
-          onSaveSelectionWord={onSaveSelectionWord}
-          startNoteFromSelection={startNoteFromSelection}
-          onClose={() => setSelectionToolbar((prev: any) => ({ ...prev, visible: false }))}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSpeak}
+            className={cn(
+              "h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all",
+              speaking ? "bg-k-crimson text-white" : "hover:bg-k-line text-k-ink"
+            )}
+          >
+            <Volume2 size={16} /> {speaking ? '正在朗读...' : '朗读'}
+          </button>
+          <button
+            onClick={onToggleTranslation}
+            className={cn(
+              "h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all",
+              translationEnabled ? "bg-k-ink text-white" : "hover:bg-k-line text-k-ink"
+            )}
+          >
+            <Languages size={16} /> {translationEnabled ? '显示韩文' : '对照翻译'}
+          </button>
+          <button
+            onClick={increaseFontSize}
+            className="h-10 w-10 rounded-xl hover:bg-k-line flex items-center justify-center text-k-ink transition-colors"
+          >
+            <Type size={18} />
+          </button>
+          <div className="w-px h-4 bg-k-line mx-2" />
+          <button className="h-10 w-10 rounded-xl hover:bg-k-line flex items-center justify-center text-k-ink transition-colors">
+            <Bookmark size={18} />
+          </button>
+        </div>
+
+        {/* Scroll Progress Bar */}
+        <div className="absolute bottom-[-1px] left-0 h-[2px] bg-k-crimson transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+      </header>
+
+      <main className="max-w-[1280px] mx-auto px-8 py-12 grid grid-cols-[1fr_340px] gap-12">
+        {/* Main Content */}
+        <article className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="relative aspect-[21/9] rounded-[32px] overflow-hidden mb-12 shadow-k-sh-lg border border-k-line/5 bg-k-card">
+            {resolvedArticle?.imageUrl ? (
+              <img src={resolvedArticle.imageUrl} className="w-full h-full object-cover opacity-80" alt="" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-k-pink/40 to-k-butter/40" />
+            )}
+            <div className="absolute inset-0 grid place-items-center opacity-10 font-k-serif text-[120px]">新</div>
+            <div className="absolute inset-0 bg-black/5" />
+            <div className="absolute bottom-8 left-10 right-10">
+              <div className="flex items-center gap-3 mb-3">
+                <DesignChip tone="ink" size="sm" className="bg-k-ink/80 text-white border-none backdrop-blur-md">
+                  {category} · {readTime} min
+                </DesignChip>
+                <span className="text-[11px] font-bold text-white/80 flex items-center gap-1.5 backdrop-blur-md bg-black/20 px-2 py-0.5 rounded-lg">
+                  <Clock size={12} /> {publishedDateLabel}
+                </span>
+              </div>
+              <h1 className="font-k-serif text-[36px] font-medium leading-[1.2] text-k-ink tracking-tight bg-white/10 backdrop-blur-sm p-4 rounded-2xl inline-block">
+                {title}
+              </h1>
+            </div>
+          </div>
+
+          <div className="bg-k-card/30 rounded-[40px] p-12 border border-k-line/5 shadow-k-sh-sm">
+            <div className="flex items-center gap-2 mb-10 text-[11px] font-black text-k-sub uppercase tracking-[2px]">
+              <Layout size={14} className="text-k-crimson" /> START READING
+            </div>
+
+            <div className="space-y-8">
+              {paragraphs.map((p, i) => (
+                <div key={i} className="space-y-3">
+                  <p
+                    className="font-k-serif leading-[2.1] tracking-[0.2px] text-k-ink"
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
+                    {p.split(/(\s+)/).map((segment, idx) => {
+                      if (/^\s+$/.test(segment)) return segment;
+
+                      // Clean word for lookup (remove punctuation)
+                      const cleanWord = segment.replace(/[.,!?;:()[\]{}"']/g, '');
+                      const isActive = activeWord === cleanWord;
+
+                      return (
+                        <span
+                          key={idx}
+                          onClick={() => onWordClick(cleanWord)}
+                          className={cn(
+                            "cursor-pointer rounded-md px-0.5 transition-all hover:bg-k-butter/40",
+                            isActive ? "bg-k-butter font-bold shadow-sm" : ""
+                          )}
+                        >
+                          {segment}
+                        </span>
+                      );
+                    })}
+                  </p>
+                  {translationEnabled && translations[i] && (
+                    <p className="text-[15px] font-medium text-k-sub bg-k-bg2/50 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2">
+                      {translations[i]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-16 pt-8 border-t border-k-line flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-k-bg2 flex items-center justify-center text-k-sub">
+                  <Share2 size={18} />
+                </div>
+                <span className="text-[12px] font-bold text-k-sub">
+                  {sourceDisplayLabel} · {wordCount} 词
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-bold text-k-sub mr-2">阅读进度 {Math.round(scrollProgress)}%</span>
+                <button className="px-6 py-2.5 bg-k-ink text-k-bg rounded-xl text-[13px] font-black hover:bg-k-crimson transition-all">
+                  标记已读
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* Sidebar */}
+        <aside className="sticky top-28 h-fit animate-in fade-in slide-in-from-right-8 duration-700 delay-150">
+          {readingSidebarContent}
+
+          <div className="mt-8 p-6 rounded-[24px] bg-k-ink text-k-bg shadow-k-sh-lg flex flex-col gap-4">
+            <div className="text-[11px] font-black uppercase tracking-widest text-k-butter">AI 学习助手</div>
+            <p className="text-[12px] font-medium leading-relaxed opacity-80">
+              对这篇文章有任何疑问？点击单词可查看 AI 释义，或在侧边栏开启深度解析。
+            </p>
+            <button className="w-full h-10 bg-k-bg text-k-ink rounded-xl text-[12px] font-black hover:bg-k-butter transition-all">
+              开启 AI 深度解析
+            </button>
+          </div>
+        </aside>
       </main>
     </div>
   );

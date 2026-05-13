@@ -194,6 +194,7 @@ export default defineSchema({
     publisher: v.optional(v.string()),
     displayLevel: v.optional(v.string()),
     totalUnits: v.optional(v.number()),
+    estimatedTotalMinutes: v.optional(v.number()),
     volume: v.optional(v.string()),
     isArchived: v.optional(v.boolean()), // Soft delete flag
   })
@@ -531,6 +532,16 @@ export default defineSchema({
   })
     .index('by_video', ['videoId'])
     .index('by_video_chunk', ['videoId', 'chunkIndex']),
+
+  video_watch_progress: defineTable({
+    userId: v.id('users'),
+    videoId: v.id('videos'),
+    progress: v.number(),
+    duration: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_user_video', ['userId', 'videoId'])
+    .index('by_user', ['userId']),
 
   // Podcast Channels
   podcast_channels: defineTable({
@@ -1327,6 +1338,41 @@ export default defineSchema({
     .index('by_activity', ['activityId'])
     .index('by_user_activity', ['userId', 'activityId']),
 
+  community_posts: defineTable({
+    userId: v.id('users'),
+    content: v.string(),
+    type: v.union(v.literal('all'), v.literal('following'), v.literal('milestones'), v.literal('qa'), v.literal('resources')),
+    attachment: v.optional(v.object({
+      type: v.string(), // e.g. "study_card"
+      id: v.string(),
+      title: v.string(),
+      description: v.optional(v.string()),
+    })),
+    images: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_type_createdAt', ['type', 'createdAt'])
+    .index('by_createdAt', ['createdAt']),
+
+  community_post_likes: defineTable({
+    postId: v.id('community_posts'),
+    userId: v.id('users'),
+    createdAt: v.number(),
+  })
+    .index('by_post', ['postId'])
+    .index('by_user_post', ['userId', 'postId']),
+
+  community_comments: defineTable({
+    postId: v.id('community_posts'),
+    userId: v.id('users'),
+    content: v.string(),
+    createdAt: v.number(),
+  })
+    .index('by_post_createdAt', ['postId', 'createdAt']),
+
+
   xp_logs: defineTable({
     userId: v.id('users'),
     amount: v.number(),
@@ -1463,11 +1509,28 @@ export default defineSchema({
       v.union(v.literal(1), v.literal(2), v.literal(3), v.literal('INFINITE'))
     ),
     audioSpeed: v.optional(v.union(v.literal(0.8), v.literal(1), v.literal(1.2), v.literal(1.4))),
+    mediaShowTranslation: v.optional(v.boolean()),
+    mediaSubtitleMode: v.optional(v.union(v.literal('SOURCE_ONLY'), v.literal('BILINGUAL'))),
+    mediaAutoScroll: v.optional(v.boolean()),
+    fontScale: v.optional(
+      v.union(v.literal('compact'), v.literal('comfortable'), v.literal('relaxed'))
+    ),
     dictationPlayCount: v.optional(v.union(v.literal(1), v.literal(2), v.literal(3))),
     dictationGapSeconds: v.optional(
       v.union(v.literal(2), v.literal(4), v.literal(6), v.literal(8))
     ),
     dictationAutoNext: v.optional(v.boolean()),
+    dailyGoalMinutes: v.optional(
+      v.union(v.literal(15), v.literal(20), v.literal(30), v.literal(45), v.literal(60))
+    ),
+    privacy: v.optional(
+      v.object({
+        profileVisibility: v.optional(
+          v.union(v.literal('public'), v.literal('friends'), v.literal('private'))
+        ),
+        leaderboardOptOut: v.optional(v.boolean()),
+      })
+    ),
 
     updatedAt: v.number(),
   }).index('by_user', ['userId']),
@@ -1542,9 +1605,11 @@ export default defineSchema({
 
   push_subscriptions: defineTable({
     userId: v.id('users'),
-    endpoint: v.string(),
-    p256dh: v.string(),
-    auth: v.string(),
+    platform: v.optional(v.union(v.literal('web'), v.literal('android'), v.literal('ios'))),
+    endpoint: v.optional(v.string()),
+    p256dh: v.optional(v.string()),
+    auth: v.optional(v.string()),
+    fcmToken: v.optional(v.string()),
     expirationTime: v.optional(v.number()),
     userAgent: v.optional(v.string()),
     lastSeenAt: v.number(),
@@ -1554,7 +1619,9 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_endpoint', ['userId', 'endpoint'])
-    .index('by_endpoint', ['endpoint']),
+    .index('by_endpoint', ['endpoint'])
+    .index('by_user_fcmToken', ['userId', 'fcmToken'])
+    .index('by_fcmToken', ['fcmToken']),
 
   /**
    * Study partnerships (D4).

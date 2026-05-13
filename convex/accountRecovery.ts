@@ -275,7 +275,7 @@ export const requestPasswordReset = action({
       email,
       ttlMs: RESET_TOKEN_TTL_MS,
     });
-    const resetLink = buildLocalizedLink(language, '/reset-password', token);
+    const resetLink = buildLocalizedLink(language, '/auth/reset-password', token);
 
     await sendRecoveryEmail({
       to: email,
@@ -350,7 +350,7 @@ export const requestEmailVerification = action({
       email: user.email,
       ttlMs: VERIFY_TOKEN_TTL_MS,
     });
-    const verifyLink = buildLocalizedLink(language, '/verify-email', token);
+    const verifyLink = buildLocalizedLink(language, '/auth/verify-email', token);
 
     await sendRecoveryEmail({
       to: user.email,

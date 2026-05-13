@@ -31,6 +31,7 @@ import {
   persistPictureBookReaderSessionState,
 } from '../utils/readingSession';
 import { KT } from '../components/mobile/ksoft/ksoft';
+import { DesignChip } from '../components/desktop/ui/DesignChip';
 
 type BookPageQuery = {
   book: PictureBook;
@@ -734,7 +735,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               )}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+            <div className="flex h-full w-full items-center justify-center bg-k-bg2 text-k-sub-light">
               <BookOpen className="h-12 w-12" />
             </div>
           )}
@@ -764,25 +765,25 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                       }
                       disabled={!isInteractive}
                       className={cn(
-                        'transition',
+                        'transition-all duration-300 font-k-serif',
                         layerLayout === 'stacked'
                           ? 'inline rounded-[0.35em] px-[0.16em] py-[0.02em] align-baseline'
                           : 'block w-full rounded-2xl px-4 py-3 text-left whitespace-normal break-keep',
                         isActive
-                          ? 'bg-[#f6e78b] text-slate-950 shadow-[0_10px_24px_-16px_rgba(15,23,42,0.45)]'
+                          ? 'bg-k-butter text-k-ink shadow-k-sh-sm transform scale-[1.02]'
                           : layerLayout === 'stacked'
-                            ? 'text-slate-800 hover:bg-slate-100'
-                            : 'text-slate-800 hover:bg-slate-100/80',
+                            ? 'text-k-ink hover:bg-k-line'
+                            : 'text-k-ink hover:bg-k-bg2/80',
                         !isInteractive && 'pointer-events-none'
                       )}
                     >
                       <span className="flex flex-col">
-                        <span>{sentence.text}</span>
+                        <span className="font-medium leading-relaxed">{sentence.text}</span>
                         {showTranslations && translatedPages[layerPageData.pageIndex]?.[idx] && (
                           <span
                             className={cn(
-                              'mt-0.5 font-medium leading-tight opacity-70',
-                              layerLayout === 'stacked' ? 'text-[0.65em]' : 'text-sm'
+                              'mt-1 font-k-sans font-bold leading-tight opacity-60 italic',
+                              layerLayout === 'stacked' ? 'text-[0.6em]' : 'text-sm'
                             )}
                           >
                             {translatedPages[layerPageData.pageIndex][idx]}
@@ -795,7 +796,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               })}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm font-semibold text-muted-foreground">
+            <div className="flex h-full items-center justify-center text-sm font-bold text-k-sub-light italic">
               {t('pictureBookReader.currentSentenceEmpty', {
                 defaultValue: 'Tap a sentence to start playback.',
               })}
@@ -803,8 +804,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           )}
         </div>
 
-        <div className="absolute bottom-4 right-4 rounded-full border border-black/10 bg-white/92 px-4 py-2 text-sm font-black text-slate-700 shadow-sm">
-          {layerPageData.pageIndex + 1} / {layerPageData.pageCount}
+        <div className="absolute bottom-6 right-8 rounded-full border border-k-line bg-k-card/80 backdrop-blur-md px-5 py-1.5 text-xs font-black text-k-sub shadow-k-sh-sm">
+          {layerPageData.pageIndex + 1} <span className="mx-1.5 opacity-30">/</span> {layerPageData.pageCount}
         </div>
       </div>
     );
@@ -812,60 +813,79 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
   return (
     <div
-      className="mx-auto flex h-full min-h-0 w-full max-w-[1820px] flex-col overflow-hidden px-1 py-1 sm:px-3 lg:px-4"
-      style={
-        isMobile
-          ? {
-              background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 62%)`,
-              fontFamily: KT.font,
-            }
-          : undefined
-      }
+      className="fixed inset-0 flex flex-col overflow-hidden bg-k-bg transition-colors duration-700"
+      style={{ fontFamily: KT.font }}
     >
-      {/* ─── MOBILE LAYOUT (hidden on lg+) ─── */}
-      <div
-        className="flex lg:hidden flex-col h-full min-h-0 overflow-hidden relative"
-        style={{ background: KT.bg, color: KT.ink }}
+      {/* ─── SHARED HEADER ─── */}
+      <header 
+        className="shrink-0 z-[100] flex items-center justify-between gap-4 px-6 h-20 border-b border-k-line backdrop-blur-xl bg-k-bg/80"
       >
-        {/* Header */}
-        <div
-          className="shrink-0 flex items-center justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-3 border-b"
-          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.92)' }}
-        >
+        <div className="flex items-center gap-4">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={() => navigate(backPath)}
-            className="h-10 w-10 shrink-0 rounded-2xl"
-            style={{ borderColor: KT.line, background: KT.card, boxShadow: KT.shSm }}
+            className="h-11 w-11 rounded-2xl hover:bg-k-line active:scale-95 transition-all"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5 text-k-ink" />
           </Button>
-          <div className="min-w-0 text-right flex-1">
-            <div
-              className="truncate text-[10px] font-black uppercase tracking-widest"
-              style={{ color: KT.crimson, fontFamily: KT.serif }}
-            >
-              讀 · READING
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-k-crimson font-k-serif">
+                讀 · READING
+              </span>
+              <DesignChip tone="butter" size="sm">Level {levelNumber || '?'}</DesignChip>
             </div>
-            <div className="truncate text-sm font-black" style={{ color: KT.ink }}>
+            <h1 className="text-[16px] font-black text-k-ink tracking-tight truncate max-w-[300px]">
               {displayBook.title}
-            </div>
+            </h1>
           </div>
+        </div>
+
+        {/* Global Desktop Controls */}
+        <div className="hidden lg:flex items-center gap-2 bg-k-bg2/50 p-1.5 rounded-2xl border border-k-line">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setPlaybackRate(
+                current =>
+                  PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(current) + 1) % PLAYBACK_RATES.length]
+              )
+            }
+            className="h-9 rounded-xl px-4 text-[11px] font-black text-k-ink hover:bg-k-card"
+          >
+            速度: {playbackRateLabel}
+          </Button>
+          <div className="w-px h-4 bg-k-line" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setAutoFlip(current => !current)}
+            className={cn(
+              "h-9 rounded-xl px-4 text-[11px] font-black transition-all",
+              autoFlip ? "bg-k-card text-k-crimson shadow-k-sh-sm" : "text-k-sub hover:bg-k-card"
+            )}
+          >
+            自动翻页: {autoFlip ? '开启' : '关闭'}
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-3">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={handleToggleTranslation}
             className={cn(
-              'h-10 w-10 shrink-0 rounded-full transition-all border border-slate-100',
-              showTranslations ? 'text-[#1F1B17]' : 'text-[#8C8377]'
+              'h-11 w-11 rounded-2xl transition-all border',
+              showTranslations 
+                ? 'bg-k-ink border-k-ink text-k-bg shadow-k-sh-sm' 
+                : 'border-k-line text-k-sub hover:border-k-ink hover:text-k-ink'
             )}
-            style={{
-              background: showTranslations ? KT.butter : KT.card,
-              borderColor: showTranslations ? KT.butterDeep : KT.line,
-            }}
           >
             {isTranslating ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -874,394 +894,189 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             )}
           </Button>
         </div>
+      </header>
 
-        {/* Image — fills all remaining space */}
-        <div
-          className="relative flex-1 min-h-0 overflow-hidden flex items-center justify-center"
-          style={{ background: KT.card }}
-        >
-          {currentPage && getSafeImageSrc(currentPage.imageUrl) ? (
-            <img
-              src={getSafeImageSrc(currentPage.imageUrl)!}
-              alt={t('pictureBookReader.pageImageAlt', {
-                defaultValue: '{{title}} page {{page}}',
-                title: displayBook.title,
-                page: renderedPageData.pageIndex + 1,
-              })}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
+      <main className="flex-1 flex min-h-0 relative">
+        {/* ─── LEFT: READER CANVAS ─── */}
+        <div className="flex-1 flex flex-col min-w-0 bg-k-bg2/30">
+          <div className="flex-1 relative flex items-center justify-center p-6 lg:p-12 overflow-hidden">
             <div
-              className="flex h-full w-full items-center justify-center"
-              style={{ background: KT.bg2 }}
+              className={cn(
+                'relative max-h-full max-w-full overflow-hidden bg-k-card shadow-k-sh-lg transition-all duration-500',
+                currentLayout === 'stacked'
+                  ? 'aspect-[1.56/1] h-[min(82vh,calc((100vw-400px)/1.56))] w-auto rounded-[2rem] border border-k-line'
+                  : 'aspect-[1.34/1] h-[min(82vh,calc((100vw-400px)/1.34))] w-auto rounded-[2.5rem] border border-k-line'
+              )}
             >
-              <BookOpen className="h-16 w-16" color={KT.subLight} />
+              {renderPageLayer(renderedPageData, safeActiveSentenceIndex, true)}
+              {overlayPageData
+                ? renderPageLayer(
+                    overlayPageData,
+                    0,
+                    false,
+                    cn(
+                      'z-10 transition-opacity duration-300 bg-k-card',
+                      showOverlayPage ? 'opacity-100' : 'opacity-0'
+                    )
+                  )
+                : null}
             </div>
-          )}
-          <div
-            className="absolute bottom-3 right-3 rounded-full px-3 py-1 text-xs font-black backdrop-blur-sm"
-            style={{ background: 'rgba(255,255,255,0.86)', color: KT.ink }}
-          >
-            {renderedPageData.pageIndex + 1} / {renderedPageData.pageCount}
+
+            {/* Navigation Overlays */}
+            <button
+              onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
+              disabled={!renderedPageData.hasPreviousPage}
+              className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 h-16 w-16 rounded-full flex items-center justify-center bg-k-card/60 backdrop-blur-md border border-k-line text-k-ink opacity-0 hover:opacity-100 hover:bg-k-card transition-all disabled:hidden group"
+            >
+              <ChevronLeft size={32} className="group-active:scale-90 transition-transform" />
+            </button>
+            <button
+              onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
+              disabled={!renderedPageData.hasNextPage}
+              className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 h-16 w-16 rounded-full flex items-center justify-center bg-k-card/60 backdrop-blur-md border border-k-line text-k-ink opacity-0 hover:opacity-100 hover:bg-k-card transition-all disabled:hidden group"
+            >
+              <ChevronRight size={32} className="group-active:scale-90 transition-transform" />
+            </button>
+          </div>
+
+          {/* Player Bar */}
+          <div className="shrink-0 h-24 border-t border-k-line bg-k-card/50 backdrop-blur-md flex items-center px-10">
+            <div className="flex-1 flex items-center gap-6">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
+                disabled={!renderedPageData.hasPreviousPage}
+                className="h-12 w-12 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30"
+              >
+                <ChevronLeft size={24} />
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleTogglePlay()}
+                disabled={currentSentences.length === 0}
+                className={cn(
+                  "h-14 w-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-k-sh",
+                  isPlaying ? "bg-k-crimson text-k-bg" : "bg-k-ink text-k-bg hover:bg-k-crimson"
+                )}
+              >
+                {isPlaying ? <Pause size={28} /> : <Play size={28} fill="currentColor" />}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
+                disabled={!renderedPageData.hasNextPage}
+                className="h-12 w-12 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30"
+              >
+                <ChevronRight size={24} />
+              </Button>
+              
+              <div className="w-px h-6 bg-k-line mx-2" />
+              
+              <div className="flex-1 max-w-2xl px-4 py-2 bg-k-bg2/40 rounded-2xl border border-k-line/5 flex items-center justify-center">
+                 <span className="font-k-serif text-[18px] font-medium text-k-ink text-center truncate px-4">
+                   {activeSentence?.text || '...'}
+                 </span>
+              </div>
+              
+              <div className="flex items-center gap-4 text-k-sub font-black text-[12px]">
+                 <span className="text-k-ink">{renderedPageData.pageIndex + 1}</span>
+                 <div className="w-32 h-1 bg-k-line rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-k-ink transition-all duration-300" 
+                      style={{ width: `${((renderedPageData.pageIndex + 1) / renderedPageData.pageCount) * 100}%` }} 
+                    />
+                 </div>
+                 <span>{renderedPageData.pageCount}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Subtitle scroll area */}
-        <div
-          ref={subtitleScrollRef}
-          className="shrink-0 max-h-[30dvh] overflow-y-auto border-t px-4 py-2 space-y-1"
-          style={{ borderColor: KT.line, background: KT.bg }}
-        >
-          {currentSentences.length > 0 ? (
-            currentSentences.map((sentence, idx) => {
+        {/* ─── RIGHT: SIDEBAR (Desktop Only) ─── */}
+        <aside className="hidden lg:flex flex-col w-[400px] border-l border-k-line bg-k-card">
+          <div className="p-6 border-b border-k-line">
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="font-k-serif text-k-crimson text-lg font-medium">文</span>
+              <span className="text-[13px] font-black text-k-ink tracking-widest uppercase">Subtitles</span>
+            </div>
+            <p className="text-[11px] font-bold text-k-sub">逐句跟读与翻译对照</p>
+          </div>
+          
+          <div 
+            ref={subtitleScrollRef}
+            className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-fine"
+          >
+            {currentSentences.map((sentence, idx) => {
               const isActive = sentence.sentenceIndex === safeActiveSentenceIndex;
               return (
                 <button
-                  key={sentence._id ?? `${sentence.sentenceIndex}`}
-                  type="button"
-                  ref={isActive ? activeSentenceBtnRef : undefined}
+                  key={sentence._id ?? idx}
                   onClick={() => void playSentence(sentence.sentenceIndex, true)}
                   className={cn(
-                    'w-full rounded-xl px-3 py-2.5 text-left text-base leading-snug font-semibold transition-colors active:scale-[0.98]'
+                    "w-full text-left p-4 rounded-2xl transition-all group",
+                    isActive 
+                      ? "bg-k-butter/40 border border-k-butter shadow-k-sh-sm" 
+                      : "hover:bg-k-bg2/50 border border-transparent"
                   )}
-                  style={{
-                    background: isActive ? KT.butter : 'transparent',
-                    color: isActive ? KT.ink : KT.ink2,
-                  }}
                 >
-                  <div className="flex flex-col">
-                    <div className={cn(showTranslations && 'mb-0.5')}>{sentence.text}</div>
-                    {showTranslations && translatedPages[renderedPageData.pageIndex]?.[idx] && (
-                      <div
-                        className="text-sm font-medium leading-tight italic"
-                        style={{ color: KT.sub }}
-                      >
-                        {translatedPages[renderedPageData.pageIndex][idx]}
-                      </div>
-                    )}
+                  <div className={cn(
+                    "text-[16px] font-medium leading-relaxed font-k-serif mb-1",
+                    isActive ? "text-k-ink" : "text-k-ink2"
+                  )}>
+                    {sentence.text}
                   </div>
+                  {showTranslations && translatedPages[renderedPageData.pageIndex]?.[idx] && (
+                    <div className="text-[13px] font-bold text-k-sub italic animate-in fade-in slide-in-from-top-1 duration-300">
+                      {translatedPages[renderedPageData.pageIndex][idx]}
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="mt-3 flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-k-crimson animate-pulse" />
+                       <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">Listening</span>
+                    </div>
+                  )}
                 </button>
               );
-            })
-          ) : (
-            <p className="py-4 text-center text-sm font-semibold" style={{ color: KT.sub }}>
-              {t('pictureBookReader.currentSentenceEmpty', {
-                defaultValue: 'Tap a sentence to start playback.',
-              })}
-            </p>
-          )}
-        </div>
-
-        {/* Bottom controls */}
-        <div
-          className="shrink-0 flex items-center justify-between gap-2 border-t px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]"
-          style={{ borderColor: KT.line, background: 'rgba(251,248,243,0.94)' }}
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
-            disabled={!renderedPageData.hasPreviousPage}
-            className="rounded-full px-4"
-            style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('pictureBookReader.prev', { defaultValue: 'Prev' })}
-          </Button>
-          <Button
-            type="button"
-            variant={isPlaying ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => void handleTogglePlay()}
-            disabled={currentSentences.length === 0}
-            className="rounded-full px-5"
-            style={{
-              background: isPlaying ? KT.ink : KT.card,
-              color: isPlaying ? KT.card : KT.ink,
-              borderColor: KT.line,
-            }}
-          >
-            {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
-            {isPlaying
-              ? t('pictureBookReader.pause', { defaultValue: 'Pause' })
-              : t('pictureBookReader.play', { defaultValue: 'Play' })}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
-            disabled={!renderedPageData.hasNextPage}
-            className="rounded-full px-4"
-            style={{ borderColor: KT.line, background: KT.card, color: KT.ink }}
-          >
-            {t('pictureBookReader.next', { defaultValue: 'Next' })}
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-
-        {audioError && (
-          <div className="absolute inset-x-4 top-20 z-30 flex justify-center">
-            <div className="rounded-full border border-red-200 bg-red-50/95 px-4 py-2 text-sm font-semibold text-red-700 shadow-lg backdrop-blur">
-              {audioError}
-            </div>
-          </div>
-        )}
-
-        {translationError && (
-          <div
-            className="pointer-events-none fixed inset-x-3 z-[120] lg:hidden"
-            style={{ top: 'calc(env(safe-area-inset-top) + 78px)' }}
-          >
-            <div
-              className="pointer-events-auto mx-auto flex w-full max-w-[34rem] items-start gap-2 rounded-2xl border border-[#3a3128] bg-[#1f1b17] px-3 py-2.5 text-[#f8f4ec] shadow-[0_14px_30px_-18px_rgba(0,0,0,0.55)]"
-            >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#f2c94c]" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold leading-5">{translationError}</p>
-              </div>
-              <div className="flex items-center gap-1.5 pl-1">
-                {showTranslationUpgradeCta ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() => {
-                      startUpgradeFlow({
-                        source: 'picture_book_translation_daily_limit',
-                      });
-                      setTranslationError(null);
-                    }}
-                    className="h-7 rounded-full border border-[#f2c94c]/70 bg-[#f2c94c]/16 px-2.5 text-[11px] font-bold text-[#f8f4ec] hover:bg-[#f2c94c]/24"
-                  >
-                    {t('pictureBookReader.upgradeNow', { defaultValue: 'Upgrade' })}
-                  </Button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setTranslationError(null)}
-                  className="grid h-7 w-7 place-items-center rounded-full border border-[#5a4e41] text-[#ddd3c7] transition-colors hover:bg-white/10"
-                  aria-label={t('common.gotIt', { defaultValue: 'Got it' })}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ─── DESKTOP LAYOUT (≥ lg) — UNCHANGED ─── */}
-      <div className="hidden lg:flex relative min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[2.25rem] border border-[#dbe5f2] bg-gradient-to-br from-[#eaf2ff] via-[#f7faff] to-[#eef5ff] p-1 shadow-sm sm:p-1.5">
-        <div className="absolute inset-x-4 top-[calc(var(--mobile-safe-top)+12px)] z-20 flex items-start justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => navigate(backPath)}
-            className="h-14 w-14 rounded-full border-white/70 bg-white/90 text-foreground shadow-lg backdrop-blur"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-right shadow-lg backdrop-blur flex-1">
-            <div className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-              {t('nav.reading', { defaultValue: 'Reading' })}
-            </div>
-            <div className="truncate text-sm font-black text-slate-800">{displayBook.title}</div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleToggleTranslation}
-            className={cn(
-              'h-14 w-14 rounded-full border border-white/70 bg-white/90 shadow-lg backdrop-blur transition-all',
-              showTranslations ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-white'
-            )}
-          >
-            {isTranslating ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
-            ) : (
-              <Languages className="h-6 w-6" />
-            )}
-          </Button>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
-          disabled={!renderedPageData.hasPreviousPage}
-          className="absolute left-2 top-1/2 z-20 hidden h-16 w-16 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-foreground shadow-lg backdrop-blur md:flex"
-        >
-          <ChevronLeft className="h-7 w-7" />
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
-          disabled={!renderedPageData.hasNextPage}
-          className="absolute right-2 top-1/2 z-20 hidden h-16 w-16 -translate-y-1/2 rounded-full border-white/70 bg-white/90 text-foreground shadow-lg backdrop-blur md:flex"
-        >
-          <ChevronRight className="h-7 w-7" />
-        </Button>
-
-        <div className="absolute right-4 top-4 z-20 hidden w-[88px] flex-col gap-3 lg:flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => void handleTogglePlay()}
-            disabled={currentSentences.length === 0}
-            className={cn(
-              'h-16 w-16 rounded-full border-white/70 shadow-lg backdrop-blur',
-              isPlaying
-                ? 'bg-slate-900 text-white hover:bg-slate-800'
-                : 'bg-white/92 text-slate-900 hover:bg-white',
-              'disabled:border-white/70 disabled:bg-white/80 disabled:text-slate-300'
-            )}
-          >
-            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={handleToggleTranslation}
-            className={cn(
-              'h-16 w-16 rounded-full border-white/70 shadow-lg backdrop-blur transition-all',
-              showTranslations
-                ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl scale-105'
-                : 'bg-white/92 text-slate-900 hover:bg-white'
-            )}
-          >
-            {isTranslating ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
-            ) : (
-              <Languages className="h-6 w-6" />
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => void playSentence(safeActiveSentenceIndex, true)}
-            disabled={!activeSentence?.audioUrl}
-            className="h-16 w-16 rounded-full border-white/70 bg-white/92 text-slate-900 shadow-lg backdrop-blur hover:bg-white disabled:border-white/70 disabled:bg-white/80 disabled:text-slate-300"
-          >
-            <RotateCcw className="h-5 w-5" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPlaybackRate(
-                current =>
-                  PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(current) + 1) % PLAYBACK_RATES.length]
-              )
-            }
-            className="rounded-full border-white/70 bg-white/92 px-3 py-2 text-xs font-black text-slate-900 shadow-lg backdrop-blur hover:bg-white"
-          >
-            {playbackRateLabel}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setAutoFlip(current => !current)}
-            className={cn(
-              'rounded-full border-white/70 px-3 py-2 text-[11px] font-black shadow-lg backdrop-blur',
-              autoFlip
-                ? 'bg-slate-900 text-white hover:bg-slate-800'
-                : 'bg-white/92 text-slate-900 hover:bg-white'
-            )}
-          >
-            {autoFlip
-              ? t('pictureBookReader.autoFlipOn', { defaultValue: 'Auto Flip On' })
-              : t('pictureBookReader.autoFlipOff', { defaultValue: 'Auto Flip Off' })}
-          </Button>
-        </div>
-
-        <div className="flex h-full min-h-0 w-full items-center justify-center">
-          <div
-            className={cn(
-              'relative max-h-full max-w-full overflow-hidden bg-white shadow-[0_32px_80px_-44px_rgba(15,23,42,0.45)]',
-              currentLayout === 'stacked'
-                ? 'aspect-[1.56/1] h-[min(92svh,calc((100vw-1rem)/1.56))] w-auto rounded-[1.4rem] border border-[#dde4ee]'
-                : 'aspect-[1.34/1] h-[min(90svh,calc((100vw-1rem)/1.34))] w-auto rounded-[2rem] border border-[#dce6f3]'
-            )}
-          >
-            {renderPageLayer(renderedPageData, safeActiveSentenceIndex, true)}
-            {overlayPageData
-              ? renderPageLayer(
-                  overlayPageData,
-                  0,
-                  false,
-                  cn(
-                    'z-10 transition-opacity duration-150',
-                    showOverlayPage ? 'opacity-100' : 'opacity-0'
-                  )
-                )
-              : null}
-          </div>
-        </div>
-
-        <div className="absolute bottom-4 left-1/2 z-20 hidden -translate-x-1/2 rounded-full border border-white/70 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 shadow-lg backdrop-blur lg:flex">
-          {activeSentence?.text ||
-            t('pictureBookReader.currentSentenceEmpty', {
-              defaultValue: 'Tap a sentence to start playback.',
             })}
-        </div>
+          </div>
+        </aside>
+      </main>
 
-        <div className="absolute inset-x-4 bottom-mobile-safe z-20 flex flex-wrap items-center justify-center gap-2 lg:hidden">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
-            disabled={!renderedPageData.hasPreviousPage}
-            className="rounded-full border-white/70 bg-white/92 px-4 shadow-lg backdrop-blur"
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            {t('pictureBookReader.prev', { defaultValue: 'Prev' })}
-          </Button>
-          <Button
-            type="button"
-            variant={isPlaying ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => void handleTogglePlay()}
-            disabled={currentSentences.length === 0}
-            className="rounded-full px-4 shadow-lg"
-          >
-            {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
-            {isPlaying
-              ? t('pictureBookReader.pause', { defaultValue: 'Pause' })
-              : t('pictureBookReader.play', { defaultValue: 'Play' })}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
-            disabled={!renderedPageData.hasNextPage}
-            className="rounded-full border-white/70 bg-white/92 px-4 shadow-lg backdrop-blur"
-          >
-            {t('pictureBookReader.next', { defaultValue: 'Next' })}
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-
-        {audioError ? (
-          <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-red-200 bg-red-50/95 px-4 py-2 text-sm font-semibold text-red-700 shadow-lg backdrop-blur">
+      {/* Overlays */}
+      {audioError && (
+        <div className="absolute inset-x-0 top-24 z-[110] flex justify-center pointer-events-none">
+          <div className="rounded-2xl bg-k-ink text-k-bg px-6 py-3 text-sm font-black shadow-k-sh-lg animate-in zoom-in-95">
             {audioError}
           </div>
-        ) : null}
-      </div>
+        </div>
+      )}
+
+      {translationError && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[110] w-[400px] animate-in slide-in-from-bottom-4">
+           <div className="bg-k-ink text-k-bg p-4 rounded-2xl shadow-k-sh-lg border border-white/10 flex gap-3">
+              <AlertCircle className="shrink-0 text-k-butter" size={20} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold leading-tight mb-2">{translationError}</p>
+                {showTranslationUpgradeCta && (
+                  <Button
+                    onClick={() => startUpgradeFlow({ source: 'picture_book_translation' })}
+                    className="w-full bg-k-crimson hover:bg-k-crimson/90 text-[11px] font-black h-8 rounded-xl"
+                  >
+                    升级以获取翻译
+                  </Button>
+                )}
+              </div>
+              <button onClick={() => setTranslationError(null)} className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
+                <X size={18} />
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1639,3 +1639,32 @@ export const backfillListeningTranslations = action({
     };
   },
 });
+
+export const updateVocabExamplesFinal = mutation({
+  args: {
+    updates: v.array(
+      v.object({
+        appearanceId: v.string(),
+        exampleSentence: v.string(),
+        exampleMeaning: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    let count = 0;
+    for (const update of args.updates) {
+      const appearanceId = ctx.db.normalizeId('vocabulary_appearances', update.appearanceId);
+      if (!appearanceId) {
+        console.error(`Invalid ID: ${update.appearanceId}`);
+        continue;
+      }
+      await ctx.db.patch(appearanceId, {
+        exampleSentence: update.exampleSentence,
+        exampleMeaning: update.exampleMeaning,
+      });
+      count++;
+    }
+    return count;
+  },
+});
+

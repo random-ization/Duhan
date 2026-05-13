@@ -43,9 +43,50 @@ const ADMIN_OVERVIEW_UNITS_LIMIT = 2000;
 const ADMIN_OVERVIEW_EXAMS_LIMIT = 2000;
 const ADMIN_OVERVIEW_INSTITUTES_LIMIT = 500;
 const ADMIN_BACKFILL_BATCH_LIMIT = 25;
+const ANDROID_DICTIONARY_SUGGESTIONS_KEY = 'android_dictionary_suggestions';
+const ANDROID_LEARNING_DEFAULTS_KEY = 'android_learning_defaults';
+const DEFAULT_ANDROID_DICTIONARY_SUGGESTIONS = [
+  '안녕하세요',
+  'TOPIK',
+  '문법',
+  '한국어',
+  '읽기',
+  '쓰기',
+  '듣기',
+  '발음',
+];
+const DEFAULT_ANDROID_WRITING_WEEKLY_GOAL_TARGET = 5;
 
 const formatCappedCount = (count: number, limit: number): number | string =>
   count > limit ? `${limit}+` : count;
+
+const clampPositiveInt = (value: number, fallback: number): number => {
+  if (!Number.isFinite(value)) return fallback;
+  const rounded = Math.floor(value);
+  return rounded > 0 ? rounded : fallback;
+};
+
+const normalizeSuggestionList = (values: string[]): string[] => {
+  const normalized: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (normalized.includes(trimmed)) continue;
+    normalized.push(trimmed);
+  }
+  return normalized;
+};
+
+const deriveInstituteUnitCount = (institute: Doc<'institutes'>): number => {
+  const totalUnits = typeof institute.totalUnits === 'number' ? institute.totalUnits : 0;
+  if (totalUnits > 0) return Math.floor(totalUnits);
+  const firstLevel = institute.levels[0];
+  if (typeof firstLevel === 'object' && firstLevel && 'units' in firstLevel) {
+    const units = (firstLevel as { units?: number }).units;
+    if (typeof units === 'number' && units > 0) return Math.floor(units);
+  }
+  return 0;
+};
 
 const adminUserRoleValidator = v.union(v.literal('ADMIN'), v.literal('STUDENT'));
 const adminUserAccountStatusValidator = v.union(v.literal('ACTIVE'), v.literal('DISABLED'));
@@ -965,6 +1006,7 @@ export const createInstitute = mutation({
     publisher: v.optional(v.string()),
     displayLevel: v.optional(v.string()),
     totalUnits: v.optional(v.number()),
+    estimatedTotalMinutes: v.optional(v.number()),
     volume: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -997,6 +1039,7 @@ export const updateInstitute = mutation({
       publisher: v.optional(v.string()),
       displayLevel: v.optional(v.string()),
       totalUnits: v.optional(v.number()),
+      estimatedTotalMinutes: v.optional(v.number()),
       volume: v.optional(v.string()),
     }),
   },
@@ -1312,6 +1355,141 @@ export const backfillCachedMetrics = mutation({
       examAttemptsUpdated,
       nextExamAttemptCursor: examAttemptsBatch.isDone ? null : examAttemptsBatch.continueCursor,
       done: usersBatch.isDone && examAttemptsBatch.isDone,
+    };
+  },
+});
+
+export const backfillAndroidMobileData = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+    force: v.optional(v.boolean()),
+    minutesPerUnit: v.optional(v.number()),
+    writingWeeklyGoalTarget: v.optional(v.number()),
+    dictionarySuggestions: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const dryRun = args.dryRun === true;
+    const force = args.force === true;
+    const minutesPerUnit = clampPositiveInt(args.minutesPerUnit ?? 30, 30);
+    const writingWeeklyGoalTarget = clampPositiveInt(
+      args.writingWeeklyGoalTarget ?? DEFAULT_ANDROID_WRITING_WEEKLY_GOAL_TARGET,
+      DEFAULT_ANDROID_WRITING_WEEKLY_GOAL_TARGET
+    );
+    const dictionarySuggestions = normalizeSuggestionList(
+      args.dictionarySuggestions ?? DEFAULT_ANDROID_DICTIONARY_SUGGESTIONS
+    );
+
+    const [visibleFalse, visibleUndefined] = await Promise.all([
+      ctx.db
+        .query('institutes')
+        .withIndex('by_archived', q => q.eq('isArchived', false))
+        .collect(),
+      ctx.db
+        .query('institutes')
+        .withIndex('by_archived', q => q.eq('isArchived', undefined))
+        .collect(),
+    ]);
+
+    const instituteMap = new Map<string, Doc<'institutes'>>();
+    for (const institute of [...visibleFalse, ...visibleUndefined]) {
+      instituteMap.set(institute._id.toString(), institute);
+    }
+    const institutes = [...instituteMap.values()];
+
+    let institutesPatched = 0;
+    const instituteUpdates: Array<{
+      legacyId: string;
+      previous: number | null;
+      next: number;
+      unitCount: number;
+      articleCount: number;
+    }> = [];
+
+    for (const institute of institutes) {
+      const unitCountFromMeta = deriveInstituteUnitCount(institute);
+      const textbookRows = await ctx.db
+        .query('textbook_units')
+        .withIndex('by_course', q => q.eq('courseId', institute.id))
+        .collect();
+      const distinctUnits = new Set<number>();
+      for (const row of textbookRows) {
+        distinctUnits.add(row.unitIndex);
+      }
+      const unitCountFromTextbook = distinctUnits.size;
+      const articleCount = textbookRows.length;
+      const derivedUnitCount = Math.max(
+        unitCountFromMeta,
+        unitCountFromTextbook,
+        articleCount > 0 ? Math.ceil(articleCount / 3) : 0
+      );
+      if (derivedUnitCount <= 0) continue;
+
+      const nextMinutes = derivedUnitCount * minutesPerUnit;
+      const previousMinutesRaw = (institute as { estimatedTotalMinutes?: unknown }).estimatedTotalMinutes;
+      const previousMinutes =
+        typeof previousMinutesRaw === 'number' && Number.isFinite(previousMinutesRaw)
+          ? Math.floor(previousMinutesRaw)
+          : null;
+      const shouldPatch = force || previousMinutes === null || previousMinutes <= 0;
+      if (!shouldPatch) continue;
+
+      instituteUpdates.push({
+        legacyId: institute.id,
+        previous: previousMinutes,
+        next: nextMinutes,
+        unitCount: derivedUnitCount,
+        articleCount,
+      });
+      if (!dryRun) {
+        await ctx.db.patch(institute._id, { estimatedTotalMinutes: nextMinutes });
+      }
+      institutesPatched += 1;
+    }
+
+    const learningDefaultsValue = {
+      writingWeeklyGoalTarget,
+    };
+    const settingsPatchResults: Array<{ key: string; changed: boolean; existed: boolean }> = [];
+
+    const upsertSiteSetting = async (key: string, value: Record<string, string | number | boolean> | string[]) => {
+      const existing = await ctx.db
+        .query('site_settings')
+        .withIndex('by_key', q => q.eq('key', key))
+        .first();
+      const existed = existing !== null;
+      const currentValue = existing?.value;
+      const changed = JSON.stringify(currentValue) !== JSON.stringify(value);
+      settingsPatchResults.push({ key, changed, existed });
+      if (!changed || dryRun) return;
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          value,
+          updatedAt: Date.now(),
+        });
+      } else {
+        await ctx.db.insert('site_settings', {
+          key,
+          value,
+          updatedAt: Date.now(),
+        });
+      }
+    };
+
+    await upsertSiteSetting(ANDROID_DICTIONARY_SUGGESTIONS_KEY, dictionarySuggestions);
+    await upsertSiteSetting(ANDROID_LEARNING_DEFAULTS_KEY, learningDefaultsValue);
+
+    return {
+      dryRun,
+      force,
+      minutesPerUnit,
+      writingWeeklyGoalTarget,
+      institutesScanned: institutes.length,
+      institutesPatched,
+      instituteUpdates: instituteUpdates.slice(0, 50),
+      dictionarySuggestionsCount: dictionarySuggestions.length,
+      settingsPatchResults,
     };
   },
 });

@@ -148,9 +148,8 @@ const SheetOverlay = React.forwardRef<HTMLDivElement, SheetOverlayProps>(
         data-slot="sheet-overlay"
         data-state={open ? 'open' : 'closed'}
         className={cn(
-          'data-[state=closed]:pointer-events-none',
-          !unstyled &&
-            'fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
+          'fixed inset-0 z-50 transition-opacity data-[state=closed]:pointer-events-none',
+          !unstyled && 'bg-black/50 data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
           className
         )}
         onClick={composeEventHandlers(onClick, () => {
@@ -287,8 +286,8 @@ const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
         aria-modal="true"
         tabIndex={-1}
         className={cn(
-          'data-[state=closed]:pointer-events-none',
-          !unstyled && 'fixed z-50 bg-card shadow-lg',
+          'fixed z-50 transition data-[state=closed]:pointer-events-none',
+          !unstyled && 'bg-card shadow-lg',
           className
         )}
         {...props}

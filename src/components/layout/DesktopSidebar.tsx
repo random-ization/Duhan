@@ -1,542 +1,266 @@
-import React, { CSSProperties, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import {
-  Settings,
-  LogOut,
-  PanelLeft,
-  Check,
-  Moon,
-  Sun,
-  GraduationCap,
-  Dumbbell,
-  Trophy,
-  type LucideIcon,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import {
-  getLocalizedPath,
-  useCurrentLanguage,
-  useLocalizedNavigate,
-} from '../../hooks/useLocalizedNavigate';
-import { Button } from '../ui';
-import {
-  useContextualSidebarState,
-  useLayoutActions,
-  useLayoutChromeState,
-  useLayoutDashboardState,
-} from '../../contexts/LayoutContext';
+import { getLocalizedPath, useCurrentLanguage, useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { Button } from '../ui/button';
+import { useLayoutActions, useLayoutChromeState } from '../../contexts/LayoutContext';
 import { getPathWithoutLang } from '../../utils/pathname';
-import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
-import { useTheme } from '../../contexts/ThemeContext';
-import { getSidebarThemeTokens } from './sidebarTheme';
+import { HanjaSeal } from '../desktop/ui/HanjaSeal';
+import { Settings } from 'lucide-react';
+import { UserAvatar } from '../common';
+import { cn } from '../../lib/utils';
 
-const HoverTooltip = ({
-  label,
-  children,
-  enabled = true,
-  side = 'top',
-}: {
+import { useLearningSelection } from '../../contexts/LearningContext';
+
+interface NavGroup {
   label: string;
-  children: React.ReactElement;
-  enabled?: boolean;
-  side?: 'top' | 'right' | 'bottom' | 'left';
-}) => {
-  if (!enabled) return children;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipPortal>
-        <TooltipContent side={side}>{label}</TooltipContent>
-      </TooltipPortal>
-    </Tooltip>
-  );
-};
-
-const UserProfileHeader = ({
-  user,
-  collapsed,
-  navigate,
-  t,
-}: {
-  user: { name?: string; email?: string; avatar?: string } | null;
-  collapsed: boolean;
-  navigate: (path: string) => void;
-  t: (key: string, options?: { defaultValue?: string }) => string;
-}) => {
-  const displayName = user?.name || t('guest');
-  const workspaceLabel = user?.name || t('sidebar.workspace', { defaultValue: 'Duhan' });
-  const initial = (displayName?.[0] || 'K').toUpperCase();
-
-  return (
-    <HoverTooltip label={t('sidebar.profile')} side={collapsed ? 'right' : 'top'}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        className={`mx-3 mb-2 mt-3 flex items-center rounded-lg px-3 py-2 text-left transition hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-          collapsed ? 'mx-auto mb-3 mt-3 h-11 w-11 justify-center rounded-xl px-0 py-0' : 'gap-3'
-        }`}
-        onClick={() => navigate('/profile')}
-        aria-label={t('sidebar.profile')}
-        title={t('sidebar.profile')}
-      >
-        <div
-          className="grid h-6 w-6 shrink-0 place-items-center rounded bg-indigo-600 text-xs font-bold text-white shadow-sm"
-          style={{ backgroundColor: user?.avatar ? 'transparent' : undefined }}
-        >
-          {user?.avatar ? (
-            <img src={user.avatar} alt={displayName} className="h-6 w-6 rounded object-cover" />
-          ) : (
-            initial
-          )}
-        </div>
-        {!collapsed && (
-          <span
-            className="truncate text-sm font-semibold tracking-wide"
-            style={{ color: 'var(--sb-text)' }}
-          >
-            {workspaceLabel}
-          </span>
-        )}
-      </Button>
-    </HoverTooltip>
-  );
-};
-
-const SidebarNav = ({
-  items,
-  pathWithoutLang,
-  searchString,
-  collapsed,
-  t,
-}: {
+  sub: string;
   items: Array<{
+    id: string;
+    k: string;
+    l: string;
     path: string;
-    to: string;
-    label: string;
-    icon: LucideIcon;
-    activePrefixes: string[];
   }>;
-  pathWithoutLang: string;
-  searchString: string;
-  collapsed: boolean;
-  t: (key: string, options?: { defaultValue?: string }) => string;
-}) => (
-  <nav
-    className={collapsed ? 'px-2 pb-4' : 'px-3 pb-4'}
-    aria-label={t('sidebar.navigation', { defaultValue: 'Sidebar navigation' })}
-  >
-    <ul className="space-y-1">
-      {items.map(item => {
-        const fullPath = pathWithoutLang + searchString;
-        const isActive = item.activePrefixes.some(prefix => {
-          if (prefix.includes('?')) return fullPath.startsWith(prefix);
-          if (pathWithoutLang.startsWith(prefix) && fullPath.includes('?view=')) return false;
-          return pathWithoutLang.startsWith(prefix);
-        });
+}
 
-        return (
-          <li key={item.path}>
-            <HoverTooltip label={item.label} enabled={collapsed} side="right">
-              <NavLink
-                to={item.to}
-                aria-label={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                title={collapsed ? item.label : undefined}
-                className={`group flex items-center rounded-lg py-2 text-[14px] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-                  collapsed ? 'mx-auto h-11 w-11 justify-center rounded-xl px-0' : 'gap-3 px-3'
-                }`}
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: 'var(--sb-surface-muted)',
-                        color: 'var(--sb-text)',
-                        boxShadow: '0 1px 2px rgba(15,23,42,0.08)',
-                      }
-                    : { color: 'var(--sb-muted-text)' }
-                }
-              >
-                <item.icon
-                  className="h-[18px] w-[18px] transition-colors"
-                  style={{ color: isActive ? 'var(--sb-text)' : 'var(--sb-muted-text)' }}
-                  aria-hidden="true"
-                />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </NavLink>
-            </HoverTooltip>
-          </li>
-        );
-      })}
-    </ul>
-  </nav>
-);
+function useDesktopSidebarNav(currentLanguage: string, selectedInstitute: string) {
+  return useMemo<NavGroup[]>(() => {
+    const toPath = (p: string) => getLocalizedPath(p, currentLanguage);
 
-const SidebarContextual = ({
-  collapsed,
-  title,
-  subtitle,
-  content,
-}: {
-  collapsed: boolean;
-  title?: string;
-  subtitle?: string;
-  content: React.ReactNode;
-}) => {
-  if (collapsed) return null;
-  return (
-    <div className="relative min-h-0 flex-1 overflow-y-auto">
-      <div
-        className="absolute left-4 right-4 top-0 h-px opacity-70"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent 0%, var(--sb-border) 50%, transparent 100%)',
-        }}
-      />
-      <div className="flex flex-col gap-5 px-3 py-5">
-        {title ? (
-          <div className="px-3">
-            <p
-              className="text-[11px] font-bold uppercase tracking-wider"
-              style={{ color: 'var(--sb-muted-text)' }}
-            >
-              {title}
-            </p>
-            {subtitle ? (
-              <p className="mt-1 text-[11px]" style={{ color: 'var(--sb-muted-text)' }}>
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-        {content}
-      </div>
-    </div>
-  );
-};
+    // Today jumps straight to the active course when possible, otherwise
+    // drops into the course-dashboard redirector.
+    const todayPath = selectedInstitute
+      ? toPath(`/course/${selectedInstitute}`)
+      : toPath('/dashboard/course');
 
-const SidebarFooter = ({
-  collapsed,
-  pathWithoutLang,
-  isEditing,
-  toggleEditMode,
-  navigate,
-  logout,
-  isDarkMode,
-  toggleDarkMode,
-  t,
-}: {
-  collapsed: boolean;
-  pathWithoutLang: string;
-  isEditing: boolean;
-  toggleEditMode: () => void;
-  navigate: (path: string) => void;
-  logout: () => void;
-  isDarkMode: boolean;
-  toggleDarkMode: () => void;
-  t: (key: string, options?: { defaultValue?: string }) => string;
-}) => (
-  <div
-    className={`mt-auto border-t ${collapsed ? 'px-2 py-3' : 'p-3'}`}
-    style={{ borderColor: 'var(--sb-border)' }}
-  >
-    <div className={`flex items-center gap-2 ${collapsed ? 'flex-col' : ''}`}>
-      <HoverTooltip
-        label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-        side={collapsed ? 'right' : 'top'}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={toggleDarkMode}
-          aria-label={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-          aria-pressed={isDarkMode}
-          title={t('sidebar.darkMode', { defaultValue: 'Dark mode' })}
-          className={`rounded-lg p-2 transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'w-9'
-          }`}
-          style={{
-            color: isDarkMode ? 'var(--sb-text)' : 'var(--sb-muted-text)',
-            backgroundColor: isDarkMode ? 'var(--sb-surface-muted)' : 'transparent',
-          }}
-        >
-          <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-            {isDarkMode ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
-          </span>
-        </Button>
-      </HoverTooltip>
+    // Grammar is a standalone top-level entry. `/grammar` resolves the right
+    // institute and forwards to `/course/:id/grammar`, independent of "今日".
+    const grammarPath = toPath('/grammar');
 
-      <HoverTooltip
-        label={pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')}
-        side={collapsed ? 'right' : 'top'}
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={() => {
-            if (pathWithoutLang === '/dashboard') {
-              toggleEditMode();
-            } else {
-              navigate('/profile');
-            }
-          }}
-          aria-label={
-            pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
-          }
-          title={
-            pathWithoutLang === '/dashboard' && isEditing ? t('done') : t('sidebar.settings')
-          }
-          className={`rounded-lg py-2 text-[14px] font-medium transition-colors hover:bg-[var(--sb-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'flex-1 px-3'
-          }`}
-          style={{
-            color:
-              pathWithoutLang === '/dashboard' && isEditing
-                ? 'var(--sb-success-text)'
-                : 'var(--sb-muted-text)',
-          }}
-        >
-          <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            {pathWithoutLang === '/dashboard' && isEditing ? (
-              <Check size={17} aria-hidden="true" />
-            ) : (
-              <Settings size={17} aria-hidden="true" />
-            )}
-            {!collapsed && (
-              <span>
-                {pathWithoutLang === '/dashboard' && isEditing
-                  ? t('done')
-                  : t('sidebar.settings', { defaultValue: 'Settings & account' })}
-              </span>
-            )}
-          </span>
-        </Button>
-      </HoverTooltip>
-
-      <HoverTooltip label={t('sidebar.logout')} side={collapsed ? 'right' : 'top'}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={logout}
-          aria-label={t('sidebar.logout')}
-          title={t('sidebar.logout')}
-          className={`rounded-lg p-2 transition-colors hover:bg-[var(--sb-danger-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)] ${
-            collapsed ? 'h-11 w-11 rounded-xl p-0' : 'w-9'
-          }`}
-          style={{ color: 'var(--sb-danger-text)' }}
-        >
-          <span className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
-            <LogOut size={16} aria-hidden="true" />
-          </span>
-        </Button>
-      </HoverTooltip>
-    </div>
-  </div>
-);
+    return [
+      {
+        label: '核 · 主页', sub: 'HOME', items: [
+          { id: 'today', k: '今', l: '今日', path: todayPath },
+        ]
+      },
+      {
+        label: '學 · 学习模块', sub: 'STUDY', items: [
+          { id: 'vocabhub', k: '詞', l: '词汇学习', path: toPath('/vocab-book') },
+          { id: 'grammar', k: '法', l: '语法', path: grammarPath },
+          { id: 'typing', k: '寫', l: '打字练习', path: toPath('/typing') },
+          { id: 'topik', k: '試', l: 'TOPIK 备考', path: toPath('/topik') },
+        ]
+      },
+      {
+        label: '入 · 沉浸内容', sub: 'IMMERSE', items: [
+          { id: 'player', k: '話', l: '播客', path: toPath('/podcasts') },
+          { id: 'video', k: '映', l: '视频', path: toPath('/videos') },
+          { id: 'reader', k: '讀', l: '阅读', path: toPath('/reading') },
+          { id: 'dict', k: '典', l: '词典', path: toPath('/dictionary/search') },
+        ]
+      },
+      {
+        label: '會 · 社区', sub: 'SOCIAL', items: [
+          { id: 'community', k: '會', l: '社区动态', path: toPath('/community') },
+          { id: 'leaderboard', k: '榜', l: '排行榜', path: toPath('/leaderboard') },
+        ]
+      },
+      {
+        label: '庫 · 我的资料', sub: 'LIBRARY', items: [
+          { id: 'notebook', k: '記', l: '笔记本', path: toPath('/notebook') },
+          { id: 'reviewhub', k: '復', l: '复习中心', path: toPath('/review') },
+          { id: 'achieve', k: '旗', l: '成就', path: toPath('/achievements') },
+          { id: 'history', k: '錄', l: '学习记录', path: toPath('/history') },
+        ]
+      },
+    ];
+  }, [currentLanguage, selectedInstitute]);
+}
 
 export default function DesktopSidebar() {
-  const { logout, user } = useAuth();
+  const { user, viewerAccess } = useAuth();
+  const isPremium = Boolean(viewerAccess?.isPremium);
   const { t } = useTranslation();
-  const { resolvedTheme, setTheme } = useTheme();
-  const { isEditing } = useLayoutDashboardState();
-  const { sidebarHidden } = useLayoutChromeState();
-  const contextualSidebar = useContextualSidebarState();
-  const { toggleEditMode } = useLayoutActions();
+  const { sidebarHidden, sidebarCollapsed } = useLayoutChromeState();
+  const { toggleSidebar } = useLayoutActions();
+  const { selectedInstitute } = useLearningSelection();
   const location = useLocation();
   const navigate = useLocalizedNavigate();
   const currentLanguage = useCurrentLanguage();
-  const [collapsed, setCollapsed] = useState(false);
+  
   const pathWithoutLang = getPathWithoutLang(location.pathname);
-  const navItems = useSidebarNavItems(t, currentLanguage);
-  const tokens = useMemo(() => getSidebarThemeTokens(resolvedTheme), [resolvedTheme]);
-  const sidebarStyle = useMemo(
-    () =>
-      ({
-        '--sb-bg': tokens.background,
-        '--sb-border': tokens.border,
-        '--sb-text': tokens.text,
-        '--sb-muted-text': tokens.mutedText,
-        '--sb-surface': tokens.surface,
-        '--sb-surface-muted': tokens.surfaceMuted,
-        '--sb-active-bg': tokens.activeBackground,
-        '--sb-active-text': tokens.activeText,
-        '--sb-hover-bg': tokens.hoverBackground,
-        '--sb-hover-text': tokens.hoverText,
-        '--sb-focus-ring': tokens.focusRing,
-        '--sb-success-bg': tokens.successBackground,
-        '--sb-success-text': tokens.successText,
-        '--sb-danger-hover-bg': tokens.destructiveHoverBackground,
-        '--sb-danger-text': tokens.destructiveText,
-        '--sb-badge-bg': tokens.badgeBackground,
-        '--sb-badge-text': tokens.badgeText,
-        backgroundColor: 'var(--sb-bg)',
-        borderColor: 'var(--sb-border)',
-      }) as CSSProperties,
-    [tokens]
-  );
+  const groups = useDesktopSidebarNav(currentLanguage, selectedInstitute);
 
-  const collapseToggleLabel = collapsed
-    ? t('sidebar.expand', { defaultValue: 'Expand sidebar' })
-    : t('sidebar.collapse', { defaultValue: 'Collapse sidebar' });
-  const isDarkMode = resolvedTheme === 'dark';
-  const toggleCollapsed = useCallback(() => setCollapsed(previous => !previous), []);
-  const toggleDarkMode = useCallback(() => {
-    setTheme(isDarkMode ? 'light' : 'dark');
-  }, [isDarkMode, setTheme]);
+  const activeId = useMemo(() => {
+    if (pathWithoutLang.startsWith('/course/')) {
+      const parts = pathWithoutLang.split('/').filter(Boolean);
+      if (parts.length === 2) return 'today';
+      if (parts.length >= 3 && parts[2] === 'grammar') return 'grammar';
+      if (parts.length >= 3 && parts[2] === 'vocab') return 'learn';
+    }
 
-  useEffect(() => {
-    if (typeof globalThis.window === 'undefined') return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey)) return;
-      if (event.key.toLowerCase() !== 'b') return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT')
-      ) {
-        return;
+    for (const group of groups) {
+      for (const item of group.items) {
+        const itemBase = getPathWithoutLang(item.path);
+        if (itemBase === '/dashboard' && pathWithoutLang === '/dashboard') return item.id;
+        if (itemBase !== '/dashboard' && pathWithoutLang.startsWith(itemBase)) return item.id;
       }
-      event.preventDefault();
-      toggleCollapsed();
-    };
-    globalThis.window.addEventListener('keydown', handleKeyDown);
-    return () => globalThis.window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleCollapsed]);
+    }
+
+    return 'today';
+  }, [groups, pathWithoutLang]);
 
   if (sidebarHidden) return null;
 
   return (
-    <div
-      data-state={collapsed ? 'collapsed' : 'expanded'}
-      data-collapsible={collapsed ? 'icon' : ''}
-      className={`relative hidden h-screen shrink-0 transition-[width] duration-200 ease-linear md:block ${
-        collapsed ? 'w-[4.5rem]' : 'w-64'
-      }`}
+    <motion.div 
+      initial={false}
+      animate={{ width: sidebarCollapsed ? 72 : 240 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="hidden md:flex h-screen shrink-0 flex-col border-r border-[rgba(31,27,23,0.08)] bg-k-card text-k-ink relative z-40 overflow-hidden"
     >
-      <aside className="flex h-full flex-col overflow-hidden border-r" style={sidebarStyle}>
-        <UserProfileHeader user={user} collapsed={collapsed} navigate={navigate} t={t} />
-
-        <SidebarNav
-          items={navItems}
-          pathWithoutLang={pathWithoutLang}
-          searchString={location.search}
-          collapsed={collapsed}
-          t={t}
-        />
-
-        {contextualSidebar && !collapsed ? (
-          <SidebarContextual
-            collapsed={collapsed}
-            title={contextualSidebar.title}
-            subtitle={contextualSidebar.subtitle}
-            content={contextualSidebar.content}
-          />
-        ) : (
-          <div className="flex-1" />
+      {/* Brand Header */}
+      <div className={cn(
+        "flex items-center gap-3 px-5 pb-4 pt-5",
+        sidebarCollapsed && "px-0 justify-center"
+      )}>
+        <img src="/logo.svg" alt="Duhan Logo" width={sidebarCollapsed ? 32 : 40} height={sidebarCollapsed ? 32 : 40} className="rounded-[10px] flex-shrink-0" />
+        {!sidebarCollapsed && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="text-[17px] font-extrabold leading-none tracking-[-0.4px] text-k-ink">
+              Duhan
+            </div>
+            <div className="mt-[3px] font-k-serif text-[10px] font-medium tracking-[2px] text-k-crimson">
+              讀韓 · 桌面端
+            </div>
+          </motion.div>
         )}
+      </div>
 
-        <SidebarFooter
-          collapsed={collapsed}
-          pathWithoutLang={pathWithoutLang}
-          isEditing={isEditing}
-          toggleEditMode={toggleEditMode}
-          navigate={navigate}
-          logout={logout}
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-          t={t}
-        />
-      </aside>
-
-      <HoverTooltip label={collapseToggleLabel} enabled side={collapsed ? 'right' : 'top'}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={toggleCollapsed}
-          aria-label={collapseToggleLabel}
-          aria-expanded={!collapsed}
-          title={collapseToggleLabel}
-          className="absolute -right-3 top-3 z-30 inline-flex h-7 w-7 items-center justify-center rounded-full border shadow-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sb-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sb-bg)]"
-          style={{
-            backgroundColor: 'var(--sb-surface)',
-            borderColor: 'var(--sb-border)',
-            color: 'var(--sb-muted-text)',
-          }}
-        >
-          <PanelLeft
-            className={`h-[15px] w-[15px] transition-transform ${collapsed ? '' : 'rotate-180'}`}
-            aria-hidden="true"
-          />
-        </Button>
-      </HoverTooltip>
-
+      {/* Collapse Toggle Button */}
       <button
-        type="button"
-        aria-label={collapseToggleLabel}
-        onClick={toggleCollapsed}
-        className="group/rail absolute inset-y-0 -right-2 z-20 hidden w-4 md:flex"
+        onClick={toggleSidebar}
+        className="absolute right-0 top-16 translate-x-1/2 w-6 h-6 rounded-full bg-k-card border border-k-line flex items-center justify-center shadow-sm z-50 hover:bg-k-bg2 transition-colors"
       >
-        <span
-          className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors group-hover/rail:bg-[var(--sb-border)]"
-          style={{ backgroundColor: 'transparent' }}
-        />
-        <span
-          className="absolute left-1/2 top-1/2 h-8 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-opacity group-hover/rail:opacity-100"
-          style={{ backgroundColor: 'var(--sb-border)' }}
-        />
+        <motion.div
+          animate={{ rotate: sidebarCollapsed ? 180 : 0 }}
+          className="text-k-sub"
+        >
+          <span style={{ fontSize: 10 }}>◀</span>
+        </motion.div>
       </button>
-    </div>
+
+      {/* Search */}
+      <div className={cn("px-4 pb-[14px]", sidebarCollapsed && "px-2")}>
+        <button className={cn(
+          "flex items-center gap-2 rounded-xl bg-k-bg2 px-3 py-[9px] text-k-sub transition-colors hover:bg-k-bg2/80",
+          sidebarCollapsed ? "justify-center px-0 w-10 mx-auto" : "w-full"
+        )}>
+          <span className="text-[13px]">⌕</span>
+          {!sidebarCollapsed && (
+            <>
+              <span className="flex-1 text-left font-semibold text-[12px]">搜索…</span>
+              <span className="rounded-md bg-k-card px-1.5 py-0.5 text-[9px] font-extrabold tracking-[0.5px]">
+                ⌘K
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Navigation Groups */}
+      <div className="flex-1 overflow-y-auto px-3 pb-4 scrollbar-hide">
+        {groups.map((g) => (
+          <div key={g.sub} className="mb-[14px]">
+            {!sidebarCollapsed && (
+              <div className="flex items-baseline gap-1.5 px-2 pb-1.5 pt-2">
+                <span className="font-k-serif text-[12px] font-medium text-k-crimson">
+                  {g.label.split(' · ')[0]}
+                </span>
+                <span className="text-[10px] font-extrabold tracking-[0.3px] text-k-ink">
+                  {g.label.split(' · ')[1]}
+                </span>
+              </div>
+            )}
+            <div className="space-y-[2px]">
+              {g.items.map((it) => {
+                const on = activeId === it.id;
+                return (
+                  <Button
+                    key={it.id}
+                    variant="ghost"
+                    asChild
+                    className={cn(
+                      'flex h-auto w-full items-center justify-start gap-2.5 rounded-[9px] px-2.5 py-[7px] text-left transition-colors',
+                      on
+                        ? 'bg-k-ink text-k-bg hover:bg-k-ink hover:text-k-bg'
+                        : 'bg-transparent text-k-ink hover:bg-k-bg2/50',
+                      sidebarCollapsed && "justify-center px-0 w-10 h-10 mx-auto"
+                    )}
+                  >
+                    <NavLink to={it.path}>
+                      <span
+                        className={cn(
+                          'w-[14px] text-center font-k-serif text-[13px] font-medium',
+                          on ? 'text-k-card opacity-85' : 'text-k-crimson',
+                          sidebarCollapsed && "w-auto text-[15px]"
+                        )}
+                      >
+                        {it.k}
+                      </span>
+                      {!sidebarCollapsed && (
+                        <span className={cn('flex-1 text-[12px] truncate', on ? 'font-extrabold' : 'font-semibold')}>
+                          {it.l}
+                        </span>
+                      )}
+                    </NavLink>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* User Chip */}
+      <div className={cn("flex items-center gap-2.5 border-t border-k-line p-3", sidebarCollapsed && "px-0 justify-center")}>
+        <div 
+          className={cn(
+            "flex flex-1 items-center gap-2.5 min-w-0 cursor-pointer transition-opacity hover:opacity-70",
+            sidebarCollapsed && "justify-center"
+          )}
+          onClick={() => navigate('/profile')}
+        >
+          <UserAvatar 
+            user={user}
+            className={cn("h-9 w-9 rounded-xl", sidebarCollapsed && "h-10 w-10")}
+            fallbackClassName="text-[14px]"
+            showNameFallback={false}
+          />
+          {!sidebarCollapsed && (
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-black text-k-ink">
+                {user?.name || '河恩'}
+              </div>
+              <div className="truncate text-[10px] font-bold text-k-sub">
+                {isPremium ? 'Premium' : 'Free'} · Lv.14
+              </div>
+            </div>
+          )}
+        </div>
+        {!sidebarCollapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg text-k-sub hover:bg-k-bg2/50"
+            onClick={() => navigate('/profile')}
+          >
+            <Settings size={14} />
+          </Button>
+        )}
+      </div>
+    </motion.div>
   );
-}
-
-function useSidebarNavItems(
-  t: (key: string, options?: { defaultValue?: string }) => string,
-  currentLanguage: string
-) {
-  return useMemo(() => {
-    const items = [
-      {
-        path: '/dashboard',
-        label: t('sidebar.learn', { defaultValue: 'Learn' }),
-        icon: GraduationCap,
-        activePrefixes: [
-          '/dashboard',
-          '/courses',
-          '/course/',
-          '/reading',
-          '/videos',
-          '/video/',
-          '/podcasts',
-        ],
-      },
-      {
-        path: '/practice',
-        label: t('sidebar.practice', { defaultValue: 'Practice' }),
-        icon: Dumbbell,
-        activePrefixes: [
-          '/practice',
-          '/dashboard?view=practice',
-          '/review',
-          '/vocab-book',
-          '/notebook',
-          '/typing',
-        ],
-      },
-      {
-        path: '/topik',
-        label: t('nav.topik', { defaultValue: 'TOPIK' }),
-        icon: Trophy,
-        activePrefixes: ['/topik'],
-      },
-    ];
-
-    return items.map(item => ({ ...item, to: getLocalizedPath(item.path, currentLanguage) }));
-  }, [t, currentLanguage]);
 }

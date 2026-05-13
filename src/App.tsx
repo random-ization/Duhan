@@ -5,9 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { useAuth } from './contexts/AuthContext';
 import { Loading } from './components/common/Loading';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { PostHogTracker } from './components/common/PostHogTracker';
-import { useUpdateLearningProgress } from './hooks/useUpdateLearningProgress';
-import { useDrainMutationQueueOnOnline } from './hooks/useOfflineMutation';
+import DeferredPostHogTracker from './components/common/DeferredPostHogTracker';
 import { GlobalModalProvider } from './contexts/GlobalModalContext';
 import { finalizeStaleChunkRecovery } from './utils/staleChunkRecovery';
 
@@ -17,10 +15,6 @@ const LazyUpgradePrompt = lazy(() => import('./components/UpgradePrompt'));
 function App() {
   const { t } = useTranslation();
   const { language, showUpgradePrompt, setShowUpgradePrompt } = useAuth();
-
-  // Replay any FSRS / quiz / reading-heartbeat mutations that were queued
-  // offline — drains at mount and on every `online` event.
-  useDrainMutationQueueOnOnline();
 
   // Track learning progress when user changes institute/level
   useEffect(() => {
@@ -42,13 +36,13 @@ function App() {
     };
     const connection = navWithConnection.connection;
     const pathname = globalThis.window.location.pathname;
-    const inLearningArea =
-      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review|media|reading|vocab-book|topik|notebook|typing|dictionary)/.test(
-        pathname
-      );
+    const inLearningCoreArea =
+      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review)/.test(pathname);
+    const inLearningSecondaryArea =
+      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses)/.test(pathname);
 
     // Keep the public landing/auth experience light; prefetch only after entering learning pages.
-    if (!inLearningArea) return;
+    if (!inLearningCoreArea) return;
     if (connection?.saveData) return;
     const effectiveType = connection?.effectiveType || '4g';
     if (effectiveType.includes('2g') || effectiveType === 'slow-2g') return;
@@ -61,15 +55,16 @@ function App() {
     const prefetchCoreRoutes = () => {
       void import('./pages/CoursesOverview');
       void import('./pages/CourseDashboard');
-      void import('./pages/ModulePage');
-      void import('./pages/MediaHubPage');
     };
 
     const prefetchSecondaryRoutes = () => {
       if (!canPrefetchSecondary) return;
+      if (!inLearningSecondaryArea) return;
+      void import('./pages/ModulePage');
       void import('./pages/VocabModulePage');
       void import('./pages/TopikPage');
       void import('./pages/ReadingDiscoveryPage');
+      void import('./pages/MediaHubPage');
     };
 
     const prefetchHeavyRoutes = () => {
@@ -121,7 +116,7 @@ function App() {
   return (
     <ErrorBoundary moduleName={t('common.appName', 'DuHan')}>
       <GlobalModalProvider>
-        <PostHogTracker />
+        <DeferredPostHogTracker />
         <Suspense fallback={<Loading fullScreen size="lg" text={t('loading')} />}>
           <AppRoutes />
         </Suspense>

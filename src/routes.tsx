@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { ContentSkeleton } from './components/common';
+import { useGlobalSettings } from './hooks/useGlobalSettings';
 import {
   LanguageRouter,
   DEFAULT_LANGUAGE,
@@ -25,6 +26,10 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const LegalDocumentPage = lazy(() => import('./pages/LegalDocumentPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const PricingDetailsPage = lazy(() => import('./pages/PricingDetailsPage'));
+const TopikFeaturePage = lazy(() => import('./pages/features/TopikFeaturePage'));
+const VocabFeaturePage = lazy(() => import('./pages/features/VocabFeaturePage'));
+const ListeningFeaturePage = lazy(() => import('./pages/features/ListeningFeaturePage'));
+const ReadingFeaturePage = lazy(() => import('./pages/features/ReadingFeaturePage'));
 const LearnHubPage = lazy(() => import('./pages/LearnHubPage'));
 const LearnGuidePage = lazy(() => import('./pages/LearnGuidePage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
@@ -45,19 +50,22 @@ const ReadingDiscoveryPage = lazy(() => import('./pages/ReadingDiscoveryPage'));
 const ReadingArticlePage = lazy(() => import('./pages/ReadingArticlePage'));
 const PictureBookReaderPage = lazy(() => import('./pages/PictureBookReaderPage'));
 const EpubReaderPage = lazy(() => import('./pages/EpubReaderPage'));
+const EpubUploadPage = lazy(() => import('./pages/EpubUploadPage'));
 const VocabModulePage = lazy(() => import('./pages/VocabModulePage'));
 const GrammarModulePage = lazy(() => import('./pages/GrammarModulePage'));
+const GrammarHubPage = lazy(() => import('./pages/GrammarHubPage'));
 const NotebookPage = lazy(() => import('./pages/NotebookPage'));
 const TypingPage = lazy(() => import('./pages/TypingPage'));
 const DictionarySearchPage = lazy(() => import('./pages/DictionarySearchPage'));
-const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const CommunityAddPage = lazy(() => import('./pages/CommunityAddPage'));
+const DesktopCommunityPage = lazy(() => import('./pages/desktop/DesktopCommunityPage'));
+const MobileCommunityPage = lazy(() => import('./components/mobile/MobileCommunityPage'));
+const DesktopLeaderboardPage = lazy(() => import('./pages/desktop/DesktopLeaderboardPage'));
+
+import { useIsMobile } from './hooks/useIsMobile';
 
 const VocabBookPage = lazy(() => import('./pages/VocabBookPage'));
-const VocabBookImmersivePage = lazy(() => import('./pages/VocabBookImmersivePage'));
-const VocabBookListenPage = lazy(() => import('./pages/VocabBookListenPage'));
-const VocabBookDictationPage = lazy(() => import('./pages/VocabBookDictationPage'));
-const VocabBookSpellingPage = lazy(() => import('./pages/VocabBookSpellingPage'));
+const VocabBookPracticePage = lazy(() => import('./pages/VocabBookPracticePage'));
 const VocabBookExportPdfPage = lazy(() => import('./pages/VocabBookExportPdfPage'));
 
 const TopikPage = lazy(() => import('./pages/TopikPage'));
@@ -65,7 +73,7 @@ const TopikWritingPage = lazy(() => import('./pages/TopikWritingPage'));
 const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
 const PodcastSearchPage = lazy(() => import('./pages/PodcastSearchPage'));
 const PodcastChannelPage = lazy(() => import('./pages/PodcastChannelPage'));
-const PodcastPlayerPage = lazy(() => import('./pages/PodcastPlayerPage'));
+const PodcastPlayerPageRoute = lazy(() => import('./pages/PodcastPlayerPageRoute'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const VideoLibraryPage = lazy(() => import('./pages/VideoLibraryPage'));
 const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
@@ -83,10 +91,12 @@ const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
 }) => {
   const location = useLocation();
   const [target, setTarget] = useState<string | null>(null);
+  const { storedSettings, isLoading: globalSettingsLoading } = useGlobalSettings();
 
   useEffect(() => {
+    if (globalSettingsLoading) return;
     let cancelled = false;
-    detectLanguage().then(detectedLang => {
+    Promise.resolve(storedSettings?.displayLanguage ?? detectLanguage()).then(detectedLang => {
       if (cancelled) return;
       const nextPathname = keepPathname ? normalizeLocalizedPathname(location.pathname) : '/';
       const normalizedPath = nextPathname === '/' ? '' : nextPathname;
@@ -95,13 +105,25 @@ const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
     return () => {
       cancelled = true;
     };
-  }, [keepPathname, location.pathname, location.search, location.hash]);
+  }, [
+    globalSettingsLoading,
+    keepPathname,
+    location.pathname,
+    location.search,
+    location.hash,
+    storedSettings?.displayLanguage,
+  ]);
 
   if (!target) {
     return <ContentSkeleton />;
   }
 
   return <Navigate to={target} replace />;
+};
+
+const CommunityPageRoute = () => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileCommunityPage /> : <DesktopCommunityPage />;
 };
 
 // Inner routes component that uses language from URL params
@@ -118,9 +140,13 @@ const LanguageAwareRoutes: React.FC = () => {
       <Routes>
         {/* === Public routes (no login required) === */}
         <Route index element={withPageLoader(<Landing />)} />
+        <Route path="landing" element={<Navigate to={`/${language}`} replace />} />
         <Route path="login" element={withPageLoader(<AuthPage />)} />
         <Route path="register" element={withPageLoader(<AuthPage />)} />
         <Route path="auth" element={withPageLoader(<AuthPage />)} /> {/* Google OAuth callback */}
+        <Route path="auth/verify-email" element={withPageLoader(<VerifyEmailPage />)} />
+        <Route path="auth/forgot-password" element={withPageLoader(<ForgotPasswordPage />)} />
+        <Route path="auth/reset-password" element={withPageLoader(<ResetPasswordPage />)} />
         <Route path="verify-email" element={withPageLoader(<VerifyEmailPage />)} />
         <Route path="forgot-password" element={withPageLoader(<ForgotPasswordPage />)} />
         <Route path="reset-password" element={withPageLoader(<ResetPasswordPage />)} />
@@ -144,22 +170,28 @@ const LanguageAwareRoutes: React.FC = () => {
         <Route path="learn/:guideSlug" element={withPageLoader(<LearnGuidePage />)} />
         <Route path="payment/success" element={withPageLoader(<PaymentSuccessPage />)} />
         <Route path="preview/mobile" element={withPageLoader(<MobilePreviewPage />)} />
+        <Route path="features/topik" element={withPageLoader(<TopikFeaturePage />)} />
+        <Route path="features/vocab" element={withPageLoader(<VocabFeaturePage />)} />
+        <Route path="features/listening" element={withPageLoader(<ListeningFeaturePage />)} />
+        <Route path="features/reading" element={withPageLoader(<ReadingFeaturePage />)} />
         {/* === Admin login page (public) === */}
         <Route path="admin/login" element={withPageLoader(<AdminLoginPage />)} />
         <Route element={withPageLoader(<ProtectedRoute />)}>
           <Route element={withPageLoader(<AppLayout />)}>
-            <Route path="profile/*" element={<ProfilePage language={language} />} />
             <Route path="achievements" element={<AchievementsPage />} />
+            <Route path="profile/*" element={<ProfilePage language={language} />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="dashboard/course" element={<CourseDashboard />} />
             <Route path="dashboard/:moduleParam" element={<ModulePage />} />
             {/* Courses */}
             <Route path="courses" element={<CoursesOverview />} />
+            <Route path="grammar" element={<GrammarHubPage />} />
             <Route path="practice" element={<Navigate to={`/${language}/courses`} replace />} />
             <Route path="review" element={<ReviewDashboardPage />} />
             <Route path="review/quiz" element={<ReviewQuizPage />} />
             <Route path="media" element={<MediaHubPage />} />
             <Route path="reading" element={<ReadingDiscoveryPage />} />
+            <Route path="reading/upload" element={<EpubUploadPage />} />
             <Route path="reading/books/:slug" element={<PictureBookReaderPage />} />
             <Route path="reading/library/:slug" element={<EpubReaderPage />} />
             <Route path="reading/:articleId" element={<ReadingArticlePage />} />
@@ -175,10 +207,7 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="notebook" element={<NotebookPage />} />
             <Route path="vocab-book" element={<VocabBookPage />} />
             <Route path="vocabbook" element={<Navigate to={`/${language}/vocab-book`} replace />} />
-            <Route path="vocab-book/immerse" element={<VocabBookImmersivePage />} />
-            <Route path="vocab-book/listen" element={<VocabBookListenPage />} />
-            <Route path="vocab-book/dictation" element={<VocabBookDictationPage />} />
-            <Route path="vocab-book/spelling" element={<VocabBookSpellingPage />} />
+            <Route path="vocab-book/practice" element={<VocabBookPracticePage />} />
             <Route path="vocab-book/export-pdf" element={<VocabBookExportPdfPage />} />
 
             {/* Podcast Learning */}
@@ -186,7 +215,7 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="podcasts/subscriptions" element={<PodcastDashboard />} />
             <Route path="podcasts/search" element={<PodcastSearchPage />} />
             <Route path="podcasts/channel" element={<PodcastChannelPage />} />
-            <Route path="podcasts/player" element={<PodcastPlayerPage />} />
+            <Route path="podcasts/player" element={<PodcastPlayerPageRoute />} />
             <Route path="podcasts/history" element={<HistoryPage />} />
 
             {/* Video Learning */}
@@ -196,8 +225,10 @@ const LanguageAwareRoutes: React.FC = () => {
             {/* Typing Practice */}
             <Route path="typing" element={<TypingPage />} />
             <Route path="dictionary/search" element={<DictionarySearchPage />} />
-            <Route path="community" element={<CommunityPage />} />
+            <Route path="community" element={<CommunityPageRoute />} />
             <Route path="community/add" element={<CommunityAddPage />} />
+            <Route path="leaderboard" element={<DesktopLeaderboardPage />} />
+            <Route path="history" element={<HistoryPage />} />
           </Route>
         </Route>
         {/* === Admin routes (standalone pages, Admin permission required) === */}

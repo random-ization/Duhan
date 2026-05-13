@@ -3,9 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { usePublicMembershipSnapshot } from '../../hooks/usePublicMembershipSnapshot';
-// `/pricing` is SSG-prerendered so we keep `convex/react` out of this
-// chunk. Prices are fetched anonymously over HTTP; checkout uses the
-// authenticated helper that attaches the JWT from localStorage.
 import {
   callAuthenticatedConvexAction,
   callPublicConvexAction,
@@ -22,10 +19,10 @@ import { notify } from '../../utils/notify';
 import { getLanguageLabel } from '../../utils/languageUtils';
 import { buildPricingDetailsPath } from '../../utils/subscriptionPlan';
 import { trackEvent } from '../../utils/analytics';
-import { ArrowLeft, Check, BookOpen, Trophy, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Star, Zap, Crown, ShieldCheck } from 'lucide-react';
 import { getSubscriptionPageCopy } from '../../utils/subscriptionPageCopy';
 import { Button } from '../ui';
-import { KT } from './ksoft/ksoft';
+import { KT, HanjaSeal, Card, PageShell } from './ksoft/ksoft';
 import { MemberSubscriptionManagement } from '../subscription/MemberSubscriptionManagement';
 
 export const MobileSubscriptionPage: React.FC = () => {
@@ -33,7 +30,7 @@ export const MobileSubscriptionPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { user, loading: authLoading } = useAuth();
   const membership = usePublicMembershipSnapshot();
-  const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
+  const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('ANNUAL');
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState<LemonSqueezyVariantPrices | null>(null);
 
@@ -45,115 +42,62 @@ export const MobileSubscriptionPage: React.FC = () => {
     i18n.language === 'vi' ||
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
+    
   const priceRegion = showLocalizedPromo ? 'REGIONAL' : 'GLOBAL';
-  const monthlyPrice =
-    prices?.[priceRegion]?.MONTHLY?.formatted ?? (showLocalizedPromo ? '$1.90' : '$6.90');
-  const annualPrice =
-    prices?.[priceRegion]?.ANNUAL?.formatted ?? (showLocalizedPromo ? '$19.90' : '$49.00');
-  const annualDiscountText = useMemo(() => {
-    const monthlyAmount = Number(prices?.[priceRegion]?.MONTHLY?.amount);
-    const annualAmount = Number(prices?.[priceRegion]?.ANNUAL?.amount);
-    if (!monthlyAmount || !annualAmount) return '-20%';
-    const discount = Math.max(0, Math.round((1 - annualAmount / (monthlyAmount * 12)) * 100));
-    return discount > 0 ? `-${discount}%` : '-20%';
-  }, [priceRegion, prices]);
+  
+  const PRICING_MAP: Record<string, any> = {
+    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', unitM: '/ mo', unitA: '/ yr' },
+    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', unitM: '/ 月', unitA: '/ 年' },
+    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', unitM: '/ 月', unitA: '/ 年' },
+    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', unitM: '/ 月', unitA: '/ 年' },
+  };
+
+  const config = PRICING_MAP[i18n.language] || PRICING_MAP['en'];
   const baseLang = (i18n.language || 'en').split('-')[0];
   const languageLabel = getLanguageLabel(baseLang as 'en' | 'zh' | 'vi' | 'mn');
   const pageCopy = useMemo(() => getSubscriptionPageCopy(i18n.language), [i18n.language]);
-  const featureCards = useMemo(
-    () => [
-      { ...pageCopy.featureCards[0], icon: BookOpen, iconClassName: 'bg-blue-50 text-blue-600' },
-      { ...pageCopy.featureCards[1], icon: Trophy, iconClassName: 'bg-white/10 text-indigo-300' },
-      {
-        ...pageCopy.featureCards[2],
-        icon: Sparkles,
-        iconClassName: 'bg-purple-50 text-purple-600',
-      },
-    ],
-    [pageCopy.featureCards]
-  );
-
-  useEffect(() => {
-    if (isPremiumMember) return;
-    const controller = new AbortController();
-    runConvexActionWithRetry(
-      () =>
-        callPublicConvexAction<Record<string, never>, LemonSqueezyVariantPrices>(
-          'lemonsqueezy:getVariantPrices',
-          {},
-          { signal: controller.signal }
-        ),
-      undefined,
-      { retries: 2, initialDelayMs: 300 }
-    )
-      .then(setPrices)
-      .catch(err => {
-        if ((err as { name?: string } | null)?.name === 'AbortError') return;
-        logger.warn('Failed to load variant prices for mobile subscription', err);
-      });
-    return () => controller.abort();
-  }, [isPremiumMember]);
 
   const handleSubscribe = async () => {
-    if (authLoading) {
-      return;
-    }
+    if (authLoading) return;
+    const plan = billingInterval as any;
 
     trackEvent('checkout_start', {
       language: i18n.language,
-      plan: billingInterval,
-      source: 'mobile_subscription',
+      plan: plan,
+      source: 'mobile_subscription_v2',
     });
 
     if (!effectiveUser) {
-      navigate(
-        `/auth?redirect=${encodeURIComponent(
-          buildPricingDetailsPath({
-            plan: billingInterval,
-            source: 'mobile_subscription',
-            returnTo: '/dashboard',
-          })
-        )}`
-      );
+      navigate('/auth', { state: { from: location.pathname, plan } });
       return;
     }
 
     setLoading(true);
     try {
       const checkoutArgs: LemonSqueezyCheckoutRequest = {
-        plan: billingInterval,
+        plan: plan,
         userId: effectiveUser.id?.toString() || '',
         userEmail: effectiveUser.email || '',
         userName: effectiveUser.name || '',
         region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
         locale: i18n.language,
-        source: 'mobile_subscription',
+        source: 'mobile_subscription_v2',
         returnTo: '/dashboard',
         appOrigin: globalThis.location.origin,
       };
       const { checkoutUrl } = await runConvexActionWithRetry(
-        () =>
-          callAuthenticatedConvexAction<
-            LemonSqueezyCheckoutRequest,
-            LemonSqueezyCheckoutResult
-          >('lemonsqueezy:createCheckout', checkoutArgs),
+        () => callAuthenticatedConvexAction<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>(
+          'lemonsqueezy:createCheckout', 
+          checkoutArgs
+        ),
         undefined,
-        { retries: 1, initialDelayMs: 250 }
+        { retries: 1 }
       );
-      if (!isSafeCheckoutUrl(checkoutUrl)) {
-        throw new Error('Invalid checkout URL returned by provider');
-      }
-      trackEvent('checkout_success', {
-        language: i18n.language,
-        plan: billingInterval,
-        source: 'mobile_subscription',
-      });
+      if (!isSafeCheckoutUrl(checkoutUrl)) throw new Error('Invalid URL');
       globalThis.location.href = checkoutUrl;
     } catch (error) {
-      const err = error as Error;
-      logger.error('Checkout failed:', err);
-      const msg = err.message || t('common.notFound', { defaultValue: 'Unknown error' });
-      notify.error(`${t('pricingDetails.errors.checkoutFailed')}: ${msg}`);
+      logger.error('Checkout failed:', error);
+      notify.error(t('pricing.checkoutError'));
       setLoading(false);
     }
   };
@@ -171,202 +115,138 @@ export const MobileSubscriptionPage: React.FC = () => {
     );
   }
 
+  const commonFeatures = [
+    t('landing.v2.pricing.pro.f1', { defaultValue: '无限新学 + 无限复习' }),
+    t('landing.v2.pricing.pro.f2', { defaultValue: '完整课程 + TOPIK 真题' }),
+    t('landing.v2.pricing.pro.f3', { defaultValue: '影视全库 + 双语字幕' }),
+    t('landing.v2.pricing.pro.f4', { defaultValue: 'AI 写作评分 + 深度解析' }),
+  ];
+
   return (
-    <div
-      className="relative min-h-[100dvh] flex flex-col pb-40 overflow-hidden"
-      style={{
-        backgroundColor: KT.bg,
-        backgroundImage: `radial-gradient(${KT.line2} 1px, transparent 1px), radial-gradient(${KT.crimson}14 1px, transparent 1px)`,
-        backgroundSize: '20px 20px, 40px 40px',
-        backgroundPosition: '0 0, 10px 10px',
-        fontFamily: KT.font,
-      }}
-    >
-      <div
-        className="pointer-events-none absolute -top-16 left-[-5rem] h-56 w-56 rounded-full blur-3xl"
-        style={{ background: `${KT.indigo}24` }}
-      />
-      <div
-        className="pointer-events-none absolute -bottom-20 right-[-4rem] h-56 w-56 rounded-full blur-3xl"
-        style={{ background: `${KT.pinkDeep}20` }}
-      />
-      {/* Header */}
-      <header
-        className="relative z-10 px-6 pt-6 pb-8"
-        style={{ background: KT.card, borderBottom: `1px solid ${KT.line}` }}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate(effectiveUser ? '/profile' : '/')}
-            className="p-2 -ml-2 text-muted-foreground hover:bg-secondary rounded-lg"
+    <PageShell>
+      {/* Header Area */}
+      <header className="px-6 pt-6 pb-4">
+        <div className="flex justify-between items-center mb-10">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-xl bg-white border border-k-ink/5 shadow-sm flex items-center justify-center"
           >
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-muted-foreground">{pageCopy.pageLabel}</span>
-            <span className="w-px h-3 bg-border"></span>
-            <span className="text-xs font-bold text-foreground">{languageLabel}</span>
+            <ArrowLeft size={18} className="text-k-ink" />
+          </button>
+          <div className="px-3 py-1 bg-k-ink/5 rounded-full text-[11px] font-black tracking-widest text-k-ink/50 uppercase">
+            {languageLabel} · {pageCopy.pageLabel}
           </div>
         </div>
 
-        <div className="text-center">
-          <span
-            className="inline-block py-1 px-3 rounded-full font-bold text-xs mb-4"
-            style={{ background: `${KT.crimson}18`, color: KT.crimson }}
-          >
-            {pageCopy.heroBadge}
-          </span>
-          <h1
-            className="text-3xl font-black leading-tight mb-2 tracking-tight"
-            style={{ color: KT.ink }}
-          >
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-k-crimson/10 rounded-full mb-4">
+            <Star size={10} className="text-k-crimson fill-k-crimson" />
+            <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">{pageCopy.heroBadge}</span>
+          </div>
+          <h1 className="font-k-serif text-[32px] font-black text-k-ink leading-tight mb-3">
             {pageCopy.heroTitle}
           </h1>
-          <p
-            className="font-medium text-sm leading-relaxed max-w-xs mx-auto"
-            style={{ color: KT.sub }}
-          >
+          <p className="text-[15px] font-medium text-k-sub opacity-80 max-w-[280px] mx-auto">
             {pageCopy.heroSubtitle}
           </p>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="relative z-10 flex-1 px-4 py-8 space-y-10">
-        {/* 1. Feature Cards */}
-        <div className="space-y-4">
-          {featureCards.map((card, index) => {
-            const Icon = card.icon;
-            const isDarkCard = index === 1;
-
-            return (
-              <div
-                key={card.title}
-                className={
-                  isDarkCard
-                    ? 'bg-primary text-primary-foreground p-6 rounded-3xl shadow-xl border border-border/50 relative overflow-hidden'
-                    : 'bg-card p-6 rounded-3xl border shadow-lg shadow-primary/5'
-                }
+      {/* Main Content */}
+      <main className="px-6 pb-48">
+        {/* Billing Toggle (Physical) */}
+        <div className="mb-10 flex justify-center">
+          <div className="relative flex w-full max-w-[320px] items-center p-1 bg-k-ink/5 rounded-2xl border-2 border-k-ink/5">
+            {[
+              { key: 'MONTHLY', label: t('plan.monthly') },
+              { key: 'ANNUAL', label: t('plan.annual') },
+              { key: 'LIFETIME', label: t('plan.lifetime') },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setBillingInterval(tab.key as any)}
+                className={`relative flex-1 py-3.5 rounded-xl text-[12px] font-black transition-all duration-300 z-10 ${
+                  billingInterval === tab.key ? 'text-k-bg' : 'text-k-sub'
+                }`}
               >
-                {isDarkCard ? (
-                  <div className="absolute top-0 right-0 -mr-12 -mt-12 w-40 h-40 bg-primary/40 rounded-full blur-3xl"></div>
-                ) : null}
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${card.iconClassName} ${isDarkCard ? 'backdrop-blur-sm' : ''}`}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3
-                  className={`text-lg font-black mb-2 ${isDarkCard ? 'text-primary-foreground' : 'text-foreground'}`}
-                >
-                  {card.title}
-                </h3>
-                <p
-                  className={`text-sm font-medium mb-4 leading-relaxed ${isDarkCard ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
-                >
-                  {card.description}
-                </p>
-                <ul className="space-y-2">
-                  {card.bullets.map((item: string) => (
-                    <li
-                      key={item}
-                      className={`flex items-start gap-3 text-sm font-medium ${isDarkCard ? 'text-primary-foreground/85' : 'text-muted-foreground'}`}
-                    >
-                      <Check
-                        className={`w-4 h-4 mt-0.5 shrink-0 ${isDarkCard ? 'text-primary' : 'text-green-500'}`}
-                      />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+                {tab.label}
+              </button>
+            ))}
+            <div 
+              className="absolute top-1 bottom-1 bg-k-ink rounded-xl transition-all duration-300 shadow-lg"
+              style={{
+                width: 'calc(33.33% - 4px)',
+                left: billingInterval === 'MONTHLY' ? '4px' : billingInterval === 'ANNUAL' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 0px)'
+              }}
+            />
+          </div>
         </div>
 
-        {/* 2. Benefit Comparison Vertical Cards */}
-        <div>
-          <div className="text-center mb-6">
-            <h3 className="text-2xl font-black text-foreground">{pageCopy.comparisonTitle}</h3>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              {pageCopy.comparisonSubtitle}
-            </p>
+        {/* Selected Plan Price Focus */}
+        <div className="mb-12 text-center">
+          <div className="flex items-baseline justify-center gap-1 mb-2">
+            <span className="font-k-serif text-[24px] font-medium text-k-ink/30">{config.symbol}</span>
+            <span className="font-k-serif text-[72px] font-black leading-none tracking-tighter text-k-ink">
+              {billingInterval === 'MONTHLY' ? config.monthly : billingInterval === 'ANNUAL' ? config.annual : config.lifetime}
+            </span>
+            <span className="text-[15px] font-bold text-k-sub opacity-50">
+              {billingInterval === 'MONTHLY' ? config.unitM : billingInterval === 'ANNUAL' ? config.unitA : t('period.once')}
+            </span>
           </div>
+          {billingInterval === 'ANNUAL' && (
+            <div className="inline-block px-3 py-1 bg-k-crimson text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-pop-small">
+              Best Value · 70% OFF
+            </div>
+          )}
+        </div>
 
-          <div className="grid gap-3">
-            {pageCopy.comparisonRows.map(row => (
-              <div key={row.label} className="bg-card rounded-2xl border p-5 shadow-sm">
-                <div className="font-bold text-base mb-3 text-foreground">{row.label}</div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-secondary/50 rounded-xl p-3 border border-border/50">
-                    <div className="text-[10px] font-black text-muted-foreground mb-1 uppercase tracking-wider">
-                      {t('free')}
-                    </div>
-                    <div className="font-medium text-muted-foreground">{row.free}</div>
-                  </div>
-                  <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-                    <div className="text-[10px] font-black text-primary mb-1 uppercase tracking-wider">
-                      Pro / Lifetime
-                    </div>
-                    <div className="font-bold text-foreground">{row.paid}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {/* Features Card */}
+        <Card pad={32} className="mb-12 border-2 border-k-ink/5 shadow-pop">
+          <div className="flex items-center gap-4 mb-8">
+            <img src="/logo.svg" alt="Duhan Logo" width={42} height={42} className="rounded-[10px]" />
+            <div>
+              <h3 className="text-[17px] font-black text-k-ink">Pro Features</h3>
+              <p className="text-[12px] text-k-sub font-medium">Unlocks the full learning platform</p>
+            </div>
           </div>
+          <ul className="space-y-5">
+            {commonFeatures.map((f, i) => (
+              <li key={i} className="flex items-start gap-4">
+                <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-ink/5 text-k-crimson shrink-0">
+                  <Check size={10} strokeWidth={4} />
+                </div>
+                <span className="text-[14px] font-medium text-k-ink leading-tight" dangerouslySetInnerHTML={{ __html: f }} />
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        {/* Detailed Comparison Link */}
+        <div className="text-center">
+          <p className="text-[13px] text-k-sub font-medium mb-4">{pageCopy.comparisonSubtitle}</p>
+          <button 
+            onClick={() => navigate(buildPricingDetailsPath({ source: 'mobile_subscription' }))}
+            className="inline-flex items-center gap-2 text-[14px] font-black text-k-ink border-b-2 border-k-ink/20 pb-1"
+          >
+            {pageCopy.comparisonTitle} <ArrowLeft size={14} className="rotate-180" />
+          </button>
         </div>
       </main>
 
-      {/* 3. Sticky Pricing */}
-      <div
-        className="fixed bottom-0 w-full p-4 pb-safe z-50 rounded-t-3xl"
-        style={{
-          background: KT.card,
-          borderTop: `1px solid ${KT.line}`,
-          boxShadow: KT.shLg,
-        }}
-      >
-        <div className="flex bg-secondary p-1 rounded-2xl mb-4">
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setBillingInterval('MONTHLY')}
-            className={`flex-1 min-h-[48px] rounded-[14px] text-xs font-bold transition-colors ${billingInterval === 'MONTHLY' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
-          >
-            {t('pricingDetails.billing.monthly', { defaultValue: 'Monthly' })} {monthlyPrice}
-          </Button>
-          <Button
-            variant="ghost"
-            size="auto"
-            onClick={() => setBillingInterval('ANNUAL')}
-            className={`flex-1 min-h-[48px] rounded-[14px] text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${billingInterval === 'ANNUAL' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
-          >
-            {t('pricingDetails.billing.annual', { defaultValue: 'Annual' })} {annualPrice}{' '}
-            <span className="text-[9px] bg-green-500/10 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded">
-              {annualDiscountText}
-            </span>
-          </Button>
-        </div>
-
+      {/* Fixed Bottom CTA */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t-2 border-k-ink/5 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50">
         <Button
-          variant="default"
-          size="auto"
           onClick={handleSubscribe}
-          loading={authLoading || loading}
-          loadingText={t('loading', { defaultValue: 'Loading...' })}
-          disabled={authLoading || loading}
-          className="w-full h-[54px] rounded-[16px] text-[15px] font-black active:scale-[0.98] transition-all disabled:opacity-70"
+          loading={loading}
+          disabled={loading || authLoading}
+          className="w-full h-[64px] bg-k-ink text-white rounded-2xl text-[16px] font-black shadow-pop-small active:scale-[0.98] transition-all"
         >
-          {t('pricingDetails.plans.pro.cta', { defaultValue: 'Upgrade to Pro' })}
+          {t('button.upgrade', 'Upgrade to Pro')}
         </Button>
-        <p className="text-[11px] text-center text-muted-foreground mt-3 font-medium">
-          {t('pricingDetails.hero.subtitleLine2', {
-            defaultValue: 'No hidden fees. Cancel anytime.',
-          })}
+        <p className="mt-4 text-[11px] text-center text-k-sub font-medium opacity-60">
+          Secure Payment · Cancel Anytime · Instant Activation
         </p>
       </div>
-    </div>
+    </PageShell>
   );
 };

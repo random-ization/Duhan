@@ -1,179 +1,283 @@
-import React, { useMemo, Suspense, lazy } from 'react';
-import { ArrowLeft, Brain, Clock, Loader2, Target, Zap } from 'lucide-react';
-import { Button } from '../../components/ui';
-import { useContextualSidebar } from '../../hooks/useContextualSidebar';
-import {
-  ContextualCountBadge,
-  ContextualListItemButton,
-  ContextualPrimaryActionButton,
-  ContextualSection,
-} from '../../components/layout/contextualSidebarBlocks';
+import React, { useState } from 'react';
+import { useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import { VOCAB } from '../../utils/convexRefs';
+import { 
+  calculateFSRSReview, 
+  deserializeCard, 
+  serializeCard, 
+  createEmptyCard,
+  type Grade 
+} from '../../utils/srsAlgorithm';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import type { Id } from '../../../convex/_generated/dataModel';
 
-const VocabQuiz = lazy(() => import('../../features/vocab/components/VocabQuiz'));
+type VocabWord = {
+  _id: Id<'words'>;
+  word: string;
+  meaning: string;
+  meaningZh: string;
+  pronunciation?: string;
+  partOfSpeech: string;
+  example?: string;
+};
 
-interface DesktopReviewQuizPageProps {
+type ReviewStats = {
+  dueNow: number;
+  totalReviews: number;
+  completedToday: number;
+};
+
+function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
+  return (
+    <div className="mb-[22px]">
+      <div className="mb-2.5 flex items-baseline px-0.5">
+        {kanji && (
+          <span className="mr-1.5 font-k-serif text-[14px] font-medium text-k-crimson">
+            {kanji}
+          </span>
+        )}
+        <span className="text-[11px] font-extrabold tracking-[0.4px] text-k-ink">
+          {title}
+        </span>
+        {action && (
+          <span className="ml-auto text-[10px] font-bold text-k-sub cursor-pointer hover:text-k-ink">
+            {action}
+          </span>
+        )}
+      </div>
+      <div className="rounded-[14px] bg-k-card shadow-k-sh-sm" style={{ padding: pad }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface DesktopReviewQuizProps {
   modeLabel: string;
   loading: boolean;
   words: any[];
   labels: any;
   dueItems: any[];
   mode: string;
-  language: any;
-  navigate: any;
+  language: string;
+  navigate: (path: string) => void;
   t: any;
 }
 
-export const DesktopReviewQuizPage: React.FC<DesktopReviewQuizPageProps> = ({
+export default function DesktopReviewQuizPage({
   modeLabel,
   loading,
-  words,
+  words = [],
   labels,
   dueItems,
   mode,
   language,
   navigate,
-  t,
-}) => {
-  const quizSidebarContent = useMemo(
-    () => (
-      <div className="space-y-3">
-        <ContextualSection
-          title={t('reviewPage.modes.title', { defaultValue: 'Choose a Mode' })}
-          badge={<ContextualCountBadge value={words.length} tone="accent" />}
-          withRail
+  t: passedT,
+}: DesktopReviewQuizProps) {
+  const { t: localT } = useTranslation();
+  const t = passedT || localT;
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [completedCount, setCompletedCount] = useState(0);
+
+  const submitReview = useMutation(VOCAB.updateProgressV2);
+
+  const word = words[currentIndex] || {
+    id: 'demo',
+    korean: '벚꽃',
+    english: 'cherry blossom',
+    meaning: 'cherry blossom',
+    meaningZh: t('common.cherryBlossom', 'Cherry Blossom'),
+    partOfSpeech: t('common.noun', 'Noun'),
+  };
+
+  const handleReview = async (quality: number) => {
+    if (!word || word.id === 'demo' || !word._id) {
+      // Demo mode or no words left
+      if (currentIndex < words.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+        setShowAnswer(false);
+      } else {
+        navigate('/review');
+      }
+      return;
+    }
+
+    try {
+      const rating = quality as Grade;
+      const now = new Date();
+      
+      // Get current card state or create new
+      const currentCard = word.progress ? deserializeCard(word.progress) : createEmptyCard(now);
+      
+      // Calculate next state
+      const result = calculateFSRSReview(rating, currentCard, now);
+      const fsrsState = serializeCard(result.card);
+
+      await submitReview({
+        wordId: word._id,
+        rating: quality,
+        fsrsState,
+      });
+      
+      setCompletedCount(prev => prev + 1);
+      
+      if (currentIndex < words.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+        setShowAnswer(false);
+      } else {
+        // Finished
+        navigate('/review');
+      }
+    } catch (error) {
+      console.error('Failed to submit review:', error);
+    }
+  };
+
+  const dueCount = words.length;
+
+  const content = (
+    <div className="grid grid-cols-2 items-start gap-[18px]">
+      {/* Card */}
+      <div>
+        <div className="mb-4 flex items-center gap-3">
+          <DesignChip tone="ink" size="sm">{t('coursesOverview.desktop.quiz.reviewing')} · {completedCount} / {dueCount}</DesignChip>
+          <div className="h-1 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--color-k-line2)' }}>
+            <div className="h-full w-[29%] bg-k-crimson" />
+          </div>
+          <span className="text-[11px] font-bold text-k-sub">09:42 / 12:00</span>
+        </div>
+
+        <DesktopCard
+          pad={0}
+          className="relative grid aspect-[4/3] place-items-center overflow-hidden bg-k-bg2"
         >
-          <ContextualListItemButton
-            icon={Zap}
-            label={t('reviewPage.modes.quick.title', { defaultValue: 'Quick Review' })}
-            subtitle={t('reviewPage.modes.quick.desc', {
-              defaultValue: '10 random due words • 2 mins',
-            })}
-            active={mode === 'quick'}
-            onClick={() => navigate('/review/quiz?mode=quick')}
-          />
-          <ContextualListItemButton
-            icon={Brain}
-            label={t('reviewPage.modes.full.title', { defaultValue: 'Full Review' })}
-            subtitle={t('reviewPage.modes.full.desc', {
-              count: dueItems.length,
-              defaultValue: `Clear all ${dueItems.length} due words`,
-            })}
-            active={mode === 'full'}
-            onClick={() => navigate('/review/quiz?mode=full')}
-          />
-          <ContextualListItemButton
-            icon={Target}
-            label={t('reviewPage.modes.weak.title', { defaultValue: 'Weakest Words' })}
-            subtitle={t('reviewPage.modes.weak.desc', {
-              defaultValue: 'Focus on difficult items',
-            })}
-            active={mode === 'weak'}
-            onClick={() => navigate('/review/quiz?mode=weak')}
-          />
-        </ContextualSection>
-
-        <ContextualSection title={t('reviewPage.queue.title', { defaultValue: 'Word Queue' })}>
-          <ContextualListItemButton
-            icon={Clock}
-            label={t('reviewPage.queue.due', { defaultValue: 'Due Review' })}
-            subtitle={t('reviewPage.sidebar.queueHint', {
-              defaultValue: 'Words ready in this round',
-            })}
-            trailing={<ContextualCountBadge value={dueItems.length} tone="warning" />}
-          />
-        </ContextualSection>
-
-        <ContextualPrimaryActionButton
-          label={t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' })}
-          onClick={() => navigate('/review')}
-        />
-      </div>
-    ),
-    [dueItems.length, mode, navigate, t, words.length]
-  );
-
-  useContextualSidebar({
-    id: 'review-quiz-context',
-    title: modeLabel,
-    subtitle: t('reviewPage.sidebar.quizSubtitle', {
-      defaultValue: 'Switch mode without leaving this page',
-    }),
-    content: quizSidebarContent,
-    enabled: true,
-  });
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:from-indigo-400/8 dark:via-background dark:to-indigo-300/8">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-card/70 backdrop-blur-xl border-b-[3px] border-indigo-100 dark:border-indigo-300/20">
-        <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
-          <Button
-            onClick={() => navigate('/review')}
-            variant="ghost"
-            size="auto"
-            className="p-2.5 rounded-2xl bg-card border-[3px] border-border hover:border-indigo-300 dark:hover:border-indigo-300/35 transition-all duration-200"
-            aria-label={t('common.back', { defaultValue: 'Back' })}
-          >
-            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          <div className="text-center">
-            <p className="text-xs font-black text-indigo-600 dark:text-indigo-300 tracking-wider uppercase">
-              {modeLabel}
-            </p>
-            {!loading && (
-              <p className="text-sm font-bold text-muted-foreground">
-                {words.length} {labels.wordsUnit ?? 'words'}
-              </p>
+          <div className="absolute right-[22px] top-[18px]">
+            <DesignChip tone="butter" size="sm">{t('coursesOverview.desktop.quiz.reviewNum', { count: 4 })}</DesignChip>
+          </div>
+          <div className="absolute left-[22px] top-[18px] font-k-serif text-[80px] font-medium leading-[1] text-[rgba(31,27,23,0.06)]">
+            春
+          </div>
+          <div className="p-8 text-center">
+            <div className="font-k-serif text-[64px] font-medium leading-[1.1] tracking-[-1.5px] text-k-ink">
+              {word.korean || word.word}
+            </div>
+            <div className="mt-3 text-[14px] font-bold tracking-[0.5px] text-k-sub">
+              {word.pronunciation ? `[ ${word.pronunciation} ] · ` : ''} {word.partOfSpeech}
+            </div>
+            {word.example && (
+              <div className="mt-[18px] max-w-[420px] rounded-[12px] bg-k-card px-[18px] py-[12px] text-[13px] italic text-k-ink2">
+                {word.example}
+              </div>
+            )}
+            {!showAnswer && (
+              <button 
+                onClick={() => setShowAnswer(true)}
+                className="mt-8 cursor-pointer rounded-full bg-k-ink px-8 py-3 text-[14px] font-extrabold text-k-bg transition-transform hover:scale-105"
+              >
+                {t('coursesOverview.desktop.quiz.revealAnswer', { defaultValue: 'Show Answer' })}
+              </button>
             )}
           </div>
-          <div className="w-12" />
-        </div>
+        </DesktopCard>
+
+        {showAnswer && (
+          <div className="mt-[14px] grid grid-cols-4 gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {[
+              { l: t('coursesOverview.desktop.quiz.again'), s: t('coursesOverview.desktop.quiz.timeUnit.minute'), tone: 'var(--color-k-crimson)', kbd: '1', quality: 0 },
+              { l: t('coursesOverview.desktop.quiz.hard'), s: t('coursesOverview.desktop.quiz.timeUnit.minutes', { count: 6 }), tone: 'var(--color-k-pink-deep)', kbd: '2', quality: 1 },
+              { l: t('coursesOverview.desktop.quiz.good'), s: t('coursesOverview.desktop.quiz.timeUnit.day'), tone: 'var(--color-k-mint-deep)', kbd: '3', quality: 3 },
+              { l: t('coursesOverview.desktop.quiz.easy'), s: t('coursesOverview.desktop.quiz.timeUnit.days', { count: 5 }), tone: 'var(--color-k-indigo)', kbd: '4', quality: 5 },
+            ].map((b, i) => (
+              <button
+                key={i}
+                onClick={() => handleReview(b.quality)}
+                className="flex cursor-pointer flex-col items-center gap-1 rounded-[12px] border-none px-2 py-[14px] text-k-card transition-transform hover:-translate-y-1"
+                style={{ background: b.tone }}
+              >
+                <span className="text-[13px] font-extrabold">{b.l}</span>
+                <span className="text-[10px] font-bold opacity-85">{b.s}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[40vh]">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          </div>
-        ) : words.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
-            <p className="text-2xl">🎉</p>
-            <p className="text-lg font-bold text-slate-700 dark:text-slate-200">
-              {t('reviewPage.queue.empty_due', {
-                defaultValue: 'No words due for review! Good job.',
-              })}
-            </p>
-            <Button onClick={() => navigate('/review')} variant="secondary">
-              {t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' })}
-            </Button>
-          </div>
-        ) : (
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center min-h-[40vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      {/* Right — answer + meta */}
+      <div>
+        {showAnswer ? (
+          <DesktopCard pad={24} className="mb-[14px] animate-in fade-in slide-in-from-right-4 duration-300">
+            <DesignChip tone="mint" size="sm">{t('coursesOverview.desktop.quiz.revealed')}</DesignChip>
+            <div className="mt-3 font-k-serif text-[36px] font-medium tracking-[-0.8px] text-k-ink">
+              {word.meaningZh || word.meaning}
+            </div>
+            <div className="mt-1 text-[13px] font-semibold text-k-sub">
+              {word.meaning}
+            </div>
+            {word.example && (
+              <div className="mt-4 rounded-[12px] bg-k-bg2 px-[16px] py-[14px]">
+                <div className="font-k-serif text-[15px] leading-[1.7] text-k-ink">
+                  {word.example}
+                </div>
               </div>
-            }
-          >
-            <VocabQuiz
-              words={words}
-              language={language}
-              variant="quiz"
-              presetSettings={{
-                multipleChoice: true,
-                writingMode: false,
-                mcDirection: 'KR_TO_NATIVE',
-                autoTTS: true,
-                soundEffects: true,
-              }}
-              onComplete={() => navigate('/review')}
-            />
-          </Suspense>
+            )}
+          </DesktopCard>
+        ) : (
+          <DesktopCard pad={24} className="mb-[14px] flex flex-col items-center justify-center py-12 text-center opacity-40">
+            <div className="text-[14px] font-bold text-k-sub">
+              {t('coursesOverview.desktop.quiz.pressToReveal', { defaultValue: 'Reveal to see meaning' })}
+            </div>
+          </DesktopCard>
         )}
+
+        <DRail kanji="關" title={t('coursesOverview.desktop.quiz.relatedVocab')} pad={0}>
+          {[
+            { w: '꽃', m: t('common.flower', 'Flower') },
+            { w: '봄', m: t('common.spring', 'Spring') },
+            { w: '벚나무', m: t('common.cherryTree', 'Cherry Tree') },
+          ].map((v, i, a) => (
+            <div
+              key={i}
+              className="flex justify-between px-[14px] py-[7px]"
+              style={{ borderBottom: i < a.length - 1 ? '1px solid var(--color-k-line)' : 'none' }}
+            >
+              <span className="text-[13px] font-extrabold tracking-[-0.2px] text-k-ink">{v.w}</span>
+              <span className="text-[11px] font-semibold text-k-sub">{v.m}</span>
+            </div>
+          ))}
+        </DRail>
+
+        <DRail kanji="歷" title={t('coursesOverview.desktop.quiz.reviewHistory')} pad={0}>
+          <div className="flex gap-1.5 px-[14px] py-[10px]">
+            {[40, 65, 85, 55, 70, 90, 75].map((v, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-sm"
+                style={{
+                  height: `${v * 0.6}px`,
+                  background: v > 70 ? 'var(--color-k-mint-deep)' : v > 50 ? 'var(--color-k-butter)' : 'var(--color-k-crimson)',
+                }}
+              />
+            ))}
+          </div>
+          <div className="px-[14px] pb-[8px] text-[10px] font-bold text-k-sub">
+            {t('coursesOverview.desktop.quiz.accuracyRate')}
+          </div>
+        </DRail>
       </div>
     </div>
   );
-};
 
-export default DesktopReviewQuizPage;
+  return (
+    <div className="p-6">
+      <div className="mb-4 text-[12px] font-bold text-k-sub">
+        {t('coursesOverview.desktop.review.title').toUpperCase()} · {t('coursesOverview.desktop.quiz.fsrsReview')}
+      </div>
+      {content}
+    </div>
+  );
+}

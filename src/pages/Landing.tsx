@@ -1,53 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, Navigate } from 'react-router-dom';
-import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { LogoIcon } from '../components/ui/Logo';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
-// Landing used to depend on `convex/react` + `convex/_generated/api` for
-// two things: `useConvexAuth()` (to redirect signed-in visitors to
-// /dashboard) and `useAction(api.lemonsqueezy.getVariantPrices)` (to
-// fetch live pricing). Both pulled the ~25 kB gz `vendor-convex`
-// chunk + spun up a WebSocket on every visit. We replace them with a
-// synchronous localStorage token probe and a direct HTTP POST, so no
-// pre-auth page preloads Convex anymore.
 import { callPublicConvexAction, hasConvexAuthToken } from '../utils/publicConvexClient';
-import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { trackEvent } from '../utils/analytics';
 import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
-import {
-  ArrowRight,
-  PlayCircle,
-  Sparkles,
-  Trophy,
-  Check,
-  BarChart3,
-  Lock,
-  BrainCircuit,
-  Volume2,
-  Zap,
-  Bot,
-  FileDown,
-  Download,
-  Mic2,
-  PauseCircle,
-  Play,
-  ChevronDown,
-  Gift,
-  Menu,
-  SkipBack,
-  SkipForward,
-  X,
-} from 'lucide-react';
-// LazyMotion + `m` uses framer-motion's mini bundle (no full motion engine
-// shipped to the landing page). Since Landing only needs DOM CSS transitions
-// (no drag / layout animations / AnimatePresence), `domAnimation` is enough.
-// This cuts ~20–25 kB gzip off the landing-page JS bundle.
-import { LazyMotion, domAnimation, m } from 'framer-motion';
-import { Button } from '../components/ui';
 
+import {
+  Globe,
+  Check,
+  ChevronRight,
+  ArrowRight,
+  Play,
+  Languages,
+  BookOpen,
+  Headphones,
+  Users,
+  Repeat,
+  Smartphone,
+  CheckCircle2,
+} from 'lucide-react';
+import { clsx } from 'clsx';
+import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 type PricePlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
 type PriceEntry = { amount: string; currency: string; formatted: string };
 type VariantPrices = {
@@ -56,28 +34,15 @@ type VariantPrices = {
 };
 type LandingFaqItem = { question: string; answer: string };
 type LandingSeoLanguage = 'en' | 'zh' | 'vi' | 'mn';
-type LandingPricingCopy = {
-  freeFeatures: string[];
-  proFeatures: string[];
-  lifetimeFeatures: string[];
-  rightsTitle: string;
-  rightsSubtitle: string;
-  rightsRows: Array<{ label: string; free: string; pro: string }>;
-};
-type LandingCopyTranslator = (key: string, options?: Record<string, unknown>) => string;
 type LandingNetworkNavigator = Navigator & {
-  connection?: {
-    saveData?: boolean;
-    effectiveType?: string;
-  };
+  connection?: { saveData?: boolean; effectiveType?: string };
 };
 type LandingIdleWindow = Window & {
-  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-  cancelIdleCallback?: (handle: number) => void;
+  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  cancelIdleCallback?: (h: number) => void;
 };
 
 const LANDING_SEO_LANGUAGES = new Set<LandingSeoLanguage>(['en', 'zh', 'vi', 'mn']);
-
 function normalizeLandingSeoLanguage(language: string): LandingSeoLanguage {
   return LANDING_SEO_LANGUAGES.has(language as LandingSeoLanguage)
     ? (language as LandingSeoLanguage)
@@ -85,9 +50,8 @@ function normalizeLandingSeoLanguage(language: string): LandingSeoLanguage {
 }
 
 function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
-  const guideSlugs = ['topik-guide', 'korean-vocabulary', 'topik-writing'] as const;
-
-  return guideSlugs.map(slug => {
+  const slugs = ['topik-guide', 'korean-vocabulary', 'topik-writing'] as const;
+  return slugs.map(slug => {
     const path = `/${language}/learn/${slug}`;
     const meta = getRouteMeta(path);
     return {
@@ -98,154 +62,22 @@ function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
   });
 }
 
-function resolveLandingPricingCopy(
-  language: LandingSeoLanguage,
-  t: LandingCopyTranslator
-): LandingPricingCopy {
-  return {
-    freeFeatures: [
-      t('landing.pricing.comparison.free.feature1', {
-        defaultValue: 'First 2 units of every course are open',
-      }),
-      t('landing.pricing.comparison.free.feature2', {
-        defaultValue: 'Core vocab drills with 20 new saves per day',
-      }),
-      t('landing.pricing.comparison.free.feature3', {
-        defaultValue: 'Public sample TOPIK and writing papers',
-      }),
-      t('landing.pricing.comparison.free.feature4', {
-        defaultValue: '2 full media plays per day and a small daily AI credit',
-      }),
-    ],
-    proFeatures: [
-      t('landing.pricing.comparison.pro.feature1', {
-        defaultValue: 'All textbooks, all units, and the full learning path',
-      }),
-      t('landing.pricing.comparison.pro.feature2', {
-        defaultValue: 'Full TOPIK and writing archive with long-term reports',
-      }),
-      t('landing.pricing.comparison.pro.feature3', {
-        defaultValue: 'Unlimited media playback, speed control, and higher AI credits',
-      }),
-      t('landing.pricing.comparison.pro.feature4', {
-        defaultValue: 'PDF export, analytics, and the full study toolkit',
-      }),
-    ],
-    lifetimeFeatures: [
-      t('landing.pricing.comparison.lifetime.feature1', {
-        defaultValue: 'Includes every current Pro entitlement',
-      }),
-      t('landing.pricing.comparison.lifetime.feature2', {
-        defaultValue: 'Future Pro features stay included',
-      }),
-      t('landing.pricing.comparison.lifetime.feature3', {
-        defaultValue: 'One-time payment with no renewal',
-      }),
-    ],
-    rightsTitle: t('landing.pricing.comparison.rightsTitle', {
-      defaultValue: 'Quick comparison',
-    }),
-    rightsSubtitle: t('landing.pricing.comparison.rightsSubtitle', {
-      defaultValue:
-        'Free helps learners start. Pro and Lifetime unlock the full depth of the platform.',
-    }),
-    rightsRows: [
-      {
-        label: t('landing.pricing.comparison.rows.courses.label', { defaultValue: 'Courses' }),
-        free: t('landing.pricing.comparison.rows.courses.free', { defaultValue: 'First 2 units' }),
-        pro: t('landing.pricing.comparison.rows.courses.pro', {
-          defaultValue: 'All courses and units',
-        }),
-      },
-      {
-        label: t('landing.pricing.comparison.rows.vocabulary.label', {
-          defaultValue: 'Vocabulary',
-        }),
-        free: t('landing.pricing.comparison.rows.vocabulary.free', {
-          defaultValue: '20 new words/day + 1 test/day',
-        }),
-        pro: t('landing.pricing.comparison.rows.vocabulary.pro', {
-          defaultValue: 'Unlimited saves, tests, and analytics',
-        }),
-      },
-      {
-        label: t('landing.pricing.comparison.rows.topik.label', {
-          defaultValue: 'TOPIK / Writing',
-        }),
-        free: t('landing.pricing.comparison.rows.topik.free', {
-          defaultValue: 'Public sample papers',
-        }),
-        pro: t('landing.pricing.comparison.rows.topik.pro', {
-          defaultValue: 'Full archive and reports',
-        }),
-      },
-      {
-        label: t('landing.pricing.comparison.rows.mediaAi.label', {
-          defaultValue: 'Media / AI',
-        }),
-        free: t('landing.pricing.comparison.rows.mediaAi.free', {
-          defaultValue: '2 plays/day + limited AI credits',
-        }),
-        pro: t('landing.pricing.comparison.rows.mediaAi.pro', {
-          defaultValue: 'Unlimited playback + speed + 100 AI credits',
-        }),
-      },
-    ],
-  };
-}
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' as const },
-  },
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
 const useLandingScroll = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
   useEffect(() => {
-    const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+    const prev = document.documentElement.style.scrollBehavior;
     document.documentElement.style.scrollBehavior = 'smooth';
     return () => {
-      document.documentElement.style.scrollBehavior = previousScrollBehavior;
+      document.documentElement.style.scrollBehavior = prev;
     };
   }, []);
-
   return isScrolled;
-};
-
-const useFeatureCards = () => {
-  const [expandedFeatureCards, setExpandedFeatureCards] = useState({
-    pdf: false,
-    podcast: false,
-    video: false,
-  });
-
-  const toggleFeatureCard = (key: keyof typeof expandedFeatureCards) => {
-    setExpandedFeatureCards(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  return { expandedFeatureCards, toggleFeatureCard };
 };
 
 const LandingJsonLd = ({
@@ -264,18 +96,13 @@ const LandingJsonLd = ({
   featuredGuidesListName: string;
 }) => {
   const featuredGuides = getFeaturedGuidesForJsonLd(language);
-
   const getPrice = (plan: 'MONTHLY' | 'ANNUAL' | 'LIFETIME') => {
-    // SEO Prices are usually Global
     const amount = prices?.GLOBAL?.[plan]?.amount;
-    if (amount) {
-      return amount;
-    }
+    if (amount) return amount;
     if (plan === 'MONTHLY') return '6.90';
     if (plan === 'ANNUAL') return '49.00';
     return '99.00';
   };
-
   return (
     <script
       type="application/ld+json"
@@ -312,27 +139,9 @@ const LandingJsonLd = ({
               url: canonicalUrl,
               inLanguage: language,
               offers: [
-                {
-                  '@type': 'Offer',
-                  name: 'Monthly Subscription',
-                  price: getPrice('MONTHLY'),
-                  priceCurrency: 'USD',
-                  availability: 'https://schema.org/InStock',
-                },
-                {
-                  '@type': 'Offer',
-                  name: 'Annual Subscription',
-                  price: getPrice('ANNUAL'),
-                  priceCurrency: 'USD',
-                  availability: 'https://schema.org/InStock',
-                },
-                {
-                  '@type': 'Offer',
-                  name: 'Lifetime Access',
-                  price: getPrice('LIFETIME'),
-                  priceCurrency: 'USD',
-                  availability: 'https://schema.org/InStock',
-                },
+                { '@type': 'Offer', name: 'Monthly Subscription', price: getPrice('MONTHLY'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+                { '@type': 'Offer', name: 'Annual Subscription', price: getPrice('ANNUAL'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+                { '@type': 'Offer', name: 'Lifetime Access', price: getPrice('LIFETIME'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
               ],
             },
             {
@@ -340,37 +149,25 @@ const LandingJsonLd = ({
               mainEntity: faqItems.map(item => ({
                 '@type': 'Question',
                 name: item.question,
-                acceptedAnswer: {
-                  '@type': 'Answer',
-                  text: item.answer,
-                },
+                acceptedAnswer: { '@type': 'Answer', text: item.answer },
               })),
             },
             {
               '@type': 'ItemList',
               name: featuredGuidesListName,
-              itemListElement: featuredGuides.map((guide, index) => ({
+              itemListElement: featuredGuides.map((g, i) => ({
                 '@type': 'ListItem',
-                position: index + 1,
-                name: guide.name,
-                url: guide.url,
+                position: i + 1,
+                name: g.name,
+                url: g.url,
               })),
             },
-            ...featuredGuides.map(guide => ({
+            ...featuredGuides.map(g => ({
               '@type': 'Course',
-              name: guide.name,
-              description: guide.description,
+              name: g.name,
+              description: g.description,
               inLanguage: language,
-              provider: {
-                '@type': 'Organization',
-                name: 'DuHan',
-                sameAs: 'https://koreanstudy.me',
-              },
-              hasCourseInstance: {
-                '@type': 'CourseInstance',
-                courseMode: 'online',
-                url: guide.url,
-              },
+              provider: { '@type': 'Organization', name: 'DuHan', sameAs: 'https://koreanstudy.me' },
             })),
           ],
         }),
@@ -379,1877 +176,1711 @@ const LandingJsonLd = ({
   );
 };
 
-const LandingNav = ({
-  isScrolled,
-  mobileMenuOpen,
-  setMobileMenuOpen,
-}: {
-  isScrolled: boolean;
-  mobileMenuOpen: boolean;
-  setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
-  const { t, i18n } = useTranslation();
-  const navigate = useLocalizedNavigate();
-  const language = normalizeLandingSeoLanguage(i18n.language);
+// ───────────────────────────────────────────────────────────────────────
+// Atomic UI helpers — mapped from "Duhan Landing Desktop.html"
+// ───────────────────────────────────────────────────────────────────────
 
-  const trackLandingCta = (ctaId: string, placement: string, target: string) => {
-    trackEvent('landing_cta_click', {
-      language,
-      ctaId,
-      placement,
-      target,
-    });
-  };
+const Container: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+  className = '',
+  children,
+  ...rest
+}) => (
+  <div className={`mx-auto w-full max-w-7xl px-5 md:px-12 ${className}`} {...rest}>
+    {children}
+  </div>
+);
 
+const BRAND_CHARS = ['韓', '恆', '두'];
+
+const Seal: React.FC<{
+  ch?: string;
+  size?: number;
+  className?: string;
+  bg?: string;
+  fg?: string;
+}> = ({ ch, size = 24, className = '', bg, fg }) => {
+  if (ch && BRAND_CHARS.includes(ch)) {
+    return <LogoIcon size={size} className={className} />;
+  }
   return (
-    <nav
-      className={`fixed top-0 w-full z-50 h-20 transition-all duration-300 backdrop-blur-md border-b border-slate-200 ${
-        isScrolled ? 'bg-white/95 shadow-sm' : 'bg-white/90'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-        <LocalizedLink to="/" className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt={t('common.appName')}
-            className="w-10 h-10 rounded-xl shadow-lg dark:brightness-0 dark:invert"
-          />
-          <span className="font-heading font-bold text-2xl tracking-tight">
-            {t('common.appName')}
-          </span>
-        </LocalizedLink>
-
-        <div className="hidden md:flex items-center gap-8 font-semibold text-slate-500 text-sm">
-          <a
-            href="#topik"
-            className="hover:text-emerald-600 dark:hover:text-emerald-300 transition-colors"
-          >
-            {t('landing.nav.topik')}
-          </a>
-          <a
-            href="#fsrs"
-            className="hover:text-brand-yellow dark:hover:text-amber-300 transition-colors"
-          >
-            {t('landing.nav.fsrs')}
-          </a>
-          <a
-            href="#ai"
-            className="hover:text-violet-500 dark:hover:text-violet-300 transition-colors"
-          >
-            {t('landing.nav.ai')}
-          </a>
-          <a href="#pricing" className="hover:text-black transition-colors">
-            {t('landing.nav.pricing')}
-          </a>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => {
-              trackLandingCta('nav_register', 'landing_nav_desktop', '/register');
-              navigate('/register');
-            }}
-            className="bg-slate-900 text-white px-5 py-2.5 rounded-full font-bold hover:bg-slate-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-          >
-            {t('landing.nav.cta')}
-          </Button>
-          <div className="ml-6">
-            <LanguageSwitcher />
-          </div>
-        </div>
-
-        <div className="md:hidden flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            className="p-2"
-            aria-label={mobileMenuOpen ? t('landing.nav.closeMenu') : t('landing.nav.openMenu')}
-            onClick={() => setMobileMenuOpen(v => !v)}
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </Button>
-          <div className="ml-2">
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </div>
-
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-200 px-6 py-5 space-y-4">
-          <div className="flex items-center justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => {
-                navigate('/login');
-                setMobileMenuOpen(false);
-              }}
-              className="text-sm font-semibold text-slate-900"
-            >
-              {t('login')}
-            </Button>
-          </div>
-          <div className="grid gap-3 text-sm font-semibold text-slate-900">
-            <a href="#topik" onClick={() => setMobileMenuOpen(false)} className="py-2">
-              {t('landing.nav.topik')}
-            </a>
-            <a href="#fsrs" onClick={() => setMobileMenuOpen(false)} className="py-2">
-              {t('landing.nav.fsrs')}
-            </a>
-            <a href="#ai" onClick={() => setMobileMenuOpen(false)} className="py-2">
-              {t('landing.nav.ai')}
-            </a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2">
-              {t('landing.nav.pricing')}
-            </a>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => {
-              trackLandingCta('mobile_nav_register', 'landing_nav_mobile', '/register');
-              navigate('/register');
-              setMobileMenuOpen(false);
-            }}
-            className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold"
-          >
-            {t('landing.nav.cta')}
-          </Button>
-        </div>
+    <div
+      className={clsx(
+        'flex shrink-0 items-center justify-center rounded-[6px] font-k-serif font-semibold leading-none shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.15)]',
+        className
       )}
-    </nav>
-  );
-};
-
-const LandingHero = () => {
-  const { t, i18n } = useTranslation();
-  const navigate = useLocalizedNavigate();
-  const language = normalizeLandingSeoLanguage(i18n.language);
-
-  return (
-    <header className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 md:px-6 relative overflow-hidden bg-[radial-gradient(110%_110%_at_50%_0%,hsl(var(--primary)/0.12)_0%,hsl(var(--background))_58%)] dark:bg-[radial-gradient(120%_120%_at_50%_0%,hsl(var(--primary)/0.30)_0%,hsl(var(--primary)/0.10)_38%,hsl(var(--background))_78%)]">
-      <div className="max-w-5xl mx-auto text-center relative z-10">
-        <h1 className="text-4xl md:text-8xl font-heading font-extrabold leading-[1.05] mb-6 md:mb-8 text-slate-900 tracking-tight">
-          {t('landing.hero.titleLine1')} <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-pink-500 dark:from-violet-300 dark:to-pink-300">
-            {t('landing.hero.titleGradient')}
-          </span>
-        </h1>
-
-        <p className="text-lg md:text-2xl text-slate-500 font-medium max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed">
-          {t('landing.hero.desc')}
-        </p>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-5">
-          <button
-            onClick={() => {
-              trackEvent('landing_cta_click', {
-                language,
-                ctaId: 'hero_primary_register',
-                placement: 'landing_hero',
-                target: '/register',
-              });
-              navigate('/register');
-            }}
-            className="px-6 py-4 md:px-10 md:py-5 bg-brand-yellow dark:bg-amber-300 border-2 border-black text-slate-900 text-base md:text-lg font-bold rounded-2xl shadow-pop hover:shadow-none transition-all flex items-center justify-center gap-3"
-          >
-            {t('landing.hero.ctaPrimary')}
-            <ArrowRight className="w-5 h-5" />
-          </button>
-          <a
-            href="#topik"
-            className="px-6 py-4 md:px-10 md:py-5 bg-white text-slate-900 text-base md:text-lg font-bold rounded-2xl border-2 border-slate-200 hover:border-black hover:text-black transition-all flex items-center justify-center gap-3"
-          >
-            <PlayCircle className="w-5 h-5" />
-            {t('landing.hero.ctaSecondary')}
-          </a>
-        </div>
-      </div>
-
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/5 dark:bg-violet-400/10 rounded-full blur-3xl -z-10" />
-    </header>
-  );
-};
-
-const LandingStats = () => {
-  const { t } = useTranslation();
-
-  return (
-    <div className="border-y border-slate-200 bg-white py-8 md:py-12">
-      <m.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={staggerContainer}
-        className="max-w-6xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8"
-      >
-        <m.div variants={fadeInUp} className="text-center">
-          <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
-            {t('landing.stats.topikCoverageValue')}
-          </div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            {t('landing.stats.topikCoverageLabel')}
-          </div>
-        </m.div>
-        <m.div variants={fadeInUp} className="text-center">
-          <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
-            {t('landing.stats.aiValue')}
-          </div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            {t('landing.stats.aiLabel')}
-          </div>
-        </m.div>
-        <m.div variants={fadeInUp} className="text-center">
-          <div className="text-3xl md:text-4xl font-heading font-extrabold text-slate-900 mb-1">
-            {t('landing.stats.fsrsValue')}
-          </div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            {t('landing.stats.fsrsLabel')}
-          </div>
-        </m.div>
-        <m.div variants={fadeInUp} className="text-center">
-          <div className="text-4xl font-heading font-extrabold text-slate-900 mb-1">
-            {t('landing.stats.levelRange')}
-          </div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            {t('landing.stats.levelSupportLabel')}
-          </div>
-        </m.div>
-      </m.div>
+      style={{
+        width: size,
+        height: size,
+        background: bg || 'var(--color-k-crimson)',
+        color: fg || 'var(--color-k-bg)',
+        fontSize: size * 0.6,
+      }}
+    >
+      {ch}
     </div>
   );
 };
 
-const LandingTopik = () => {
-  const { t } = useTranslation();
+// ───────────────────────────────────────────────────────────────────────
+// NAV
+// ───────────────────────────────────────────────────────────────────────
+
+const LandingLanguageSwitcher = () => {
+  const { i18n, t } = useTranslation();
+  const navigate = useLocalizedNavigate();
+  const location = useLocation();
+
+  const languages = [
+    { code: 'en', label: 'English' },
+    { code: 'zh', label: '中文' },
+    { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'mn', label: 'Монгол' },
+  ];
+
+  const currentLang = languages.find(l => i18n.language.startsWith(l.code)) || languages[0];
 
   return (
-    <section id="topik" className="py-16 md:py-32 overflow-hidden bg-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={staggerContainer}
-          className="md:w-1/2 relative z-10"
-        >
-          <m.div
-            variants={fadeInUp}
-            className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-200 rounded-lg font-bold text-sm mb-6"
+    <div className="group relative">
+      <button className="flex h-9 items-center gap-1.5 rounded-lg border border-[rgba(31,27,23,0.1)] bg-k-bg px-3 text-[13px] font-bold text-k-ink transition-colors hover:bg-k-bg2 md:h-10 md:gap-2 md:px-4 md:text-[14px]">
+        <Globe size={16} className="opacity-60" />
+        <span>{currentLang.label}</span>
+      </button>
+      <div className="invisible absolute right-0 top-full mt-2 w-32 origin-top-right scale-95 rounded-xl border border-[rgba(31,27,23,0.1)] bg-k-bg p-1 opacity-0 shadow-xl transition-all group-hover:visible group-hover:scale-100 group-hover:opacity-100">
+        {languages.map(lang => (
+          <button
+            key={lang.code}
+            onClick={() => {
+              const segments = location.pathname.split('/').filter(Boolean);
+              if (segments[0] && ['en', 'zh', 'vi', 'mn'].includes(segments[0])) {
+                segments[0] = lang.code;
+              } else {
+                segments.unshift(lang.code);
+              }
+              window.location.href = `/${segments.join('/')}${location.search}${location.hash}`;
+            }}
+            className={`w-full rounded-lg px-3 py-2 text-left text-[13px] font-bold transition-colors hover:bg-k-bg2 ${
+              i18n.language.startsWith(lang.code) ? 'text-k-crimson' : 'text-k-ink'
+            }`}
           >
-            <Trophy className="w-4 h-4" />
-            {t('landing.topik.badge')}
-          </m.div>
-          <m.h2
-            variants={fadeInUp}
-            className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
-          >
-            {t('landing.topik.titleLine1')}
-            <br />
-            <span className="text-emerald-600 dark:text-emerald-300">
-              {t('landing.topik.titleHighlight')}
-            </span>
-          </m.h2>
-          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
-            {t('landing.topik.desc')}
-          </m.p>
-          <m.ul variants={staggerContainer} className="space-y-4 mb-8">
-            <m.li variants={fadeInUp} className="flex items-start gap-4">
-              <div className="bg-emerald-100 dark:bg-emerald-400/15 p-2 rounded-lg text-emerald-600 dark:text-emerald-200 mt-1">
-                <Check className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900">{t('landing.topik.point1Title')}</h3>
-                <p className="text-sm text-slate-500">{t('landing.topik.point1Desc')}</p>
-              </div>
-            </m.li>
-            <m.li variants={fadeInUp} className="flex items-start gap-4">
-              <div className="bg-emerald-100 dark:bg-emerald-400/15 p-2 rounded-lg text-emerald-600 dark:text-emerald-200 mt-1">
-                <BarChart3 className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900">{t('landing.topik.point2Title')}</h3>
-                <p className="text-sm text-slate-500">{t('landing.topik.point2Desc')}</p>
-              </div>
-            </m.li>
-          </m.ul>
-        </m.div>
-
-        <m.div
-          initial={{ opacity: 0, x: 50 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.8 }}
-          className="md:w-1/2 relative"
-        >
-          <div className="absolute inset-0 bg-emerald-500/10 dark:bg-emerald-400/15 rounded-[3rem] transform rotate-3 scale-105 -z-10" />
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="bg-slate-50 border-b border-slate-200 p-4 flex gap-2 items-center">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400 dark:bg-rose-300" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400 dark:bg-amber-300" />
-                <div className="w-3 h-3 rounded-full bg-green-400 dark:bg-emerald-300" />
-              </div>
-              <div className="mx-auto bg-white px-4 py-1 rounded-md text-xs font-bold text-slate-500 shadow-sm border border-slate-200 flex items-center gap-2">
-                <Lock className="w-3 h-3" /> {t('landing.topik.mockDomain')}
-              </div>
-            </div>
-            <div className="p-8">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="font-bold text-xl">{t('landing.topik.mockTitle')}</h3>
-                  <p className="text-sm text-slate-500">{t('landing.topik.mockSubtitle')}</p>
-                </div>
-                <div className="bg-red-50 text-red-600 dark:bg-rose-400/12 dark:text-rose-200 px-4 py-2 rounded-xl font-mono font-bold border border-red-100 dark:border-rose-300/30">
-                  58:42
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                  <p className="font-bold mb-4 text-lg">{t('landing.topik.mockQuestion')}</p>
-                  <p className="mb-4 text-slate-900">{t('landing.topik.mockStem')}</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      className="p-3 bg-white border border-slate-200 rounded-lg hover:border-emerald-600 dark:hover:border-emerald-300 cursor-pointer flex gap-3 items-center"
-                    >
-                      <div className="w-5 h-5 rounded-full border border-slate-200" />
-                      {t('landing.topik.mockChoice1')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      className="p-3 bg-emerald-600 dark:bg-emerald-400 text-primary-foreground dark:text-primary-foreground border border-emerald-600 dark:border-emerald-300 rounded-lg shadow-md cursor-pointer flex gap-3 items-center"
-                    >
-                      <div className="w-5 h-5 rounded-full border-2 border-primary-foreground/40 flex items-center justify-center text-[10px]">
-                        ✓
-                      </div>
-                      {t('landing.topik.mockChoice2')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      className="p-3 bg-white border border-slate-200 rounded-lg cursor-pointer flex gap-3 items-center"
-                    >
-                      <div className="w-5 h-5 rounded-full border border-slate-200" />
-                      {t('landing.topik.mockChoice3')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      className="p-3 bg-white border border-slate-200 rounded-lg cursor-pointer flex gap-3 items-center"
-                    >
-                      <div className="w-5 h-5 rounded-full border border-slate-200" />
-                      {t('landing.topik.mockChoice4')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </m.div>
+            {lang.label}
+          </button>
+        ))}
       </div>
-    </section>
+    </div>
   );
 };
 
-const LandingFsrs = () => {
-  const { t } = useTranslation();
-
+const NavBar: React.FC<{
+  isScrolled: boolean;
+  onFreeStart: () => void;
+  onLogin: () => void;
+  t: (k: string, opts?: Record<string, unknown>) => string;
+  hasAuthToken: boolean;
+}> = ({ isScrolled, onFreeStart, onLogin, t, hasAuthToken }) => {
+  const links = [
+    { href: '#features', label: t('landing.v2.nav.features', { defaultValue: '功能' }) },
+    { href: '#loop', label: t('landing.v2.nav.loop', { defaultValue: '每日路径' }) },
+    { href: '#modules', label: t('landing.v2.nav.modules', { defaultValue: '学习模块' }) },
+    { href: '#community', label: t('landing.v2.nav.community', { defaultValue: '社区' }) },
+    { href: '#pricing', label: t('landing.v2.nav.pricing', { defaultValue: '会员' }) },
+    { href: '#faq', label: t('landing.v2.nav.faq', { defaultValue: '常见问题' }) },
+  ];
   return (
-    <section id="fsrs" className="py-16 md:py-32 bg-slate-50 relative border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row-reverse items-center gap-12 md:gap-20">
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={staggerContainer}
-          className="md:w-1/2"
-        >
-          <m.div
-            variants={fadeInUp}
-            className="inline-flex items-center gap-2 px-3 py-1 bg-brand-yellow/30 dark:bg-amber-300/20 text-slate-900 rounded-lg font-bold text-sm mb-6"
-          >
-            <BrainCircuit className="w-4 h-4" />
-            {t('landing.fsrs.badge')}
-          </m.div>
-          <m.h2
-            variants={fadeInUp}
-            className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight"
-          >
-            {t('landing.fsrs.titleLine1')}
-            <br />
-            <span className="text-brand-yellow dark:text-amber-300 drop-shadow-sm">
-              {t('landing.fsrs.titleHighlight')}
-            </span>
-          </m.h2>
-          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
-            {t('landing.fsrs.desc')}
-          </m.p>
-          <m.div variants={fadeInUp} className="grid grid-cols-2 gap-6">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-              <div className="text-3xl font-bold text-slate-900 mb-1">
-                {t('landing.fsrs.stat1Value')}
-              </div>
-              <div className="text-sm font-bold text-slate-500">{t('landing.fsrs.stat1Label')}</div>
-            </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-              <div className="text-3xl font-bold text-slate-900 mb-1">
-                {t('landing.fsrs.stat2Value')}
-              </div>
-              <div className="text-sm font-bold text-slate-500">{t('landing.fsrs.stat2Label')}</div>
-            </div>
-          </m.div>
-        </m.div>
-
-        <m.div
-          initial={{ opacity: 0, x: -50 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.8 }}
-          className="md:w-1/2 relative"
-        >
-          <div className="absolute -inset-4 bg-gradient-to-tr from-brand-yellow/20 to-orange-100 dark:from-amber-300/20 dark:to-orange-400/15 rounded-full blur-3xl opacity-60" />
-          <div className="relative grid gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-2xl border-2 border-black transform md:-rotate-3 z-20">
-              <div className="flex justify-between items-start mb-8">
-                <span className="bg-slate-50 px-2 py-1 rounded text-xs font-bold text-slate-500">
-                  {t('landing.fsrs.cardBadge')}
-                </span>
-                <Volume2 className="w-5 h-5 text-slate-500" />
-              </div>
-              <div className="text-center py-8">
-                <div className="text-4xl font-extrabold text-slate-900 mb-2">
-                  {t('landing.fsrs.word')}
-                </div>
-                <div className="text-xl text-slate-500 font-serif italic">
-                  {t('landing.fsrs.wordMeaning')}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-2 mt-8">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  className="py-2 rounded-lg bg-red-50 text-red-600 dark:bg-rose-400/12 dark:text-rose-200 text-xs font-bold border border-red-100 dark:border-rose-300/30 !block text-center"
-                >
-                  {t('landing.fsrs.rateAgain')}
-                  <br />
-                  <span className="opacity-60">{t('landing.fsrs.rateAgainHint')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  className="py-2 rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-400/12 dark:text-orange-200 text-xs font-bold border border-orange-100 dark:border-orange-300/30 !block text-center"
-                >
-                  {t('landing.fsrs.rateHard')}
-                  <br />
-                  <span className="opacity-60">{t('landing.fsrs.rateHardHint')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  className="py-2 rounded-lg bg-green-50 text-green-600 dark:bg-emerald-400/12 dark:text-emerald-200 text-xs font-bold border border-green-100 dark:border-emerald-300/30 !block text-center"
-                >
-                  {t('landing.fsrs.rateGood')}
-                  <br />
-                  <span className="opacity-60">{t('landing.fsrs.rateGoodHint')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  className="py-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200 text-xs font-bold border border-blue-100 dark:border-blue-300/30 !block text-center"
-                >
-                  {t('landing.fsrs.rateEasy')}
-                  <br />
-                  <span className="opacity-60">{t('landing.fsrs.rateEasyHint')}</span>
-                </Button>
-              </div>
-            </div>
-            <div className="absolute top-4 left-4 w-full h-full bg-brand-yellow/30 dark:bg-amber-300/20 rounded-2xl border-2 border-black -z-10 transform rotate-2" />
-          </div>
-        </m.div>
-      </div>
-    </section>
-  );
-};
-
-const LandingAi = ({ userAvatar }: { userAvatar: string }) => {
-  const { t } = useTranslation();
-
-  return (
-    <section id="ai" className="py-16 md:py-32 bg-white border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center gap-12 md:gap-20">
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={staggerContainer}
-          className="md:w-1/2"
-        >
-          <m.div
-            variants={fadeInUp}
-            className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-200 rounded-lg font-bold text-sm mb-6"
-          >
-            <Sparkles className="w-4 h-4" />
-            {t('landing.ai.badge')}
-          </m.div>
-          <m.h2
-            variants={fadeInUp}
-            className="text-3xl md:text-5xl font-heading font-bold mb-6 leading-tight"
-          >
-            {t('landing.ai.titleLine1')}
-            <br />
-            <span className="text-violet-600 dark:text-violet-300">
-              {t('landing.ai.titleHighlight')}
-            </span>
-          </m.h2>
-          <m.p variants={fadeInUp} className="text-lg text-slate-500 mb-8 leading-relaxed">
-            {t('landing.ai.desc')}
-          </m.p>
-          <m.div
-            variants={fadeInUp}
-            className="bg-slate-50 p-6 rounded-2xl border border-slate-200"
-          >
-            <h3 className="font-bold mb-2 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-violet-600 dark:text-violet-300" />
-              {t('landing.ai.supportTitle')}
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm">
-                {t('landing.ai.feature1')}
-              </span>
-              <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm">
-                {t('landing.ai.feature2')}
-              </span>
-              <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm">
-                {t('landing.ai.feature3')}
-              </span>
-              <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm">
-                {t('landing.ai.feature4')}
-              </span>
-            </div>
-          </m.div>
-        </m.div>
-
-        <m.div
-          initial={{ opacity: 0, x: 50 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.8 }}
-          className="md:w-1/2 relative"
-        >
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-w-md mx-auto">
-            <div className="bg-violet-600 dark:bg-violet-500 p-6 text-primary-foreground dark:text-primary-foreground">
-              <div className="font-bold text-lg mb-1">{t('landing.ai.chatTitle')}</div>
-              <div className="text-violet-200 dark:text-violet-100 text-sm">
-                {t('landing.ai.chatSubtitle')}
-              </div>
-            </div>
-            <div className="p-6 space-y-6 bg-slate-50 min-h-[400px]">
-              <div className="flex gap-4 flex-row-reverse">
-                <div className="w-10 h-10 rounded-full bg-slate-50 flex-shrink-0 overflow-hidden">
-                  <img src={userAvatar} alt={t('landing.ai.userAlt')} className="w-full h-full" />
-                </div>
-                <div className="bg-violet-600 dark:bg-violet-500 text-primary-foreground dark:text-primary-foreground p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]">
-                  <p className="text-sm">{t('landing.ai.userQuestion')}</p>
-                  <p className="text-xs bg-white/20 mt-2 p-2 rounded">
-                    {t('landing.ai.userExample')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0 text-primary-foreground">
-                  <Bot className="w-6 h-6" />
-                </div>
-                <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-200 max-w-[90%]">
-                  <p className="text-sm text-slate-900 leading-relaxed">
-                    {t('landing.ai.botAnswer')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </m.div>
-      </div>
-    </section>
-  );
-};
-
-const LandingToolbox = ({
-  expandedFeatureCards,
-  toggleFeatureCard,
-}: {
-  expandedFeatureCards: { pdf: boolean; podcast: boolean; video: boolean };
-  toggleFeatureCard: (key: 'pdf' | 'podcast' | 'video') => void;
-}) => {
-  const { t } = useTranslation();
-
-  return (
-    <section className="py-16 md:py-24 px-4 md:px-6 relative overflow-hidden bg-white text-slate-900">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <m.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-4xl md:text-7xl font-heading font-extrabold tracking-tight mb-5"
-          >
-            {t('landing.toolbox.title')}
-          </m.h2>
-          <m.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-2xl text-slate-500 max-w-2xl mx-auto"
-          >
-            {t('landing.toolbox.subtitle')}
-          </m.p>
+    <nav
+      className="sticky top-0 z-50 border-b border-[rgba(31,27,23,0.06)] backdrop-blur-md transition-shadow"
+      style={{
+        background: 'rgba(251,248,243,0.92)',
+        boxShadow: isScrolled ? '0 1px 0 rgba(31,27,23,0.06)' : 'none',
+      }}
+    >
+      <Container className="flex h-[52px] items-center gap-10 md:h-[68px]">
+        <LocalizedLink to="/" className="flex items-center gap-2 text-[16px] font-extrabold tracking-[-0.3px] text-k-ink md:gap-2.5 md:text-[19px]">
+          <img src="/logo.svg" alt="Duhan Logo" className="h-[28px] w-[28px] md:h-8 md:w-8 rounded-lg flex-shrink-0" />
+          <span>
+            <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>Duhan
+          </span>
+        </LocalizedLink>
+        <div className="hidden flex-1 items-center gap-7 lg:flex">
+          {links.map(l => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="text-[14px] font-semibold text-[#3A342E] transition-colors hover:text-k-crimson"
+            >
+              {l.label}
+            </a>
+          ))}
         </div>
-
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start"
-        >
-          {/* Card 1: PDF */}
-          <m.div
-            variants={fadeInUp}
-            className={`group bg-slate-50 rounded-3xl border border-slate-200 hover:border-amber-400 dark:hover:border-amber-300 hover:bg-slate-50 transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm ${
-              expandedFeatureCards.pdf
-                ? 'ring-2 ring-amber-400 dark:ring-amber-300 md:min-h-[760px] shadow-xl'
-                : ''
-            }`}
+        <div className="ml-auto flex items-center gap-2">
+          <LandingLanguageSwitcher />
+          <button
+            type="button"
+            onClick={onLogin}
+            className="rounded-[11px] bg-transparent px-3 py-2 text-[13px] font-bold text-k-ink transition-transform hover:-translate-y-[1px] md:px-5 md:py-[11px] md:text-[14px]"
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              aria-expanded={expandedFeatureCards.pdf}
-              onClick={() => toggleFeatureCard('pdf')}
-              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-400/15 dark:text-amber-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <FileDown className="w-6 h-6 md:w-7 md:h-7" />
-                </div>
-                <div
-                  className={`p-2 rounded-full hover:bg-slate-50 transition-colors ${expandedFeatureCards.pdf ? 'bg-slate-50' : ''}`}
-                >
-                  <ChevronDown
-                    className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
-                      expandedFeatureCards.pdf ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
-                {t('landing.toolbox.card1Title')}
-              </h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                {t('landing.toolbox.card1Desc')}
-              </p>
-            </Button>
-
-            <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.pdf
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-500 shadow-sm">
-                        <strong className="text-amber-600 dark:text-amber-300 block mb-1">
-                          {t('landing.toolbox.demo.pdf.block1Title')}
-                        </strong>
-                        {t('landing.toolbox.demo.pdf.block1Value')}
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-500 shadow-sm">
-                        <strong className="text-amber-600 dark:text-amber-300 block mb-1">
-                          {t('landing.toolbox.demo.pdf.block2Title')}
-                        </strong>
-                        {t('landing.toolbox.demo.pdf.block2Value')}
-                      </div>
-                    </div>
-
-                    <div className="relative w-full bg-white text-slate-900 p-6 rounded-sm shadow-lg border border-slate-200 transform hover:scale-[1.02] transition-transform duration-500 mb-6 font-sans">
-                      <div className="flex justify-between items-end border-b-2 border-black pb-3 mb-4">
-                        <div>
-                          <h4 className="font-bold text-lg leading-none">
-                            {t('landing.toolbox.demo.pdf.sheetTitle')}
-                          </h4>
-                          <div className="flex gap-2 mt-2">
-                            <span className="text-[10px] bg-slate-50 px-1 border border-slate-200">
-                              {t('landing.toolbox.demo.pdf.badge1')}
-                            </span>
-                            <span className="text-[10px] bg-slate-900 text-white px-1">
-                              {t('landing.toolbox.demo.pdf.badge2')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-xs">www.koreanstudy.me</div>
-                          <div className="text-[8px] text-slate-500">
-                            {t('landing.toolbox.demo.pdf.siteTagline')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-y border-slate-200 text-[10px] font-bold text-slate-500">
-                          <tr>
-                            <th className="py-1 pl-2 w-8">#</th>
-                            <th className="py-1">{t('landing.toolbox.demo.pdf.tableWord')}</th>
-                            <th className="py-1">{t('landing.toolbox.demo.pdf.tableMeaning')}</th>
-                            <th className="py-1 w-12 text-center">
-                              {t('landing.toolbox.demo.pdf.tableQuiz')}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-sm">
-                          <tr className="border-b border-slate-200">
-                            <td className="py-3 pl-2 text-slate-500 text-xs font-mono">01</td>
-                            <td className="py-3 font-bold font-serif text-lg">더운물</td>
-                            <td className="py-3 text-slate-500 text-xs">
-                              {t('landing.toolbox.demo.pdf.meaning1')}
-                            </td>
-                            <td className="py-3 text-center">
-                              <div className="w-4 h-4 border border-slate-200 rounded mx-auto" />
-                            </td>
-                          </tr>
-                          <tr className="border-b border-slate-200">
-                            <td className="py-3 pl-2 text-slate-500 text-xs font-mono">02</td>
-                            <td className="py-3 font-bold font-serif text-lg">먹다</td>
-                            <td className="py-3 text-slate-500 text-xs">
-                              {t('landing.toolbox.demo.pdf.meaning2')}
-                            </td>
-                            <td className="py-3 text-center">
-                              <div className="w-4 h-4 border border-slate-200 rounded mx-auto" />
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-
-                      <div className="mt-6 pt-2 border-t border-slate-200 flex justify-between items-center text-[8px] text-slate-500">
-                        <span>{t('landing.toolbox.demo.pdf.footerLeft')}</span>
-                        <span>{t('landing.toolbox.demo.pdf.footerRight')}</span>
-                      </div>
-
-                      <div
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-tl from-slate-200 to-white shadow-sm"
-                        style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }}
-                      />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-amber-400 dark:bg-amber-300 text-slate-900 font-bold rounded-xl hover:bg-amber-500 dark:hover:bg-amber-200 hover:text-primary-foreground dark:hover:text-black transition-colors shadow-lg shadow-amber-100 dark:shadow-amber-400/20 flex justify-center gap-2 items-center mt-auto"
-                    >
-                      <Download className="w-4 h-4" /> {t('landing.toolbox.card1Cta')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </m.div>
-
-          {/* Card 2: Podcast */}
-          <m.div
-            variants={fadeInUp}
-            className={`group rounded-3xl border transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm bg-gradient-to-b from-pink-50/80 via-white to-white dark:from-pink-400/10 dark:via-white dark:to-white border-pink-300/60 dark:border-pink-300/35 hover:border-pink-400 dark:hover:border-pink-200 ${
-              expandedFeatureCards.podcast
-                ? 'ring-2 ring-pink-400 dark:ring-pink-300 md:min-h-[760px] shadow-xl'
-                : ''
-            }`}
+            {t('landing.v2.nav.login', { defaultValue: '登录' })}
+          </button>
+          <button
+            type="button"
+            onClick={onFreeStart}
+            className="hidden rounded-[11px] bg-k-crimson px-5 py-[11px] text-[14px] font-bold text-k-bg transition-transform hover:-translate-y-[1px] md:inline-flex"
           >
-            <div className="pointer-events-none absolute -top-20 -right-12 h-52 w-52 rounded-full bg-pink-300/25 blur-3xl dark:bg-pink-400/20" />
-            <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-fuchsia-300/20 blur-3xl dark:bg-fuchsia-400/15" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              aria-expanded={expandedFeatureCards.podcast}
-              onClick={() => toggleFeatureCard('podcast')}
-              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-400/15 dark:text-pink-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <Mic2 className="w-6 h-6 md:w-7 md:h-7" />
-                </div>
-                <div
-                  className={`p-2 rounded-full hover:bg-pink-100/80 dark:hover:bg-pink-400/20 transition-colors ${expandedFeatureCards.podcast ? 'bg-pink-100/70 dark:bg-pink-400/20' : ''}`}
-                >
-                  <ChevronDown
-                    className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
-                      expandedFeatureCards.podcast ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-pink-600 dark:group-hover:text-pink-300 transition-colors">
-                {t('landing.toolbox.card2Title')}
-              </h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                {t('landing.toolbox.card2Desc')}
-              </p>
-            </Button>
-
-            <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.podcast
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
-                    <ul className="space-y-2 text-sm text-slate-500 mb-6">
-                      <li className="flex gap-2">
-                        <Check className="w-4 h-4 text-pink-500 dark:text-pink-300" />
-                        <strong className="text-slate-900">
-                          {t('landing.toolbox.card2Point1Title')}
-                        </strong>
-                        : {t('landing.toolbox.card2Point1Desc')}
-                      </li>
-                      <li className="flex gap-2">
-                        <Check className="w-4 h-4 text-pink-500 dark:text-pink-300" />
-                        <strong className="text-slate-900">
-                          {t('landing.toolbox.card2Point2Title')}
-                        </strong>
-                        : {t('landing.toolbox.card2Point2Desc')}
-                      </li>
-                    </ul>
-
-                    <div className="bg-white/95 border border-pink-200 dark:border-pink-300/35 rounded-xl overflow-hidden mb-6 relative shadow-lg">
-                      <div className="bg-pink-50/80 dark:bg-pink-400/10 p-3 flex items-center gap-3 border-b border-pink-100 dark:border-pink-300/25">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-fuchsia-600 flex items-center justify-center animate-pulse">
-                          <BarChart3 className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-500">
-                            {t('landing.toolbox.demo.podcast.nowPlaying')}
-                          </div>
-                          <div className="text-xs font-bold text-slate-900 truncate">
-                            {t('landing.toolbox.demo.podcast.episodeTitle')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-6">
-                        <div className="flex justify-center gap-6 items-center mb-6">
-                          <SkipBack className="w-5 h-5 text-slate-500" />
-                          <div className="w-12 h-12 rounded-full bg-pink-500 text-white flex items-center justify-center shadow-lg hover:bg-pink-600 transition-colors">
-                            <PauseCircle className="w-8 h-8" />
-                          </div>
-                          <SkipForward className="w-5 h-5 text-slate-500" />
-                        </div>
-                        <div className="space-y-3">
-                          <div className="h-1 bg-slate-50 rounded-full overflow-hidden">
-                            <div className="h-full bg-pink-500 w-1/3 rounded-full relative">
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-pink-600 rounded-full shadow-lg" />
-                            </div>
-                          </div>
-                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                            <span>04:12</span>
-                            <span>12:45</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-pink-50/70 dark:bg-pink-400/10 p-4 border-t border-pink-100 dark:border-pink-300/25 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-300 uppercase tracking-wider">
-                            {t('landing.toolbox.demo.podcast.liveTranscript')}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 leading-relaxed italic">
-                          &quot;... {t('landing.toolbox.demo.podcast.transcriptFragment')} ...&quot;
-                        </p>
-                        <p className="text-xs text-slate-900">
-                          {t('landing.toolbox.demo.podcast.translation')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-gradient-to-r from-pink-500 to-fuchsia-500 dark:from-pink-500 dark:to-fuchsia-500 text-primary-foreground font-bold rounded-xl hover:from-pink-600 hover:to-fuchsia-600 dark:hover:from-pink-400 dark:hover:to-fuchsia-400 transition-colors shadow-lg shadow-pink-100 dark:shadow-pink-400/25 mt-auto flex justify-center items-center"
-                    >
-                      {t('landing.toolbox.card2Cta')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </m.div>
-
-          {/* Card 3: Video */}
-          <m.div
-            variants={fadeInUp}
-            className={`group rounded-3xl border transition-all duration-300 overflow-hidden relative flex flex-col shadow-sm bg-gradient-to-b from-violet-50/80 via-white to-white dark:from-violet-400/10 dark:via-white dark:to-white border-violet-300/60 dark:border-violet-300/35 hover:border-violet-400 dark:hover:border-violet-200 ${
-              expandedFeatureCards.video
-                ? 'ring-2 ring-violet-400 dark:ring-violet-300 md:min-h-[760px] shadow-xl'
-                : ''
-            }`}
+            {t('landing.v2.nav.register', { defaultValue: '注册' })}
+          </button>
+          <button
+            type="button"
+            className="grid h-9 w-9 place-items-center rounded-[9px] bg-k-bg2 font-k-serif text-[16px] text-k-ink md:hidden"
+            aria-label="Menu"
           >
-            <div className="pointer-events-none absolute -top-20 -left-12 h-52 w-52 rounded-full bg-violet-300/25 blur-3xl dark:bg-violet-400/20" />
-            <div className="pointer-events-none absolute -bottom-24 -right-16 h-56 w-56 rounded-full bg-purple-300/20 blur-3xl dark:bg-purple-400/15" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              aria-expanded={expandedFeatureCards.video}
-              onClick={() => toggleFeatureCard('video')}
-              className="p-6 md:p-8 flex flex-col w-full text-left outline-none"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-violet-100 text-violet-600 dark:bg-violet-400/15 dark:text-violet-200 flex items-center justify-center text-xl md:text-2xl group-hover:scale-110 transition-transform duration-300">
-                  <PlayCircle className="w-6 h-6 md:w-7 md:h-7" />
-                </div>
-                <div
-                  className={`p-2 rounded-full hover:bg-slate-50 transition-colors ${
-                    expandedFeatureCards.video
-                      ? 'bg-violet-100/70 dark:bg-violet-400/20'
-                      : 'hover:bg-violet-100/80 dark:hover:bg-violet-400/20'
-                  }`}
-                >
-                  <ChevronDown
-                    className={`w-6 h-6 text-slate-500 transition-transform duration-300 ${
-                      expandedFeatureCards.video ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold mb-2 text-slate-900 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors">
-                {t('landing.toolbox.card3Title')}
-              </h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                {t('landing.toolbox.card3Desc')}
-              </p>
-            </Button>
-
-            <div
-              className={`grid transition-all duration-500 ease-in-out ${
-                expandedFeatureCards.video
-                  ? 'grid-rows-[1fr] opacity-100'
-                  : 'grid-rows-[0fr] opacity-0'
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="px-8 pb-8 pt-0 flex flex-col">
-                  <div className="pt-6 border-t border-slate-200 flex-1 flex flex-col">
-                    <div className="bg-black rounded-xl overflow-hidden mb-6 aspect-video relative group/vid shadow-xl border border-violet-300/30 dark:border-violet-300/40">
-                      <img
-                        src="https://images.unsplash.com/photo-1540653542719-7243b614f1d9?auto=format&fit=crop&q=80&w=800"
-                        alt="Video learning demo"
-                        className="w-full h-full object-cover opacity-80 group-hover/vid:opacity-60 transition-opacity"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center text-white shadow-xl transform group-hover/vid:scale-110 transition-transform">
-                          <Play className="w-6 h-6 fill-current" />
-                        </div>
-                      </div>
-                      <div className="absolute top-3 left-3 bg-black/45 backdrop-blur-md rounded-md border border-white/20 px-2 py-1">
-                        <p className="text-[10px] uppercase tracking-wider text-violet-200 font-bold">
-                          {t('landing.toolbox.demo.video.aiTitle')}
-                        </p>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                        <div className="flex flex-col gap-2">
-                          <div className="bg-white/10 backdrop-blur-md p-2 rounded-lg border border-white/20">
-                            <div className="text-[10px] text-violet-300 font-bold mb-0.5">
-                              {t('landing.toolbox.demo.video.subtitle')}
-                            </div>
-                            <div className="text-xs text-white font-medium">
-                              {t('landing.toolbox.demo.video.gloss')}
-                            </div>
-                          </div>
-                          <div className="bg-violet-600/30 backdrop-blur-md p-2 rounded-lg border border-violet-500/30">
-                            <div className="text-[10px] text-violet-200 font-bold mb-0.5">
-                              TRANSLATION
-                            </div>
-                            <div className="text-xs text-white/90">
-                              {t('landing.toolbox.demo.video.translation')}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 mb-6 text-xs">
-                      <div className="rounded-lg border border-violet-200/80 dark:border-violet-300/35 bg-violet-50/70 dark:bg-violet-400/10 p-3">
-                        <p className="text-violet-700 dark:text-violet-200 font-bold mb-1">
-                          {t('landing.toolbox.demo.video.baseForm')}
-                        </p>
-                        <p className="text-slate-900">
-                          {t('landing.toolbox.demo.video.baseFormValue')}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-fuchsia-200/80 dark:border-fuchsia-300/35 bg-fuchsia-50/70 dark:bg-fuchsia-400/10 p-3">
-                        <p className="text-fuchsia-700 dark:text-fuchsia-200 font-bold mb-1">
-                          {t('landing.toolbox.demo.video.grammar')}
-                        </p>
-                        <p className="text-slate-900">
-                          {t('landing.toolbox.demo.video.grammarValue')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={e => e.stopPropagation()}
-                      className="w-full py-3 bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 text-primary-foreground font-bold rounded-xl hover:from-violet-700 hover:to-purple-700 dark:hover:from-violet-400 dark:hover:to-purple-400 transition-colors shadow-lg shadow-violet-100 dark:shadow-violet-400/25 mt-auto flex justify-center items-center"
-                    >
-                      {t('landing.toolbox.card3Cta')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </m.div>
-        </m.div>
-      </div>
-    </section>
+            ≡
+          </button>
+        </div>
+      </Container>
+    </nav>
   );
 };
 
-const LandingTyping = ({ navigate }: { navigate: (path: string) => void }) => {
-  const { t } = useTranslation();
+// ───────────────────────────────────────────────────────────────────────
+// HERO
+// ───────────────────────────────────────────────────────────────────────
 
-  return (
-    <section className="py-16 md:py-24 bg-white relative overflow-hidden">
-      {/* Background Blobs */}
-      <m.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-50 dark:bg-blue-400/12 rounded-full blur-3xl opacity-50 pointer-events-none"
+const FloatChip: React.FC<{
+  ch: string;
+  title: string;
+  value: string;
+  bg?: string;
+  fg?: string;
+  className?: string;
+}> = ({ ch, title, value, bg, fg, className = '' }) => (
+  <div
+    className={`absolute flex items-center gap-2.5 rounded-[14px] bg-k-card px-3.5 py-3 ${className}`}
+    style={{ boxShadow: '0 12px 32px rgba(31,27,23,0.12)' }}
+  >
+    <Seal ch={ch} size={36} bg={bg} fg={fg} />
+    <div>
+      <div className="text-[11px] font-semibold text-k-sub">{title}</div>
+      <div className="text-[16px] font-extrabold text-k-ink">{value}</div>
+    </div>
+  </div>
+);
+
+const MobilePhoneBlock: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
+  <div className="flex justify-center lg:hidden">
+    <div className="relative h-[580px] w-full max-w-[290px]">
+      <div
+        className="absolute -z-10 rounded-full opacity-30 blur-[40px]"
+        style={{ width: 240, height: 240, background: '#F4C5C5', top: '10%', right: '-10%' }}
       />
-      <m.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: 2,
-        }}
-        className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none"
+      <div
+        className="absolute -z-10 rounded-full opacity-30 blur-[40px]"
+        style={{ width: 200, height: 200, background: '#F2D27A', bottom: '10%', left: '-10%' }}
       />
-
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
-          {/* Left Content */}
-          <m.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={staggerContainer}
-            className="lg:w-1/2 space-y-8 text-left"
-          >
-            <m.div
-              variants={fadeInUp}
-              className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-300/30"
-            >
-              <span className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-300 animate-pulse" />
-              {t('landing.typing.badge')}
-            </m.div>
-
-            <m.h2
-              variants={fadeInUp}
-              className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight"
-            >
-              {t('landing.typing.titleLine1')}
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-300 dark:to-cyan-300">
-                {t('landing.typing.titleHighlight')}
-              </span>
-            </m.h2>
-
-            <m.p
-              variants={fadeInUp}
-              className="text-lg text-slate-500 leading-relaxed max-w-xl"
-            >
-              {t('landing.typing.desc')}
-            </m.p>
-
-            <m.div variants={staggerContainer} className="space-y-4">
-              <m.div variants={fadeInUp} className="flex items-start gap-3">
-                <div className="mt-1 w-5 h-5 rounded-full bg-green-100 dark:bg-emerald-400/15 flex items-center justify-center text-green-600 dark:text-emerald-200 flex-shrink-0">
-                  <Check className="w-3 h-3" strokeWidth={3} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    {t('landing.typing.feature1Title')}
-                  </h3>
-                  <p className="text-slate-500 text-sm">{t('landing.typing.feature1Desc')}</p>
-                </div>
-              </m.div>
-              <m.div variants={fadeInUp} className="flex items-start gap-3">
-                <div className="mt-1 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-400/15 flex items-center justify-center text-blue-600 dark:text-blue-200 flex-shrink-0">
-                  <Check className="w-3 h-3" strokeWidth={3} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    {t('landing.typing.feature2Title')}
-                  </h3>
-                  <p className="text-slate-500 text-sm">{t('landing.typing.feature2Desc')}</p>
-                </div>
-              </m.div>
-            </m.div>
-
-            <m.div variants={fadeInUp} className="pt-4">
-              <m.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/learn?module=typing')}
-                className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg flex items-center gap-2 group"
-              >
-                <span>{t('landing.typing.cta')}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </m.button>
-            </m.div>
-          </m.div>
-
-          {/* Right Preview */}
-          <m.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.8 }}
-            className="lg:w-1/2 w-full"
-          >
-            <div className="relative bg-slate-50 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden group">
-              <div className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[400px]">
-                {/* Stats Header */}
-                <div className="text-center mb-10 w-full max-w-md">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
-                    {t('landing.typing.preview.label', 'TYPING PREVIEW')}
-                  </p>
-                  <div className="text-3xl md:text-4xl font-bold leading-relaxed tracking-tight">
-                    <span className="text-slate-900">
-                      {t('landing.typing.preview.text1', '한')}
-                    </span>
-                    <span className="text-slate-900">
-                      {t('landing.typing.preview.text2', '국')}
-                    </span>
-                    <span className="text-blue-600 dark:text-blue-300 relative inline-block mx-0.5">
-                      {t('landing.typing.preview.text3', '어')}
-                      <span className="absolute -right-0.5 top-1 bottom-1 w-0.5 bg-blue-600 dark:bg-blue-300 animate-pulse rounded-full" />
-                    </span>
-                    <span className="text-slate-300">
-                      {t('landing.typing.preview.text4', '를 배워요')}
-                    </span>
-                  </div>
-                  <div className="mt-6 flex justify-center gap-4 text-sm font-medium text-slate-500">
-                    <div className="px-3 py-1 bg-white rounded border border-slate-200 shadow-sm">
-                      {t('landing.typing.preview.wpmLabel', 'WPM')}:{' '}
-                      <span className="text-slate-900 font-bold">210</span>
-                    </div>
-                    <div className="px-3 py-1 bg-white rounded border border-slate-200 shadow-sm">
-                      {t('landing.typing.preview.accLabel', 'Acc')}:{' '}
-                      <span className="text-green-600 dark:text-emerald-300 font-bold">98%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Keyboard Visual */}
-                <div className="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm select-none transform transition-transform group-hover:scale-[1.02]">
-                  <div className="flex justify-between items-center mb-3 px-1">
-                    <span className="text-[10px] font-bold text-slate-500">
-                      {t('landing.typing.preview.nextKeyLabel', 'NEXT KEY')}:{' '}
-                      <span className="text-blue-600 dark:text-blue-300">ㄹ (F)</span>
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-300">
-                      {t('landing.typing.preview.layoutLabel', 'KOREAN 2-SET')}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5 font-typing text-sm">
-                    {/* Row 1 */}
-                    <div className="flex justify-center gap-1">
-                      {['ㅂ', 'ㅈ', 'ㄷ', 'ㄱ', 'ㅅ', 'ㅛ', 'ㅕ', 'ㅑ', 'ㅐ', 'ㅔ'].map(k => (
-                        <div
-                          key={k}
-                          className="bg-white border-b-2 border-slate-200 text-slate-500 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
-                        >
-                          {k}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Row 2 */}
-                    <div className="flex justify-center gap-1 pl-4">
-                      {['ㅁ', 'ㄴ', 'ㅇ'].map(k => (
-                        <div
-                          key={k}
-                          className="bg-white border-b-2 border-slate-200 text-slate-500 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
-                        >
-                          {k}
-                        </div>
-                      ))}
-                      {/* Active Key */}
-                      <div className="bg-blue-500 dark:bg-blue-400 border-b-2 border-blue-600 dark:border-blue-300 text-primary-foreground dark:text-primary-foreground rounded-md flex items-center justify-center font-bold shadow-md transform translate-y-px w-8 h-8 md:w-10 md:h-10 relative text-xs md:text-sm">
-                        ㄹ<span className="absolute top-0.5 right-1 text-[8px] opacity-70">F</span>
-                      </div>
-                      {['ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'].map(k => (
-                        <div
-                          key={k}
-                          className="bg-white border-b-2 border-slate-200 text-slate-500 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
-                        >
-                          {k}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Row 3 */}
-                    <div className="flex justify-center gap-1 pl-8">
-                      {['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ'].map(k => (
-                        <div
-                          key={k}
-                          className="bg-white border-b-2 border-slate-200 text-slate-500 rounded-md flex items-center justify-center font-bold shadow-sm w-8 h-8 md:w-10 md:h-10 text-xs md:text-sm"
-                        >
-                          {k}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -z-10 top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100/30 via-transparent to-purple-100/30 dark:from-blue-400/12 dark:to-violet-400/12 rounded-full blur-3xl" />
-          </m.div>
-        </div>
+      <div className="scale-[0.9] origin-top">
+        <PhoneMockup t={t} />
       </div>
-    </section>
-  );
-};
+    </div>
+  </div>
+);
 
-const LandingPricing = ({
-  showLocalizedPromo,
-  navigate,
-  prices,
-}: {
-  showLocalizedPromo: boolean;
-  navigate: (path: string) => void;
-  prices: VariantPrices | null;
-}) => {
-  const { t, i18n } = useTranslation();
-  const language = normalizeLandingSeoLanguage(i18n.language);
-  const pricingCopy = resolveLandingPricingCopy(language, t);
-
-  const navigateWithLandingCta = (ctaId: string, target: string, placement: string) => {
-    trackEvent('landing_cta_click', {
-      language,
-      ctaId,
-      placement,
-      target,
-    });
-    navigate(target);
-  };
-
-  // Price Calculation Helpers
-  const getPrice = (
-    plan: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME',
-    region: 'GLOBAL' | 'REGIONAL'
-  ) => {
-    const amount = prices?.[region]?.[plan]?.amount;
-    if (amount) {
-      return amount;
-    }
-    // Fallbacks
-    if (region === 'REGIONAL') {
-      if (plan === 'MONTHLY') return '1.9';
-      if (plan === 'ANNUAL') return '19.9';
-    } else {
-      if (plan === 'MONTHLY') return '6.90';
-      if (plan === 'ANNUAL') return '49';
-      if (plan === 'LIFETIME') return '99.00';
-    }
-    return '---';
-  };
-
-  const proPriceDisplay = showLocalizedPromo
-    ? getPrice('MONTHLY', 'REGIONAL')
-    : getPrice('ANNUAL', 'GLOBAL');
-
-  const lifetimePriceDisplay = getPrice('LIFETIME', 'GLOBAL');
-
-  return (
-    <section id="pricing" className="py-16 md:py-32 bg-[#F8FAFF]">
-      <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <div className="text-center mb-10 md:mb-16">
-          <m.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-3xl md:text-4xl font-heading font-bold mb-4"
-          >
-            {t('landing.pricing.title')}
-          </m.h2>
-          <m.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-600"
-          >
-            {t('landing.pricing.subtitle')}
-          </m.p>
-        </div>
-
-        {showLocalizedPromo && (
-          <m.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-xl mx-auto bg-[#FFF7D6] border-2 border-[#F2C94C] rounded-2xl shadow-pop p-6 flex items-center justify-between gap-4 mb-10"
-          >
-            <div className="flex items-start gap-4 min-w-0">
-              <div className="w-12 h-12 bg-[#F2C94C] rounded-full border-2 border-black flex items-center justify-center flex-shrink-0">
-                <Gift className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-heading font-extrabold text-slate-900">
-                    {t('pricingDetails.promo.card.title')}
-                  </h3>
-                  <span className="bg-brand-yellow dark:bg-amber-300 text-slate-900 border border-black rounded px-2 py-0.5 text-[10px] font-black">
-                    {t('pricingDetails.promo.card.badge')}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-800 mt-1">
-                  {t('pricingDetails.promo.card.description')}
-                </p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() =>
-                navigateWithLandingCta(
-                  'promo_annual',
-                  buildPricingDetailsPath({
-                    plan: 'ANNUAL',
-                    source: 'landing',
-                    returnTo: '/dashboard',
-                  }),
-                  'landing_pricing_promo'
-                )
-              }
-              className="bg-slate-900 text-white border-2 border-black rounded-xl shadow-pop px-4 py-2 text-sm font-bold hover:shadow-pop-hover hover:-translate-y-0.5 transition-all whitespace-nowrap"
-            >
-              {t('pricingDetails.promo.card.cta')}
-            </Button>
-          </m.div>
-        )}
-
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-center"
-        >
-          <m.div
-            variants={fadeInUp}
-            className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
-          >
-            <div className="font-bold text-lg mb-2 text-slate-900">
-              {t('landing.pricing.free.title')}
-            </div>
-            <div className="text-4xl font-extrabold mb-6 text-slate-900">
-              {t('landing.pricing.free.price')}
-            </div>
-            <ul className="space-y-4 text-sm text-slate-700 mb-8">
-              {pricingCopy.freeFeatures.map(feature => (
-                <li key={feature} className="flex gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() =>
-                navigateWithLandingCta('pricing_free_register', '/register', 'landing_pricing_free')
-              }
-              className="w-full py-3 rounded-xl border-2 border-slate-900 bg-white text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors"
-            >
-              {t('landing.pricing.free.cta')}
-            </Button>
-          </m.div>
-
-          <m.div
-            variants={fadeInUp}
-            className={`p-8 text-white rounded-3xl shadow-xl relative transform md:scale-105 border-4 border-brand-yellow overflow-hidden ${
-              showLocalizedPromo ? 'bg-[#0B2545]' : 'bg-slate-900'
-            }`}
-          >
-            {showLocalizedPromo ? (
-              <div className="absolute top-5 right-5 bg-[#F2C94C] text-slate-900 border-2 border-black px-4 py-2 rounded-xl font-black text-xs tracking-wider animate-float">
-                {t('pricingDetails.promo.activated')}
-              </div>
-            ) : (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-yellow dark:bg-amber-300 text-slate-900 px-4 py-1 rounded-full text-xs font-bold uppercase">
-                {t('landing.pricing.pro.badge')}
-              </div>
-            )}
-
-            <div className="font-bold text-lg mb-2 text-brand-yellow dark:text-amber-300">
-              {t('landing.pricing.pro.title')}
-            </div>
-
-            {showLocalizedPromo ? (
-              <>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-3xl font-black text-brand-green dark:text-emerald-300">
-                    $
-                  </span>
-                  <span className="text-6xl font-extrabold text-brand-green dark:text-emerald-300">
-                    {proPriceDisplay}
-                  </span>
-                  <span className="text-slate-100 text-sm">
-                    {t('pricingDetails.period.month', '/mo')}
-                  </span>
-                </div>
-                <div className="text-slate-100 font-bold text-sm mb-6">
-                  {t('pricingDetails.originalLabel', 'Original')}{' '}
-                  <span className="line-through decoration-red-500 decoration-wavy decoration-2">
-                    $6.90
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-5xl font-extrabold mb-1">${proPriceDisplay}</div>
-                <div className="text-slate-100 text-sm mb-6">{t('landing.pricing.pro.period')}</div>
-              </>
-            )}
-
-            <ul className="space-y-4 text-sm text-slate-100 mb-8">
-              {pricingCopy.proFeatures.map(feature => (
-                <li key={feature} className="flex gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-300" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-
-            <m.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() =>
-                navigateWithLandingCta(
-                  'pricing_pro_checkout',
-                  buildPricingDetailsPath({
-                    plan: 'ANNUAL',
-                    source: 'landing',
-                    returnTo: '/dashboard',
-                  }),
-                  'landing_pricing_pro'
-                )
-              }
-              className="w-full py-4 bg-[#F2C94C] text-slate-900 rounded-xl font-bold border-2 border-[#0F172A] shadow-lg hover:bg-[#FFD95A] transition-colors"
-            >
-              {showLocalizedPromo
-                ? t('pricingDetails.promo.subscribe')
-                : t('landing.pricing.pro.cta')}
-            </m.button>
-          </m.div>
-
-          <m.div
-            variants={fadeInUp}
-            className="p-6 md:p-8 border-2 border-slate-300 rounded-3xl bg-white shadow-sm"
-          >
-            <div className="font-bold text-lg mb-2 text-slate-900">
-              {t('landing.pricing.lifetime.title')}
-            </div>
-            <div className="text-4xl font-extrabold mb-6 text-slate-900">
-              ${lifetimePriceDisplay}
-            </div>
-            <ul className="space-y-4 text-sm text-slate-700 mb-8">
-              {pricingCopy.lifetimeFeatures.map(feature => (
-                <li key={feature} className="flex gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() =>
-                navigateWithLandingCta(
-                  'pricing_lifetime_checkout',
-                  buildPricingDetailsPath({
-                    plan: 'LIFETIME',
-                    source: 'landing',
-                    returnTo: '/dashboard',
-                  }),
-                  'landing_pricing_lifetime'
-                )
-              }
-              className="w-full py-3 rounded-xl border-2 border-slate-900 bg-white text-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-colors"
-            >
-              {t('landing.pricing.lifetime.cta')}
-            </Button>
-          </m.div>
-        </m.div>
-
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="mt-8 md:mt-10 rounded-[2rem] border-2 border-black bg-white shadow-pop overflow-hidden"
-        >
-          <div className="bg-[#FFF7D6] border-b-2 border-black px-5 md:px-6 py-4">
-            <h3 className="text-xl md:text-2xl font-heading font-extrabold text-slate-900">
-              {pricingCopy.rightsTitle}
-            </h3>
-            <p className="mt-1 text-sm md:text-base text-slate-700">{pricingCopy.rightsSubtitle}</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1.15fr]">
-            {pricingCopy.rightsRows.map(row => (
-              <div key={row.label} className="contents">
-                <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4">
-                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    {t('landing.pricing.comparison.headers.feature', { defaultValue: 'Feature' })}
-                  </div>
-                  <div className="mt-1 text-base font-black text-slate-900">{row.label}</div>
-                </div>
-                <div className="border-t md:border-t-0 md:border-r-2 border-black px-5 py-4 bg-slate-50">
-                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    {t('landing.pricing.comparison.headers.free', { defaultValue: 'Free' })}
-                  </div>
-                  <div className="mt-1 text-sm leading-6 text-slate-600">{row.free}</div>
-                </div>
-                <div className="border-t md:border-t-0 border-black px-5 py-4 bg-[#FFFDF3]">
-                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 md:hidden">
-                    {t('landing.pricing.comparison.headers.proLifetime', {
-                      defaultValue: 'Pro / Lifetime',
-                    })}
-                  </div>
-                  <div className="mt-1 text-sm leading-6 font-semibold text-slate-900">
-                    {row.pro}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </m.div>
-      </div>
-    </section>
-  );
-};
-
-const LandingFaq = () => {
-  const { t } = useTranslation();
-
-  return (
-    <section id="faq" className="py-24 bg-slate-50 border-t border-slate-200">
-      <div className="max-w-3xl mx-auto px-6">
-        <m.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-heading font-bold mb-12 text-center"
-        >
-          {t('landing.faq.title')}
-        </m.h2>
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="space-y-6"
-        >
-          <m.details
-            variants={fadeInUp}
-            className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
-          >
-            <summary className="font-bold text-lg list-none flex justify-between items-center">
-              {t('landing.faq.q1')}
-              <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
-            </summary>
-            <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a1')}</p>
-          </m.details>
-          <m.details
-            variants={fadeInUp}
-            className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
-          >
-            <summary className="font-bold text-lg list-none flex justify-between items-center">
-              {t('landing.faq.q2')}
-              <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
-            </summary>
-            <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a2')}</p>
-          </m.details>
-          <m.details
-            variants={fadeInUp}
-            className="bg-white p-6 rounded-2xl border border-slate-200 group cursor-pointer"
-          >
-            <summary className="font-bold text-lg list-none flex justify-between items-center">
-              {t('landing.faq.q3')}
-              <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform" />
-            </summary>
-            <p className="mt-4 text-slate-500 leading-relaxed">{t('landing.faq.a3')}</p>
-          </m.details>
-        </m.div>
-      </div>
-    </section>
-  );
-};
-
-const LandingGuidesCluster = () => {
-  const { t } = useTranslation();
-
-  const guideLinks = [
+const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const steps: Array<{ kanji: string; title: string; sub: string; state: 'done' | 'active' | 'idle' }> = [
     {
-      to: '/learn/topik-guide',
-      title: t('landing.guides.topik.title', { defaultValue: 'TOPIK Preparation Guide' }),
-      description: t('landing.guides.topik.description', {
-        defaultValue: 'Understand exam structure, scoring, and weekly prep loops.',
-      }),
+      kanji: '複',
+      title: t('landing.v2.hero.phone.s1.t', { defaultValue: '早间复习' }),
+      sub: t('landing.v2.hero.phone.s1.s', { defaultValue: '18 张到期卡 · 已完成' }),
+      state: 'done',
     },
     {
-      to: '/learn/korean-vocabulary',
-      title: t('landing.guides.vocab.title', { defaultValue: 'Korean Vocabulary System' }),
-      description: t('landing.guides.vocab.description', {
-        defaultValue: 'Retain words long term with SRS, dictation, and context review.',
-      }),
+      kanji: '學',
+      title: t('landing.v2.hero.phone.s2.t', { defaultValue: '新课 · L24 골목길' }),
+      sub: t('landing.v2.hero.phone.s2.s', { defaultValue: '现在进行中 · 8 分钟' }),
+      state: 'active',
     },
     {
-      to: '/learn/topik-writing',
-      title: t('landing.guides.writing.title', { defaultValue: 'TOPIK Writing Strategy' }),
-      description: t('landing.guides.writing.description', {
-        defaultValue: 'Use clear templates and timed revision checklists for higher scores.',
-      }),
+      kanji: '聽',
+      title: t('landing.v2.hero.phone.s3.t', { defaultValue: '播客片段' }),
+      sub: t('landing.v2.hero.phone.s3.s', { defaultValue: '한국 골목 산책 · 6 分钟' }),
+      state: 'idle',
+    },
+    {
+      kanji: '讀',
+      title: t('landing.v2.hero.phone.s4.t', { defaultValue: '睡前阅读' }),
+      sub: t('landing.v2.hero.phone.s4.s', { defaultValue: '短文 · 골목길의 추억' }),
+      state: 'idle',
     },
   ];
 
   return (
-    <section id="guides" className="py-20 bg-white border-t border-slate-200">
-      <div className="max-w-6xl mx-auto px-6">
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="max-w-3xl"
-        >
-          <h2 className="text-3xl font-heading font-bold">
-            {t('landing.guides.title', {
-              defaultValue: 'Start with practical Korean study guides',
-            })}
-          </h2>
-          <p className="mt-3 text-base text-slate-500 leading-relaxed">
-            {t('landing.guides.subtitle', {
-              defaultValue:
-                'Build your roadmap with SEO-optimized guide pages for TOPIK, vocabulary, grammar, and writing.',
-            })}
-          </p>
-        </m.div>
+    <div
+      className="relative h-[640px] w-[320px] rounded-[48px] bg-k-ink p-[14px]"
+      style={{ boxShadow: '0 40px 80px rgba(31,27,23,0.25), 0 0 0 1px rgba(0,0,0,0.4)' }}
+    >
+      <div className="absolute left-1/2 top-[18px] z-[5] h-7 w-[110px] -translate-x-1/2 rounded-2xl bg-k-ink" />
+      <div className="relative h-full w-full overflow-hidden rounded-[36px] bg-k-bg px-[18px] pb-[14px] pt-[18px]">
+        <div className="flex items-center justify-between px-1 pb-4 pt-3.5 font-k-serif text-[14px] text-k-ink">
+          <span className="font-k-mono text-[12px] font-bold tracking-[1.5px] text-k-crimson">
+            {t('landing.v2.hero.phone.date', { defaultValue: '五月 十一日' })}
+          </span>
+          <span className="font-k-serif text-[18px] font-medium text-k-crimson">韓</span>
+        </div>
+        <div className="text-[24px] font-extrabold text-k-ink">
+          <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>
+          {t('landing.v2.hero.phone.greet', { defaultValue: '你好，河恩' })}
+        </div>
+        <div className="mb-4 text-[11px] text-k-sub">
+          {t('landing.v2.hero.phone.sub', { defaultValue: '今日学习已就绪 · 4 步约 22 分钟' })}
+        </div>
 
-        <m.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="mt-8 grid gap-4 md:grid-cols-3"
-        >
-          {guideLinks.map(guide => (
-            <m.article
-              key={guide.to}
-              variants={fadeInUp}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+        {steps.map(s => {
+          const isActive = s.state === 'active';
+          return (
+            <div
+              key={s.kanji}
+              className={`mb-2.5 rounded-[18px] p-4 ${isActive ? 'bg-k-crimson text-k-bg' : 'bg-k-card'}`}
+              style={{ boxShadow: isActive ? 'none' : '0 2px 8px rgba(31,27,23,0.04)' }}
             >
-              <h3 className="text-lg font-extrabold leading-snug">{guide.title}</h3>
-              <p className="mt-2 text-sm text-slate-500 leading-relaxed">{guide.description}</p>
-              <LocalizedLink
-                to={guide.to}
-                className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700"
-              >
-                {t('landing.guides.readMore', { defaultValue: 'Read guide' })}
-                <ArrowRight className="h-4 w-4" />
-              </LocalizedLink>
-            </m.article>
+              <div className="flex items-center gap-3">
+                <span
+                  className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-[9px] font-k-serif text-[14px] font-medium"
+                  style={{
+                    background:
+                      s.state === 'done'
+                        ? '#BFE0CF'
+                        : isActive
+                        ? 'var(--color-k-bg)'
+                        : 'rgba(31,27,23,0.08)',
+                    color: isActive ? 'var(--color-k-crimson)' : 'var(--color-k-ink)',
+                  }}
+                >
+                  {s.kanji}
+                </span>
+                <div className="flex-1 overflow-hidden">
+                  <div className="truncate text-[13px] font-extrabold leading-tight">{s.title}</div>
+                  <div
+                    className={`truncate text-[10px] ${isActive ? 'text-[rgba(251,248,243,0.7)]' : 'text-k-sub'}`}
+                  >
+                    {s.sub}
+                  </div>
+                </div>
+                {s.state === 'done' && (
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-[#5B8472]">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <div className="mt-4 flex justify-center gap-1.5 opacity-30">
+          {[0, 1, 2].map(i => (
+            <div key={i} className={`h-1 w-1 rounded-full ${i === 0 ? 'bg-k-ink' : 'bg-k-sub'}`} />
           ))}
-        </m.div>
+        </div>
       </div>
+    </div>
+  );
+};
+
+
+
+const Hero: React.FC<{
+  onFreeStart: () => void;
+  t: (k: string, opts?: Record<string, unknown>) => string;
+}> = ({ onFreeStart, t }) => (
+  <section className="relative overflow-hidden px-5 py-12 md:px-0 md:py-[80px] lg:py-[100px]">
+    <Container className="grid items-center gap-8 md:gap-[60px] lg:grid-cols-[1.05fr_1fr]">
+      <div>
+        <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-k-bg2 px-[11px] py-1 text-[11px] font-bold tracking-[0.3px] text-[#3A342E] md:mb-6 md:gap-2 md:px-[13px] md:py-1.5 md:text-[12px]">
+          <span className="h-1.5 w-1.5 rounded-full bg-k-crimson" />
+          <span className="font-k-serif font-medium text-k-crimson">新</span>
+          {t('landing.v2.hero.eyebrow', { defaultValue: 'v3.0 已发布 · 全新学习路径与社区' })}
+        </span>
+        <h1 className="m-0 mb-4 text-[44px] font-extrabold leading-[1.04] tracking-[-1.4px] text-k-ink md:mb-6 md:text-[56px] md:tracking-[-2.5px] lg:text-[72px]">
+          <span className="mr-1.5 block font-k-serif text-[56px] font-medium leading-none text-k-crimson md:inline md:text-inherit">
+            {t('landing.v2.hero.titleKo', { defaultValue: '讀韓' })}
+          </span>
+          <br className="hidden md:block" />
+          {t('landing.v2.hero.titlePre', { defaultValue: '让韩语 ' })}
+          <span className="relative inline-block">
+            <span className="relative z-[1]">
+              {t('landing.v2.hero.titleUnderlined', { defaultValue: '变成日常' })}
+            </span>
+            <span
+              className="absolute inset-x-0 bottom-1 z-0 h-[10px] opacity-70 md:bottom-2 md:h-[14px]"
+              style={{ background: '#F2D27A' }}
+              aria-hidden
+            />
+          </span>
+        </h1>
+        <p className="m-0 mb-5 max-w-[540px] text-[15px] leading-[1.55] text-[#3A342E] md:mb-8 md:text-[18px] md:leading-[1.6]">
+          {t('landing.v2.hero.sub', {
+            defaultValue:
+              '每天一条精心编排的学习路径 · 单词、语法、TOPIK、影视、播客、阅读、社区互译串联 · 基于 FSRS 记忆模型，跟你的学习节奏一起呼吸。',
+          })}
+        </p>
+        <div className="mb-6 flex flex-col gap-[9px] md:mb-8 md:flex-row md:items-center md:gap-3">
+          <button
+            type="button"
+            onClick={onFreeStart}
+            className="w-full rounded-[11px] bg-k-crimson px-7 py-[15px] text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
+          >
+            {t('landing.v2.hero.ctaPrimary', { defaultValue: '免费开始学习 →' })}
+          </button>
+          <button
+            type="button"
+            className="w-full rounded-[11px] bg-k-card px-7 py-[15px] text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
+            style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-ink)' }}
+          >
+            {t('landing.v2.hero.ctaSecondary', { defaultValue: '观看 90s 演示' })}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-3 border-t border-[rgba(31,27,23,0.08)] pt-4 md:flex md:gap-7 md:pt-7">
+          {(
+            [
+              { n: '48K+', nDesktop: '48,200+', l: t('landing.v2.hero.meta1', { defaultValue: '活跃学习者' }) },
+              { n: '230K+', nDesktop: '230,000+', l: t('landing.v2.hero.meta2', { defaultValue: '每日复习卡' }) },
+              { n: '⭐ 4.9', nDesktop: '⭐ 4.9', l: t('landing.v2.hero.meta3', { defaultValue: 'App Store 评分' }) },
+            ] as const
+          ).map(m => (
+            <div key={m.l} className="flex flex-col gap-0.5">
+              <span className="font-k-serif text-[20px] font-semibold leading-[1.1] tracking-[-0.5px] text-k-crimson md:text-[28px]">
+                <span className="md:hidden">{m.n}</span>
+                <span className="hidden md:inline">{m.nDesktop}</span>
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.6px] text-k-sub md:text-[11px] md:tracking-[1.4px]">
+                {m.l}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile phone preview block — Shows on mobile, hidden on desktop */}
+      <MobilePhoneBlock t={t} />
+
+      {/* Desktop visual — phone mockup */}
+      <div className="relative hidden h-[620px] items-center justify-center lg:flex">
+        <div
+          className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
+          style={{ width: 360, height: 360, background: '#F4C5C5', top: 60, right: -40 }}
+        />
+        <div
+          className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
+          style={{ width: 280, height: 280, background: '#F2D27A', bottom: 40, left: -20 }}
+        />
+        <div
+          className="absolute -z-10 rounded-full opacity-40 blur-[40px]"
+          style={{ width: 220, height: 220, background: '#BFE0CF', top: 240, left: 80 }}
+        />
+
+        <FloatChip
+          ch="續"
+          title={t('landing.v2.hero.chip1.t', { defaultValue: '连续学习' })}
+          value={t('landing.v2.hero.chip1.v', { defaultValue: '47 天' })}
+          className="left-[30px] top-[56px]"
+        />
+        <FloatChip
+          ch="詞"
+          title={t('landing.v2.hero.chip2.t', { defaultValue: '今日新词' })}
+          value={t('landing.v2.hero.chip2.v', { defaultValue: '12 / 15' })}
+          bg="#BFE0CF"
+          fg="var(--color-k-ink)"
+          className="right-[20px] top-[200px]"
+        />
+        <FloatChip
+          ch="能"
+          title={t('landing.v2.hero.chip3.t', { defaultValue: 'TOPIK II' })}
+          value={t('landing.v2.hero.chip3.v', { defaultValue: '5 级 · 87%' })}
+          bg="#F2D27A"
+          fg="var(--color-k-ink)"
+          className="bottom-[80px] left-[50px]"
+        />
+
+        <PhoneMockup t={t} />
+      </div>
+    </Container>
+  </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────
+// LOGOS STRIP
+// ───────────────────────────────────────────────────────────────────────
+
+const LogosStrip: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const items = [
+    { ko: '讀', label: t('landing.v2.logos.v1', { defaultValue: '真实语境沉浸阅读' }) },
+    { ko: '聽', label: t('landing.v2.logos.v2', { defaultValue: '影视播客原声精听' }) },
+    { ko: '記', label: t('landing.v2.logos.v3', { defaultValue: 'FSRS 算法智能复习' }) },
+    { ko: '譯', label: t('landing.v2.logos.v4', { defaultValue: '母语社区互译共建' }) },
+    { ko: '通', label: t('landing.v2.logos.v5', { defaultValue: '全平台学习进度同步' }) },
+  ];
+  return (
+    <section className="bg-k-bg2 py-8 md:py-11">
+      <Container className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 md:justify-between">
+        {items.map(i => (
+          <div key={i.ko} className="flex items-center gap-3 text-[13px] font-bold text-k-ink transition-opacity hover:opacity-100 md:text-[14px]">
+            <span className="font-k-serif text-[18px] text-k-crimson opacity-90 md:text-[20px]">{i.ko}</span>
+            <span className="opacity-70">{i.label}</span>
+          </div>
+        ))}
+      </Container>
     </section>
   );
 };
 
-const LandingFooter = () => {
-  const { t } = useTranslation();
+// ───────────────────────────────────────────────────────────────────────
+// SECTION HEAD
+// ───────────────────────────────────────────────────────────────────────
+
+const SectionHead: React.FC<{
+  eyebrowKo: string;
+  eyebrow: string;
+  titleKo?: string;
+  title: React.ReactNode;
+  sub?: string;
+  tone?: 'light' | 'dark';
+}> = ({ eyebrowKo, eyebrow, titleKo, title, sub, tone = 'light' }) => (
+  <div className="mb-10 text-center md:mb-[60px]">
+    <span
+      className="text-[12px] font-extrabold uppercase tracking-[3px]"
+      style={{ color: tone === 'dark' ? '#F2A78D' : 'var(--color-k-crimson)' }}
+    >
+      <span className="mr-1.5 font-k-serif font-medium">{eyebrowKo}</span>
+      {eyebrow}
+    </span>
+    <h2
+      className="m-0 mb-4 mt-3 text-[32px] font-extrabold leading-[1.1] tracking-[-1px] md:mt-3.5 md:text-[52px] md:tracking-[-1.4px]"
+      style={{ color: tone === 'dark' ? 'var(--color-k-bg)' : 'var(--color-k-ink)' }}
+    >
+      {titleKo ? <span className="mr-2 font-k-serif font-medium text-k-crimson">{titleKo}</span> : null}
+      {title}
+    </h2>
+    {sub ? (
+      <p
+        className="mx-auto max-w-[640px] text-[17px]"
+        style={{ color: tone === 'dark' ? 'rgba(251,248,243,0.7)' : '#3A342E' }}
+      >
+        {sub}
+      </p>
+    ) : null}
+  </div>
+);
+
+// ───────────────────────────────────────────────────────────────────────
+// FEATURES MOSAIC
+// ───────────────────────────────────────────────────────────────────────
+
+const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  type Tone = 'dark' | 'cream' | 'butter' | 'mint' | 'crimson';
+  type Tile = {
+    tone: Tone;
+    span2?: boolean;
+    span3?: boolean;
+    kanji: string;
+    title: string;
+    desc: string;
+    pill: string;
+    deco: string;
+  };
+  const tiles: Tile[] = [
+    {
+      tone: 'dark',
+      span2: true,
+      kanji: '今',
+      title: t('landing.v2.features.t1.title', { defaultValue: '每日学习路径' }),
+      desc: t('landing.v2.features.t1.desc', {
+        defaultValue:
+          '基于昨日表现与 FSRS 算法，自动生成「复习 → 新学 → 听 → 读」四步闭环。无需自己排程，打开就是今天最该做的事。',
+      }),
+      pill: t('landing.v2.features.t1.pill', { defaultValue: '/ 早 7:00 自动生成 · 平均 22 分钟' }),
+      deco: '今',
+    },
+    {
+      tone: 'butter',
+      kanji: '詞',
+      title: t('landing.v2.features.t2.title', { defaultValue: '词汇本 + 四种模式' }),
+      desc: t('landing.v2.features.t2.desc', { defaultValue: '闪卡、学习、考试、连连看 — 一个词四种练法。' }),
+      pill: t('landing.v2.features.t2.pill', { defaultValue: '/ TOPIK I + II · 9,300 词' }),
+      deco: '詞',
+    },
+    {
+      tone: 'cream',
+      kanji: '法',
+      title: t('landing.v2.features.t3.title', { defaultValue: '语法句型库' }),
+      desc: t('landing.v2.features.t3.desc', { defaultValue: '每条语法配场景例句 + 真题。错误自动入复习队列。' }),
+      pill: t('landing.v2.features.t3.pill', { defaultValue: '/ 480 条核心语法' }),
+      deco: '法',
+    },
+    {
+      tone: 'mint',
+      kanji: '能',
+      title: t('landing.v2.features.t4.title', { defaultValue: 'TOPIK 备考' }),
+      desc: t('landing.v2.features.t4.desc', { defaultValue: '真题 / 模考 / 写作 AI 评分 + 听力倍速精听' }),
+      pill: t('landing.v2.features.t4.pill', { defaultValue: '/ TOPIK II 平均提升 1.4 级' }),
+      deco: '能',
+    },
+    {
+      tone: 'cream',
+      kanji: '譯',
+      title: t('landing.v2.features.t6.title', { defaultValue: '母语社区 · 互译' }),
+      desc: t('landing.v2.features.t6.desc', { defaultValue: '遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。' }),
+      pill: t('landing.v2.features.t6.pill', { defaultValue: '/ 1.2k+ 活跃互助组' }),
+      deco: '譯',
+    },
+    {
+      tone: 'crimson',
+      span3: true,
+      kanji: '映',
+      title: t('landing.v2.features.t5.title', { defaultValue: '影视 · 播客 · 阅读 三栖沉浸' }),
+      desc: t('landing.v2.features.t5.desc', {
+        defaultValue:
+          '韩剧片段、Spotify 播客、新闻短文 — 一键转录、双语字幕、生词点译入卡 · 把追剧变成最香的学习。',
+      }),
+      pill: t('landing.v2.features.t5.pill', { defaultValue: '/ 4,800+ 学习素材 · 每周更新' }),
+      deco: '映',
+    },
+  ];
+
+  const toneClass: Record<Tone, string> = {
+    dark: 'bg-k-ink text-k-bg',
+    cream: 'bg-k-bg2',
+    butter: '',
+    mint: '',
+    crimson: 'bg-k-crimson text-k-bg',
+  };
+  const toneStyle: Record<Tone, React.CSSProperties> = {
+    dark: {},
+    cream: {},
+    butter: { background: '#F2D27A' },
+    mint: { background: '#BFE0CF' },
+    crimson: {},
+  };
+  const sealStyle = (tone: Tone): { bg?: string; fg?: string } => {
+    switch (tone) {
+      case 'dark':
+        return { bg: '#F2A78D', fg: 'var(--color-k-ink)' };
+      case 'crimson':
+        return { bg: 'var(--color-k-bg)', fg: 'var(--color-k-crimson)' };
+      case 'butter':
+      case 'mint':
+      case 'cream':
+        return { bg: 'var(--color-k-ink)', fg: 'var(--color-k-bg)' };
+      default:
+        return {};
+    }
+  };
+  const descClass = (tone: Tone): string => {
+    if (tone === 'dark') return 'text-[rgba(251,248,243,0.7)]';
+    if (tone === 'crimson') return 'text-[rgba(251,248,243,0.85)]';
+    return 'text-[#3A342E]';
+  };
+  const pillClass = (tone: Tone): string => {
+    if (tone === 'dark') return 'text-[rgba(251,248,243,0.55)]';
+    if (tone === 'crimson') return 'text-[rgba(251,248,243,0.6)]';
+    return 'text-[rgba(31,27,23,0.6)]';
+  };
+  const decoColor = (tone: Tone): string => {
+    if (tone === 'dark') return 'rgba(251,248,243,0.06)';
+    if (tone === 'crimson') return 'rgba(251,248,243,0.13)';
+    return 'rgba(31,27,23,0.05)';
+  };
 
   return (
-    <footer className="bg-white py-12 border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-6 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <img
-            src="/logo.png"
-            alt={t('common.appName')}
-            className="w-9 h-9 rounded-lg dark:brightness-0 dark:invert"
+    <section id="features" className="py-16 md:py-24">
+      <Container>
+        <SectionHead
+          eyebrowKo="具"
+          eyebrow="FEATURES"
+          titleKo="學"
+          title={t('landing.v2.features.title', { defaultValue: '一站式的韩语学习工具箱' })}
+          sub={t('landing.v2.features.sub', {
+            defaultValue: '从五十音到 TOPIK 6 级，覆盖你学韩语过程中的每一个场景 — 不再东拼西凑十个 App。',
+          })}
+        />
+
+        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3 lg:grid-rows-[280px_280px_280px]">
+          {tiles.map((tile, i) => {
+            const seal = sealStyle(tile.tone);
+            return (
+              <article
+                key={i}
+                className={`relative flex flex-col overflow-hidden rounded-[22px] p-7 ${toneClass[tile.tone]}`}
+                style={{
+                  ...toneStyle[tile.tone],
+                  gridColumn: tile.span3 ? 'span 3' : tile.span2 ? 'span 2' : undefined,
+                  boxShadow: '0 2px 6px rgba(31,27,23,0.04)',
+                }}
+              >
+                <Seal ch={tile.kanji} size={40} bg={seal.bg} fg={seal.fg} className="mb-4" />
+                <div className="mb-2 text-[22px] font-extrabold tracking-[-0.4px]">{tile.title}</div>
+                <div className={`text-[13.5px] leading-[1.55] ${descClass(tile.tone)}`}>{tile.desc}</div>
+                <div
+                  className={`mt-auto flex items-center gap-1.5 font-k-mono text-[11px] font-bold uppercase tracking-[0.5px] ${pillClass(tile.tone)}`}
+                >
+                  {tile.pill}
+                </div>
+                <div
+                  className="pointer-events-none absolute -bottom-2.5 -right-2.5 select-none font-k-serif text-[180px] font-medium leading-[0.8]"
+                  style={{ color: decoColor(tile.tone) }}
+                  aria-hidden
+                >
+                  {tile.deco}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// DAILY LOOP (dark)
+// ───────────────────────────────────────────────────────────────────────
+
+const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const cards = [
+    {
+      koNum: '壹',
+      label: t('landing.v2.loop.s1.label', { defaultValue: 'STEP 1 · 早间' }),
+      title: t('landing.v2.loop.s1.title', { defaultValue: '复习到期卡' }),
+      desc: t('landing.v2.loop.s1.desc', { defaultValue: 'FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。' }),
+      previewKo: '複',
+      preview: t('landing.v2.loop.s1.preview', { defaultValue: '18 卡 · 7 分钟' }),
+    },
+    {
+      koNum: '貳',
+      label: t('landing.v2.loop.s2.label', { defaultValue: 'STEP 2 · 课程' }),
+      title: t('landing.v2.loop.s2.title', { defaultValue: '新一课内容' }),
+      desc: t('landing.v2.loop.s2.desc', { defaultValue: '课本 + 听力 + 即学即考 · 任何片段都能截图入卡。' }),
+      previewKo: '學',
+      preview: t('landing.v2.loop.s2.preview', { defaultValue: 'L24 · 8 分钟' }),
+    },
+    {
+      koNum: '參',
+      label: t('landing.v2.loop.s3.label', { defaultValue: 'STEP 3 · 通勤' }),
+      title: t('landing.v2.loop.s3.title', { defaultValue: '听力沉浸' }),
+      desc: t('landing.v2.loop.s3.desc', { defaultValue: '真实播客或韩剧片段 · 双语字幕 · 生词秒收。' }),
+      previewKo: '聽',
+      preview: t('landing.v2.loop.s3.preview', { defaultValue: '播客 6 分钟' }),
+    },
+    {
+      koNum: '肆',
+      label: t('landing.v2.loop.s4.label', { defaultValue: 'STEP 4 · 睡前' }),
+      title: t('landing.v2.loop.s4.title', { defaultValue: '阅读一段' }),
+      desc: t('landing.v2.loop.s4.desc', { defaultValue: '段落难度自动匹配 · 看完一篇 = 巩固今天的所学。' }),
+      previewKo: '讀',
+      preview: t('landing.v2.loop.s4.preview', { defaultValue: '短文 4 分钟' }),
+    },
+  ];
+  return (
+    <section id="loop" className="py-16 md:py-24">
+      <Container>
+        <div className="rounded-[36px] bg-k-ink px-6 py-16 text-k-bg md:px-12 md:py-24">
+          <SectionHead
+            tone="dark"
+            eyebrowKo="日"
+            eyebrow="DAILY LOOP"
+            titleKo="日"
+            title={t('landing.v2.loop.title', { defaultValue: '四步，一天的韩语就稳了' })}
+            sub={t('landing.v2.loop.sub', {
+              defaultValue: '不需要意志力 · 早晨打开 App 就是清单 · 任何时候关掉再回来都能续上',
+            })}
           />
-          <div className="font-heading font-bold text-2xl">{t('common.appName')}</div>
+          <div className="mt-8 grid gap-[18px] md:mt-12 md:grid-cols-2 lg:grid-cols-4">
+            {cards.map(c => (
+              <div
+                key={c.koNum}
+                className="rounded-[20px] border border-[rgba(251,248,243,0.08)] bg-[rgba(251,248,243,0.05)] px-[22px] py-7"
+              >
+                <span className="font-k-serif text-[36px] font-medium leading-none text-[#F2A78D]">
+                  {c.koNum}
+                </span>
+                <div className="mb-1 mt-3.5 text-[11px] font-extrabold uppercase tracking-[2px] text-[rgba(251,248,243,0.5)]">
+                  {c.label}
+                </div>
+                <h4 className="m-0 mb-2.5 text-[19px] font-extrabold tracking-[-0.2px]">{c.title}</h4>
+                <p className="m-0 text-[13px] leading-[1.55] text-[rgba(251,248,243,0.65)]">{c.desc}</p>
+                <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-[rgba(251,248,243,0.07)] px-3 py-2.5 text-[11px] font-semibold text-[rgba(251,248,243,0.55)]">
+                  <span className="font-k-serif text-[#F2A78D]">{c.previewKo}</span>
+                  {c.preview}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex justify-center gap-6 text-sm text-slate-500 font-semibold mb-8">
-          <a href="#topik" className="hover:text-black">
-            {t('landing.footer.about')}
-          </a>
-          <LocalizedLink to="/learn" className="hover:text-black">
-            {t('landing.footer.learnGuides', { defaultValue: 'Learn Guides' })}
-          </LocalizedLink>
-          <LocalizedLink to="/privacy" className="hover:text-black">
-            {t('common.privacy')}
-          </LocalizedLink>
-          <LocalizedLink to="/terms" className="hover:text-black">
-            {t('common.terms')}
-          </LocalizedLink>
-          <a href="mailto:support@koreanstudy.me" className="hover:text-black">
-            {t('common.contact')}
-          </a>
-        </div>
-        <p className="text-xs text-slate-500">{t('landing.footer.copyright')}</p>
+      </Container>
+    </section>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// MODULES showcase
+// ───────────────────────────────────────────────────────────────────────
+
+const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
+  <section id="modules" className="bg-k-bg2 py-24">
+    <Container className="max-w-7xl">
+      <SectionHead
+        eyebrowKo="模"
+        eyebrow="LEARNING MODULES"
+        titleKo="具"
+        title={t('landing.v2.modules.title', { defaultValue: '专为长期学习而生的模块' })}
+        sub={t('landing.v2.modules.sub', {
+          defaultValue: '每一个都打磨过百次 · 不堆功能 · 用起来都「这就是我要的」',
+        })}
+      />
+      <div className="grid gap-6 md:grid-cols-2">
+        <ModuleCard
+          kanji="詞"
+          title={t('landing.v2.modules.m1.title', { defaultValue: '词汇本 · 四模式练习' })}
+          desc={t('landing.v2.modules.m1.desc', {
+            defaultValue:
+              '同一个单词，四种练法 — 闪卡看脸熟、学习模式吃透、考试限时检验、连连看放松收尾。每个词都有 FSRS 记忆强度条。',
+          })}
+          tags={[
+            t('landing.v2.modules.m1.tag1', { defaultValue: 'FSRS 算法' }),
+            t('landing.v2.modules.m1.tag2', { defaultValue: '4 种练习模式' }),
+            t('landing.v2.modules.m1.tag3', { defaultValue: '例句联想' }),
+            t('landing.v2.modules.m1.tag4', { defaultValue: '词册筛选' }),
+          ]}
+          link={t('landing.v2.modules.m1.link', { defaultValue: '了解词汇模块 →' })}
+          href="/features/vocab"
+          visualBg="#F2D27A"
+          visual={
+            <div
+              className="w-full rounded-[14px] bg-k-card p-4 text-center"
+              style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
+            >
+              <div className="font-k-serif text-[36px] font-medium tracking-[-1px] text-k-ink">
+                골목길
+              </div>
+              <div className="my-1 mb-3 text-[11px] text-k-sub">gol-mok-gil · n. 巷子</div>
+              <div className="flex justify-center gap-1">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <span
+                    key={i}
+                    className="h-2.5 w-2.5 rounded-[4px]"
+                    style={{ background: i <= 3 ? '#BFE0CF' : 'rgba(31,27,23,0.15)' }}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 text-[10px] font-bold tracking-[1px] text-k-sub">記憶 60%</div>
+            </div>
+          }
+        />
+
+        <ModuleCard
+          kanji="能"
+          title={t('landing.v2.modules.m2.title', { defaultValue: 'TOPIK · 真题 + AI 考评' })}
+          desc={t('landing.v2.modules.m2.desc', {
+            defaultValue:
+              '深度收录历年阅读与听力真题，1:1 还原真实考场。AI 写作实时批改给出 4 维反馈，更有全真模拟听力变速精听，助你攻克 6 级。',
+          })}
+          tags={[
+            t('landing.v2.modules.m2.tag1', { defaultValue: '10 年历年真题' }),
+            t('landing.v2.modules.m2.tag2', { defaultValue: '1:1 模考环境' }),
+            t('landing.v2.modules.m2.tag3', { defaultValue: 'AI 写作实时批改' }),
+            t('landing.v2.modules.m2.tag4', { defaultValue: '全维成绩预测' }),
+          ]}
+          link={t('landing.v2.modules.m2.link', { defaultValue: '了解 TOPIK 模块 →' })}
+          href="/features/topik"
+          visualBg="#BFE0CF"
+          visual={
+            <svg viewBox="0 0 200 200" width={180} height={180}>
+              <circle cx={100} cy={100} r={78} fill="none" stroke="rgba(31,27,23,0.12)" strokeWidth={14} />
+              <circle
+                cx={100}
+                cy={100}
+                r={78}
+                fill="none"
+                stroke="var(--color-k-crimson)"
+                strokeWidth={14}
+                strokeLinecap="round"
+                strokeDasharray={490}
+                strokeDashoffset={100}
+                transform="rotate(-90 100 100)"
+              />
+              <text x={100} y={92} textAnchor="middle" fontFamily="Noto Serif KR" fontSize={42} fontWeight={500} fill="var(--color-k-ink)">
+                87
+              </text>
+              <text
+                x={100}
+                y={120}
+                textAnchor="middle"
+                fontFamily="Pretendard"
+                fontSize={11}
+                fontWeight={700}
+                fill="var(--color-k-sub)"
+                letterSpacing={1.5}
+              >
+                TOPIK II · L5
+              </text>
+            </svg>
+          }
+        />
+
+        <ModuleCard
+          kanji="映"
+          title={t('landing.v2.modules.m3.title', { defaultValue: '媒体库 · 精听变速' })}
+          desc={t('landing.v2.modules.m3.desc', {
+            defaultValue: '告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。',
+          })}
+          tags={[
+            t('landing.v2.modules.m3.tag1', { defaultValue: '4,800+ 片段' }),
+            t('landing.v2.modules.m3.tag2', { defaultValue: '双语字幕' }),
+            t('landing.v2.modules.m3.tag3', { defaultValue: '点词入卡' }),
+            t('landing.v2.modules.m3.tag4', { defaultValue: '难度匹配' }),
+          ]}
+          link={t('landing.v2.modules.m3.link', { defaultValue: '了解沉浸模块 →' })}
+          href="/features/listening"
+          visualBg="#F4C5C5"
+          visual={
+            <div
+              className="w-full rounded-[14px] bg-k-ink p-4 text-k-bg"
+              style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
+            >
+              <div className="mb-2 text-[10px] font-bold tracking-[1.5px] text-[rgba(251,248,243,0.5)]">
+                ▶ NOW PLAYING · 00:47
+              </div>
+              <div className="mb-1.5 font-k-serif text-[15px] font-medium leading-[1.5]">
+                골목길에서 만난 작은 빵집…
+              </div>
+              <div className="text-[12px] leading-[1.5] text-[rgba(251,248,243,0.7)]">
+                在巷子里遇见的小面包店…
+              </div>
+              <div className="mt-3 h-[3px] overflow-hidden rounded bg-[rgba(251,248,243,0.15)]">
+                <div className="h-full w-[34%]" style={{ background: '#F2A78D' }} />
+              </div>
+            </div>
+          }
+        />
+
+        <ModuleCard
+          kanji="讀"
+          title={t('landing.v2.modules.m4.title', { defaultValue: '分级阅读 · AI 提词' })}
+          desc={t('landing.v2.modules.m4.desc', {
+            defaultValue:
+              '从新闻到精选绘本，所有内容按 L1–L6 难度精准分级。AI 自动提取核心词汇与划词翻译，让长难句解析与背景知识不再是阅读障碍。',
+          })}
+          tags={[
+            t('landing.v2.modules.m4.tag1', { defaultValue: '分级 1–6' }),
+            t('landing.v2.modules.m4.tag2', { defaultValue: '绘本库' }),
+            t('landing.v2.modules.m4.tag3', { defaultValue: '点词查询' }),
+            t('landing.v2.modules.m4.tag4', { defaultValue: '笔记入卡' }),
+          ]}
+          link={t('landing.v2.modules.m4.link', { defaultValue: '了解阅读模块 →' })}
+          href="/features/reading"
+          tone="indigo"
+          visualBg="#3D4A6B"
+          visual={
+            <div
+              className="w-full rounded-[14px] p-[18px] text-k-ink"
+              style={{
+                background: 'rgba(251,248,243,0.95)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              }}
+            >
+              <div className="mb-2 font-k-serif text-[11px] font-bold tracking-[2px] text-k-crimson">
+                三 · LEVEL 3
+              </div>
+              <div className="font-k-serif text-[14px] font-medium leading-[1.6]">
+                <span style={{ background: '#F2D27A', padding: '0 2px', borderRadius: 2 }}>골목길</span>
+                의 끝에 작은 빵집이 있다. 매일 아침 갓 구운 빵{' '}
+                <span style={{ background: '#F4C5C5', padding: '0 2px', borderRadius: 2 }}>냄새</span>가
+                거리를 채운다…
+              </div>
+              <div className="mt-3 flex justify-between text-[11px] font-semibold text-k-sub">
+                <span>3 / 18 段</span>
+                <span>📖 2.4 分钟</span>
+              </div>
+            </div>
+          }
+        />
       </div>
+    </Container>
+  </section>
+);
+
+const ModuleCard: React.FC<{
+  kanji: string;
+  title: string;
+  desc: string;
+  tags: string[];
+  link: string;
+  href?: string;
+  visualBg: string;
+  visual: React.ReactNode;
+  tone?: 'default' | 'indigo';
+}> = ({ kanji, title, desc, tags, link, href = '#', visualBg, visual, tone = 'default' }) => {
+  const indigo = tone === 'indigo';
+  return (
+    <article className="grid items-center gap-6 rounded-[24px] bg-k-card p-7 md:grid-cols-[1fr_280px] md:p-9">
+      <div>
+        <Seal ch={kanji} size={44} className="mb-4" />
+        <h3 className="m-0 mb-2.5 text-[26px] font-extrabold tracking-[-0.5px] text-k-ink">{title}</h3>
+        <p className="m-0 mb-4 text-[14px] leading-[1.55] text-[#3A342E]">{desc}</p>
+        <ul className="m-0 mb-4 flex list-none flex-wrap gap-1.5 p-0">
+          {tags.map(tag => (
+            <li
+              key={tag}
+              className="rounded-[7px] bg-k-bg2 px-2.5 py-1 text-[12px] font-bold text-[#3A342E]"
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
+        <LocalizedLink to={href} className="text-[13px] font-bold text-k-crimson no-underline hover:underline">
+          {link}
+        </LocalizedLink>
+      </div>
+      <div
+        className="relative grid aspect-square place-items-center overflow-hidden rounded-[18px] p-[22px]"
+        style={{ background: visualBg, color: indigo ? 'var(--color-k-bg)' : undefined }}
+      >
+        {visual}
+      </div>
+    </article>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// COMMUNITY STATS
+// ───────────────────────────────────────────────────────────────────────
+
+const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const stats = [
+    {
+      n: '48,200+',
+      l: t('landing.v2.community.s1.l', { defaultValue: '学习伙伴' }),
+      s: t('landing.v2.community.s1.s', { defaultValue: '共同进阶' }),
+    },
+    {
+      n: '3,200+',
+      l: t('landing.v2.community.s2.l', { defaultValue: '公开词汇本' }),
+      s: t('landing.v2.community.s2.s', { defaultValue: '资源共享' }),
+    },
+    {
+      n: '8,400+',
+      l: t('landing.v2.community.s3.l', { defaultValue: '学习心得' }),
+      s: t('landing.v2.community.s3.s', { defaultValue: '经验沉淀' }),
+    },
+    {
+      n: '87%',
+      l: t('landing.v2.community.s4.l', { defaultValue: '坚持天数' }),
+      s: t('landing.v2.community.s4.s', { defaultValue: '续写里程' }),
+    },
+  ];
+  return (
+    <section id="community" className="py-24">
+      <Container>
+        <SectionHead
+          eyebrowKo="會"
+          eyebrow="COMMUNITY"
+          titleKo="伴"
+          title={t('landing.v2.community.title', { defaultValue: '不一个人学，更走得远' })}
+          sub={t('landing.v2.community.sub', {
+            defaultValue: '共享词汇卡片、交流备考心得、见证彼此成长 · K-Soft 社区让韩语学习不再孤单',
+          })}
+        />
+        <div className="grid grid-cols-2 rounded-[24px] bg-k-bg2 p-2 md:grid-cols-4">
+          {stats.map((s, i) => (
+            <div
+              key={s.l}
+              className="px-7 py-8 text-center"
+              style={{
+                borderRight:
+                  i < stats.length - 1
+                    ? '1px dashed rgba(31,27,23,0.12)'
+                    : 'none',
+              }}
+            >
+              <div className="font-k-serif text-[48px] font-semibold leading-none tracking-[-1.5px] text-k-crimson">
+                {s.n}
+              </div>
+              <div className="mt-2.5 text-[12px] font-extrabold uppercase tracking-[1.6px] text-[#3A342E]">
+                {s.l}
+              </div>
+              <div className="mt-1 text-[11px] text-k-sub">{s.s}</div>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// PRICING
+// ───────────────────────────────────────────────────────────────────────
+
+type PricingMode = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
+
+const Pricing: React.FC<{
+  t: (k: string, opts?: Record<string, unknown>) => string;
+  prices: VariantPrices | null;
+  onSelect: (plan: PricingMode | 'FREE') => void;
+}> = ({ t, prices, onSelect }) => {
+  const [mode, setMode] = useState<PricingMode>('ANNUAL');
+
+  const getPrice = (m: PricingMode) => {
+    return prices?.REGIONAL?.[m]?.amount ?? prices?.GLOBAL?.[m]?.amount ?? null;
+  };
+  const getCurrency = (m: PricingMode) => {
+    const cur = prices?.REGIONAL?.[m]?.currency ?? prices?.GLOBAL?.[m]?.currency ?? null;
+    return cur === 'USD' ? '$' : cur === 'CNY' ? '¥' : (cur ?? '¥');
+  };
+
+  const formatPrice = (amt: string | null, fallback: string) => {
+    if (!amt) return fallback;
+    const n = Number(amt);
+    return Number.isFinite(n) ? (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2)) : String(amt);
+  };
+
+  const subDisplay = {
+    v: formatPrice(
+      getPrice(mode),
+      mode === 'MONTHLY' ? '58' : mode === 'QUARTERLY' ? '128' : '468'
+    ),
+    c: getCurrency(mode),
+    u:
+      mode === 'MONTHLY'
+        ? t('landing.v2.pricing.perMonth', { defaultValue: '/ 月' })
+        : mode === 'QUARTERLY'
+          ? t('landing.v2.pricing.perQuarter', { defaultValue: '/ 季付' })
+          : t('landing.v2.pricing.perYear', { defaultValue: '/ 年付' }),
+  };
+
+  const lifetimeDisplay = {
+    v: formatPrice(getPrice('LIFETIME'), '888'),
+    c: getCurrency('LIFETIME'),
+    u: t('landing.v2.pricing.lifetime', { defaultValue: '/ 终身一次' }),
+  };
+
+  const tabs: Array<{ key: PricingMode; label: string; save?: string }> = [
+    { key: 'MONTHLY', label: t('landing.v2.pricing.tabMonthly', { defaultValue: '月付' }) },
+    { key: 'QUARTERLY', label: t('landing.v2.pricing.tabQuarterly', { defaultValue: '季付' }) },
+    {
+      key: 'ANNUAL',
+      label: t('landing.v2.pricing.tabAnnual', { defaultValue: '年付' }),
+      save: '最划算',
+    },
+  ];
+
+  const commonFeatures = [
+    { html: t('landing.v2.pricing.pro.f1', { defaultValue: '<b>无限</b>新词 + 科学复习 (FSRS)' }) },
+    { html: t('landing.v2.pricing.pro.f2', { defaultValue: '全库课程 + TOPIK <b>1-6 级</b>真题' }) },
+    { html: t('landing.v2.pricing.pro.f3', { defaultValue: '影视 / 播客<b>全库 + 智能脚本</b>' }) },
+    { html: t('landing.v2.pricing.pro.f4', { defaultValue: '<b>AI 写作诊断</b> + 变速精听' }) },
+    { html: t('landing.v2.pricing.pro.f5', { defaultValue: '社区<b>公开资源</b>无限获取' }) },
+    { html: t('landing.v2.pricing.pro.f6', { defaultValue: '全端学习进度<b>实时同步</b>' }) },
+  ];
+
+  return (
+    <section id="pricing" className="bg-k-bg2 py-16 md:py-32">
+      <Container>
+        <SectionHead
+          eyebrowKo="金"
+          eyebrow="SUBSCRIPTION"
+          titleKo="擇"
+          title={t('landing.v2.pricing.title', { defaultValue: '选一个，开始学' })}
+          sub={t('landing.v2.pricing.sub', {
+            defaultValue: '加入全球学习者社区，解锁完整的 AI 韩语进阶体验',
+          })}
+        />
+
+        <div className="mx-auto mt-4 grid max-w-[1200px] items-stretch gap-6 lg:grid-cols-3">
+          {/* FREE */}
+          <PlanCard
+            koName="無"
+            title={t('landing.v2.pricing.free.title', { defaultValue: '免费版 · Free' })}
+            desc={t('landing.v2.pricing.free.desc', { defaultValue: '入门之选 · 开启你的韩语进阶之旅' })}
+            currency="¥"
+            value="0"
+            unit={t('landing.v2.pricing.free.unit', { defaultValue: '/ 永久' })}
+            features={[
+              { html: t('landing.v2.pricing.free.f1', { defaultValue: '<b>每日 5 个</b>新学单词' }) },
+              { html: t('landing.v2.pricing.free.f2', { defaultValue: '<b>每日 30 张</b>复习上限' }) },
+              { html: t('landing.v2.pricing.free.f3', { defaultValue: '<b>基础课程</b> (L1–L2) 体验' }) },
+              { html: t('landing.v2.pricing.free.f4', { defaultValue: '影视 / 播客<b>预览模式</b>' }) },
+              { html: t('landing.v2.pricing.free.f5', { defaultValue: 'TOPIK 历年真题' }), x: true },
+              { html: t('landing.v2.pricing.free.f6', { defaultValue: 'AI 写作诊断' }), x: true },
+            ]}
+            ctaLabel={t('landing.v2.pricing.free.cta', { defaultValue: '免费开始' })}
+            ctaVariant="line"
+            onCta={() => onSelect('FREE')}
+          />
+
+          {/* PRO (SUBSCRIPTION) */}
+          <div className="relative z-10 lg:scale-[1.05]">
+            <div className="h-full overflow-hidden rounded-[32px] border-2 border-k-ink bg-k-ink p-1 text-k-bg shadow-2xl">
+              {mode === 'ANNUAL' && (
+                <div className="absolute top-5 right-5 rounded-full bg-k-crimson px-3 py-1 text-[11px] font-black uppercase tracking-wider text-k-bg">
+                  {t('landing.v2.pricing.popular', { defaultValue: 'Popular' })}
+                </div>
+              )}
+              
+              <div className="flex flex-col p-8 pt-10 h-full">
+                <div className="mb-6">
+                  <Seal ch="恆" size={40} bg="var(--color-k-bg)" fg="var(--color-k-ink)" className="mb-4 shadow-pop-small" />
+                  <div className="text-[22px] font-extrabold tracking-tight">{t('landing.v2.pricing.pro.title', { defaultValue: '正式版 · Plus' })}</div>
+                  <div className="mt-1 text-[13px] opacity-60">{t('landing.v2.pricing.pro.desc', { defaultValue: '进阶首选 · 全方位解锁 AI 学习黑科技' })}</div>
+                </div>
+
+                <div className="mb-8 flex gap-1 rounded-xl bg-white/5 p-1 backdrop-blur-sm">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setMode(tab.key)}
+                      className={`relative flex-1 rounded-lg py-2 text-[12px] font-bold transition-all ${
+                        mode === tab.key ? 'bg-k-bg text-k-ink shadow-lg' : 'text-white/50 hover:text-white/80'
+                      }`}
+                    >
+                      {tab.label}
+                      {tab.save && mode !== tab.key && (
+                        <span className="absolute -top-2 -right-1 rounded-full bg-k-crimson px-1.5 py-0.5 text-[8px] text-white">
+                          {tab.save}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mb-8 flex items-baseline gap-1">
+                  <span className="font-k-serif text-[24px] font-medium opacity-70">{subDisplay.c}</span>
+                  <span className="font-k-serif text-[52px] font-black leading-none tracking-tighter">{subDisplay.v}</span>
+                  <span className="ml-1 text-[14px] font-bold opacity-50">{subDisplay.u}</span>
+                </div>
+
+                <div className="mb-10 space-y-4 flex-1">
+                  {commonFeatures.map((f, i) => (
+                    <div key={i} className="flex items-start gap-3.5 text-[14px]">
+                      <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-bg text-k-ink shadow-sm">
+                        <Check size={10} strokeWidth={4} />
+                      </div>
+                      <span className="opacity-90" dangerouslySetInnerHTML={{ __html: f.html }} />
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => onSelect(mode)}
+                  className="group relative w-full overflow-hidden rounded-2xl bg-k-bg py-4 text-[15px] font-black text-k-ink transition-transform active:scale-[0.98]"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {t('landing.v2.pricing.pro.cta', { defaultValue: '立即开启全能模式' })}
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* LIFETIME */}
+          <PlanCard
+            koName="永"
+            title={t('landing.v2.pricing.lifetime.title', { defaultValue: '终身版 · Lifetime' })}
+            desc={t('landing.v2.pricing.lifetime.desc', { defaultValue: '终身无忧 · 一次投资，永久享有所有功能' })}
+            currency={lifetimeDisplay.c}
+            value={lifetimeDisplay.v}
+            unit={lifetimeDisplay.u}
+            features={commonFeatures}
+            ctaLabel={t('landing.v2.pricing.lifetime.cta', { defaultValue: '永久买断' })}
+            ctaVariant="line"
+            onCta={() => onSelect('LIFETIME')}
+          />
+        </div>
+
+        <div className="mt-16 flex flex-col items-center justify-center gap-6 border-t border-k-ink/5 pt-10 text-center">
+          <p className="max-w-xl text-[13px] leading-relaxed text-k-sub opacity-70">
+            {t('landing.v2.pricing.fine', {
+              defaultValue: '系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联',
+            })}
+          </p>
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+type PlanFeature = { html: string; x?: boolean };
+
+const PlanCard: React.FC<{
+  featured?: boolean;
+  ribbon?: string;
+  koName: string;
+  title: string;
+  desc: string;
+  currency: string;
+  value: string;
+  unit: string;
+  originalPrice?: string;
+  features: PlanFeature[];
+  ctaLabel: string;
+  ctaVariant: 'line' | 'primary' | 'primary-on-dark';
+  onCta: () => void;
+}> = ({
+  koName,
+  title,
+  desc,
+  currency,
+  value,
+  unit,
+  features,
+  ctaLabel,
+  onCta,
+}) => {
+  return (
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border-2 border-k-ink/5 bg-k-bg p-8 shadow-pop transition-all hover:border-k-ink/10 hover:-translate-y-1">
+      <div className="mb-6">
+        <Seal ch={koName} size={36} className="mb-4 opacity-80" />
+        <div className="text-[20px] font-extrabold text-k-ink">{title}</div>
+        <div className="mt-1 text-[13px] text-k-sub opacity-80">{desc}</div>
+      </div>
+
+      <div className="mb-8 flex items-baseline gap-1">
+        <span className="font-k-serif text-[20px] font-medium text-k-sub">{currency}</span>
+        <span className="font-k-serif text-[44px] font-black leading-none tracking-tight text-k-ink">{value}</span>
+        <span className="ml-1 text-[13px] font-bold text-k-sub">{unit}</span>
+      </div>
+
+      <div className="mb-10 flex-1 space-y-4">
+        {features.map((f, i) => (
+          <div key={i} className={`flex items-start gap-3 text-[13px] ${f.x ? 'opacity-30 line-through' : 'text-k-ink'}`}>
+            <div className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full ${f.x ? 'bg-k-sub/20' : 'bg-k-ink/5'}`}>
+              {f.x ? <div className="h-[1.5px] w-2 bg-k-sub" /> : <Check size={10} strokeWidth={4} className="text-k-crimson" />}
+            </div>
+            <span dangerouslySetInnerHTML={{ __html: f.html }} />
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onCta}
+        className="w-full rounded-2xl border-2 border-k-ink bg-transparent py-3.5 text-[14px] font-black text-k-ink transition-all hover:bg-k-ink hover:text-k-bg"
+      >
+        {ctaLabel}
+      </button>
+    </div>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// TESTIMONIALS
+// ───────────────────────────────────────────────────────────────────────
+
+const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
+  <section className="py-24">
+    <Container>
+      <SectionHead
+        eyebrowKo="聲"
+        eyebrow="TESTIMONIALS"
+        titleKo="話"
+        title={t('landing.v2.testimonials.title', { defaultValue: '用过 Duhan 的人都在说' })}
+      />
+      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
+        <TestimonialCard
+          tone="crimson"
+          large
+          tags={[
+            t('landing.v2.testimonials.t1.tag1', { defaultValue: '用了 11 个月' }),
+            t('landing.v2.testimonials.t1.tag2', { defaultValue: 'TOPIK 5 级达成' }),
+          ]}
+          quote={t('landing.v2.testimonials.t1.quote', {
+            defaultValue:
+              '之前用 Anki 自己堆卡，每次复习都焦虑。Duhan 把它包装成「今天就这四步」，神奇地我居然坚持了一年。备考时连续 47 天没断卡，TOPIK II 直接 5 级。',
+          })}
+          avatarCh="河"
+          avatarBg="#F2D27A"
+          name={t('landing.v2.testimonials.t1.name', { defaultValue: '河恩 · @hae_eun' })}
+          meta={t('landing.v2.testimonials.t1.meta', { defaultValue: '设计师 · 杭州' })}
+        />
+        <TestimonialCard
+          tone="cream"
+          tags={[
+            t('landing.v2.testimonials.t2.tag1', { defaultValue: '追剧学韩语' }),
+            t('landing.v2.testimonials.t2.tag2', { defaultValue: '3 个月' }),
+          ]}
+          quote={t('landing.v2.testimonials.t2.quote', {
+            defaultValue: '看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。',
+          })}
+          avatarCh="小"
+          avatarBg="#BFE0CF"
+          name={t('landing.v2.testimonials.t2.name', { defaultValue: '小柯' })}
+          meta={t('landing.v2.testimonials.t2.meta', { defaultValue: '大三学生' })}
+        />
+        <TestimonialCard
+          tone="card"
+          tags={[t('landing.v2.testimonials.t3.tag1', { defaultValue: '母语者助教' })]}
+          quote={t('landing.v2.testimonials.t3.quote', {
+            defaultValue: 'UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。',
+          })}
+          avatarCh="민"
+          avatarBg="#F4C5C5"
+          name={t('landing.v2.testimonials.t3.name', { defaultValue: '민지 · 助教' })}
+          meta={t('landing.v2.testimonials.t3.meta', { defaultValue: '首尔 · 母语者' })}
+        />
+      </div>
+    </Container>
+  </section>
+);
+
+const TestimonialCard: React.FC<{
+  tone: 'crimson' | 'cream' | 'card';
+  large?: boolean;
+  tags: string[];
+  quote: string;
+  avatarCh: string;
+  avatarBg: string;
+  name: string;
+  meta: string;
+}> = ({ tone, large, tags, quote, avatarCh, avatarBg, name, meta }) => {
+  const isCrimson = tone === 'crimson';
+  const containerClass =
+    tone === 'crimson'
+      ? 'bg-k-crimson text-k-bg'
+      : tone === 'cream'
+      ? 'bg-k-bg2'
+      : 'bg-k-card';
+  return (
+    <article className={`relative rounded-[22px] p-7 ${containerClass}`}>
+      <span
+        aria-hidden
+        className="absolute right-7 top-9 font-k-serif text-[80px] leading-[0.5]"
+        style={{ color: isCrimson ? '#F2A78D' : 'var(--color-k-crimson)' }}
+      >
+        “
+      </span>
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        {tags.map(tag => (
+          <span
+            key={tag}
+            className="rounded-[5px] px-2 py-0.5 text-[10.5px] font-bold tracking-[0.3px]"
+            style={{
+              background: isCrimson ? 'rgba(251,248,243,0.13)' : 'rgba(31,27,23,0.06)',
+              color: isCrimson ? 'var(--color-k-bg)' : '#3A342E',
+            }}
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+      <blockquote
+        className={`m-0 mb-6 max-w-[90%] font-medium ${
+          large ? 'text-[22px] font-semibold leading-[1.4] tracking-[-0.3px]' : 'text-[17px] leading-[1.5]'
+        }`}
+      >
+        {quote}
+      </blockquote>
+      <div
+        className="flex items-center gap-3 border-t pt-4"
+        style={{
+          borderColor: isCrimson ? 'rgba(251,248,243,0.18)' : 'rgba(31,27,23,0.08)',
+        }}
+      >
+        <span
+          className="grid h-[42px] w-[42px] place-items-center rounded-full font-k-serif text-[18px] font-semibold text-k-ink"
+          style={{ background: avatarBg }}
+        >
+          {avatarCh}
+        </span>
+        <div>
+          <div className={`text-[14px] font-extrabold ${isCrimson ? 'text-k-bg' : 'text-k-ink'}`}>
+            {name}
+          </div>
+          <div
+            className="mt-0.5 text-[12px]"
+            style={{ color: isCrimson ? 'rgba(251,248,243,0.6)' : 'var(--color-k-sub)' }}
+          >
+            {meta}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// FAQ
+// ───────────────────────────────────────────────────────────────────────
+
+const FaqList: React.FC<{
+  t: (k: string, opts?: Record<string, unknown>) => string;
+  items: LandingFaqItem[];
+}> = ({ t, items }) => {
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  return (
+    <section id="faq" className="bg-k-bg2 py-24">
+      <Container>
+        <SectionHead
+          eyebrowKo="問"
+          eyebrow="FAQ"
+          titleKo="問"
+          title={t('landing.v2.faq.title', { defaultValue: '常见问题' })}
+        />
+        <div className="mx-auto max-w-[820px]">
+          {items.map((item, i) => {
+            const open = openIdx === i;
+            return (
+              <div key={i} className="border-b border-[rgba(31,27,23,0.1)] py-5">
+                <button
+                  type="button"
+                  onClick={() => setOpenIdx(open ? null : i)}
+                  className="flex w-full cursor-pointer items-center justify-between text-[17px] font-bold text-k-ink"
+                >
+                  <span className="text-left">
+                    <span className="mr-2 font-k-serif text-[22px] font-medium text-k-crimson">問</span>
+                    {item.question}
+                  </span>
+                  <span className="ml-3 text-k-sub">{open ? '−' : '+'}</span>
+                </button>
+                {open ? (
+                  <div className="max-w-[92%] pt-3 text-[14.5px] leading-[1.6] text-[#3A342E]">
+                    {item.answer}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+};
+
+// ───────────────────────────────────────────────────────────────────────
+// FINAL CTA
+// ───────────────────────────────────────────────────────────────────────
+
+const FinalCta: React.FC<{
+  t: (k: string, opts?: Record<string, unknown>) => string;
+  onFreeStart: () => void;
+}> = ({ t, onFreeStart }) => (
+  <section className="py-24">
+    <Container>
+      <div className="relative overflow-hidden rounded-[36px] bg-k-crimson px-6 py-24 text-k-bg">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-[-120px] right-[-40px] select-none font-k-serif text-[320px] font-medium leading-[0.8] md:bottom-[-200px] md:right-[-60px] md:text-[540px]"
+          style={{ color: 'rgba(251,248,243,0.06)' }}
+        >
+          韓
+        </span>
+        <div className="relative text-center">
+          <div className="my-3 flex items-center justify-center gap-[22px]">
+            <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
+            <span className="font-k-serif text-[22px] font-medium text-[#F2A78D]">始</span>
+            <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
+          </div>
+          <h2 className="mx-auto m-0 mb-4 max-w-[760px] text-[32px] font-extrabold leading-[1.1] tracking-[-1px] md:text-[60px] md:leading-[1.05] md:tracking-[-1.4px]">
+            {t('landing.v2.finalCta.titlePre', { defaultValue: '今天就让韩语' })}
+            <br />
+            {t('landing.v2.finalCta.titleMid', { defaultValue: '成为你日常的' })}
+            <span className="font-k-serif font-medium">
+              {t('landing.v2.finalCta.titlePost', { defaultValue: '一部分' })}
+            </span>
+          </h2>
+          <p className="m-0 mb-8 text-[17px] text-[rgba(251,248,243,0.75)]">
+            {t('landing.v2.finalCta.sub', { defaultValue: '注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱' })}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={onFreeStart}
+              className="rounded-[13px] bg-k-bg px-7 py-4 text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px]"
+            >
+              {t('landing.v2.finalCta.ctaPrimary', { defaultValue: '免费开始 →' })}
+            </button>
+            <button
+              type="button"
+              className="rounded-[13px] bg-transparent px-7 py-4 text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px]"
+              style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-bg)' }}
+            >
+              {t('landing.v2.finalCta.ctaSecondary', { defaultValue: '下载 iOS / Android' })}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Container>
+  </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────
+// FOOTER
+// ───────────────────────────────────────────────────────────────────────
+
+const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const cols: Array<{ koHead: string; head: string; links: string[] }> = [
+    {
+      koHead: '具',
+      head: t('landing.v2.footer.col1.head', { defaultValue: '产品' }),
+      links: [
+        t('landing.v2.footer.col1.l1', { defaultValue: '功能总览' }),
+        t('landing.v2.footer.col1.l3', { defaultValue: 'TOPIK 备考' }),
+        t('landing.v2.footer.col1.l4', { defaultValue: '影视听力' }),
+        t('landing.v2.footer.col1.l5', { defaultValue: '分级阅读' }),
+        t('landing.v2.footer.col1.l6', { defaultValue: '社区' }),
+      ],
+    },
+    {
+      koHead: '學',
+      head: t('landing.v2.footer.col2.head', { defaultValue: '学习' }),
+      links: [
+        t('landing.v2.footer.col2.l1', { defaultValue: '学习指南' }),
+        t('landing.v2.footer.col2.l2', { defaultValue: '语法百科' }),
+        t('landing.v2.footer.col2.l3', { defaultValue: '备考博客' }),
+        t('landing.v2.footer.col2.l4', { defaultValue: '每日韩语' }),
+      ],
+    },
+    {
+      koHead: '司',
+      head: t('landing.v2.footer.col3.head', { defaultValue: '公司' }),
+      links: [
+        t('landing.v2.footer.col3.l1', { defaultValue: '关于 Duhan' }),
+        t('landing.v2.footer.col3.l5', { defaultValue: '联系我们' }),
+      ],
+    },
+    {
+      koHead: '助',
+      head: t('landing.v2.footer.col4.head', { defaultValue: '支持' }),
+      links: [
+        t('landing.v2.footer.col4.l1', { defaultValue: '帮助中心' }),
+        t('landing.v2.footer.col4.l2', { defaultValue: '退款政策' }),
+        t('landing.v2.footer.col4.l3', { defaultValue: '隐私协议' }),
+        t('landing.v2.footer.col4.l4', { defaultValue: '用户协议' }),
+      ],
+    },
+  ];
+
+  return (
+    <footer className="pb-8 pt-16">
+      <Container>
+        <div
+          className="grid grid-cols-2 gap-8 border-b border-[rgba(31,27,23,0.1)] pb-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]"
+        >
+          <div>
+            <div className="flex items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.3px] text-k-ink">
+              <img src="/logo.svg" alt="Duhan Logo" width={32} height={32} className="rounded-lg flex-shrink-0" />
+              <span>
+                <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>Duhan
+              </span>
+            </div>
+            <p className="my-4 mb-5 max-w-[280px] text-[13.5px] leading-[1.55] text-k-sub">
+              {t('landing.v2.footer.tag1', { defaultValue: '讀韓 · 让韩语变成日常。' })}
+              <br />
+              {t('landing.v2.footer.tag2', { defaultValue: '从单词到 TOPIK 6 级，一站搞定。' })}
+            </p>
+            <div className="flex gap-2">
+              {['小', 'D'].map(s => (
+                <a
+                  key={s}
+                  href="#"
+                  className="grid h-9 w-9 place-items-center rounded-[9px] bg-k-bg2 font-k-serif text-[16px] font-medium text-k-ink no-underline hover:bg-k-crimson hover:text-white transition-colors"
+                  title={s === 'D' ? 'Discord' : 'Xiaohongshu'}
+                >
+                  {s}
+                </a>
+              ))}
+            </div>
+          </div>
+          {cols.map(col => (
+            <div key={col.head}>
+              <h6 className="m-0 mb-4 text-[11px] font-extrabold uppercase tracking-[1.8px] text-k-ink">
+                <span className="mr-1 font-k-serif font-medium text-k-crimson">{col.koHead}</span>
+                {col.head}
+              </h6>
+              {col.links.map(l => (
+                <a
+                  key={l}
+                  href="#"
+                  className="block py-1 text-[13.5px] text-[#3A342E] no-underline hover:text-k-crimson"
+                >
+                  {l}
+                </a>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6 text-[12px] text-k-sub">
+          <div>
+            © {new Date().getFullYear()} Duhan ·{' '}
+            {t('landing.v2.footer.copy', { defaultValue: '讀韓 · 沪 ICP 备 2026000000 号' })}
+          </div>
+          <div className="flex items-center gap-5">
+            <a href="#" className="text-k-sub no-underline">
+              Privacy
+            </a>
+            <a href="#" className="text-k-sub no-underline">
+              Terms
+            </a>
+            <a href="#" className="text-k-sub no-underline">
+              Cookies
+            </a>
+            <span className="text-[13px] font-bold text-k-ink">EN · 中 · 한국어</span>
+          </div>
+        </div>
+      </Container>
     </footer>
   );
 };
 
-const DEMO_ASSETS = {
-  userAvatar: '/landing/avatar-user.svg',
-} as const;
+// ───────────────────────────────────────────────────────────────────────
+// PAGE
+// ───────────────────────────────────────────────────────────────────────
 
 export default function Landing() {
   const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  // Synchronous probe replaces `useConvexAuth()`: reads only localStorage
-  // so no Convex module or WebSocket is loaded. If the probe is wrong
-  // (stale token), /dashboard will re-validate and bounce back to /login.
-  const hasAuthToken = React.useMemo(() => hasConvexAuthToken(), []);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [shouldLoadPrices, setShouldLoadPrices] = useState(false);
+  const hasAuthToken = useMemo(() => hasConvexAuthToken(), []);
   const isScrolled = useLandingScroll();
-  const { expandedFeatureCards, toggleFeatureCard } = useFeatureCards();
-
-  // Dynamic Pricing for Landing
+  const [shouldLoadPrices, setShouldLoadPrices] = useState(false);
   const [prices, setPrices] = useState<VariantPrices | null>(null);
 
   useEffect(() => {
-    if (shouldLoadPrices) {
-      return;
-    }
-    if (typeof globalThis.window === 'undefined') {
-      return;
-    }
-
-    const navWithConnection = globalThis.navigator as LandingNetworkNavigator;
-    const connection = navWithConnection.connection;
-    if (connection?.saveData) {
-      return;
-    }
-
-    const effectiveType = connection?.effectiveType ?? '4g';
-    if (effectiveType.includes('2g') || effectiveType === 'slow-2g') {
-      return;
-    }
+    if (shouldLoadPrices) return;
+    if (typeof globalThis.window === 'undefined') return;
+    const nav = globalThis.navigator as LandingNetworkNavigator;
+    const conn = nav.connection;
+    if (conn?.saveData) return;
+    const eff = conn?.effectiveType ?? '4g';
+    if (eff.includes('2g') || eff === 'slow-2g') return;
 
     let cancelled = false;
-    const triggerPriceLoad = () => {
-      if (cancelled) return;
-      setShouldLoadPrices(true);
+    const trigger = () => {
+      if (!cancelled) setShouldLoadPrices(true);
     };
 
     const idleWindow = globalThis.window as LandingIdleWindow;
-    const handleScroll = () => {
-      if (globalThis.window.scrollY >= globalThis.window.innerHeight * 0.4) {
-        triggerPriceLoad();
-      }
+    const onScroll = () => {
+      if (globalThis.window.scrollY >= globalThis.window.innerHeight * 0.4) trigger();
     };
-
-    const handlePointerDown = () => {
-      triggerPriceLoad();
-    };
-
+    const onPointer = () => trigger();
     let idleId: number | null = null;
     let timeoutId: number | null = null;
-
     if (idleWindow.requestIdleCallback) {
-      idleId = idleWindow.requestIdleCallback(triggerPriceLoad, { timeout: 2200 });
+      idleId = idleWindow.requestIdleCallback(trigger, { timeout: 2200 });
     } else {
-      timeoutId = globalThis.window.setTimeout(triggerPriceLoad, 1600);
+      timeoutId = globalThis.window.setTimeout(trigger, 1600);
     }
-
-    globalThis.window.addEventListener('scroll', handleScroll, { passive: true });
-    globalThis.window.addEventListener('pointerdown', handlePointerDown, {
-      once: true,
-      passive: true,
-    });
-
+    globalThis.window.addEventListener('scroll', onScroll, { passive: true });
+    globalThis.window.addEventListener('pointerdown', onPointer, { once: true, passive: true });
     return () => {
       cancelled = true;
-      globalThis.window.removeEventListener('scroll', handleScroll);
-      globalThis.window.removeEventListener('pointerdown', handlePointerDown);
-      if (idleId !== null && idleWindow.cancelIdleCallback) {
-        idleWindow.cancelIdleCallback(idleId);
-      }
-      if (timeoutId !== null) {
-        globalThis.window.clearTimeout(timeoutId);
-      }
+      globalThis.window.removeEventListener('scroll', onScroll);
+      globalThis.window.removeEventListener('pointerdown', onPointer);
+      if (idleId !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(idleId);
+      if (timeoutId !== null) globalThis.window.clearTimeout(timeoutId);
     };
   }, [shouldLoadPrices]);
 
   useEffect(() => {
-    if (!shouldLoadPrices) {
-      return;
-    }
-
+    if (!shouldLoadPrices) return;
     const controller = new AbortController();
     runConvexActionWithRetry(
       () =>
@@ -2266,11 +1897,9 @@ export default function Landing() {
         if ((err as { name?: string } | null)?.name === 'AbortError') return;
         console.error(err);
       });
-
     return () => controller.abort();
   }, [shouldLoadPrices]);
 
-  // Condition return AFTER hooks
   const meta = getRouteMeta(location.pathname);
   const localizedSeoTitle = t('landing.seo.title', { defaultValue: meta.title });
   const localizedSeoDescription = t('landing.seo.description', { defaultValue: meta.description });
@@ -2281,87 +1910,124 @@ export default function Landing() {
   const normalizedLanguage = normalizeLandingSeoLanguage(
     ((i18n.language || 'en').split('-')[0] || 'en').toLowerCase()
   );
-  const faqItems: LandingFaqItem[] = [
-    { question: t('landing.faq.q1'), answer: t('landing.faq.a1') },
-    { question: t('landing.faq.q2'), answer: t('landing.faq.a2') },
-    { question: t('landing.faq.q3'), answer: t('landing.faq.a3') },
-  ];
   const canonicalUrl = `https://koreanstudy.me${location.pathname === '/' ? '' : location.pathname}`;
-  const showLocalizedPromo =
-    i18n.language === 'zh' ||
-    i18n.language === 'vi' ||
-    i18n.language === 'mn' ||
-    i18n.language.startsWith('zh-');
 
-  // If the visitor has a Convex Auth token stashed in localStorage, fast-path
-  // them to the dashboard. /dashboard re-validates the token server-side and
-  // will redirect to /login if it's stale, so a false positive here is safe.
-  if (hasAuthToken) {
-    return <Navigate to="dashboard" replace />;
-  }
+  const faqItems: LandingFaqItem[] = useMemo(
+    () => [
+      {
+        question: t('landing.v2.faq.q1', { defaultValue: '零基础也能用吗？' }),
+        answer: t('landing.v2.faq.a1', {
+          defaultValue:
+            '完全可以。新用户引导会评估你的水平 · 从五十音到入门会话都有完整课程 · 系统会按你的节奏推进，永远不会让你卡在「太难了」上。',
+        }),
+      },
+      {
+        question: t('landing.v2.faq.q2', { defaultValue: 'FSRS 算法是什么？' }),
+        answer: t('landing.v2.faq.a2', {
+          defaultValue:
+            '基于学习科学的间隔重复算法（比传统 Anki SM-2 更精准）· 根据你每次回忆的难度自动安排下一次复习时间 · 平均节省 30% 复习时间，记忆留存却更久。',
+        }),
+      },
+      {
+        question: t('landing.v2.faq.q3', { defaultValue: 'Plus 和 Elite 的核心差别？' }),
+        answer: t('landing.v2.faq.a3', {
+          defaultValue:
+            'Plus 给你全部学习内容 · Elite 在此之上加 1v1 真人语伴、写作精改、专属顾问、留学求职配套 — 适合 6 个月内需要拿出实绩的学习者（TOPIK 高分 / 求职 / 留学）。',
+        }),
+      },
+      {
+        question: t('landing.v2.faq.q4', { defaultValue: '能离线学吗？' }),
+        answer: t('landing.v2.faq.a4', {
+          defaultValue: 'Plus 起支持离线 · 课程、闪卡、播客、阅读素材都可下载 · 通勤地铁、飞机上完全没问题。',
+        }),
+      },
+      {
+        question: t('landing.v2.faq.q5', { defaultValue: '有学生折扣吗？' }),
+        answer: t('landing.v2.faq.a5', {
+          defaultValue: '学生认证（学信网 / 学生证）可享 Plus 七折 · Elite 八折。每年学生节（9/1 和 3/1）另有立减券。',
+        }),
+      },
+      {
+        question: t('landing.v2.faq.q6', { defaultValue: '不满意可以退款吗？' }),
+        answer: t('landing.v2.faq.a6', {
+          defaultValue: '符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。',
+        }),
+      },
+    ],
+    [t]
+  );
+
+  // if (hasAuthToken) {
+  //   return <Navigate to="dashboard" replace />;
+  // }
+
+  const analyticsLang = (i18n.language || 'en').split('-')[0] || 'en';
+  const handleFreeStart = () => {
+    trackEvent('landing_cta_click', {
+      language: analyticsLang,
+      ctaId: 'free_start',
+      placement: 'hero',
+      target: '/auth',
+    });
+    navigate('/auth');
+  };
+  const handleLogin = () => {
+    trackEvent('landing_cta_click', {
+      language: analyticsLang,
+      ctaId: 'login',
+      placement: 'nav',
+      target: '/auth',
+    });
+    navigate('/auth');
+  };
+  const handleSelectPlan = (plan: PricingMode | 'FREE') => {
+    trackEvent('landing_cta_click', {
+      language: analyticsLang,
+      ctaId: `plan_${plan.toLowerCase()}`,
+      placement: 'pricing',
+      target: plan === 'FREE' ? '/auth' : '/pricing/details',
+    });
+    if (plan === 'FREE') {
+      navigate('/auth');
+      return;
+    }
+    navigate(buildPricingDetailsPath({ plan, source: 'landing' }));
+  };
 
   return (
-    // LazyMotion with the `domAnimation` feature set enables all `m.*` tags
-    // used across this page (opacity / transform / scale transitions, hover/
-    // tap gestures, viewport-triggered animations). Landing does not use
-    // drag, layout, or AnimatePresence, so we intentionally skip `domMax`.
-    <LazyMotion features={domAnimation} strict>
-      <div className="min-h-screen font-landing antialiased text-slate-900 overflow-x-hidden bg-[#FAFAFA] selection:bg-brand-yellow dark:selection:bg-amber-300 selection:text-black">
-        <Seo
-          title={localizedSeoTitle}
-          description={localizedSeoDescription}
-          keywords={localizedSeoKeywords}
-          noIndex={meta.noIndex}
-        />
-        <LandingJsonLd
-          description={localizedSeoDescription}
-          prices={prices}
-          faqItems={faqItems}
-          language={normalizedLanguage}
-          canonicalUrl={canonicalUrl}
-          featuredGuidesListName={featuredGuidesListName}
-        />
-        <LandingNav
-          isScrolled={isScrolled}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
-        />
-
-        <LandingHero />
-        <LandingStats />
-
-        <main className="space-y-0">
-          <LandingTopik />
-          <div className="w-full h-px bg-slate-50" />
-          <LandingFsrs />
-          <div className="w-full h-px bg-slate-50" />
-          <LandingAi userAvatar={DEMO_ASSETS.userAvatar} />
-          <div className="w-full h-px bg-slate-50" />
-
-          <LandingTyping navigate={navigate} />
-          <div className="w-full h-px bg-slate-50" />
-
-          <LandingToolbox
-            expandedFeatureCards={expandedFeatureCards}
-            toggleFeatureCard={toggleFeatureCard}
-          />
-          <div className="w-full h-px bg-slate-50" />
-
-          <LandingPricing
-            showLocalizedPromo={showLocalizedPromo}
-            navigate={navigate}
-            prices={prices}
-          />
-          <div className="w-full h-px bg-slate-50" />
-
-          <LandingGuidesCluster />
-          <div className="w-full h-px bg-slate-50" />
-
-          <LandingFaq />
-
-          <LandingFooter />
-        </main>
-      </div>
-    </LazyMotion>
+    <div className="min-h-screen overflow-x-hidden bg-k-bg font-k-sans text-k-ink antialiased selection:bg-[#F2D27A] selection:text-k-ink">
+      <Seo
+        title={localizedSeoTitle}
+        description={localizedSeoDescription}
+        keywords={localizedSeoKeywords}
+        noIndex={meta.noIndex}
+      />
+      <LandingJsonLd
+        description={localizedSeoDescription}
+        prices={prices}
+        faqItems={faqItems}
+        language={normalizedLanguage}
+        canonicalUrl={canonicalUrl}
+        featuredGuidesListName={featuredGuidesListName}
+      />
+      <NavBar 
+        isScrolled={isScrolled} 
+        onFreeStart={handleFreeStart} 
+        onLogin={handleLogin} 
+        t={t} 
+        hasAuthToken={hasAuthToken}
+      />
+      <Hero onFreeStart={handleFreeStart} t={t} />
+      <LogosStrip t={t} />
+      <FeaturesMosaic t={t} />
+      <DailyLoop t={t} />
+      <Modules t={t} />
+      <CommunityStats t={t} />
+      <Pricing t={t} prices={prices} onSelect={handleSelectPlan} />
+      <Testimonials t={t} />
+      <FaqList t={t} items={faqItems} />
+      <FinalCta t={t} onFreeStart={handleFreeStart} />
+      <Footer t={t} />
+    </div>
   );
 }

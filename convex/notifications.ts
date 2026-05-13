@@ -636,6 +636,7 @@ export const subscribePush = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
+        platform: 'web',
         p256dh: payload.keys.p256dh,
         auth: payload.keys.auth,
         expirationTime:
@@ -648,6 +649,7 @@ export const subscribePush = mutation({
     } else {
       await ctx.db.insert('push_subscriptions', {
         userId,
+        platform: 'web',
         endpoint: payload.endpoint,
         p256dh: payload.keys.p256dh,
         auth: payload.keys.auth,

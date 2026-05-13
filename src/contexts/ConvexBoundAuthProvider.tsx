@@ -50,6 +50,9 @@ export const ConvexBoundAuthProvider: React.FC<ConvexBoundAuthProviderProps> = (
   const updateProfileMutation = useMutation(
     mRef<{ name?: string; avatar?: string }, void>('auth:updateProfile')
   );
+  const updateUserSettings = useMutation(
+    mRef<{ displayLanguage?: Language }, unknown>('userSettings:updateSettings')
+  );
   const reconcileCustomerAccess = useAction(
     aRef<
       { userEmail: string; userId?: string },
@@ -61,8 +64,11 @@ export const ConvexBoundAuthProvider: React.FC<ConvexBoundAuthProviderProps> = (
     safeSetLocalStorageItem('preferredLanguage', lang);
     safeSetLocalStorageItem('preferredLanguageSource', 'user');
     document.documentElement.lang = lang;
+    void updateUserSettings({ displayLanguage: lang }).catch(() => {
+      // Keep local language changes responsive if the user settings sync fails.
+    });
     i18n.changeLanguage(lang);
-  }, []);
+  }, [updateUserSettings]);
 
   const language: Language = normalizeLanguage(i18n.language);
 

@@ -240,7 +240,7 @@ export const MobileAuthPage: React.FC = () => {
             flexDirection: 'column',
           }}
         >
-          <HanjaSeal c="韓" size={64} bg={KT.crimson} round={16} />
+          <img src="/logo.svg" alt="Duhan Logo" width={64} height={64} style={{ borderRadius: 16 }} />
           <div
             style={{
               fontFamily: KT.serif,

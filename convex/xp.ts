@@ -1,5 +1,6 @@
 import { internalMutation, query } from './_generated/server';
-import { v } from 'convex/values';
+import { v, ConvexError } from 'convex/values';
+import { getOptionalAuthUserId } from './utils';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const XP_SOURCES = [
@@ -37,7 +38,7 @@ export const addXP = internalMutation({
   },
   handler: async (ctx, args) => {
     if (!isXpSource(args.source)) {
-      throw new Error('INVALID_XP_SOURCE');
+      throw new ConvexError({ code: 'INVALID_XP_SOURCE' });
     }
 
     await ctx.db.insert('xp_logs', {
@@ -117,6 +118,17 @@ export const getWeeklyLeaderboard = query({
         if (!user) {
           return null;
         }
+        const settings = await ctx.db
+          .query('user_settings')
+          .withIndex('by_user', q => q.eq('userId', stat.userId))
+          .first();
+        const privacy = settings?.privacy;
+        if (
+          privacy?.leaderboardOptOut === true ||
+          privacy?.profileVisibility === 'private'
+        ) {
+          return null;
+        }
         return {
           userId: stat.userId,
           name: user.name ?? null,
@@ -134,55 +146,14 @@ export const getWeeklyLeaderboard = query({
 export const getMyXpStats = query({
   args: {},
   handler: async ctx => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const userByToken = await ctx.db
-      .query('users')
-      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-      .first();
-    if (userByToken) {
-      const weekIdentifier = getCurrentWeekIdentifier();
-      const currentWeekStats = await ctx.db
-        .query('user_xp_stats')
-        .withIndex('by_user_week', q =>
-          q.eq('userId', userByToken._id).eq('weekIdentifier', weekIdentifier)
-        )
-        .first();
-
-      const latestStats =
-        currentWeekStats ||
-        (await ctx.db
-          .query('user_xp_stats')
-          .withIndex('by_user_week', q => q.eq('userId', userByToken._id))
-          .order('desc')
-          .first());
-
-      return {
-        currentWeekXp: currentWeekStats?.currentWeekXp ?? 0,
-        totalXp: currentWeekStats?.totalXp ?? latestStats?.totalXp ?? 0,
-      };
-    }
-
-    const email = identity.email;
-    const userRecord = email
-      ? await ctx.db
-          .query('users')
-          .withIndex('email', q => q.eq('email', email))
-          .unique()
-      : null;
-
-    if (!userRecord) {
-      return null;
-    }
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return null;
 
     const weekIdentifier = getCurrentWeekIdentifier();
     const currentWeekStats = await ctx.db
       .query('user_xp_stats')
       .withIndex('by_user_week', q =>
-        q.eq('userId', userRecord._id).eq('weekIdentifier', weekIdentifier)
+        q.eq('userId', userId).eq('weekIdentifier', weekIdentifier)
       )
       .first();
 
@@ -190,7 +161,7 @@ export const getMyXpStats = query({
       currentWeekStats ||
       (await ctx.db
         .query('user_xp_stats')
-        .withIndex('by_user_week', q => q.eq('userId', userRecord._id))
+        .withIndex('by_user_week', q => q.eq('userId', userId))
         .order('desc')
         .first());
 

@@ -91,6 +91,22 @@ function pickName(user: Doc<'users'>): string {
   return name || 'Learner';
 }
 
+type UserPrivacy = {
+  profileVisibility?: 'public' | 'friends' | 'private';
+  leaderboardOptOut?: boolean;
+};
+
+async function loadUserPrivacy(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<'users'>
+): Promise<UserPrivacy> {
+  const settings = await ctx.db
+    .query('user_settings')
+    .withIndex('by_user', q => q.eq('userId', userId))
+    .first();
+  return settings?.privacy ?? {};
+}
+
 function isoWeekEndsAtMs(now: number): number {
   const date = new Date(now);
   const dayOfWeek = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
@@ -243,15 +259,22 @@ export const getMyLeagueBoard = query({
     const tier = membership.tier;
     const userIds = sorted.map(m => m.userId);
     const userDocs = await Promise.all(userIds.map(id => ctx.db.get(id)));
+    const privacyDocs = await Promise.all(userIds.map(id => loadUserPrivacy(ctx, id)));
     const userMap = new Map(
       userDocs.filter((u): u is Doc<'users'> => u !== null).map(u => [u._id, u])
     );
+    const privacyMap = new Map(userIds.map((id, index) => [String(id), privacyDocs[index]]));
 
     const entries: LeagueEntryDto[] = [];
     for (let i = 0; i < sorted.length && entries.length < limit; i += 1) {
       const member = sorted[i];
       const user = userMap.get(member.userId);
       if (!user) continue;
+      const privacy = privacyMap.get(String(member.userId));
+      const isMe = member.userId === userId;
+      const hiddenByVisibility = privacy?.profileVisibility === 'private' && !isMe;
+      const hiddenByOptOut = privacy?.leaderboardOptOut === true && !isMe;
+      if (hiddenByVisibility || hiddenByOptOut) continue;
       const rank = i + 1;
       entries.push({
         rank,
@@ -260,7 +283,7 @@ export const getMyLeagueBoard = query({
         avatarUrl: user.avatar || user.image || null,
         weeklyXp: member.weeklyXpSnapshot,
         tier,
-        isMe: member.userId === userId,
+        isMe,
         willPromote: rank <= promoteCount && tierIndex(tier) < TIER_ORDER.length - 1,
         willDemote: rank > demoteCutoffRank && tierIndex(tier) > 0,
       });

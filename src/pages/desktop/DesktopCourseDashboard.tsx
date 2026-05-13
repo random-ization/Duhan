@@ -1,665 +1,510 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import { useParams } from 'react-router-dom';
-import { ChevronRight, BookMarked } from 'lucide-react';
-import { useConvex, useQuery } from 'convex/react';
-import { NoArgs, qRef, GRAMMARS, VOCAB } from '../../utils/convexRefs';
+import React, { useMemo } from 'react';
+import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLearningSelection } from '../../contexts/LearningContext';
-import { getLocalizedContent } from '../../utils/languageUtils';
-import { logger } from '../../utils/logger';
-import { getCourseCoverTransitionName } from '../../utils/viewTransitions';
-import { useTheme } from '../../contexts/ThemeContext';
-import { Button } from '../../components/ui';
-import { AppBreadcrumb } from '../../components/common/AppBreadcrumb';
-import type { Language } from '../../types';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
+import { StreakRow } from '../../components/desktop/ui/StreakRow';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { DRail } from '../../components/desktop/ui/DRail';
+import { DesktopPrimaryActionCard } from '../../components/desktop/DesktopPrimaryActionCard';
+import { DesktopTopikCountdownCard } from '../../components/desktop/DesktopTopikCountdownCard';
+import { VOCAB, TOPIK, DAILY_CHALLENGES } from '../../utils/convexRefs';
 
-type Institute = {
-  id: string;
-  name?: string;
-  publisher?: string;
-  displayLevel?: string;
-  coverUrl?: string;
-  totalUnits?: number;
-};
+import type { LearnerStatsDto } from '../../../convex/learningStats';
 
-type GrammarPoint = {
-  id: string;
-  unitId: number | string;
-  title: string;
-  titleEn?: string;
-  titleZh?: string;
-  titleVi?: string;
-  titleMn?: string;
-  summary: string;
-  summaryEn?: string;
-  summaryVi?: string;
-  summaryMn?: string;
-  status?: string;
-};
-
-type VocabStats = { total: number; mastered: number };
-
-type CourseProgress = {
-  completedUnits: number[];
-  completedCount: number;
-  totalUnits: number;
-  progressPercent: number;
+interface CourseProgress {
+  courseId?: string;
+  courseName?: string;
   lastUnitIndex?: number;
-} | null;
+  completedUnits?: number[];
+  totalUnits?: number;
+  progressPercent?: number;
+}
 
-type DashboardModule = {
-  id: string;
-  label: string;
-  subtitle: string;
-  emoji: string;
-  stripeColor: string;
-  iconBg: string;
-  iconBorder: string;
-  hoverBg: string;
-  progressLabel: string;
-  progressValue: string;
-  progressColor: string;
-  progressWidth: string;
-  hoverText: string;
-  hoverRotate: string;
-  path: string;
-};
+interface ReviewSummary {
+  dueNow?: number;
+  dueSoon?: number;
+}
 
-const buildCourseMeta = ({
-  course,
-  instituteId,
-  language,
-  t,
-}: {
-  course?: Institute;
-  instituteId?: string;
-  language: Language;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}) => {
-  const isYskCourse = instituteId === 'ysk-1';
-  const coursePublisher =
-    course?.publisher || (isYskCourse ? 'OER' : t('courseDashboard.defaultPublisher'));
-  const courseName =
-    (course && getLocalizedContent(course, 'name', language)) ||
-    course?.name ||
-    (isYskCourse ? 'You Speak Korean! 1' : t('courseDashboard.defaultCourseName'));
-  const displayLevel =
-    course?.displayLevel || (isYskCourse ? '1' : t('courseDashboard.defaultDisplayLevel'));
-  const totalUnits = course?.totalUnits || (isYskCourse ? 12 : 10);
-  return { isYskCourse, coursePublisher, courseName, displayLevel, totalUnits };
-};
+interface DailyPhrase {
+  korean?: string;
+  translation?: string;
+}
 
-const buildProgressStats = ({
-  grammarPoints,
-  vocabStats,
+const ZH_WEEKDAY_SHORT = ['日', '一', '二', '三', '四', '五', '六'];
+
+function getWeekdayLabels(language: string): string[] {
+  const today = new Date();
+  const labels: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    if (i === 0) {
+      labels.push(language === 'zh' ? '今' : 'Now');
+    } else if (language === 'zh') {
+      labels.push(ZH_WEEKDAY_SHORT[d.getDay()]);
+    } else {
+      labels.push(d.toLocaleDateString(language, { weekday: 'short' }));
+    }
+  }
+  return labels;
+}
+
+export default function DesktopCourseDashboard({
   courseProgress,
-  totalUnits,
+  reviewSummary,
+  dailyPhrase,
+  stats,
 }: {
-  grammarPoints: GrammarPoint[];
-  vocabStats: VocabStats;
-  courseProgress: CourseProgress;
-  totalUnits: number;
-}) => {
-  const completedUnits = courseProgress?.completedUnits ?? [];
-  const completedCount = courseProgress?.completedCount ?? completedUnits.length;
-  const unitTotal = courseProgress?.totalUnits || totalUnits;
-  const unitProgress = unitTotal > 0 ? (completedCount / unitTotal) * 100 : 0;
-  const lastUnitIndex =
-    courseProgress?.lastUnitIndex ??
-    (completedUnits.length > 0 ? Math.min(Math.max(...completedUnits) + 1, unitTotal) : undefined);
+  courseProgress: CourseProgress | null;
+  reviewSummary: ReviewSummary | null;
+  dailyPhrase: DailyPhrase | null;
+  stats: LearnerStatsDto | null;
+}) {
+  const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+  const dashboardLanguage = i18n.language || 'en';
+  const navigate = useLocalizedNavigate();
+  const [now] = React.useState(() => Date.now());
 
-  const grammarMastered = grammarPoints.filter(g => g.status === 'MASTERED').length;
-  const grammarTotal = grammarPoints.length;
-  const vocabProgress = vocabStats.total > 0 ? (vocabStats.mastered / vocabStats.total) * 100 : 0;
-  const grammarProgress = grammarTotal > 0 ? (grammarMastered / grammarTotal) * 100 : 0;
-  const progressParts = [vocabProgress, grammarProgress, unitProgress];
-  const overallProgress = Math.round(
-    progressParts.reduce((sum, value) => sum + value, 0) / progressParts.length
+  const dueWords = useQuery(VOCAB.getDueForReview, user ? {} : 'skip');
+  const todayChallenge = useQuery(
+    DAILY_CHALLENGES.getTodayChallenge,
+    user ? { language: dashboardLanguage } : 'skip'
+  );
+  const lobbyStats = useQuery(TOPIK.getLobbyStats, user ? {} : 'skip');
+  const insights = useQuery(VOCAB.getDashboardInsights, user ? {} : 'skip');
+
+  const dueNow = reviewSummary?.dueNow ?? 0;
+
+  const weeklyMinutes = useMemo(() => {
+    if (!stats?.weeklyActivity) return [0, 0, 0, 0, 0, 0, 0];
+    return stats.weeklyActivity.map(d => (typeof d === 'number' ? d : d.minutes));
+  }, [stats]);
+
+  const weeklyTotalMinutes = useMemo(
+    () => weeklyMinutes.reduce((sum, m) => sum + m, 0),
+    [weeklyMinutes]
   );
 
-  return {
-    grammarMastered,
-    completedCount,
-    unitTotal,
-    unitProgress,
-    lastUnitIndex,
-    overallProgress,
+  const dailyGoalMinutes = stats?.dailyGoal ?? 30;
+  const weeklyGoalMinutes = dailyGoalMinutes * 7;
+  const weeklyGoalHours = +(weeklyGoalMinutes / 60).toFixed(1);
+  const weeklyTotalHours = (weeklyTotalMinutes / 60).toFixed(1);
+  const weeklyProgressPct = Math.min(
+    100,
+    Math.round((weeklyTotalMinutes / Math.max(1, weeklyGoalMinutes)) * 100)
+  );
+
+  const activeWeekdayCount = useMemo(
+    () => weeklyMinutes.filter(m => m > 0).length,
+    [weeklyMinutes]
+  );
+
+  const weekdayLabels = useMemo(() => getWeekdayLabels(i18n.language), [i18n.language]);
+
+  const upcomingReviews = useMemo(() => {
+    if (!dueWords || dueWords.length === 0) return [];
+    return dueWords.slice(0, 3).map(w => {
+      const diffMin = w.next_review ? Math.max(0, Math.floor((w.next_review - now) / 60000)) : 0;
+      let dueLabel = t('dashboard.desktop.now', { defaultValue: 'Now' });
+      if (diffMin > 0 && diffMin < 60) {
+        dueLabel = t('dashboard.desktop.minutesAgo', {
+          count: diffMin,
+          defaultValue: `${diffMin}m`,
+        });
+      } else if (diffMin >= 60 && diffMin < 1440) {
+        dueLabel = t('dashboard.desktop.hoursAgo', {
+          count: Math.floor(diffMin / 60),
+          defaultValue: `${Math.floor(diffMin / 60)}h`,
+        });
+      } else if (diffMin >= 1440) {
+        dueLabel = `${Math.floor(diffMin / 1440)}d`;
+      }
+      return { w: w.word, m: w.meaningZh || w.meaning, d: dueLabel };
+    });
+  }, [dueWords, now, t]);
+
+  const currentUnitIndex = courseProgress?.lastUnitIndex ?? 0;
+  const isGrammarDone =
+    courseProgress?.completedUnits?.includes(currentUnitIndex) ?? false;
+  const listeningDone = (stats?.todayActivities?.listeningsCompleted ?? 0) > 0;
+  const challengeDone = todayChallenge?.isCompleted ?? false;
+
+  type ModuleEntry = {
+    kanji: string;
+    label: string;
+    done: boolean;
+    cur: boolean;
+    navTo: string;
   };
-};
 
-const buildModules = ({
-  t,
-  instituteId,
-  loadingVocab,
-  vocabStats,
-  loadingGrammar,
-  grammarPoints,
-  grammarMastered,
-  unitTotal,
-  completedCount,
-  unitProgress,
-  totalUnits,
-}: {
-  t: (key: string, opts?: Record<string, unknown>) => string;
-  instituteId?: string;
-  loadingVocab: boolean;
-  vocabStats: VocabStats;
-  loadingGrammar: boolean;
-  grammarPoints: GrammarPoint[];
-  grammarMastered: number;
-  unitTotal: number;
-  completedCount: number;
-  unitProgress: number;
-  totalUnits: number;
-}): DashboardModule[] => {
-  const unitProgressValue =
-    unitTotal > 0
-      ? `${completedCount}/${unitTotal}`
-      : t('courseDashboard.lessonCount', { count: totalUnits });
+  const pathStrip: ModuleEntry[] = useMemo(() => {
+    const reviewDone = dueNow === 0;
+    return [
+      {
+        kanji: '復',
+        label: t('dashboard.desktop.modules.review', { defaultValue: '复习' }),
+        done: reviewDone,
+        cur: !reviewDone,
+        navTo: '/review',
+      },
+      {
+        kanji: '文',
+        label: t('dashboard.desktop.modules.grammar', { defaultValue: '语法' }),
+        done: isGrammarDone,
+        cur: reviewDone && !isGrammarDone,
+        navTo: '/grammar',
+      },
+      {
+        kanji: '聽',
+        label: t('dashboard.desktop.modules.listening', { defaultValue: '听力' }),
+        done: listeningDone,
+        cur: reviewDone && isGrammarDone && !listeningDone,
+        navTo: '/podcasts',
+      },
+      {
+        kanji: '試',
+        label: t('dashboard.desktop.modules.topik', { defaultValue: 'TOPIK' }),
+        done: challengeDone,
+        cur: reviewDone && isGrammarDone && listeningDone && !challengeDone,
+        navTo: '/topik',
+      },
+    ];
+  }, [dueNow, isGrammarDone, listeningDone, challengeDone, t]);
 
-  return [
-    {
-      id: 'vocabulary',
-      label: t('courseDashboard.modules.vocabulary'),
-      subtitle: 'VOCABULARY',
-      emoji: '🧩',
-      stripeColor: 'bg-green-400 dark:bg-green-500/70',
-      iconBg: 'bg-green-50 dark:bg-green-500/15',
-      iconBorder: 'border-green-200 dark:border-green-400/35',
-      hoverBg: 'bg-green-400/90 dark:bg-green-500/55',
-      progressLabel: t('courseDashboard.progress.totalWords'),
-      progressValue: loadingVocab ? '...' : `${vocabStats.total}`,
-      progressColor: 'bg-green-400 dark:bg-green-500/80',
-      progressWidth:
-        vocabStats.total > 0
-          ? `${Math.min((vocabStats.mastered / vocabStats.total) * 100, 100)}%`
-          : '0%',
-      hoverText: 'START',
-      hoverRotate: 'group-hover:rotate-12',
-      path: `/course/${instituteId}/vocab`,
-    },
-    {
-      id: 'grammar',
-      label: t('courseDashboard.modules.grammar'),
-      subtitle: 'GRAMMAR',
-      emoji: '⚡️',
-      stripeColor: 'bg-purple-400 dark:bg-purple-500/70',
-      iconBg: 'bg-purple-50 dark:bg-purple-500/15',
-      iconBorder: 'border-purple-200 dark:border-purple-400/35',
-      hoverBg: 'bg-purple-400/90 dark:bg-purple-500/55',
-      progressLabel: t('courseDashboard.progress.grammarPoints'),
-      progressValue: loadingGrammar ? '...' : `${grammarPoints.length}`,
-      progressColor: 'bg-purple-400 dark:bg-purple-500/80',
-      progressWidth:
-        grammarPoints.length > 0 ? `${(grammarMastered / grammarPoints.length) * 100}%` : '0%',
-      hoverText: 'START',
-      hoverRotate: 'group-hover:-rotate-12',
-      path: `/course/${instituteId}/grammar`,
-    },
-    {
-      id: 'reading',
-      label: t('courseDashboard.modules.reading'),
-      subtitle: 'READING',
-      emoji: '📖',
-      stripeColor: 'bg-blue-400 dark:bg-blue-500/70',
-      iconBg: 'bg-blue-50 dark:bg-blue-500/15',
-      iconBorder: 'border-blue-200 dark:border-blue-400/35',
-      hoverBg: 'bg-blue-400/90 dark:bg-blue-500/55',
-      progressLabel: t('courseDashboard.progress.units'),
-      progressValue: unitProgressValue,
-      progressColor: 'bg-blue-400 dark:bg-blue-500/80',
-      progressWidth: `${Math.min(unitProgress, 100)}%`,
-      hoverText: 'READ',
-      hoverRotate: 'group-hover:scale-110',
-      path: `/course/${instituteId}/reading`,
-    },
-    {
-      id: 'listening',
-      label: t('courseDashboard.modules.listening'),
-      subtitle: 'LISTENING',
-      emoji: '🎧',
-      stripeColor: 'bg-[#FEE500] dark:bg-yellow-400/70',
-      iconBg: 'bg-yellow-50 dark:bg-yellow-500/15',
-      iconBorder: 'border-yellow-200 dark:border-yellow-400/35',
-      hoverBg: 'bg-[#FEE500]/90 dark:bg-yellow-500/55',
-      progressLabel: t('courseDashboard.progress.units'),
-      progressValue: unitProgressValue,
-      progressColor: 'bg-[#FEE500] dark:bg-yellow-400/80',
-      progressWidth: `${Math.min(unitProgress, 100)}%`,
-      hoverText: 'LISTEN',
-      hoverRotate: 'group-hover:-translate-y-1',
-      path: `/course/${instituteId}/listening`,
-    },
-  ];
-};
+  const taskCount = useMemo(
+    () => pathStrip.filter(p => !p.done).length,
+    [pathStrip]
+  );
 
-const CourseHeaderCard = ({
-  courseName,
-  instituteId,
-  coverUrl,
-  isYskCourse,
-  coverTransitionName,
-  coursePublisher,
-  displayLevel,
-  totalUnits,
-  lastUnitIndex,
-  overallProgress,
-  t,
-}: {
-  courseName: string;
-  instituteId?: string;
-  coverUrl?: string;
-  isYskCourse: boolean;
-  coverTransitionName: string;
-  coursePublisher: string;
-  displayLevel: string;
-  totalUnits: number;
-  lastUnitIndex?: number;
-  overallProgress: number;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}) => (
-  <div className="flex flex-col md:flex-row gap-8 items-center bg-card p-6 rounded-[2rem] border-2 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden font-sans">
-    <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FEE500] dark:bg-yellow-400/35 rounded-full border-4 border-foreground dark:border-yellow-300/40 z-0" />
+  const dateStr = useMemo(() => {
+    const d = new Date();
+    if (i18n.language === 'zh') {
+      const weekLabel = `星期${ZH_WEEKDAY_SHORT[d.getDay()]}`;
+      return `${d.getMonth() + 1}月 ${d.getDate()}日 · ${weekLabel}`;
+    }
+    return `${d.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })} · ${d.toLocaleDateString(i18n.language, { weekday: 'short' })}`;
+  }, [i18n.language]);
 
-    <div
-      className="w-32 h-40 md:w-36 md:h-48 bg-muted border-2 border-foreground rounded-2xl flex-shrink-0 relative z-10 shadow-sm -rotate-2 overflow-hidden"
-      style={{ viewTransitionName: coverTransitionName } as CSSProperties}
-    >
-      {coverUrl ? (
-        <img src={coverUrl} alt={courseName} className="w-full h-full object-cover rounded-xl" />
-      ) : isYskCourse ? (
-        <div className="w-full h-full flex items-center justify-center bg-amber-50 dark:bg-amber-500/15">
-          <span className="text-xl font-black text-amber-700 dark:text-amber-200">YSK</span>
-        </div>
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-indigo-50 dark:bg-indigo-500/15">
-          <BookMarked className="w-12 h-12 text-indigo-300 dark:text-indigo-200/70" />
-        </div>
-      )}
-    </div>
+  const lobbyWeakAreas = lobbyStats?.weakAreas ?? [];
+  const normalizedCourseProgress =
+    courseProgress?.courseId && courseProgress.courseName
+      ? {
+          courseId: courseProgress.courseId,
+          courseName: courseProgress.courseName,
+          lastUnitIndex: courseProgress.lastUnitIndex ?? 1,
+          completedUnits: courseProgress.completedUnits ?? [],
+        }
+      : null;
 
-    <div className="flex-1 text-center md:text-left z-10">
-      <h1 className="font-display text-4xl font-black text-foreground mb-2 tracking-tight">
-        {courseName || t('loading')}
-        <span className="text-xs text-muted-foreground font-normal ml-2">ID: {instituteId}</span>
-      </h1>
-      <p className="text-muted-foreground font-medium flex items-center gap-2">
-        <span>{coursePublisher}</span>
-        {t('courseDashboard.courseMeta', { level: displayLevel, totalUnits })}
-      </p>
-      {lastUnitIndex ? (
-        <p className="text-xs text-muted-foreground font-semibold mt-1">
-          {t('courseDashboard.recentUnit', {
-            defaultValue: 'Recently studied: Unit {unit}',
-            unit: lastUnitIndex,
-          })}
-        </p>
-      ) : null}
+  const showDailyPhraseBanner =
+    !!dailyPhrase && (todayChallenge?.isCompleted || dueNow === 0);
 
-      <div className="max-w-md mx-auto md:mx-0">
-        <div className="flex justify-between text-xs font-bold mb-1">
-          <span>{t('courseDashboard.overallProgress')}</span>
-          <span>{overallProgress}%</span>
-        </div>
-        <div className="w-full bg-muted h-4 rounded-full border-2 border-foreground overflow-hidden relative">
-          <div
-            className="bg-[#FEE500] dark:bg-yellow-400/75 h-full border-r-2 border-foreground dark:border-yellow-300/40"
-            style={{ width: `${overallProgress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const ModuleGrid = ({
-  modules,
-  navigate,
-}: {
-  modules: DashboardModule[];
-  navigate: (to: string) => void;
-}) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-16 font-sans">
-    {modules.map(m => (
-      <Button
-        key={m.id}
-        onClick={() => navigate(m.path)}
-        variant="ghost"
-        size="auto"
-        className="group h-[320px] bg-card rounded-[2rem] border-4 border-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative transition-all duration-200 hover:-translate-y-1.5 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-left !justify-start !items-stretch !whitespace-normal"
-      >
-        <div className={`h-3 w-full ${m.stripeColor} border-b-4 border-foreground`} />
-
-        <div className="p-6 flex-1 flex flex-col items-center text-center relative z-10">
-          <div
-            className={`w-20 h-20 ${m.iconBg} rounded-2xl border-2 ${m.iconBorder} flex items-center justify-center mb-4 ${m.hoverRotate} transition-transform`}
-          >
-            <span className="text-4xl">{m.emoji}</span>
+  const content = (
+    <div>
+      {/* Hero */}
+      <div className="mb-[22px] flex items-end gap-[22px]">
+        <div className="flex-1">
+          <div className="mb-1.5 font-k-serif text-[13px] tracking-[4px] text-k-crimson">
+            {dateStr}
           </div>
-
-          <h3 className="font-black text-2xl mb-1">{m.label}</h3>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-4">
-            {m.subtitle}
-          </p>
-
-          <div className="mt-auto w-full">
-            <div className="text-xs text-muted-foreground font-bold mb-1 flex justify-between">
-              <span>{m.progressLabel}</span>
-              <span>{m.progressValue}</span>
-            </div>
-            <div className="w-full bg-muted h-2 rounded-full border border-border">
-              <div
-                className={`${m.progressColor} h-full rounded-full`}
-                style={{ width: m.progressWidth }}
-              />
-            </div>
+          <div className="text-[36px] font-extrabold leading-[1.1] tracking-[-1px] text-k-ink">
+            {t('dashboard.desktop.greeting', {
+              name: user?.name?.split(' ')[0] || 'Learner',
+              defaultValue: 'Hello',
+            })}
+          </div>
+          <div className="mt-1.5 text-[14px] font-medium text-k-sub">
+            {taskCount > 0
+              ? t('dashboard.desktop.tasksLeftSummary', {
+                  count: taskCount,
+                  defaultValue: `还有 ${taskCount} 项任务待完成`,
+                })
+              : t('dashboard.desktop.allDone', {
+                  defaultValue: '今日任务已完成 ✓',
+                })}
           </div>
         </div>
-
-        <div
-          className={`absolute inset-0 ${m.hoverBg} flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 backdrop-blur-sm`}
+        <DesktopCard
+          pad={16}
+          style={{
+            width: 220,
+            background:
+              'linear-gradient(135deg, rgba(235,160,172,0.55) 0%, rgba(222,185,116,0.55) 100%)',
+          }}
         >
-          <span className="text-white font-black text-xl tracking-widest border-4 border-white px-4 py-1 rounded-xl">
-            {m.hoverText}
-          </span>
-        </div>
-      </Button>
-    ))}
-  </div>
-);
-
-const grammarStatusBadge = (
-  status: string | undefined,
-  t: (key: string) => string
-): { className: string; label: string } => {
-  if (status === 'MASTERED') {
-    return {
-      className:
-        'text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200 px-2 py-0.5 rounded',
-      label: t('courseDashboard.status.mastered'),
-    };
-  }
-  if (status === 'LEARNING') {
-    return {
-      className:
-        'text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-200 px-2 py-0.5 rounded',
-      label: t('courseDashboard.status.learning'),
-    };
-  }
-  return {
-    className: 'text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded',
-    label: t('courseDashboard.status.notStarted'),
-  };
-};
-
-const GrammarSection = ({
-  t,
-  language,
-  loadingGrammar,
-  grammarPoints,
-  instituteId,
-  navigate,
-}: {
-  t: (key: string, opts?: Record<string, unknown>) => string;
-  language: Language;
-  loadingGrammar: boolean;
-  grammarPoints: GrammarPoint[];
-  instituteId?: string;
-  navigate: (to: string) => void;
-}) => (
-  <div className="border-t-2 border-border pt-10 font-sans">
-    <div className="flex justify-between items-end mb-6">
-      <div>
-        <h3 className="text-2xl font-black text-foreground mb-1">
-          {t('courseDashboard.grammarTitle')}
-        </h3>
-        <p className="text-muted-foreground text-sm font-bold">
-          {t('courseDashboard.grammarSubtitle')}
-        </p>
-      </div>
-      <Button
-        variant="ghost"
-        size="auto"
-        className="text-sm font-bold text-muted-foreground hover:text-foreground flex items-center gap-1"
-      >
-        {t('courseDashboard.viewAll')} <ChevronRight className="w-4 h-4" />
-      </Button>
-    </div>
-
-    <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory">
-      {loadingGrammar &&
-        ['sk1', 'sk2', 'sk3', 'sk4'].map(id => (
-          <div
-            key={id}
-            className="snap-start flex-shrink-0 w-64 bg-card border-2 border-border rounded-xl p-5 animate-pulse"
-          >
-            <div className="h-8 bg-muted rounded mb-2 w-32"></div>
-            <div className="h-4 bg-muted rounded mb-1 w-24"></div>
-            <div className="h-3 bg-muted rounded w-full"></div>
+          <div className="mb-1 text-[10px] font-extrabold tracking-[1.5px] text-k-sub">
+            {t('dashboard.desktop.weeklyGoal', { defaultValue: 'Weekly Goal' })}
           </div>
-        ))}
-
-      {!loadingGrammar && grammarPoints.length === 0 && (
-        <div className="text-muted-foreground text-sm py-4">{t('courseDashboard.noGrammar')}</div>
-      )}
-
-      {!loadingGrammar &&
-        grammarPoints.length > 0 &&
-        grammarPoints.map(gp => {
-          const badge = grammarStatusBadge(gp.status, t);
-          const localizedTitle =
-            getLocalizedContent(gp as never, 'title', language as never) || gp.title;
-          const localizedSummary =
-            getLocalizedContent(gp as never, 'summary', language as never) || gp.summary;
-          return (
+          <div className="text-[26px] font-extrabold tracking-[-0.6px] text-k-ink">
+            {weeklyTotalHours} / {weeklyGoalHours}{' '}
+            <span className="text-[12px] font-bold text-k-sub">
+              {t('dashboard.desktop.hours', { defaultValue: 'hours' })}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[rgba(31,27,23,0.1)]">
             <div
-              key={gp.id}
-              className="snap-start flex-shrink-0 w-64 bg-card border-2 border-border rounded-xl p-5 hover:border-purple-500 dark:hover:border-purple-400/45 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,0.55)] transition-all group cursor-pointer relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 bg-muted text-muted-foreground text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-                UNIT {String(gp.unitId).padStart(2, '0')}
-              </div>
-              <div className="text-purple-600 dark:text-purple-300 font-black text-2xl mb-2">
-                {localizedTitle}
-              </div>
-              <div className="text-muted-foreground font-bold text-sm mb-1">{localizedSummary}</div>
+              className="h-full bg-k-ink"
+              style={{ width: `${weeklyProgressPct}%` }}
+            />
+          </div>
+        </DesktopCard>
+      </div>
 
-              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                <span className={badge.className}>{badge.label}</span>
-                <span className="text-muted-foreground group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
-                  →
+      {/* Primary Action */}
+      <DesktopPrimaryActionCard
+        dueNow={dueNow}
+        todayChallenge={todayChallenge ?? null}
+        weakAreas={lobbyWeakAreas}
+        courseProgress={normalizedCourseProgress}
+      />
+
+      {/* Compact path strip */}
+      <DesktopCard pad={0} className="mb-[22px]">
+        <div className="flex items-center gap-3 border-b border-[rgba(31,27,23,0.08)] px-[18px] py-3">
+          <HanjaSeal c="道" size={26} bg="var(--color-k-crimson)" round={7} />
+          <div className="text-[12px] font-extrabold tracking-[0.4px] text-k-ink">
+            {t('dashboard.desktop.todayPath', { defaultValue: "Today's Path" })}
+          </div>
+          <div className="ml-auto text-[10px] font-bold text-k-sub">
+            {pathStrip.filter(p => p.done).length} / {pathStrip.length}
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-[1px] bg-[rgba(31,27,23,0.08)]">
+          {pathStrip.map((p, i) => (
+            <button
+              key={`${p.kanji}-${i}`}
+              type="button"
+              onClick={() => navigate(p.navTo)}
+              className="flex cursor-pointer items-center gap-2.5 bg-k-card px-[14px] py-[12px] text-left transition-colors hover:bg-k-bg2"
+              style={{ opacity: p.done ? 0.55 : 1 }}
+            >
+              <HanjaSeal
+                c={p.kanji}
+                size={28}
+                bg={
+                  p.done
+                    ? 'var(--color-k-mint-deep)'
+                    : p.cur
+                    ? 'var(--color-k-ink)'
+                    : 'var(--color-k-sub-light)'
+                }
+                round={7}
+              />
+              <div className="flex-1 text-[12px] font-extrabold tracking-[-0.2px] text-k-ink">
+                <span style={{ textDecoration: p.done ? 'line-through' : 'none' }}>
+                  {p.label}
                 </span>
               </div>
-            </div>
-          );
-        })}
+              {p.done && <span className="text-[14px] text-k-mint-deep">✓</span>}
+              {p.cur && (
+                <span className="rounded-md bg-k-ink px-1.5 py-0.5 text-[8px] font-extrabold tracking-[1px] text-k-bg">
+                  {t('dashboard.desktop.now', { defaultValue: 'NOW' })}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </DesktopCard>
 
-      {grammarPoints.length > 0 && (
-        <Button
-          onClick={() => navigate(`/course/${instituteId}/grammar`)}
-          variant="ghost"
-          size="auto"
-          className="snap-start flex-shrink-0 w-24 bg-muted border-2 border-dashed border-border rounded-xl flex items-center justify-center hover:bg-muted hover:border-border !shadow-none"
-        >
-          <span className="text-2xl text-muted-foreground">➜</span>
-        </Button>
-      )}
-    </div>
-  </div>
-);
-
-export const DesktopCourseDashboard = () => {
-  const navigate = useLocalizedNavigate();
-  const { instituteId } = useParams<{ instituteId: string }>();
-  const { t } = useTranslation();
-  const { user, language } = useAuth();
-  const { resolvedTheme } = useTheme();
-  const convex = useConvex();
-
-  const institutes = useQuery(qRef<NoArgs, Institute[]>('institutes:getAll'));
-
-  const grammarList = useQuery(
-    GRAMMARS.getByCourse,
-    instituteId ? { courseId: instituteId } : 'skip'
-  );
-
-  const [vocabStatsState, setVocabStatsState] = useState<{
-    courseId: string;
-    data: { total: number; mastered: number };
-  } | null>(null);
-
-  useEffect(() => {
-    if (!instituteId) return;
-    let cancelled = false;
-    convex
-      .query(VOCAB.getStats, { courseId: instituteId })
-      .then(res => {
-        if (cancelled) return;
-        setVocabStatsState({ courseId: instituteId, data: res });
-      })
-      .catch(err => {
-        if (cancelled) return;
-        logger.error('[CourseDashboard] VOCAB.getStats failed', err);
-        setVocabStatsState({ courseId: instituteId, data: { total: 0, mastered: 0 } });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [convex, instituteId]);
-
-  const vocabData =
-    vocabStatsState && vocabStatsState.courseId === instituteId ? vocabStatsState.data : undefined;
-  const courseProgress = useQuery(
-    qRef<
-      { courseId: string },
-      {
-        completedUnits: number[];
-        completedCount: number;
-        totalUnits: number;
-        progressPercent: number;
-        lastUnitIndex?: number;
-      } | null
-    >('progress:getCourseProgress'),
-    user && instituteId ? { courseId: instituteId } : 'skip'
-  );
-
-  const loadingGrammar = grammarList === undefined;
-  const loadingVocab = vocabData === undefined;
-
-  const grammarPoints = (grammarList || []) as GrammarPoint[];
-  const vocabStats = vocabData || { total: 0, mastered: 0 };
-
-  const course = institutes?.find(i => i.id === instituteId);
-  const { isYskCourse, coursePublisher, courseName, displayLevel, totalUnits } = buildCourseMeta({
-    course,
-    instituteId,
-    language,
-    t,
-  });
-  const coverUrl = course?.coverUrl;
-  const coverTransitionName = getCourseCoverTransitionName(instituteId);
-  const {
-    grammarMastered,
-    completedCount,
-    unitTotal,
-    unitProgress,
-    lastUnitIndex,
-    overallProgress,
-  } = buildProgressStats({
-    grammarPoints,
-    vocabStats,
-    courseProgress: courseProgress ?? null,
-    totalUnits,
-  });
-
-  const modules = buildModules({
-    t,
-    instituteId,
-    loadingVocab,
-    vocabStats,
-    loadingGrammar,
-    grammarPoints,
-    grammarMastered,
-    unitTotal,
-    completedCount,
-    unitProgress,
-    totalUnits,
-  });
-
-  return (
-    <div
-      className="min-h-screen pb-20 font-sans"
-      style={{
-        backgroundColor: resolvedTheme === 'dark' ? '#0b1220' : '#F0F4F8',
-        backgroundImage:
-          resolvedTheme === 'dark'
-            ? 'radial-gradient(rgba(148,163,184,0.22) 1.5px, transparent 1.5px)'
-            : 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
-        backgroundSize: '24px 24px',
-      }}
-    >
-      <div className="w-full max-w-[1400px] mx-auto p-6 md:p-10">
-        <header className="mb-10">
-          <AppBreadcrumb
-            className="mb-4"
-            items={[
-              {
-                label: t('coursesOverview.pageTitle', { defaultValue: 'Courses' }),
-                to: '/courses',
-              },
-              { label: courseName || instituteId || 'Course' },
-            ]}
-          />
-          <Button
-            onClick={() => navigate('/courses')}
-            variant="ghost"
-            size="auto"
-            className="mb-6 flex items-center gap-2 font-bold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <span className="bg-card border-2 border-border rounded-full w-8 h-8 flex items-center justify-center shadow-sm">
-              ←
+      {/* Activity + Insights */}
+      <div className="mb-[22px] grid grid-cols-[1.4fr_1fr] gap-[18px]">
+        <DesktopCard>
+          <div className="mb-4 flex items-baseline">
+            <span className="mr-2 font-k-serif text-[16px] font-medium text-k-crimson">
+              績
             </span>
-            {t('courseDashboard.backToShelf')}
-          </Button>
+            <span className="text-[14px] font-extrabold text-k-ink">
+              {t('dashboard.desktop.weeklyActivity', { defaultValue: 'Activity' })}
+            </span>
+            <span
+              className="ml-auto cursor-pointer text-[11px] font-bold text-k-sub hover:text-k-ink"
+              onClick={() => navigate('/profile')}
+            >
+              {t('dashboard.desktop.viewAll', { defaultValue: 'View all' })} →
+            </span>
+          </div>
+          <div className="flex h-[90px] items-end gap-2.5">
+            {(() => {
+              const maxVal = Math.max(60, ...weeklyMinutes);
+              return weeklyMinutes.map((v, i) => (
+                <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div
+                    className="w-full rounded-sm"
+                    style={{
+                      height: `${Math.max(2, (v / maxVal) * 90)}px`,
+                      background:
+                        i === 6 ? 'var(--color-k-ink)' : 'var(--color-k-crimson)',
+                      opacity: i === 6 ? 1 : 0.85,
+                    }}
+                  />
+                  <div className="text-[10px] font-bold text-k-sub">
+                    {weekdayLabels[i]}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        </DesktopCard>
 
-          <CourseHeaderCard
-            courseName={courseName}
-            instituteId={instituteId}
-            coverUrl={coverUrl}
-            isYskCourse={isYskCourse}
-            coverTransitionName={coverTransitionName}
-            coursePublisher={coursePublisher}
-            displayLevel={displayLevel}
-            totalUnits={totalUnits}
-            lastUnitIndex={lastUnitIndex}
-            overallProgress={overallProgress}
-            t={t}
-          />
-        </header>
-
-        <h2 className="text-3xl font-black mb-6 flex items-center gap-2 text-foreground">
-          <span>🚀</span> {t('courseDashboard.trainingModules')}
-        </h2>
-
-        <ModuleGrid modules={modules} navigate={navigate} />
-        <GrammarSection
-          t={t}
-          language={language}
-          loadingGrammar={loadingGrammar}
-          grammarPoints={grammarPoints}
-          instituteId={instituteId}
-          navigate={navigate}
-        />
+        <DesktopCard>
+          <div className="mb-3 flex items-baseline">
+            <span className="mr-2 font-k-serif text-[16px] font-medium text-k-crimson">
+              洞
+            </span>
+            <span className="text-[14px] font-extrabold text-k-ink">
+              {t('dashboard.desktop.insights.title', { defaultValue: '30 天洞见' })}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-[20px] font-extrabold tracking-[-0.4px] text-k-ink">
+                {insights?.retentionRate30d != null
+                  ? `${Math.round(insights.retentionRate30d)}%`
+                  : '—'}
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold text-k-sub">
+                {t('dashboard.desktop.insights.retention', { defaultValue: '记忆留存' })}
+              </div>
+            </div>
+            <div>
+              <div className="text-[20px] font-extrabold tracking-[-0.4px] text-k-ink">
+                {insights?.activeDays30d ?? '—'}
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold text-k-sub">
+                {t('dashboard.desktop.insights.activeDays', { defaultValue: '活跃天数' })}
+              </div>
+            </div>
+            <div>
+              <div className="text-[20px] font-extrabold tracking-[-0.4px] text-k-ink">
+                {insights?.totalReviews30d ?? '—'}
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold text-k-sub">
+                {t('dashboard.desktop.insights.reviews', { defaultValue: '总复习数' })}
+              </div>
+            </div>
+          </div>
+          {insights?.heatmap?.length ? (
+            <div className="mt-3 grid grid-cols-[repeat(14,minmax(0,1fr))] gap-[3px]">
+              {insights.heatmap.slice(-28).map((cell, idx) => (
+                <div
+                  key={`${cell.date}-${idx}`}
+                  className="aspect-square rounded-[3px]"
+                  style={{
+                    background:
+                      cell.intensity === 0
+                        ? 'rgba(31,27,23,0.06)'
+                        : cell.intensity === 1
+                        ? 'rgba(91,132,114,0.30)'
+                        : cell.intensity === 2
+                        ? 'rgba(91,132,114,0.55)'
+                        : cell.intensity === 3
+                        ? 'rgba(91,132,114,0.80)'
+                        : 'var(--color-k-mint-deep)',
+                    outline: cell.isToday
+                      ? '1.5px solid var(--color-k-ink)'
+                      : 'none',
+                  }}
+                  title={cell.date}
+                />
+              ))}
+            </div>
+          ) : null}
+        </DesktopCard>
       </div>
 
-      <style>{`
-                .scrollbar-hide::-webkit-scrollbar { display: none; }
-                .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
+      {/* Daily phrase (only when challenge already done/no due) */}
+      {showDailyPhraseBanner && dailyPhrase ? (
+        <DesktopCard
+          pad={20}
+          style={{ background: 'var(--color-k-indigo)', color: 'var(--color-k-card)' }}
+          className="relative mb-[22px]"
+        >
+          <div className="absolute -right-1.5 -top-2 font-k-serif text-[90px] font-medium leading-[1] text-[rgba(255,255,255,0.08)]">
+            語
+          </div>
+          <DesignChip tone="ink" size="sm">
+            {t('dashboard.desktop.dailyPhrase', { defaultValue: '今日金句' })}
+          </DesignChip>
+          <div className="mt-2.5 text-[17px] font-extrabold leading-[1.3]">
+            {dailyPhrase.korean}
+          </div>
+          <div className="mt-1 text-[11px] opacity-75">{dailyPhrase.translation}</div>
+        </DesktopCard>
+      ) : null}
     </div>
   );
-};
 
-export default DesktopCourseDashboard;
+  const right = (
+    <div className="max-h-[calc(100vh-100px)] w-[320px] shrink-0 overflow-y-auto pl-[22px]">
+      <DRail
+        kanji="火"
+        title={t('dashboard.desktop.streak', { defaultValue: 'Streak' })}
+        pad={16}
+      >
+        <div className="mb-3 flex items-baseline gap-1.5">
+          <span className="text-[32px] font-extrabold tracking-[-1px] text-k-ink">
+            {stats?.streak ?? 0}
+          </span>
+          <span className="text-[11px] font-bold text-k-sub">
+            {t('dashboard.desktop.consecutiveDays', { defaultValue: 'days' })}
+          </span>
+          <span className="ml-auto text-[18px]">🔥</span>
+        </div>
+        <StreakRow done={activeWeekdayCount} />
+      </DRail>
+
+      <DRail
+        kanji="記"
+        title={t('dashboard.desktop.upcomingReviews', { defaultValue: 'Upcoming' })}
+        action={`${t('dashboard.desktop.reviewCta', { defaultValue: 'Review' })} →`}
+        onActionClick={() => navigate('/review')}
+        pad={14}
+      >
+        {upcomingReviews.length === 0 ? (
+          <div className="py-6 text-center text-[11px] font-semibold text-k-sub opacity-50">
+            {t('dashboard.desktop.noUpcomingReviews', { defaultValue: 'No reviews' })}
+          </div>
+        ) : (
+          upcomingReviews.map((r, i) => (
+            <div
+              key={`${r.w}-${i}`}
+              className="flex items-center gap-2.5 py-[7px]"
+              style={{
+                borderBottom:
+                  i < upcomingReviews.length - 1
+                    ? '1px solid var(--color-k-line)'
+                    : 'none',
+              }}
+            >
+              <div className="flex-1">
+                <div className="text-[13px] font-extrabold tracking-[-0.2px] text-k-ink">
+                  {r.w}
+                </div>
+                <div className="text-[10px] font-semibold text-k-sub">{r.m}</div>
+              </div>
+              <DesignChip tone="muted" size="sm">
+                {r.d}
+              </DesignChip>
+            </div>
+          ))
+        )}
+      </DRail>
+
+      <DesktopTopikCountdownCard
+        upcomingExam={lobbyStats?.upcomingExam ?? null}
+        weakAreas={lobbyWeakAreas}
+      />
+    </div>
+  );
+
+  return (
+    <div className="flex font-sans">
+      <div className="flex-1">{content}</div>
+      {right}
+    </div>
+  );
+}

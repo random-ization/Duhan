@@ -8,9 +8,21 @@ import { LayoutProvider } from './LayoutContext';
 import { ConfirmDialogProvider } from './ConfirmDialogContext';
 import { NotebookPickerProvider } from './NotebookPickerContext';
 import { ConvexBoundAuthProvider } from './ConvexBoundAuthProvider';
+import { GlobalSettingsProvider } from './GlobalSettingsProvider';
 import { LearningProgressTracker } from './LearningProgressTracker';
 import { LearningProvider } from './LearningContext';
+import { AudioPlayerProvider } from './AudioPlayerContext';
 import { getConvexUrl } from '../utils/convexConfig';
+import { useDrainMutationQueueOnOnline } from '../hooks/useOfflineMutation';
+
+/**
+ * Side-effect component that drains the offline mutation queue when online.
+ * Must be rendered inside <ConvexAuthProvider>.
+ */
+const OfflineMutationQueueTracker = () => {
+  useDrainMutationQueueOnOnline();
+  return null;
+};
 
 /**
  * Provider stack that only applies on authenticated routes.
@@ -70,21 +82,26 @@ const AuthedAppProviders: React.FC<{ children: React.ReactNode }> = ({ children 
     <QueryClientProvider client={getQueryClient()}>
       <ConvexAuthProvider client={getConvexClient()}>
         <ConvexBoundAuthProvider>
-          <DataProvider>
-            <NotebookPickerProvider>
-              <ConfirmDialogProvider>
-                <LayoutProvider>
-                  <LearningProvider>
-                    {/* Side-effect-only; syncs selected institute/level to the
-                        backend on change. Must sit inside ConvexBoundAuthProvider
-                        so `useMutation` can resolve the Convex client. */}
-                    <LearningProgressTracker />
-                    {children}
-                  </LearningProvider>
-                </LayoutProvider>
-              </ConfirmDialogProvider>
-            </NotebookPickerProvider>
-          </DataProvider>
+          <GlobalSettingsProvider>
+            <DataProvider>
+              <NotebookPickerProvider>
+                <ConfirmDialogProvider>
+                  <LayoutProvider>
+                    <LearningProvider>
+                      <AudioPlayerProvider>
+                        {/* Side-effect-only; syncs selected institute/level to the
+                            backend on change. Must sit inside ConvexBoundAuthProvider
+                            so `useMutation` can resolve the Convex client. */}
+                        <LearningProgressTracker />
+                        <OfflineMutationQueueTracker />
+                        {children}
+                      </AudioPlayerProvider>
+                    </LearningProvider>
+                  </LayoutProvider>
+                </ConfirmDialogProvider>
+              </NotebookPickerProvider>
+            </DataProvider>
+          </GlobalSettingsProvider>
         </ConvexBoundAuthProvider>
       </ConvexAuthProvider>
     </QueryClientProvider>

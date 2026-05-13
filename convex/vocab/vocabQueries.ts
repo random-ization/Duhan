@@ -19,6 +19,7 @@ import type {
   VocabBookPageDto,
   VocabReviewSummaryDto,
   VocabProgressDto,
+  UnitProgressDto,
 } from './vocabTypes';
 import { normalizeUnitIdParam, resolveTargetUnitId } from '../vocabHelpers';
 import { normalizeStoragePublicUrl } from '../spacesConfig';
@@ -88,69 +89,87 @@ function matchVocabBookCategory(progress: Doc<'user_vocab_progress'>, category: 
   return !isMastered && !isUnlearned;
 }
 
+async function buildVocabBookItem(
+  ctx: QueryCtx,
+  word: Doc<'words'>,
+  progress: Doc<'user_vocab_progress'> | Partial<Doc<'user_vocab_progress'>> | null
+): Promise<VocabBookItemDto> {
+  const appearance = await ctx.db
+    .query('vocabulary_appearances')
+    .withIndex('by_word_createdAt', q => q.eq('wordId', word._id))
+    .order('desc')
+    .first();
+
+  // Handle both full and partial progress objects
+  const mappedProgress = progress && '_id' in progress 
+    ? mapProgress(progress as Doc<'user_vocab_progress'>) 
+    : null;
+  
+  // Ensure we always have a valid progress object for VocabBookItemDto
+  const defaultProgress: VocabProgressDto = {
+    id: '' as Id<'user_vocab_progress'>,
+    status: 'NEW',
+    interval: 1,
+    streak: 0,
+    nextReviewAt: null,
+    lastReviewedAt: null,
+    state: 0,
+    due: null,
+    stability: 0,
+    difficulty: 0,
+    elapsed_days: 0,
+    scheduled_days: 0,
+    learning_steps: 0,
+    reps: 0,
+    lapses: 0,
+    last_review: null,
+  };
+  
+  const effectiveProgress = mappedProgress ?? defaultProgress;
+
+  return {
+    id: word._id,
+    word: word.word,
+    meaning: appearance?.meaning || word.meaning,
+    meaningEn: appearance?.meaningEn || word.meaningEn,
+    meaningZh: appearance?.meaning || word.meaning,
+    meaningVi: appearance?.meaningVi || word.meaningVi || '',
+    meaningMn: appearance?.meaningMn || word.meaningMn || '',
+    pronunciation: word.pronunciation,
+    hanja: word.hanja,
+    partOfSpeech: word.partOfSpeech || '',
+    audioUrl: normalizeStoragePublicUrl(word.audioUrl) || word.audioUrl,
+    audio: normalizeStoragePublicUrl(word.audioUrl) || word.audioUrl,
+    exampleSentence: appearance?.exampleSentence,
+    exampleMeaning: appearance?.exampleMeaning,
+    exampleMeaningEn: appearance?.exampleMeaningEn,
+    exampleMeaningVi: appearance?.exampleMeaningVi,
+    exampleMeaningMn: appearance?.exampleMeaningMn,
+    example: appearance?.exampleSentence,
+    exampleZh: appearance?.exampleMeaning,
+    exampleVi: appearance?.exampleMeaningVi,
+    exampleMn: appearance?.exampleMeaningMn,
+    status: (effectiveProgress.status as VocabBookItemDto['status']) || 'NEW',
+    proficiency: 0,
+    last_review: effectiveProgress.last_review ?? undefined,
+    next_review: effectiveProgress.nextReviewAt ?? effectiveProgress.due ?? undefined,
+    lapses: effectiveProgress.lapses ?? 0,
+    elapsed_days: effectiveProgress.elapsed_days ?? 0,
+    scheduled_days: effectiveProgress.scheduled_days ?? 0,
+    learning_steps: effectiveProgress.learning_steps ?? 0,
+    reps: effectiveProgress.reps ?? 0,
+    mastered: effectiveProgress.status === 'MASTERED',
+    progress: effectiveProgress,
+    savedByUser: progress?.savedByUser,
+  };
+}
+
 async function buildVocabBookItems(
   ctx: QueryCtx,
   selected: Array<{ progress: Doc<'user_vocab_progress'>; word: Doc<'words'> }>
 ): Promise<VocabBookItemDto[]> {
   if (selected.length === 0) return [];
-
-  const appearanceLookups = await Promise.all(
-    selected.slice(0, 200).map(async ({ word }) => {
-      const appearance = await ctx.db
-        .query('vocabulary_appearances')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .withIndex('by_word_createdAt', (q: any) => q.eq('wordId', word._id))
-        .order('desc')
-        .first();
-      return [word._id.toString(), appearance] as const;
-    })
-  );
-
-  const appearanceMap = new Map<string, Doc<'vocabulary_appearances'> | null>();
-  for (const [id, appearance] of appearanceLookups) {
-    appearanceMap.set(id, appearance ?? null);
-  }
-
-  return selected.map(({ progress, word }) => {
-    const appearance = appearanceMap.get(word._id.toString()) ?? null;
-    const mappedProgress = mapProgress(progress)!;
-
-    return {
-      id: word._id,
-      word: word.word,
-      meaning: appearance?.meaning || word.meaning,
-      meaningEn: appearance?.meaningEn || word.meaningEn,
-      meaningZh: appearance?.meaning || word.meaning,
-      meaningVi: appearance?.meaningVi || word.meaningVi || '',
-      meaningMn: appearance?.meaningMn || word.meaningMn || '',
-      pronunciation: word.pronunciation,
-      hanja: word.hanja,
-      partOfSpeech: word.partOfSpeech || '',
-      audioUrl: normalizeStoragePublicUrl(word.audioUrl) || word.audioUrl,
-      audio: normalizeStoragePublicUrl(word.audioUrl) || word.audioUrl,
-      exampleSentence: appearance?.exampleSentence,
-      exampleMeaning: appearance?.exampleMeaning,
-      exampleMeaningEn: appearance?.exampleMeaningEn,
-      exampleMeaningVi: appearance?.exampleMeaningVi,
-      exampleMeaningMn: appearance?.exampleMeaningMn,
-      example: appearance?.exampleSentence,
-      exampleZh: appearance?.exampleMeaning,
-      exampleVi: appearance?.exampleMeaningVi,
-      exampleMn: appearance?.exampleMeaningMn,
-      status: (mappedProgress.status as VocabBookItemDto['status']) || 'NEW',
-      proficiency: 0,
-      last_review: mappedProgress.last_review ?? undefined,
-      next_review: mappedProgress.nextReviewAt ?? mappedProgress.due ?? undefined,
-      lapses: mappedProgress.lapses ?? 0,
-      elapsed_days: mappedProgress.elapsed_days ?? 0,
-      scheduled_days: mappedProgress.scheduled_days ?? 0,
-      learning_steps: mappedProgress.learning_steps ?? 0,
-      reps: mappedProgress.reps ?? 0,
-      mastered: mappedProgress.status === 'MASTERED',
-      progress: mappedProgress,
-      savedByUser: progress.savedByUser,
-    };
-  });
+  return Promise.all(selected.map(({ progress, word }) => buildVocabBookItem(ctx, word, progress)));
 }
 
 async function resolveCourseContext(ctx: QueryCtx, courseId: string) {
@@ -256,55 +275,88 @@ function summarizeReviewProgress(
 // Get vocabulary statistics for a course
 export const getStats = query({
   args: {
-    courseId: v.string(),
+    courseId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<VocabStatsDto> => {
     try {
       const userId = await getOptionalAuthUserId(ctx);
+      if (!userId) return { total: 0, mastered: 0, dueReviews: 0, unlearned: 0 };
 
-      const courseId = args.courseId?.trim() || '';
-      if (!courseId) return { total: 0, mastered: 0 };
+      const courseId = args.courseId?.trim();
+      const now = Date.now();
+      
+      if (!courseId || courseId === 'all') {
+        // Global stats for the user
+        const allProgress = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        
+        let total = 0;
+        let mastered = 0;
+        let dueReviews = 0;
+        let unlearned = 0;
+
+        for (const p of allProgress) {
+          total++;
+          if (p.status === 'MASTERED') mastered++;
+          else if (p.status === 'NEW' || p.status === 'NOT_STARTED') unlearned++;
+          
+          if (p.status !== 'MASTERED' && (p.due ?? p.nextReviewAt ?? 0) <= now) {
+            dueReviews++;
+          }
+        }
+        return { total, mastered, dueReviews, unlearned };
+      }
 
       vocabLogger.debug(`getStats courseId=${courseId}`);
 
-      // IMPORTANT: This query must be bounded to avoid Convex timeouts when datasets grow.
-      const MAX_UNIQUE_WORDS = 2500;
-      const MAX_APPEARANCE_DOCS = 8000;
-      const MAX_PROGRESS_DOCS = 12000;
-
-      // 1) Scan appearances (bounded) and collect unique wordIds.
-      const courseWordIds = new Set<string>();
+      // Scan appearances to collect unique wordIds in this course.
       const appearances = await ctx.db
         .query('vocabulary_appearances')
         .withIndex('by_course_unit', q => q.eq('courseId', courseId))
-        .order('desc')
-        .take(MAX_APPEARANCE_DOCS);
+        .collect();
 
-      for (const app of appearances) {
-        courseWordIds.add(app.wordId.toString());
-        if (courseWordIds.size >= MAX_UNIQUE_WORDS) break;
-      }
-
+      const courseWordIds = new Set(appearances.map(app => app.wordId.toString()));
       const total = courseWordIds.size;
-      if (!userId || total === 0) return { total, mastered: 0 };
+      
+      if (total === 0) return { total: 0, mastered: 0, dueReviews: 0, unlearned: 0 };
 
-      // 2) Count mastered progress (bounded).
-      let mastered = 0;
+      // Get progress for these words
       const progressDocs = await ctx.db
         .query('user_vocab_progress')
         .withIndex('by_user', q => q.eq('userId', userId))
-        .order('desc')
-        .take(MAX_PROGRESS_DOCS);
+        .collect();
+
+      let mastered = 0;
+      let dueReviews = 0;
+      let learnedInCourse = 0;
 
       for (const p of progressDocs) {
-        if (p.status === 'MASTERED' && courseWordIds.has(p.wordId.toString())) mastered++;
-        if (mastered >= total) break;
+        if (!courseWordIds.has(p.wordId.toString())) continue;
+        
+        if (p.status === 'MASTERED') {
+          mastered++;
+          learnedInCourse++;
+        } else {
+          if (p.status !== 'NEW' && p.status !== 'NOT_STARTED') {
+            learnedInCourse++;
+          }
+          if ((p.due ?? p.nextReviewAt ?? 0) <= now) {
+            dueReviews++;
+          }
+        }
       }
 
-      return { total, mastered };
+      return { 
+        total, 
+        mastered, 
+        dueReviews, 
+        unlearned: total - learnedInCourse 
+      };
     } catch (err) {
       vocabLogger.error('getStats failed', err);
-      return { total: 0, mastered: 0 };
+      return { total: 0, mastered: 0, dueReviews: 0, unlearned: 0 };
     }
   },
 });
@@ -529,6 +581,7 @@ export const getReviewDeck = query({
           exampleZh: app.exampleMeaning,
           exampleVi: app.exampleMeaningVi,
           exampleMn: app.exampleMeaningMn,
+          tips: word.tips,
           status: (progress?.status as VocabReviewDeckDto['status']) || 'NEW',
           proficiency: 0,
           last_review: progress?.last_review,
@@ -637,6 +690,8 @@ export const getVocabBookPage = query({
       v.union(v.literal('ALL'), v.literal('UNLEARNED'), v.literal('DUE'), v.literal('MASTERED'))
     ),
     cursor: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    unit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<VocabBookPageDto> => {
     try {
@@ -647,6 +702,7 @@ export const getVocabBookPage = query({
 
       const includeMastered = args.includeMastered ?? false;
       const category = (args.category ?? 'ALL') as VocabBookCategory;
+      const now = Date.now();
       const searchQuery = args.search?.trim().toLowerCase() || '';
       const selectedWordIds = new Set(
         (args.selectedWordIds ?? []).map(id => id.trim()).filter(id => id.length > 0)
@@ -660,6 +716,112 @@ export const getVocabBookPage = query({
       let scanned = 0;
       const selected: Array<{ progress: Doc<'user_vocab_progress'>; word: Doc<'words'> }> = [];
 
+      let courseWordIds: Set<string> | null = null;
+      const targetCourseIds: string[] = [];
+
+      if (args.courseId) {
+        const { effectiveCourseId } = await resolveCourseContext(ctx, args.courseId);
+        targetCourseIds.push(effectiveCourseId);
+      } else if (!args.savedByUserOnly) {
+        const enrolled = await ctx.db
+          .query('user_course_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        targetCourseIds.push(...enrolled.map(p => p.courseId));
+      }
+
+      if (targetCourseIds.length > 0) {
+        const appearances = await Promise.all(
+          targetCourseIds.map(courseId => {
+            const query = ctx.db
+              .query('vocabulary_appearances')
+              .withIndex('by_course_unit', q => q.eq('courseId', courseId));
+            // If unit is specified, filter by unitId
+            if (args.unit !== undefined && args.unit !== null) {
+              return query.filter(q => q.eq(q.field('unitId'), args.unit)).collect();
+            }
+            return query.collect();
+          })
+        );
+        courseWordIds = new Set(appearances.flat().map(a => String(a.wordId)));
+      }
+
+      // SPECIAL CASE: When filtering by course/unit, we want to include words 
+      // even if they don't have a progress record yet.
+      if (courseWordIds && (category === 'UNLEARNED' || category === 'ALL')) {
+        const allUserProgress = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        const progressMap = new Map(allUserProgress.map(p => [String(p.wordId), p]));
+        
+        let targetWordIds: string[] = [];
+        
+        if (category === 'UNLEARNED') {
+          // Words in textbooks that have NO progress record or are 'NEW'
+          targetWordIds = Array.from(courseWordIds).filter(id => {
+            const p = progressMap.get(id);
+            return !p || p.status === 'NEW' || p.state === 0;
+          });
+        } else {
+          // ALL words in textbooks (respecting courseWordIds filter)
+          targetWordIds = Array.from(courseWordIds);
+        }
+        
+        // Simple slicing for this view since it's targeted
+        let filteredWordIds = targetWordIds;
+        if (searchQuery) {
+          const words = await Promise.all(targetWordIds.map(id => ctx.db.get(ctx.db.normalizeId('words', id)!)));
+          filteredWordIds = targetWordIds.filter((id, idx) => {
+            const word = words[idx];
+            if (!word) return false;
+            const loweredWord = word.word.toLowerCase();
+            const loweredMeanings = [word.meaning, word.meaningEn, word.meaningVi, word.meaningMn]
+              .filter((item): item is string => typeof item === 'string')
+              .map(item => item.toLowerCase());
+            return loweredWord.includes(searchQuery) || loweredMeanings.some(m => m.includes(searchQuery));
+          });
+        }
+
+        const startIndex = offset || 0;
+        const pageItems = filteredWordIds.slice(startIndex, startIndex + pageSize);
+        
+        const items = await Promise.all(
+          pageItems.map(async (wordIdStr) => {
+            const wordId = ctx.db.normalizeId('words', wordIdStr);
+            if (!wordId) return null;
+            const word = await ctx.db.get(wordId);
+            if (!word) return null;
+            
+            const progress = progressMap.get(wordIdStr) || {
+              userId,
+              wordId,
+              status: 'NEW',
+              proficiency: 0,
+              reps: 0,
+              lapses: 0,
+              state: 0,
+              updatedAt: now,
+              createdAt: now,
+            };
+            
+            return buildVocabBookItem(ctx, word, progress);
+          })
+        );
+
+        const nextOffset = startIndex + pageSize;
+        const nextCursor = nextOffset < filteredWordIds.length 
+          ? encodeVocabBookCursor({ dbCursor: dbCursor, offset: nextOffset }) 
+          : null;
+
+        return { 
+          items: items.filter((i): i is VocabBookItemDto => i !== null), 
+          nextCursor, 
+          hasMore: Boolean(nextCursor) 
+        };
+      }
+
+      // STANDARD CASE: Iterate over user_vocab_progress
       while (selected.length < pageSize && scanned < 14000) {
         const currentDbCursor = dbCursor;
         const page = await ctx.db
@@ -673,6 +835,7 @@ export const getVocabBookPage = query({
         offset = 0;
 
         const filteredProgress = pageSlice.filter(progress => {
+          if (courseWordIds && !courseWordIds.has(String(progress.wordId))) return false;
           if (hasSelectedWordIds && !selectedWordIds.has(String(progress.wordId))) return false;
           if (args.savedByUserOnly && progress.savedByUser !== true) return false;
           if (!includeMastered && progress.status === 'MASTERED') return false;
@@ -896,35 +1059,51 @@ export const getReviewSummary = query({
       const todayMs = startOfDay(now);
       const courseId = args.courseId?.trim() || '';
 
+      const targetCourseIds: string[] = [];
       if (courseId) {
-        const appearances = await ctx.db
-          .query('vocabulary_appearances')
-          .withIndex('by_course_unit', q => q.eq('courseId', courseId))
+        targetCourseIds.push(courseId);
+      } else if (!args.savedByUserOnly) {
+        const enrolled = await ctx.db
+          .query('user_course_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
           .collect();
+        targetCourseIds.push(...enrolled.map(p => p.courseId));
+      }
 
-        const wordIds = [...new Set(appearances.map(appearance => appearance.wordId))];
-        const progressArray = await Promise.all(
-          wordIds.map(wordId =>
-            ctx.db
-              .query('user_vocab_progress')
-              .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
-              .first()
+      let appearanceWordIds: Set<string> | null = null;
+      if (targetCourseIds.length > 0) {
+        const appearances = await Promise.all(
+          targetCourseIds.map(cid => 
+            ctx.db.query('vocabulary_appearances')
+              .withIndex('by_course_unit', q => q.eq('courseId', cid))
+              .collect()
           )
         );
-
-        return summarizeReviewProgress(progressArray, now, todayMs);
+        appearanceWordIds = new Set(appearances.flat().map(a => String(a.wordId)));
       }
 
       const progressDocs = await ctx.db
         .query('user_vocab_progress')
-        .withIndex(args.savedByUserOnly ? 'by_user_saved' : 'by_user', q =>
-          args.savedByUserOnly
-            ? q.eq('userId', userId).eq('savedByUser', true)
-            : q.eq('userId', userId)
-        )
+        .withIndex('by_user', q => q.eq('userId', userId))
         .collect();
 
-      return summarizeReviewProgress(progressDocs, now, todayMs);
+      const filteredProgress = progressDocs.filter(p => {
+        if (args.savedByUserOnly && p.savedByUser !== true) return false;
+        if (appearanceWordIds && !appearanceWordIds.has(String(p.wordId))) return false;
+        return true;
+      });
+
+      const summary = summarizeReviewProgress(filteredProgress, now, todayMs);
+      
+      // Add truly new words to unlearned count
+      if (appearanceWordIds) {
+        const progressWordIds = new Set(progressDocs.map(p => String(p.wordId)));
+        const trulyNewCount = Array.from(appearanceWordIds).filter(id => !progressWordIds.has(id)).length;
+        summary.unlearned += trulyNewCount;
+        summary.total += trulyNewCount;
+      }
+
+      return summary;
     } catch (err) {
       vocabLogger.error('getReviewSummary failed', err);
       return {
@@ -1085,5 +1264,171 @@ export const bulkImport = mutation({
     }
 
     return { success: true, results };
+  },
+});
+
+// Get day-by-day review forecast for the next 7 days
+export const getForecast = query({
+  args: {},
+  handler: async (ctx): Promise<number[]> => {
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
+      if (!userId) return [0, 0, 0, 0, 0, 0, 0];
+
+      const now = Date.now();
+      const todayStart = startOfDay(now);
+      
+      // We only need words that are due or will be due
+      const progressDocs = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .collect();
+
+      const forecast = [0, 0, 0, 0, 0, 0, 0];
+      for (const p of progressDocs) {
+        if (p.status === 'MASTERED') continue;
+        
+        const due = p.due ?? p.nextReviewAt;
+        if (!due) continue;
+        
+        const dayIndex = Math.floor((due - todayStart) / ONE_DAY_MS);
+        if (dayIndex < 0) {
+          // Already due
+          forecast[0]++;
+        } else if (dayIndex < 7) {
+          forecast[dayIndex]++;
+        }
+      }
+
+      return forecast;
+    } catch (err) {
+      vocabLogger.error('getForecast failed', err);
+      return [0, 0, 0, 0, 0, 0, 0];
+    }
+  },
+});
+
+/**
+ * Get per-unit progress for a course
+ * Returns progress data for each unit including total words, mastered words, and progress percentage
+ */
+export const getUnitProgress = query({
+  args: {
+    courseId: v.string(),
+  },
+  handler: async (ctx, args): Promise<UnitProgressDto[]> => {
+    try {
+      const userId = await getOptionalAuthUserId(ctx);
+
+      // Resolve course context to get effectiveCourseId and institute
+      const { institute, effectiveCourseId } = await resolveCourseContext(ctx, args.courseId);
+
+      // Query all vocabulary_appearances for this course
+      const appearances = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q => q.eq('courseId', effectiveCourseId))
+        .collect();
+
+      // Group by unitId, collecting unique wordId sets per unit
+      const unitWordsMap = new Map<number, Set<string>>();
+      for (const appearance of appearances) {
+        const unitId = appearance.unitId;
+        if (!unitWordsMap.has(unitId)) {
+          unitWordsMap.set(unitId, new Set());
+        }
+        unitWordsMap.get(unitId)!.add(appearance.wordId.toString());
+      }
+
+      // Collect all unique wordIds across all units
+      const allWordIds = new Set<string>();
+      for (const wordSet of unitWordsMap.values()) {
+        for (const wordId of wordSet) {
+          allWordIds.add(wordId);
+        }
+      }
+
+      // Batch-fetch user_vocab_progress records for the user
+      const progressMap = new Map<string, Doc<'user_vocab_progress'>>();
+      if (userId && allWordIds.size > 0) {
+        // Fetch all progress for this user, then filter by our wordIds
+        const allProgress = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        
+        for (const progress of allProgress) {
+          const wordIdStr = progress.wordId.toString();
+          if (allWordIds.has(wordIdStr)) {
+            progressMap.set(wordIdStr, progress);
+          }
+        }
+      }
+
+      // Build result array
+      const result: UnitProgressDto[] = [];
+
+      for (const [unitId, wordSet] of unitWordsMap) {
+        const totalWords = wordSet.size;
+        let masteredWords = 0;
+
+        for (const wordId of wordSet) {
+          const progress = progressMap.get(wordId);
+          // Words with state >= 2 are considered mastered
+          // Words without progress record are treated as state 0 (not mastered)
+          if (progress && typeof progress.state === 'number' && progress.state >= 2) {
+            masteredWords++;
+          }
+        }
+
+        // Compute progressPercent = Math.floor(masteredWords / totalWords * 100)
+        // Handle edge case where totalWords is 0
+        const progressPercent = totalWords > 0 ? Math.floor((masteredWords / totalWords) * 100) : 0;
+
+        result.push({
+          unitId,
+          totalWords,
+          masteredWords,
+          progressPercent,
+        });
+      }
+
+      // Determine if this is a Volume 2 course
+      const isVolume2 =
+        institute &&
+        institute.volume &&
+        (institute.volume === '2' || institute.volume === 'B');
+      const isLegacyYonseiVolume2Id =
+        institute &&
+        institute.id &&
+        (institute.id.includes('_1b') || institute.id.includes('_2b') || institute.id.endsWith('b'));
+
+      // If institute.totalUnits is defined, pad result to include units with 0 words
+      // For Volume 2 courses, we should NOT pad units 1-10 since the course uses units 11-20
+      if (institute && typeof institute.totalUnits === 'number' && institute.totalUnits > 0) {
+        const existingUnits = new Set(result.map(r => r.unitId));
+        // Skip padding for Volume 2 courses that already have data in units 11-20
+        const hasVolume2Units = existingUnits.size > 0 && Math.min(...existingUnits) >= 11;
+        if (existingUnits.size < institute.totalUnits && !(isVolume2 || isLegacyYonseiVolume2Id || hasVolume2Units)) {
+          for (let unitId = 1; unitId <= institute.totalUnits; unitId++) {
+            if (!existingUnits.has(unitId)) {
+              result.push({
+                unitId,
+                totalWords: 0,
+                masteredWords: 0,
+                progressPercent: 0,
+              });
+            }
+          }
+        }
+      }
+
+      // Sort by unitId ascending
+      result.sort((a, b) => a.unitId - b.unitId);
+
+      return result;
+    } catch (err) {
+      vocabLogger.error('getUnitProgress failed', err);
+      return [];
+    }
   },
 });

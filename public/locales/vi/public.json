@@ -517,7 +517,7 @@
       "q2": "Đề TOPIK có cập nhật không?",
       "a2": "Có. Chúng tôi thu thập đề công khai và cập nhật khi có đợt mới.",
       "q3": "Có hoàn tiền không?",
-      "a3": "Có bảo đảm hoàn tiền trong 14 ngày. Email hỗ trợ để được hoàn tiền."
+      "a3": "Các gói trả phí đủ điều kiện có dùng thử miễn phí 7 ngày. Yêu cầu hoàn tiền sẽ được xem xét theo từng trường hợp dựa trên lịch sử thanh toán, mức sử dụng, sự cố kỹ thuật và quy định pháp luật áp dụng."
     },
     "guides": {
       "title": "Bắt đầu với các hướng dẫn học tiếng Hàn thực tế",
@@ -599,7 +599,7 @@
     }
   },
   "pricingDetails": {
-    "refundBadge": "Hoàn tiền trong 14 ngày",
+    "refundBadge": "Dùng thử miễn phí 7 ngày",
     "errors": {
       "checkoutFailed": "Không thể bắt đầu thanh toán. Vui lòng thử lại."
     },
@@ -711,7 +711,7 @@
       "title": "Câu hỏi thường gặp",
       "q1": {
         "q": "Không hài lòng có hoàn tiền không?",
-        "a": "Có. Chúng tôi có bảo đảm hoàn tiền 14 ngày. Hãy email hỗ trợ để được hoàn tiền."
+        "a": "Các gói trả phí đủ điều kiện có dùng thử miễn phí 7 ngày. Yêu cầu hoàn tiền sẽ được xem xét theo từng trường hợp dựa trên lịch sử thanh toán, mức sử dụng, sự cố kỹ thuật và quy định pháp luật áp dụng."
       },
       "q2": {
         "q": "Tôi có thể hủy bất cứ lúc nào không?",

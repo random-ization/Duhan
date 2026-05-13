@@ -991,52 +991,7 @@ export default function NotebookV2Page() {
 
   return (
     <Suspense fallback={<div className="min-h-[50vh]" />}>
-      <DesktopNotebookV2Page
-        {...{
-          t,
-          navigate,
-          dateLocale,
-          activeNotebookId,
-          setActiveNotebookId,
-          selectedPageId,
-          setSelectedPageId,
-          query,
-          setQuery,
-          sourceFilter,
-          setSourceFilter,
-          viewMode,
-          setViewMode,
-          editorOpen,
-          setEditorOpen,
-          handleEditorOpenChange,
-          editorExpanded,
-          setEditorExpanded,
-          title,
-          setTitle,
-          noteKind,
-          setNoteKind,
-          quoteText,
-          setQuoteText,
-          editorDoc,
-          setEditorDoc,
-          saveState,
-          lastSavedAt,
-          notebooksResult,
-          sourceSummary,
-          searchResult,
-          pendingReviewCount,
-          selectedSearchItem,
-          selectedIsQuoteCard,
-          selectedPagePayload,
-          handleCreateNote,
-          handleDeletePage,
-          handleOpenSource,
-          handleRetrySave,
-          editorFallback,
-          togglePin,
-          OfficialTiptapEditor,
-        }}
-      />
+      <DesktopNotebookV2Page />
     </Suspense>
   );
 }

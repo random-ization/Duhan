@@ -130,14 +130,14 @@ const buildLearnTools = (labels: {
     l: labels.flashcards,
     s: labels.flashcardsSub,
     tone: 'pink',
-    action: { kind: 'path', path: buildVocabBookModePath('immerse') },
+    action: { kind: 'path', path: buildVocabBookModePath('flashcard') },
   },
   {
     k: '聽',
     l: labels.dictation,
     s: labels.dictationSub,
     tone: 'mint',
-    action: { kind: 'path', path: buildVocabBookModePath('dictation') },
+    action: { kind: 'path', path: buildVocabBookModePath('test') },
   },
   {
     k: '寫',
@@ -151,7 +151,7 @@ const buildLearnTools = (labels: {
     l: labels.pronunciation,
     s: labels.pronunciationSub,
     tone: 'lilac',
-    action: { kind: 'path', path: buildVocabBookModePath('listen') },
+    action: { kind: 'path', path: buildVocabBookModePath('match') },
   },
 ];
 

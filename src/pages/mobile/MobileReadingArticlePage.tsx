@@ -197,7 +197,7 @@ export default function MobileReadingArticlePage({
         onLookupSelection={onLookupSelection}
         onSaveSelectionWord={onSaveSelectionWord}
         startNoteFromSelection={startNoteFromSelection}
-        onClose={() => setSelectionToolbar((prev: any) => ({ ...prev, visible: false }))}
+        onClose={() => setSelectionToolbar((prev: SelectionToolbarState) => ({ ...prev, visible: false }))}
       />
 
       {!mobilePanelOpen ? (

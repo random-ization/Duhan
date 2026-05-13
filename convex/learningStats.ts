@@ -13,6 +13,10 @@ export type ReviewStatsDto = {
   dueNow: number;
   dueSoon: number;
   savedWords: number;
+  unlearned: number;
+  mastered: number;
+  total: number;
+  recommendedToday: number;
 };
 
 export type ModuleBreakdownPoint = {
@@ -54,6 +58,8 @@ export type LearnerStatsDto = {
   courseProgress: Array<{
     courseId: string;
     courseName: string;
+    displayLevel?: string;
+    volume?: string;
     completedUnits: number;
     totalUnits: number;
     lastAccessAt: string;
@@ -65,6 +71,7 @@ export type LearnerStatsDto = {
   vocabStats: {
     total: number;
     dueReviews: number;
+    unlearned: number;
     mastered: number;
   };
   grammarStats: {
@@ -77,4 +84,36 @@ export type LearnerStatsDto = {
   totalMinutes: number;
   todayWordsStudied: number;
   todayGrammarStudied: number;
+};
+export type CourseDashboardDto = {
+  currentCourse: {
+    id: string;
+    name: string;
+    displayLevel: string;
+    totalUnits: number;
+    completedUnitsCount: number;
+    currentUnitIndex: number;
+    coverUrl?: string;
+    publisher?: string;
+    totalStudyMinutes: number;
+  } | null;
+  enrolledCourses: Array<{
+    id: string;
+    name: string;
+    displayLevel?: string;
+    completedUnitsCount: number;
+    totalUnits: number;
+    lastAccessAt: number;
+  }>;
+  journeyUnits: Array<{
+    unitIndex: number;
+    title: string;
+    isCompleted: boolean;
+    isCurrent: boolean;
+  }>;
+  stats: {
+    streak: number;
+    weeklyActivity: WeeklyActivityPoint[];
+    totalMinutes: number;
+  };
 };

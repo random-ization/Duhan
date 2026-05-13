@@ -68,6 +68,26 @@ const GrammarModulePage: React.FC = () => {
     return 10;
   }, [allCourseGrammar]);
 
+  const normalizedAllCourseGrammar = useMemo<GrammarPointData[]>(
+    () =>
+      (allCourseGrammar || []).map(item => ({
+        id: String(item.id),
+        title: item.title,
+        titleEn: item.titleEn,
+        titleZh: item.titleZh,
+        titleVi: item.titleVi,
+        titleMn: item.titleMn,
+        unitId: item.unitId,
+        summary: item.summary,
+        summaryZh: item.summary,
+        type: 'GRAMMAR',
+        explanation: item.summary,
+        examples: [],
+        status: normalizeStatus(item.status),
+      })),
+    [allCourseGrammar]
+  );
+
   const focusGrammarId = searchParams.get('focusGrammarId')?.trim() || null;
   const focusedUnitFromQuery = useMemo(() => {
     if (!focusGrammarId || !allCourseGrammar || allCourseGrammar.length === 0) {
@@ -300,7 +320,7 @@ const GrammarModulePage: React.FC = () => {
 
   return (
     <DesktopGrammarModulePage
-      allCourseGrammar={allCourseGrammar || []}
+      allCourseGrammar={normalizedAllCourseGrammar}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       desktopSelectedGrammarId={desktopSelectedGrammarId}
@@ -313,7 +333,7 @@ const GrammarModulePage: React.FC = () => {
       instituteId={instituteId || ''}
       language={language}
       t={t}
-      selectedStatus={selectedStatus}
+      selectedStatus={selectedStatus ?? 'NEW'}
       statusLabel={statusLabel}
       statusClass={statusClass}
       selectedProficiency={selectedProficiency}
@@ -333,4 +353,3 @@ const GrammarModulePage: React.FC = () => {
 };
 
 export default GrammarModulePage;
-

@@ -47,5 +47,17 @@ playwright-report/
 .trae/
 coverage/
 
+# Local generated reports and tool caches
+.android-sdk/
+Library/
+docs/reports/
+scratch/
+.kiro/
+.temp_original.tsx
+patch_logo_icon.py
+tsc_output.txt
+lint_output.txt
+*.keystore
+
 # Claude IDE/Tool internal worktrees
 .claude/

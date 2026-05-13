@@ -90,6 +90,10 @@ export interface DictionaryEntry {
       word: string;
       definition: string;
     };
+    examples?: Array<{
+      ko: string;
+      translation?: string;
+    }>;
   }>;
 }
 
@@ -162,6 +166,10 @@ function parseSearchXML(xmlText: string): SearchResult {
                 definition: getTagContent(firstTranslation, 'trans_dfn'),
               }
             : undefined,
+          examples: getAllTagContents(sense, 'example').map(ex => ({
+            ko: getTagContent(ex, 'example_ko') || getTagContent(ex, 'exam') || '',
+            translation: getTagContent(ex, 'example_en') || getTagContent(ex, 'example_zh') || getTagContent(ex, 'example_vi') || getTagContent(ex, 'example_mn') || undefined
+          })).filter(ex => !!ex.ko)
         };
       }),
     };

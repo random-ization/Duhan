@@ -1,7 +1,7 @@
 # Launch Runbook
 
 Last updated: March 19, 2026  
-Refund policy baseline: **14-day full refund**
+Refund policy baseline: **7-day free trial + case-by-case refunds**
 
 ## 1. Release Checklist
 
@@ -11,7 +11,7 @@ Refund policy baseline: **14-day full refund**
    - `NODE_ENV=production npm run env:validate`
 4. Verify legal copy consistency:
    - Terms/Privacy/Refund pages all render correctly in `en/zh/vi/mn`.
-   - Pricing, landing FAQ, and refund badge all match 14-day policy.
+   - Pricing, landing FAQ, and refund badge all match the published trial and refund policy.
 
 ## 2. Alert Rules (Must Configure Before Launch)
 
@@ -47,13 +47,14 @@ Refund policy baseline: **14-day full refund**
    - affected user `subscriptionType`/`tier` updated as expected.
 4. Record replay window and affected count in incident log.
 
-## 5. Refund SOP (14-Day Policy)
+## 5. Refund SOP (Case-by-Case Policy)
 
-1. Confirm purchase timestamp is within 14 days.
-2. Verify account email and payment record.
-3. Process refund in provider dashboard.
-4. Ensure subscription access is revoked if required.
-5. Reply to user with confirmation and expected bank/card settlement window.
+1. Confirm whether the user is still in a free-trial window or has already been charged.
+2. Verify account email, payment record, billing timeline, and whether the request involves duplicate charge, billing error, or material product issue.
+3. Review refund eligibility case by case against the published policy and applicable local consumer law.
+4. If approved, process the refund in the provider dashboard and ensure subscription access is revoked if required.
+5. Record the reason and note that Lemon Squeezy, as merchant of record, may also issue refunds or handle chargebacks under its platform rules.
+6. Reply to the user with the outcome and expected bank/card settlement window.
 
 ## 6. Incident Contacts (Fill Before Launch)
 

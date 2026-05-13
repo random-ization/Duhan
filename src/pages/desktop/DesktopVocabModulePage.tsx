@@ -8,65 +8,120 @@ import {
   DialogPortal,
 } from '../../components/ui';
 import { VocabModuleSkeleton } from '../../components/common';
+import type { LearningSessionSnapshot } from '../../features/vocab/components/VocabQuiz';
+import type { VocabTestSessionSnapshot } from '../../features/vocab/components/VocabTest';
+import type { FlashcardSessionSnapshot } from '../../features/vocab/components/FlashcardView';
+import type { VocabularyItem, Institute, User, Language } from '../../types';
+import type { LabelsBundle } from '../VocabBookPage';
 
 const FlashcardView = lazy(() => import('../../features/vocab/components/FlashcardView'));
 const VocabQuiz = lazy(() => import('../../features/vocab/components/VocabQuiz'));
 const VocabMatch = lazy(() => import('../../features/vocab/components/VocabMatch'));
 const VocabTest = lazy(() => import('../../features/vocab/components/VocabTest'));
 
-interface DesktopVocabModulePageProps {
-  labels: any;
-  course: any;
+// --- Types ---
+
+export interface ExtendedVocabItem extends VocabularyItem {
+  id: string;
+  unit: number;
+  mastered?: boolean;
+  exampleTranslation?: string;
+  // FSRS Fields
+  state?: number;
+  stability?: number;
+  difficulty?: number;
+  elapsed_days?: number;
+  scheduled_days?: number;
+  reps?: number;
+  learning_steps?: number;
+  lapses?: number;
+  last_review?: number | null;
+}
+
+export type ViewMode = 'flashcard' | 'match';
+export type SessionMode = 'FLASHCARD' | 'LEARN' | 'TEST';
+
+export interface ViewState {
+  mode: ViewMode;
+  cardIndex: number;
+  isFlipped: boolean;
+  flashcardComplete: boolean;
+}
+
+export interface ResumeCandidate {
+  mode: SessionMode;
+  sessionId: string;
+  completed: number;
+  remaining: number;
+  total: number;
+  progressPercent: number;
+}
+
+export interface DesktopVocabModulePageProps {
+  labels: LabelsBundle;
+  course: Institute | undefined;
   language: string;
   instituteId: string | undefined;
-  selectedUnitId: any;
-  availableUnits: any[];
-  setSelectedUnitId: (id: any) => void;
-  viewState: any;
-  setViewState: any;
-  filteredWords: any[];
-  masteredIds: any;
-  setMasteredIds: any;
-  flashcardResumeSnapshot: any;
-  latestFlashcardSnapshotRef: any;
-  persistLearningSnapshot: (mode: any, snapshot: any) => Promise<void>;
+  selectedUnitId: number | 'ALL';
+  availableUnits: number[];
+  setSelectedUnitId: (id: number | 'ALL') => void;
+  viewState: ViewState;
+  setViewState: React.Dispatch<React.SetStateAction<ViewState>>;
+  filteredWords: ExtendedVocabItem[];
+  masteredIds: Set<string>;
+  setMasteredIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  flashcardResumeSnapshot: FlashcardSessionSnapshot | null;
+  latestFlashcardSnapshotRef: React.MutableRefObject<FlashcardSessionSnapshot | null>;
+  persistLearningSnapshot: (mode: SessionMode, snapshot: FlashcardSessionSnapshot | LearningSessionSnapshot | VocabTestSessionSnapshot) => Promise<void>;
   flushQueue: () => Promise<void>;
-  completeSessionForMode: (mode: any) => Promise<void>;
+  completeSessionForMode: (mode: SessionMode) => Promise<void>;
 
-  globalSettings: any;
-  updateGlobalSettings: (settings: any) => Promise<void>;
+  globalSettings: {
+    flashcardAutoTTS: boolean;
+    flashcardFront: 'KOREAN' | 'NATIVE';
+    flashcardRatingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
+  };
+  updateGlobalSettings: (settings: Partial<DesktopVocabModulePageProps['globalSettings']>) => Promise<void>;
   speakWord: (text: string) => void;
   toggleStar: (id: string) => void;
   starredIds: Set<string>;
-  requestOpenSessionMode: (mode: any) => void;
-  handleReview: any;
-  gameWords: any[];
+  requestOpenSessionMode: (mode: SessionMode) => void;
+  handleReview: (word: ExtendedVocabItem, result: boolean | number) => void;
+  gameWords: Array<{
+    id: string;
+    korean: string;
+    english: string;
+    unit: number;
+    partOfSpeech?: string;
+    pos?: string;
+  }>;
   learnOpen: boolean;
-  latestLearnSnapshotRef: any;
+  latestLearnSnapshotRef: React.MutableRefObject<LearningSessionSnapshot | null>;
   setLearnOpen: (open: boolean) => void;
-  learnResumeSnapshot: any;
+  learnResumeSnapshot: LearningSessionSnapshot | null;
   testOpen: boolean;
-  latestTestSnapshotRef: any;
+  latestTestSnapshotRef: React.MutableRefObject<VocabTestSessionSnapshot | null>;
   setTestOpen: (open: boolean) => void;
-  testResumeSnapshot: any;
-  resumeModePrompt: any;
-  setResumeModePrompt: any;
-  resumeCandidate: any;
-  setResumeCandidate: any;
-  user: any;
-  navigate: any;
+  testResumeSnapshot: VocabTestSessionSnapshot | null;
+  resumeModePrompt: SessionMode | null;
+  setResumeModePrompt: (mode: SessionMode | null) => void;
+  resumeCandidate: ResumeCandidate | null;
+  setResumeCandidate: (candidate: ResumeCandidate | null) => void;
+  user: User | null;
+  navigate: (path: string) => void;
   backPath: string;
-  BACKGROUND_STYLE: any;
-  resolveCourseBreadcrumbLabel: any;
-  getLabel: any;
+
+  resolveCourseBreadcrumbLabel: (course: Institute | undefined, language: string, instituteId: string | undefined) => string;
+  getLabel: (labels: LabelsBundle, path: readonly string[]) => string | undefined;
   restartFromResumePrompt: () => Promise<void>;
   continueFromResumePrompt: () => void;
-  pendingUnitSwitch: any;
-  setPendingUnitSwitch: any;
+  pendingUnitSwitch: number | 'ALL' | null;
+  setPendingUnitSwitch: (unit: number | 'ALL' | null) => void;
   confirmUnitSwitchWithSave: () => Promise<void>;
   renderEmptyContent: () => React.ReactNode;
   renderTopBar: () => React.ReactNode;
   renderModeTabs: () => React.ReactNode;
+  renderOverlays: () => React.ReactNode;
 }
 
 export default function DesktopVocabModulePage({
@@ -110,7 +165,7 @@ export default function DesktopVocabModulePage({
   user,
   navigate,
   backPath,
-  BACKGROUND_STYLE,
+
   resolveCourseBreadcrumbLabel,
   getLabel,
   restartFromResumePrompt,
@@ -121,14 +176,15 @@ export default function DesktopVocabModulePage({
   renderEmptyContent,
   renderTopBar,
   renderModeTabs,
+  renderOverlays,
 }: DesktopVocabModulePageProps) {
 
   const renderFlashcardDeck = () => (
     <Suspense fallback={<VocabModuleSkeleton />}>
       <FlashcardView
-        key={`${instituteId}:${selectedUnitId}:${flashcardResumeSnapshot?.timestamp ?? 'fresh'}`}
+        key={`${instituteId}:${selectedUnitId}`}
         words={filteredWords}
-        language={language as any}
+        language={language as Language}
 
         courseId={instituteId}
         progressKey={`${instituteId}:${selectedUnitId}`}
@@ -156,9 +212,9 @@ export default function DesktopVocabModulePage({
         onComplete={stats => {
           void flushQueue();
           void completeSessionForMode('FLASHCARD');
-          setViewState((prev: any) => ({ ...prev, flashcardComplete: true }));
+          setViewState((prev: ViewState) => ({ ...prev, flashcardComplete: true }));
           const newMastered = new Set(masteredIds);
-          stats.correct.forEach((w: any) => newMastered.add(w.id));
+          stats.correct.forEach((w) => newMastered.add(w.id));
           setMasteredIds(newMastered);
         }}
         onSaveWord={word => {
@@ -179,7 +235,7 @@ export default function DesktopVocabModulePage({
             requestOpenSessionMode('FLASHCARD');
             return;
           }
-          setViewState((prev: any) => ({ ...prev, mode: target as any }));
+          setViewState((prev: ViewState) => ({ ...prev, mode: target as ViewMode }));
         }}
         onSpeak={speakWord}
         onCardReview={handleReview}
@@ -199,32 +255,32 @@ export default function DesktopVocabModulePage({
       {!viewState.flashcardComplete ? (
         renderFlashcardDeck()
       ) : (
-        <div className="w-full max-w-xl bg-card border-2 border-foreground rounded-[2rem] p-8 flex flex-col items-center shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] text-center my-12 animate-in fade-in-50 duration-300">
-          <div className="w-20 h-20 bg-green-100 dark:bg-green-400/20 text-green-600 dark:text-green-300 rounded-full flex items-center justify-center text-4xl mb-6 border-2 border-green-600 dark:border-green-400/40">
+        <div className="w-full max-w-2xl bg-k-card border border-k-divider rounded-[2.5rem] p-10 flex flex-col items-center shadow-xl text-center my-16 animate-in fade-in-50 zoom-in-95 duration-500">
+          <div className="w-24 h-24 bg-k-mint-deep/10 text-k-mint-deep rounded-full flex items-center justify-center text-5xl mb-8 border border-k-mint-deep/20">
             ✓
           </div>
-          <h2 className="text-3xl font-black text-foreground mb-2">
+          <h2 className="text-4xl font-extrabold text-k-ink mb-3 tracking-tight">
             {labels.sessionComplete || 'Session Complete!'}
           </h2>
-          <p className="text-muted-foreground mb-2">
+          <p className="text-k-sub font-bold text-lg mb-4">
             {filteredWords.length} {labels.wordsUnit || 'words'}{' '}
             {labels.vocab?.reviewed || 'reviewed'}
           </p>
-          <div className="flex gap-2 mb-8">
-            <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-400/14 dark:text-green-200 rounded-full text-sm font-bold">
+          <div className="flex gap-3 mb-10">
+            <span className="px-5 py-2 bg-k-mint-deep/10 text-k-mint-deep rounded-full text-sm font-extrabold border border-k-mint-deep/20">
               ✓ {labels.vocab?.remembered || 'Remembered'} {masteredIds.size}
             </span>
-            <span className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-400/14 dark:text-red-200 rounded-full text-sm font-bold">
+            <span className="px-5 py-2 bg-k-pink-deep/10 text-k-pink-deep rounded-full text-sm font-extrabold border border-k-pink-deep/20">
               ✕ {labels.vocab?.forgot || 'Forgot'} {filteredWords.length - masteredIds.size}
             </span>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
             <Button
               type="button"
               variant="ghost"
               size="auto"
               onClick={() => setLearnOpen(true)}
-              className="px-6 py-3 bg-card border-2 border-foreground text-foreground font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 transition-all"
+              className="px-8 py-4 bg-k-card border border-k-divider text-k-ink font-extrabold rounded-2xl shadow-sm hover:border-k-crimson hover:text-k-crimson transition-all"
             >
               🧠 {labels.learn || 'Learn'}
             </Button>
@@ -240,7 +296,7 @@ export default function DesktopVocabModulePage({
                       setSelectedUnitId(availableUnits[currentIdx + 1]);
                     }
                   }}
-                  className="px-6 py-3 bg-green-500 dark:bg-green-400/80 border-2 border-green-600 dark:border-green-300/35 text-primary-foreground font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(22,163,74,1)] dark:shadow-[4px_4px_0px_0px_rgba(74,222,128,0.28)] hover:-translate-y-1 transition-all"
+                  className="px-8 py-4 bg-k-mint-deep text-white font-extrabold rounded-2xl shadow-md hover:bg-k-mint-deep/90 transition-all"
                 >
                   {labels.common?.next || 'Next Unit'} →
                 </Button>
@@ -251,10 +307,10 @@ export default function DesktopVocabModulePage({
             variant="ghost"
             size="auto"
             onClick={() => {
-              setViewState((prev: any) => ({ ...prev, cardIndex: 0, flashcardComplete: false }));
+              setViewState((prev: ViewState) => ({ ...prev, cardIndex: 0, flashcardComplete: false }));
               setMasteredIds(new Set());
             }}
-            className="mt-6 text-sm text-muted-foreground hover:text-foreground font-bold underline underline-offset-4"
+            className="mt-8 text-sm text-k-sub hover:text-k-crimson font-bold underline underline-offset-8 transition-colors"
           >
             {labels.vocab?.restartSession || 'Restart session'}
           </Button>
@@ -269,7 +325,7 @@ export default function DesktopVocabModulePage({
         <VocabMatch
           key={`match-${selectedUnitId}-${gameWords.length}`}
           words={gameWords}
-          onComplete={(time: any, moves: any) => console.log('Match completed:', { time, moves })}
+          onComplete={(time: number, moves: number) => console.log('Match completed:', { time, moves })}
         />
       </Suspense>
     </div>
@@ -286,117 +342,13 @@ export default function DesktopVocabModulePage({
     );
   };
 
-  const renderOverlays = () => (
-    <>
-      <Dialog
-        open={learnOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            if (latestLearnSnapshotRef.current) {
-              void persistLearningSnapshot('LEARN', latestLearnSnapshotRef.current);
-            }
-            void flushQueue();
-            setLearnOpen(false);
-          }
-        }}
-      >
-        <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-50 bg-black/45" />
-          <DialogContent className="fixed inset-0 z-[51] flex items-center justify-center pointer-events-none p-0">
-            <div className="pointer-events-auto w-full h-full bg-background flex flex-col">
-              <div className="p-4 sm:p-6 flex-1 overflow-auto">
-                <Suspense fallback={<VocabModuleSkeleton />}>
-                  <VocabQuiz
-                    key={`learn-${selectedUnitId}-${gameWords.length}`}
-                    words={gameWords}
-                    courseId={instituteId}
-                    onComplete={() => {
-                      void flushQueue();
-                      void completeSessionForMode('LEARN');
-                    }}
-                    hasNextUnit={
-                      typeof selectedUnitId === 'number' &&
-                      availableUnits.indexOf(selectedUnitId) < availableUnits.length - 1
-                    }
-                    onNextUnit={() => {
-                      if (typeof selectedUnitId === 'number') {
-                        const currentIdx = availableUnits.indexOf(selectedUnitId);
-                        if (currentIdx < availableUnits.length - 1) {
-                          setSelectedUnitId(availableUnits[currentIdx + 1]);
-                        }
-                      }
-                    }}
-                    currentUnitLabel={
-                      selectedUnitId === 'ALL'
-                        ? labels.vocab?.allUnits || 'All Units'
-                        : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`
-                    }
-                    userId={user?.id}
-                    language={language as any}
 
-                    variant="learn"
-                    resumeSnapshot={learnResumeSnapshot}
-                    onSessionSnapshot={snapshot => {
-                      latestLearnSnapshotRef.current = snapshot;
-                      void persistLearningSnapshot('LEARN', snapshot);
-                    }}
-                  />
-                </Suspense>
-              </div>
-            </div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
-
-
-      <Dialog
-        open={testOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            if (latestTestSnapshotRef.current) {
-              void persistLearningSnapshot('TEST', latestTestSnapshotRef.current);
-            }
-            void flushQueue();
-            setTestOpen(false);
-          }
-        }}
-      >
-        <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-50 bg-black/45" />
-          <DialogContent className="fixed inset-0 z-[51] flex items-center justify-center pointer-events-none p-0">
-            <div className="pointer-events-auto w-full h-full bg-background flex flex-col">
-              <div className="p-4 sm:p-6 flex-1 overflow-auto">
-                <Suspense fallback={<VocabModuleSkeleton />}>
-                  <VocabTest
-                    key={`test-${selectedUnitId}-${gameWords.length}`}
-                    words={gameWords as any}
-                    language={language as any}
-                    scopeTitle={
-                      selectedUnitId === 'ALL'
-                        ? labels.vocab?.allUnits || 'All Units'
-                        : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`
-                    }
-                    resumeSnapshot={testResumeSnapshot}
-                    onSessionSnapshot={snapshot => {
-                      latestTestSnapshotRef.current = snapshot;
-                      void persistLearningSnapshot('TEST', snapshot);
-                    }}
-                  />
-
-                </Suspense>
-              </div>
-            </div>
-          </DialogContent>
-        </DialogPortal>
-      </Dialog>
-    </>
-  );
 
   return (
-    <div className="min-h-screen flex flex-col items-center py-6 px-4" style={BACKGROUND_STYLE}>
-      <div className="w-full max-w-4xl mb-6">
+    <div className="min-h-screen flex flex-col items-center py-8 px-6 bg-k-bg font-sans">
+      <div className="w-full max-w-5xl mb-8">
         <AppBreadcrumb
-          className="mb-4"
+          className="mb-6 opacity-70"
           items={[
             { label: labels.coursesOverview?.pageTitle || 'Courses', to: '/courses' },
             {
@@ -410,7 +362,9 @@ export default function DesktopVocabModulePage({
         {renderModeTabs()}
       </div>
 
-      {renderContent()}
+      <div className="w-full max-w-5xl flex flex-col items-center">
+        {renderContent()}
+      </div>
 
       {renderOverlays()}
 

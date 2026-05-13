@@ -1,0 +1,160 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "org.jetbrains.kotlin.plugin.compose"
+apply plugin: "org.jetbrains.kotlin.plugin.serialization"
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
+/**
+ * Set this to true in release builds to optimize the app using [R8](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization).
+ */
+def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: false).toBoolean()
+def readBuildSecret = { String key ->
+    def fromGradle = findProperty(key)
+    if (fromGradle != null && fromGradle.toString().trim()) {
+        return fromGradle.toString().trim()
+    }
+    def fromEnv = System.getenv(key)
+    if (fromEnv != null && fromEnv.toString().trim()) {
+        return fromEnv.toString().trim()
+    }
+    return ""
+}
+
+def firebaseApiKey = readBuildSecret("HANGYEOL_FIREBASE_API_KEY")
+def firebaseAppId = readBuildSecret("HANGYEOL_FIREBASE_APP_ID")
+def firebaseProjectId = readBuildSecret("HANGYEOL_FIREBASE_PROJECT_ID")
+def firebaseSenderId = readBuildSecret("HANGYEOL_FIREBASE_SENDER_ID")
+def firebaseStorageBucket = readBuildSecret("HANGYEOL_FIREBASE_STORAGE_BUCKET")
+def firebaseDatabaseUrl = readBuildSecret("HANGYEOL_FIREBASE_DATABASE_URL")
+def oauthRedirectBaseUrl = readBuildSecret("HANGYEOL_OAUTH_REDIRECT_BASE_URL")
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace 'com.hangyeol.app'
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    defaultConfig {
+        applicationId 'com.hangyeol.app'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField "String", "CONVEX_URL", "\"https://deafening-partridge-486.convex.cloud\""
+        buildConfigField "boolean", "USE_CONVEX_BACKEND", "true"
+        buildConfigField "String", "FIREBASE_API_KEY", "\"${firebaseApiKey}\""
+        buildConfigField "String", "FIREBASE_APP_ID", "\"${firebaseAppId}\""
+        buildConfigField "String", "FIREBASE_PROJECT_ID", "\"${firebaseProjectId}\""
+        buildConfigField "String", "FIREBASE_SENDER_ID", "\"${firebaseSenderId}\""
+        buildConfigField "String", "FIREBASE_STORAGE_BUCKET", "\"${firebaseStorageBucket}\""
+        buildConfigField "String", "FIREBASE_DATABASE_URL", "\"${firebaseDatabaseUrl}\""
+        buildConfigField "String", "OAUTH_REDIRECT_BASE_URL", "\"${oauthRedirectBaseUrl}\""
+        buildConfigField "boolean", "REQUEST_NOTIFICATIONS_ON_LAUNCH", "true"
+    }
+
+    flavorDimensions "backend"
+    productFlavors {
+        mock {
+            dimension "backend"
+            buildConfigField "boolean", "USE_CONVEX_BACKEND", "false"
+            buildConfigField "boolean", "REQUEST_NOTIFICATIONS_ON_LAUNCH", "false"
+        }
+        staging {
+            dimension "backend"
+            buildConfigField "boolean", "USE_CONVEX_BACKEND", "true"
+        }
+        prod {
+            dimension "backend"
+            buildConfigField "boolean", "USE_CONVEX_BACKEND", "true"
+        }
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
+            def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
+            shrinkResources enableShrinkResources.toBoolean()
+            minifyEnabled enableMinifyInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
+            crunchPngs enablePngCrunchInRelease.toBoolean()
+        }
+    }
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+}
+
+dependencies {
+    implementation(platform("androidx.compose:compose-bom:2025.02.00"))
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.media3:media3-exoplayer:1.10.0")
+    implementation("androidx.media3:media3-ui:1.10.0")
+
+    // Network: OkHttp + Retrofit for Convex HTTP API
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+
+    // Security: encrypted storage for auth tokens
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Browser: Custom Tabs for OAuth flows
+    implementation("androidx.browser:browser:1.8.0")
+
+    // Firebase Cloud Messaging: device token registration for Convex push subscriptions
+    implementation("com.google.firebase:firebase-messaging:24.1.2")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.02.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+}

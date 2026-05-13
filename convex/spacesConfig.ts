@@ -62,6 +62,19 @@ export function getSpacesCdnBaseUrl(bucket: string, host: string): string {
   return `https://${bucket}.${toSpacesCdnHost(host)}`;
 }
 
+export function resolveStoragePublicUrl(objectKey: string): string {
+  const spaces = getSpacesPublicConfig();
+  if (!spaces) return '';
+  const host = getSpacesHost(spaces.endpoint);
+  const cdnBase = getSpacesCdnBaseUrl(spaces.bucket, host);
+  // Ensure the key is properly encoded as a URI path
+  const encodedKey = objectKey
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+  return `${cdnBase}/${encodedKey}`;
+}
+
 export function normalizeStoragePublicUrl(
   inputUrl: string | null | undefined
 ): string | null | undefined {
@@ -92,7 +105,12 @@ export function normalizeStoragePublicUrl(
       return inputUrl;
     }
 
-    return `${targetUrl.origin}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
+    // Convert legacy host to current CDN host
+    const objectKey = currentUrl.pathname.startsWith('/') 
+      ? currentUrl.pathname.slice(1) 
+      : currentUrl.pathname;
+      
+    return resolveStoragePublicUrl(objectKey);
   } catch {
     return inputUrl;
   }

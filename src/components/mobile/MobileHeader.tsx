@@ -20,9 +20,11 @@ import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGlobalSettings } from '../../hooks/useGlobalSettings';
 import { NOTIFICATIONS, qRef, type NotificationDto } from '../../utils/convexRefs';
 import { notify } from '../../utils/notify';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
+import { UserAvatar } from '../common';
 import { MobileHeaderAction, RouteUiConfig } from '../../config/routes.config';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../../utils/browserStorage';
 import { hasSafeReturnTo, resolveSafeReturnTo } from '../../utils/navigation';
@@ -32,7 +34,11 @@ import { MobileSearchSheet } from './MobileSearchSheet';
 
 type HeaderStats = Pick<LearnerStatsDto, 'streak'>;
 
-const FONT_SCALES = [0.95, 1, 1.08];
+const FONT_SCALE_OPTIONS = [
+  { setting: 'compact', cssScale: 0.95 },
+  { setting: 'comfortable', cssScale: 1 },
+  { setting: 'relaxed', cssScale: 1.08 },
+] as const;
 
 interface MobileHeaderProps {
   routeUiConfig: RouteUiConfig;
@@ -44,6 +50,12 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const {
+    settings: globalSettings,
+    storedSettings,
+    updateSettings,
+    isLoading: globalSettingsLoading,
+  } = useGlobalSettings();
   const stats = useQuery(
     qRef<Record<string, never>, HeaderStats | null>('userStats:getStats'),
     user ? {} : 'skip'
@@ -62,12 +74,14 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
   const dismissNotification = useMutation(NOTIFICATIONS.dismiss);
   const latestUnreadIdRef = useRef<string | null>(null);
   const latestUnreadCreatedAtRef = useRef<number | null>(null);
-  const [fontScaleIndex, setFontScaleIndex] = useState(() => {
+  const fontScaleMigrationAttemptedRef = useRef(false);
+  const [fallbackFontScaleIndex, setFallbackFontScaleIndex] = useState(() => {
     if (typeof window === 'undefined') return 1;
     const saved = safeGetLocalStorageItem('mobile_font_scale_index');
     const parsed = saved ? Number(saved) : 1;
-    return Number.isInteger(parsed) && parsed >= 0 && parsed < FONT_SCALES.length ? parsed : 1;
+    return Number.isInteger(parsed) && parsed >= 0 && parsed < FONT_SCALE_OPTIONS.length ? parsed : 1;
   });
+  const [pendingFontScaleIndex, setPendingFontScaleIndex] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -121,22 +135,49 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     });
   }, [routeUiConfig.headerTitle, routeUiConfig.headerTitleDefault, t]);
 
+  const settingsFontScaleIndex = useMemo(
+    () =>
+      Math.max(
+        0,
+        FONT_SCALE_OPTIONS.findIndex(option => option.setting === globalSettings.fontScale)
+      ),
+    [globalSettings.fontScale]
+  );
+
+  const effectiveFontScaleIndex =
+    pendingFontScaleIndex ??
+    (globalSettingsLoading ? fallbackFontScaleIndex : settingsFontScaleIndex);
+
   const applyNextFontScale = () => {
-    const next = (fontScaleIndex + 1) % FONT_SCALES.length;
-    setFontScaleIndex(next);
+    const next = (effectiveFontScaleIndex + 1) % FONT_SCALE_OPTIONS.length;
+    setPendingFontScaleIndex(next);
+    setFallbackFontScaleIndex(next);
     if (typeof window !== 'undefined') {
       safeSetLocalStorageItem('mobile_font_scale_index', String(next));
-      document.documentElement.style.setProperty('--mobile-font-scale', String(FONT_SCALES[next]));
     }
+    void updateSettings({ fontScale: FONT_SCALE_OPTIONS[next].setting }).catch(() => {
+      // Unauthenticated or offline users keep the local preference as a fallback.
+    });
   };
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.style.setProperty(
       '--mobile-font-scale',
-      String(FONT_SCALES[fontScaleIndex])
+      String(FONT_SCALE_OPTIONS[effectiveFontScaleIndex].cssScale)
     );
-  }, [fontScaleIndex]);
+  }, [effectiveFontScaleIndex]);
+
+  useEffect(() => {
+    if (fontScaleMigrationAttemptedRef.current) return;
+    if (globalSettingsLoading) return;
+    if (storedSettings?.fontScale !== undefined) return;
+    if (fallbackFontScaleIndex === 1) return;
+    fontScaleMigrationAttemptedRef.current = true;
+    void updateSettings({ fontScale: FONT_SCALE_OPTIONS[fallbackFontScaleIndex].setting }).catch(() => {
+      fontScaleMigrationAttemptedRef.current = false;
+    });
+  }, [fallbackFontScaleIndex, globalSettingsLoading, storedSettings?.fontScale, updateSettings]);
 
   const toggleFavorite = () => {
     const next = favorites.includes(pathWithoutLang)
@@ -450,17 +491,10 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img
-                  src={user?.avatar || '/logo.png'}
-                  alt={user?.name ?? 'User'}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 14,
-                    border: `2px solid ${KT.card}`,
-                    boxShadow: KT.sh,
-                    objectFit: 'cover',
-                  }}
+                <UserAvatar 
+                  user={user}
+                  className="w-[44px] h-[44px] rounded-[14px] border-2 border-k-card shadow-k-sh"
+                  fallbackClassName="text-[18px]"
                 />
                 <div
                   style={{
@@ -718,7 +752,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
                             type="button"
                             onClick={() => {
                               setBellOpen(false);
-                              navigate('/profile?tab=settings');
+                              navigate('/profile/settings/notifications');
                             }}
                             style={{
                               width: '100%',

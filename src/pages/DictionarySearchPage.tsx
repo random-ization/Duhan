@@ -44,6 +44,7 @@ type DictionaryEntry = {
     order: number;
     definition: string;
     translation?: { lang: string; word: string; definition: string };
+    examples?: Array<{ ko: string; translation?: string }>;
   }>;
 };
 
@@ -207,6 +208,7 @@ export default function DictionarySearchPage() {
     void runSearch(initialQuery);
   }, [initialQuery, runSearch, scope]);
 
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
@@ -254,6 +256,12 @@ export default function DictionarySearchPage() {
     },
     [getWordDetail, t, translationLang]
   );
+
+  useEffect(() => {
+    if (result && result.entries.length > 0 && !detailEntry && !detailLoading) {
+      void handleOpenDetail(result.entries[0]);
+    }
+  }, [result, detailEntry, detailLoading, handleOpenDetail]);
 
   const detailSenses = useMemo(() => {
     if (!detailEntry?.senses?.length) return [];

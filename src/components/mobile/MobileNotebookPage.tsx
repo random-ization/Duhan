@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui';
 import type { JSONContent } from '@tiptap/core';
-import { useSearchParams } from 'react-router-dom';
+import { NavigateFunction, useSearchParams } from 'react-router-dom';
 
 import type { Id } from '../../../convex/_generated/dataModel';
 import {
@@ -52,9 +52,16 @@ import { KT, Chip, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
 
 const OfficialTiptapEditor = lazy(() => import('../notebook/OfficialTiptapEditor'));
 
+export interface SourceSummaryItem {
+  key: string;
+  label: string;
+  count: number;
+  modules: string[];
+}
+
 interface MobileNotebookPageProps {
   t: TranslateFn;
-  navigate: any;
+  navigate: NavigateFunction;
   dateLocale: string;
   activeNotebookId: Id<'note_pages'> | null;
   setActiveNotebookId: (id: Id<'note_pages'> | null) => void;
@@ -80,7 +87,7 @@ interface MobileNotebookPageProps {
   saveState: SaveState;
   lastSavedAt: number | null;
   notebooksResult: NotebookListResult;
-  sourceSummary: any[];
+  sourceSummary: SourceSummaryItem[];
   searchResult: SearchResult;
   pendingReviewCount: number;
   selectedSearchItem: SearchItem | null;
@@ -972,41 +979,45 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                             {t('notes.v2.page.myNote', { defaultValue: 'My Note' })}
                           </p>
-                          <Suspense
-                            fallback={
-                              <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
-                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                              </div>
-                            }
-                          >
-                            <OfficialTiptapEditor
-                              value={editorDoc}
-                              onChange={setEditorDoc}
-                              placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
-                                defaultValue: 'Write your understanding…',
-                              })}
-                              preset="study"
-                            />
-                          </Suspense>
+                          {editorOpen ? (
+                            <Suspense
+                              fallback={
+                                <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
+                                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                </div>
+                              }
+                            >
+                              <OfficialTiptapEditor
+                                value={editorDoc}
+                                onChange={setEditorDoc}
+                                placeholder={t('notes.v2.page.quoteEditorPlaceholder', {
+                                  defaultValue: 'Write your understanding…',
+                                })}
+                                preset="study"
+                              />
+                            </Suspense>
+                          ) : null}
                         </div>
                       </div>
                     ) : (
-                      <Suspense
-                        fallback={
-                          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
-                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                          </div>
-                        }
-                      >
-                        <OfficialTiptapEditor
-                          value={editorDoc}
-                          onChange={setEditorDoc}
-                          placeholder={t('notes.v2.page.editorPlaceholder', {
-                            defaultValue: 'Start writing your thoughts here…',
-                          })}
-                          preset="full"
-                        />
-                      </Suspense>
+                      editorOpen ? (
+                        <Suspense
+                          fallback={
+                            <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            </div>
+                          }
+                        >
+                          <OfficialTiptapEditor
+                            value={editorDoc}
+                            onChange={setEditorDoc}
+                            placeholder={t('notes.v2.page.editorPlaceholder', {
+                              defaultValue: 'Start writing your thoughts here…',
+                            })}
+                            preset="full"
+                          />
+                        </Suspense>
+                      ) : null
                     )}
                   </div>
                 )}

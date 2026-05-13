@@ -1,9 +1,10 @@
 import { mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { v } from 'convex/values';
+import { v, ConvexError } from 'convex/values';
 import { MetadataJson, parsePhoneNumberWithError } from 'libphonenumber-js/core';
 import phoneMetadata from './phone/metadata.cn-vn-mn';
 import { canExposeViewerRecord } from './adminUserUtils';
+import { normalizeStoragePublicUrl } from './spacesConfig';
 
 export const viewer = query({
   args: {},
@@ -19,7 +20,10 @@ export const viewer = query({
     if (!canExposeViewerRecord(user)) {
       return null;
     }
-    return user;
+    return {
+      ...user,
+      avatar: normalizeStoragePublicUrl(user.avatar) || undefined,
+    };
   },
 });
 
@@ -72,7 +76,7 @@ export const verifyAndMarkRegion = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error('UNAUTHORIZED');
+      throw new ConvexError({ code: 'UNAUTHORIZED' });
     }
 
     let digits = args.phoneRaw.replaceAll(/\D/g, '');
@@ -116,5 +120,105 @@ export const verifyAndMarkRegion = mutation({
     });
 
     return { eligible, region };
+  },
+});
+
+export const registerPushToken = mutation({
+  args: {
+    platform: v.union(v.literal('android'), v.literal('ios')),
+    fcmToken: v.string(),
+    userAgent: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({ code: 'UNAUTHORIZED' });
+    }
+
+    const token = args.fcmToken.trim();
+    if (!token) {
+      throw new ConvexError({ code: 'INVALID_FCM_TOKEN' });
+    }
+
+    const now = Date.now();
+    const existing = await ctx.db
+      .query('push_subscriptions')
+      .withIndex('by_user_fcmToken', q => q.eq('userId', userId).eq('fcmToken', token))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        platform: args.platform,
+        userAgent: args.userAgent,
+        revokedAt: undefined,
+        lastSeenAt: now,
+        updatedAt: now,
+      });
+      return { ok: true as const, subscriptionId: existing._id };
+    }
+
+    const insertedId = await ctx.db.insert('push_subscriptions', {
+      userId,
+      platform: args.platform,
+      fcmToken: token,
+      userAgent: args.userAgent,
+      lastSeenAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { ok: true as const, subscriptionId: insertedId };
+  },
+});
+export const updateCurrentCourse = mutation({
+  args: {
+    courseId: v.string(),
+    level: v.optional(v.number()),
+    unit: v.optional(v.number()),
+    module: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
+
+    const update: {
+      lastInstitute?: string;
+      lastActivityAt: number;
+      lastLevel?: number;
+      lastUnit?: number;
+      lastModule?: string;
+    } = {
+      lastInstitute: args.courseId,
+      lastActivityAt: Date.now(),
+    };
+    if (args.level !== undefined) update.lastLevel = args.level;
+    if (args.unit !== undefined) update.lastUnit = args.unit;
+    if (args.module !== undefined) update.lastModule = args.module;
+
+    await ctx.db.patch(userId, update);
+    
+    // Also update course progress record to track when this course was last accessed
+    const existingProgress = await ctx.db
+      .query('user_course_progress')
+      .withIndex('by_user_course', (q) => q.eq('userId', userId).eq('courseId', args.courseId))
+      .first();
+
+    if (existingProgress) {
+      await ctx.db.patch(existingProgress._id, {
+        lastAccessAt: Date.now(),
+        ...(args.unit !== undefined ? { lastUnitIndex: args.unit } : {}),
+      });
+    } else {
+      await ctx.db.insert('user_course_progress', {
+        userId,
+        courseId: args.courseId,
+        completedUnits: [],
+        lastAccessAt: Date.now(),
+        lastUnitIndex: args.unit ?? 1,
+        createdAt: Date.now(),
+      });
+    }
+
+    return { success: true };
   },
 });

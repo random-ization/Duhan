@@ -1,49 +1,37 @@
-import React, { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import React from 'react';
+import { cn } from '../../../lib/utils';
 
-export interface StreakRowProps {
+interface StreakRowProps {
   done?: number;
-  labels?: readonly string[];
+  labels?: string[];
+  className?: string;
 }
 
-function buildWeekdayLabels(language: string): readonly string[] {
-  try {
-    const formatter = new Intl.DateTimeFormat(language, { weekday: 'narrow' });
-    const monday = new Date(Date.UTC(2021, 0, 4)); // 2021-01-04 is a Monday
-    return Array.from({ length: 7 }, (_, index) =>
-      formatter.format(new Date(monday.getTime() + index * 24 * 60 * 60 * 1000))
-    );
-  } catch {
-    return ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  }
-}
-
-export function StreakRow({ done = 0, labels }: StreakRowProps) {
-  const { i18n } = useTranslation();
-  const language = i18n.resolvedLanguage || i18n.language || 'en';
-  const resolvedLabels = useMemo(
-    () => (labels && labels.length > 0 ? labels : buildWeekdayLabels(language)),
-    [labels, language]
-  );
+export function StreakRow({
+  done = 5,
+  labels = ['月', '火', '水', '木', '金', '土', '日'],
+  className,
+}: StreakRowProps) {
   return (
-    <div className="flex gap-[6px]">
-      {resolvedLabels.map((d, i) => {
+    <div className={cn('flex gap-1.5', className)}>
+      {labels.map((d, i) => {
         const isDone = i < done;
-        const isLastDone = i === done - 1;
-        
+        const isCurrent = i === done - 1;
+
         return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-[6px]">
+          <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
             <div
-              className={`w-full aspect-square rounded-[12px] grid place-items-center text-[13px] font-bold relative ${
+              className={cn(
+                'relative grid aspect-square w-full place-items-center rounded-xl text-[13px] font-bold',
                 isDone ? 'bg-k-mint text-[#2F5847]' : 'bg-[rgba(31,27,23,0.05)] text-k-sub'
-              }`}
+              )}
             >
               {isDone ? '✓' : ''}
-              {isLastDone && (
-                <div className="absolute -top-1 -right-1 text-[12px]">🔥</div>
+              {isCurrent && (
+                <div className="absolute -right-1 -top-1 text-[12px]">🔥</div>
               )}
             </div>
-            <div className="text-[10px] text-k-sub font-semibold font-k-sans">
+            <div className="font-k-sans text-[10px] font-semibold text-k-sub">
               {d}
             </div>
           </div>

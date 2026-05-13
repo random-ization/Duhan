@@ -15,6 +15,7 @@ import {
   Button,
   Textarea
 } from '../../components/ui';
+import { cn } from '../../lib/utils';
 import type {
   VocabularyItem,
   GrammarItem,
@@ -65,43 +66,54 @@ export const ReadingArticleAiTab: React.FC<{
   grammar,
 }) => (
   <>
-    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
-        <span>💡</span> {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
+    <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm mb-10 transition-all hover:shadow-k-sh-lg group">
+      <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60 group-hover:text-k-crimson transition-colors">
+        <span className="font-k-serif text-[20px] font-medium text-k-crimson">💡</span> 
+        {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
       </h3>
       {aiAnalysisLoading && (
-        <p className="mb-2 text-xs font-semibold text-primary">
-          {t('readingArticle.ai.loading', { defaultValue: 'Generating AI analysis...' })}
-        </p>
+        <div className="mb-3 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-k-crimson animate-pulse" />
+          <p className="text-[11px] font-black text-k-crimson uppercase tracking-wider">
+            {t('readingArticle.ai.loading', { defaultValue: 'Generating AI analysis...' })}
+          </p>
+        </div>
       )}
       {aiAnalysisError && (
-        <p className="mb-2 text-xs font-semibold text-amber-600 dark:text-amber-300">
+        <p className="mb-3 text-[11px] font-bold text-k-crimson/70 bg-k-crimson/5 px-3 py-1.5 rounded-lg border border-k-crimson/10">
           {t('readingArticle.ai.fallbackNotice', {
             defaultValue: 'AI unavailable, local fallback is used.',
           })}
         </p>
       )}
-      <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
+      <p className="text-[14px] leading-[1.7] font-medium text-k-ink/80 opacity-90 group-hover:opacity-100 transition-opacity">
+        {summary}
+      </p>
     </section>
-    <section>
-      <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
-        🔑 {t('readingArticle.ai.coreVocab', { defaultValue: 'Core Vocabulary' })}
+    <section className="mb-10">
+      <h3 className="mb-5 flex items-center gap-2.5 px-1 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+        <span className="font-k-serif text-[20px] font-medium text-k-crimson">詞</span>
+        {t('readingArticle.ai.coreVocab', { defaultValue: 'Core Vocabulary' })}
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {vocabulary.slice(0, 8).map(item => (
           <div
             key={item.term}
-            className="group flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/50"
+            className="group flex w-full items-center justify-between rounded-[22px] border border-k-line/5 bg-k-card p-4 text-left shadow-k-sh-sm transition-all hover:shadow-k-sh-lg hover:border-k-line/20 hover:translate-x-1"
           >
             <Button
               type="button"
               variant="ghost"
               size="auto"
               onClick={() => onWordClick(item.term)}
-              className="!block flex-1 text-left"
+              className="!block flex-1 text-left hover:bg-transparent"
             >
-              <div className="font-bold text-muted-foreground">{item.term}</div>
-              <div className="text-xs text-muted-foreground">{item.meaning}</div>
+              <div className="text-[16px] font-black text-k-ink group-hover:text-k-crimson transition-colors leading-tight">
+                {item.term}
+              </div>
+              <div className="text-[12px] font-bold text-k-sub mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                {item.meaning}
+              </div>
             </Button>
             <Button
               type="button"
@@ -117,37 +129,40 @@ export const ReadingArticleAiTab: React.FC<{
                   : t('readingArticle.vocab.save', { defaultValue: 'Add' })
               }
               loadingIconClassName="w-3 h-3"
-              className={`ml-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ${
+              className={cn(
+                "ml-3 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black transition-all",
                 savedWords[item.term.toLowerCase()]
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                  : 'bg-muted text-muted-foreground hover:bg-muted'
-              }`}
+                  ? 'bg-k-ink text-k-bg border border-k-ink'
+                  : 'bg-k-bg2 text-k-sub hover:bg-k-ink hover:text-k-bg border border-transparent'
+              )}
             >
               {savedWords[item.term.toLowerCase()] ? <Check size={12} /> : <Star size={12} />}
               {savedWords[item.term.toLowerCase()]
-                ? t('readingArticle.vocab.saved', { defaultValue: 'Saved' })
-                : t('readingArticle.vocab.save', { defaultValue: 'Add' })}
+                ? t('readingArticle.vocab.saved', { defaultValue: '已保存' })
+                : t('readingArticle.vocab.save', { defaultValue: '生词' })}
             </Button>
           </div>
         ))}
       </div>
     </section>
     <section>
-      <h3 className="mb-3 px-1 text-sm font-bold text-muted-foreground">
-        📖 {t('readingArticle.ai.grammarTitle', { defaultValue: 'Grammar Points' })}
+      <h3 className="mb-5 flex items-center gap-2.5 px-1 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+        <span className="font-k-serif text-[20px] font-medium text-k-crimson">法</span>
+        {t('readingArticle.ai.grammarTitle', { defaultValue: 'Grammar Points' })}
       </h3>
-      <div className="space-y-3">
+      <div className="space-y-5">
         {grammar.map(item => (
           <article
             key={item.pattern}
-            className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/35"
+            className="rounded-[24px] border border-k-line/5 bg-k-card p-5 shadow-k-sh-sm hover:shadow-k-sh-lg transition-all relative overflow-hidden group"
           >
-            <div className="mb-1 font-bold text-blue-800 dark:text-blue-300">{item.pattern}</div>
-            <div className="mb-2 text-sm text-blue-700 dark:text-blue-300/90">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-k-crimson/20 group-hover:bg-k-crimson transition-colors" />
+            <div className="mb-2 font-black text-k-ink text-[15px]">{item.pattern}</div>
+            <div className="mb-4 text-[13px] font-medium text-k-sub leading-relaxed opacity-90">
               {item.explanation}
             </div>
-            <div className="rounded border border-blue-50 bg-card p-2 text-xs text-muted-foreground dark:border-blue-900/70 dark:bg-background/50">
-              {item.example}
+            <div className="rounded-2xl border border-k-line/5 bg-k-bg2/40 p-4 text-[12px] font-medium italic text-k-sub/80 border-dashed">
+              &quot;{item.example}&quot;
             </div>
           </article>
         ))}
@@ -580,21 +595,18 @@ export const ReadingArticleSidebar: React.FC<{
         />
       }
     >
-      <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-muted p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-k-line/10 bg-k-bg2/50 p-1">
         <Button
           type="button"
           variant="ghost"
           size="auto"
           onClick={() => setPanelTab('ai')}
-          className="rounded-md px-2 py-1.5 text-xs font-bold"
-          style={{
-            backgroundColor:
-              panelTab === 'ai' ? 'var(--sb-active-bg, hsl(var(--accent)))' : 'transparent',
-            color:
-              panelTab === 'ai'
-                ? 'var(--sb-active-text, hsl(var(--accent-foreground)))'
-                : 'var(--sb-muted-text, hsl(var(--muted-foreground)))',
-          }}
+          className={cn(
+            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
+            panelTab === 'ai' 
+              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
+              : "text-k-sub hover:text-k-ink"
+          )}
         >
           ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
         </Button>
@@ -603,15 +615,12 @@ export const ReadingArticleSidebar: React.FC<{
           variant="ghost"
           size="auto"
           onClick={() => setPanelTab('notes')}
-          className="rounded-md px-2 py-1.5 text-xs font-bold"
-          style={{
-            backgroundColor:
-              panelTab === 'notes' ? 'var(--sb-active-bg, hsl(var(--accent)))' : 'transparent',
-            color:
-              panelTab === 'notes'
-                ? 'var(--sb-active-text, hsl(var(--accent-foreground)))'
-                : 'var(--sb-muted-text, hsl(var(--muted-foreground)))',
-          }}
+          className={cn(
+            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
+            panelTab === 'notes' 
+              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
+              : "text-k-sub hover:text-k-ink"
+          )}
         >
           📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
         </Button>

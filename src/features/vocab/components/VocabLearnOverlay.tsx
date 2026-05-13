@@ -42,9 +42,13 @@ export default function VocabLearnOverlay({
 
     // Capture once when opening so we can reliably restore on close.
     previousSidebarHiddenRef.current = latestSidebarHiddenRef.current;
-    setSidebarHidden(true);
+    if (isFullscreen) {
+      setSidebarHidden(true);
+    }
     return () => {
-      setSidebarHidden(previousSidebarHiddenRef.current ?? false);
+      if (isFullscreen) {
+        setSidebarHidden(previousSidebarHiddenRef.current ?? false);
+      }
       previousSidebarHiddenRef.current = null;
     };
   }, [open, setSidebarHidden]);
@@ -62,15 +66,15 @@ export default function VocabLearnOverlay({
 
   const overlayContent = (
     <div
-      className={`pointer-events-auto relative w-full h-full bg-card overflow-hidden flex flex-col ${
+      className={`pointer-events-auto relative w-full h-full bg-k-bg overflow-hidden flex flex-col ${
         isFullscreen
           ? 'rounded-none border-0 shadow-none'
-          : 'rounded-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_rgba(15,23,42,1)]'
+          : 'rounded-[32px] border border-k-divider shadow-2xl shadow-black/5'
       }`}
     >
-      {headerContent ?? (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="font-black text-foreground">{title || labels.learn || 'Learn'}</div>
+      {headerContent !== undefined ? headerContent : (
+        <div className="flex items-center justify-between px-6 py-4 border-b border-k-divider bg-k-card/80 backdrop-blur-md">
+          <div className="text-[18px] font-extrabold text-k-ink">{title || labels.learn || 'Learn'}</div>
           <Button
             variant="ghost"
             size="auto"
@@ -84,7 +88,7 @@ export default function VocabLearnOverlay({
         </div>
       )}
 
-      <div className={isFullscreen ? 'flex-1 overflow-hidden' : 'flex-1 overflow-auto'}>
+      <div className={isFullscreen ? 'flex-1 overflow-hidden relative' : 'flex-1 overflow-auto relative'}>
         {children}
       </div>
     </div>
@@ -93,7 +97,7 @@ export default function VocabLearnOverlay({
   if (isFullscreen) {
     if (typeof document === 'undefined') return null;
     return createPortal(
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 91 }}>
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 101 }}>
         {overlayContent}
       </div>,
       document.body
@@ -111,8 +115,7 @@ export default function VocabLearnOverlay({
         />
         <DialogContent
           unstyled
-          className="fixed inset-0 pointer-events-none p-3 sm:p-6"
-          style={{ zIndex: 91 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-4 sm:p-8"
         >
           {overlayContent}
         </DialogContent>

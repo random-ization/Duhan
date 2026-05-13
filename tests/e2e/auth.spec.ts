@@ -1,14 +1,37 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const langPrefix = '/en';
+const emailInputSelector = 'input[type="email"], input[name="email"], #mobile-auth-email';
+
+async function ensureEmailInputVisible(page: Page) {
+  const emailInput = page.locator(emailInputSelector).first();
+  if (await emailInput.isVisible().catch(() => false)) {
+    return;
+  }
+
+  // Mobile register view may require tapping the first primary CTA once to reveal the email form.
+  const revealButton = page
+    .getByRole('button', { name: /create character|register|sign up|가입|회원가입/i })
+    .first();
+  if (await revealButton.isVisible().catch(() => false)) {
+    await revealButton.click();
+  } else {
+    const firstButton = page.locator('button').first();
+    if (await firstButton.isVisible().catch(() => false)) {
+      await firstButton.click();
+    }
+  }
+
+  await page.waitForSelector(emailInputSelector, { timeout: 15000 });
+}
 
 test.describe('Authentication Flow', () => {
   test('should display login page correctly', async ({ page }) => {
     await page.goto(`${langPrefix}/login`);
 
     // Check page elements
-    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 15000 });
-    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible();
+    await ensureEmailInputVisible(page);
+    await expect(page.locator(emailInputSelector).first()).toBeVisible();
     await expect(page.locator('input[type="password"], input[name="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
@@ -16,7 +39,8 @@ test.describe('Authentication Flow', () => {
   test('should show error for invalid credentials', async ({ page }) => {
     await page.goto(`${langPrefix}/login`);
 
-    await page.fill('input[type="email"], input[name="email"]', 'invalid@test.com');
+    await ensureEmailInputVisible(page);
+    await page.fill(emailInputSelector, 'invalid@test.com');
     await page.fill('input[type="password"], input[name="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
 
@@ -30,11 +54,18 @@ test.describe('Authentication Flow', () => {
 
   test('should display registration form when switching to register mode', async ({ page }) => {
     await page.goto(`${langPrefix}/register`);
+    await page.waitForLoadState('domcontentloaded');
 
-    // Registration page should have email and password fields
-    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 15000 });
-    await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"], input[name="password"]')).toBeVisible();
+    // Register route can show either the direct form or the pre-form CTA (mobile first step).
+    const emailField = page.locator(emailInputSelector).first();
+    if (await emailField.isVisible().catch(() => false)) {
+      await expect(emailField).toBeVisible();
+      await expect(page.locator('input[type="password"], input[name="password"]')).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole('button', { name: /create character|register|sign up|가입|회원가입/i }).first()
+      ).toBeVisible();
+    }
   });
 
   test('should have Google login option', async ({ page }) => {

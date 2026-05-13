@@ -92,6 +92,23 @@ const learningModuleValidator = v.union(...LEARNING_MODULE_VALUES.map(value => v
 const learningEventNameValidator = v.union(
   ...LEARNING_EVENT_NAME_VALUES.map(value => v.literal(value))
 );
+const clientEventValueValidator = v.union(v.string(), v.number(), v.boolean());
+const clientEventParamsValidator = v.optional(v.record(v.string(), clientEventValueValidator));
+
+const CLIENT_EVENT_ID_VALUES = [
+  'landing_cta_click',
+  'signup_start',
+  'signup_success',
+  'checkout_start',
+  'checkout_success',
+  'payment_activation_success',
+  'day1_retention',
+  'dashboard_learning_module_selected',
+  'learning_material_selected',
+  'learning_resource_opened',
+] as const;
+
+const clientEventIdValidator = v.union(...CLIENT_EVENT_ID_VALUES.map(value => v.literal(value)));
 
 const LEGACY_ACTIVITY_EVENT_MAP: Record<LearningModule, LearningEventName> = {
   VOCAB: 'review_completed',
@@ -302,6 +319,42 @@ export const trackSessionSummary = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     await appendActivitySummary(ctx, userId, args);
+    return { success: true };
+  },
+});
+
+export const trackClientEvent = mutation({
+  args: {
+    eventId: clientEventIdValidator,
+    params: clientEventParamsValidator,
+    platform: v.optional(v.string()),
+    surface: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const now = Date.now();
+    const user = await ctx.db.get(userId);
+
+    await ctx.db.insert('activity_logs', {
+      userId,
+      activityType: 'CLIENT_EVENT',
+      sessionId: `client:${args.eventId}:${now}`,
+      module: 'VOCAB',
+      surface: sanitizeOptionalString(args.surface) ?? 'mobile_app',
+      source: sanitizeOptionalString(args.platform) ?? 'mobile',
+      metadata: sanitizeMetadata({
+        eventId: args.eventId,
+        ...(args.params ?? {}),
+      }),
+      createdAt: now,
+    });
+
+    if (user) {
+      await ctx.db.patch(userId, {
+        ...buildLastActivityPatch('VOCAB', now),
+      });
+    }
+
     return { success: true };
   },
 });

@@ -17,6 +17,9 @@ export default [
             "node_modules/",
             "coverage/",
             "stats.html",
+            // Android / Expo build artifacts
+            "apps/mobile/dist/",
+            "apps/mobile/android/app/build/",
         ],
     },
 

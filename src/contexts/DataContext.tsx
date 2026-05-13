@@ -26,7 +26,7 @@ interface DataProviderProps {
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const institutesData = useQuery(INSTITUTES.getAll, {});
 
-  const institutes = useMemo<Institute[] | undefined>(() => institutesData, [institutesData]);
+  const institutes = institutesData;
   const institutesLoading = institutesData === undefined;
 
   const value = useMemo(

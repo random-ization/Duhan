@@ -27,7 +27,7 @@ const DialogOverlay = React.forwardRef<React.ElementRef<typeof SheetOverlay>, Di
         unstyled={unstyled}
         className={cn(
           !unstyled &&
-            'fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
+            'bg-black/50 data-[state=open]:opacity-100 data-[state=closed]:opacity-0',
           className
         )}
         {...props}
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof SheetContent>, Di
         unstyled={unstyled}
         className={cn(
           !unstyled &&
-            'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl transition',
+            'left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card shadow-2xl',
           className
         )}
         {...props}

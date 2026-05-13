@@ -74,8 +74,12 @@ const ReviewQuizPage: React.FC = () => {
       id: String(item.id),
       korean: item.word,
       english: item.meaning,
+      meaning: item.meaning,
+      meaningZh: item.meaningZh || item.meaning,
       unit: 0,
       partOfSpeech: item.partOfSpeech,
+      pronunciation: item.pronunciation,
+      example: item.exampleSentence,
     }));
   }, [reviewQueue, dueItems, mode]);
 

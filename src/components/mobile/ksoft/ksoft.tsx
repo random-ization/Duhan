@@ -31,34 +31,45 @@ export const Chip: React.FC<{
   );
 };
 
+import { LogoIcon } from '../../ui/Logo';
+
+const BRAND_CHARS = ['韓', '恆', '두'];
+
 export const HanjaSeal: React.FC<{
   c: string;
   size?: number;
   bg?: string;
   color?: string;
   round?: number;
-}> = ({ c, size = 40, bg, color, round = 8 }) => (
-  <div
-    style={{
-      width: size,
-      height: size,
-      background: bg || KT.crimson,
-      color: color || KT.card,
-      fontFamily: KT.serif,
-      fontSize: size * 0.5,
-      fontWeight: 500,
-      display: 'grid',
-      placeItems: 'center',
-      borderRadius: round,
-      boxShadow: `inset 0 0 0 ${Math.max(1, size / 20)}px rgba(255,255,255,0.15)`,
-      letterSpacing: -1,
-      lineHeight: 1,
-      flexShrink: 0,
-    }}
-  >
-    {c}
-  </div>
-);
+  className?: string;
+}> = ({ c, size = 40, bg, color, round = 8, className = '' }) => {
+  if (BRAND_CHARS.includes(c)) {
+    return <LogoIcon size={size} className={className} />;
+  }
+  return (
+    <div
+      className={className}
+      style={{
+        width: size,
+        height: size,
+        background: bg || KT.crimson,
+        color: color || KT.card,
+        fontFamily: KT.serif,
+        fontSize: size * 0.5,
+        fontWeight: 500,
+        display: 'grid',
+        placeItems: 'center',
+        borderRadius: round,
+        boxShadow: `inset 0 0 0 ${Math.max(1, size / 20)}px rgba(255,255,255,0.15)`,
+        letterSpacing: -1,
+        lineHeight: 1,
+        flexShrink: 0,
+      }}
+    >
+      {c}
+    </div>
+  );
+};
 
 export const SectionHead: React.FC<{
   kanji?: string;
@@ -126,10 +137,12 @@ export const Card: React.FC<{
   pad?: number;
   tone?: 'card' | 'bg2' | string;
   style?: React.CSSProperties;
-}> = ({ children, pad = 20, tone = 'card', style }) => {
+  className?: string;
+}> = ({ children, pad = 20, tone = 'card', style, className }) => {
   const bg = tone === 'card' ? KT.card : tone === 'bg2' ? KT.bg2 : tone;
   return (
     <div
+      className={className}
       style={{
         background: bg,
         borderRadius: 28,

@@ -538,9 +538,12 @@ export interface GrammarPointData {
   titleMn?: string;
   slug?: string;
   level?: string; // "TOPIK 1", "TOPIK 2"
+  unitId?: number; // Unit number for course organization
 
   // Chinese summary (default)
   summary: string;
+  // Legacy: alias for summary (Chinese)
+  summaryZh?: string;
   // Multi-language summaries
   summaryEn?: string;
   summaryVi?: string;

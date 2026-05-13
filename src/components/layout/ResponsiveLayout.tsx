@@ -10,7 +10,7 @@ import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
 import { MobileHeader } from '../mobile/MobileHeader';
 import { MobileBottomNav } from '../mobile/MobileBottomNav';
-import DesktopShell from '../desktop/layout/DesktopShell';
+
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
@@ -29,12 +29,9 @@ function MobileLayout() {
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const routeUiConfig = getRouteUiConfig(pathWithoutLang);
   
-  const mainBackgroundStyle = routeUiConfig.usePatternBackground
-    ? {
-        backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
-        backgroundSize: '24px 24px',
-      }
-    : undefined;
+  const mainBackgroundStyle = {
+    backgroundColor: '#FBF8F3',
+  };
   
   const mobileShellStyle = {
     background: '#FBF8F3',
@@ -126,11 +123,7 @@ function MobileLayout() {
 }
 
 export default function ResponsiveLayout() {
-  const isDesktop = matchesMediaQuery('(min-width: 1024px)');
-  
-  if (isDesktop) {
-    return <DesktopShell />;
-  }
-  
+  // DesktopShell has been removed; AppLayout is now the primary layout.
+  // This component is kept for backwards compatibility but should not be used.
   return <MobileLayout />;
 }

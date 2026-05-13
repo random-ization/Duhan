@@ -1,4 +1,7 @@
 {
+  "status": {
+    "inProgress": "进行中"
+  },
   "home": "首页",
   "textbookLearning": "教材学习",
   "topik": "TOPIK 备考",
@@ -251,7 +254,8 @@
     "once": "一次性"
   },
   "button": {
-    "upgrade": "立即升级"
+    "upgrade": "立即升级",
+    "courseSyllabus": "课程大纲"
   },
   "common": {
     "appName": "Duhan",
@@ -278,6 +282,7 @@
     "currentFocus": "当前焦点",
     "more": "更多操作",
     "favorite": "收藏",
+    "unit": "单元",
     "unfavorite": "取消收藏",
     "share": "分享",
     "shareFailed": "分享失败",
@@ -334,12 +339,14 @@
     "englishContent": "英文内容",
     "readGuide": "阅读指南",
     "roadmap": "通过 TOPIK 练习、词汇复习和语法训练，构建你的学习路线图。",
-    "collectionName": "韩语学习指南"
+    "collectionName": "韩语学习指南",
+    "subtitle": "系统化掌握韩语"
   },
   "coursesLibrary": {
     "badge": "教材库",
     "title": "选择教材",
     "summary": "共收录 {{count}} 本教材，按出版社分组",
+    "myOtherCourses": "我的其他课程",
     "searchPlaceholder": "搜索教材...",
     "noResults": "未找到相关教材",
     "publisherBadge": "出版社",
@@ -623,7 +630,7 @@
       "q2": "TOPIK 真题是最新的吗？",
       "a2": "是的。我们收录了公开发布的历年真题，并会随着官方公布持续更新。",
       "q3": "如果不满意可以退款吗？",
-      "a3": "我们提供 14 天无理由退款保证。如果你觉得 DuHan 没能帮到你，发邮件给我们即可全额退款。"
+      "a3": "符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。"
     },
     "guides": {
       "title": "从实用的韩语学习指南开始",
@@ -676,7 +683,7 @@
     }
   },
   "pricingDetails": {
-    "refundBadge": "14天无理由退款",
+    "refundBadge": "7天免费试用",
     "errors": {
       "checkoutFailed": "无法发起支付，请稍后重试。"
     },
@@ -788,7 +795,7 @@
       "title": "常见问题",
       "q1": {
         "q": "如果我不满意可以退款吗？",
-        "a": "当然。我们提供 14天无理由退款保证。如果您觉得 DuHan 没有帮助到您，只需发送邮件给我们，我们将全额退款，没有任何废话。"
+        "a": "符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。"
       },
       "q2": {
         "q": "我可以随时取消订阅吗？",

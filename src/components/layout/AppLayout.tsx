@@ -13,6 +13,8 @@ import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
 import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
+import { DesktopHeader } from './DesktopHeader';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
@@ -32,7 +34,7 @@ export default function AppLayout() {
   const { setSidebarHidden } = useLayoutActions();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const routeUiConfig = getRouteUiConfig(pathWithoutLang);
-  const isMobileViewport = matchesMediaQuery('(max-width: 767px)');
+  const isMobileViewport = useIsMobile();
 
   // Safety net: some fullscreen flows toggle sidebarHidden to hide mobile chrome.
   // If that state ever gets stuck (e.g. a component crashes/unmounts unexpectedly),
@@ -67,13 +69,7 @@ export default function AppLayout() {
   const routeContentClass = routeUiConfig.lockMainScroll
     ? 'flex-1 min-h-0 w-full min-w-0'
     : 'flex-1 w-full min-w-0';
-  const mainBackgroundStyle =
-    routeUiConfig.usePatternBackground && !isMobileViewport
-      ? {
-          backgroundImage: 'radial-gradient(hsl(var(--border)) 1.5px, transparent 1.5px)',
-          backgroundSize: '24px 24px',
-        }
-      : undefined;
+  const mainBackgroundStyle = undefined;
   const mobileShellStyle = isMobileViewport
     ? {
         background: '#FBF8F3',
@@ -84,8 +80,8 @@ export default function AppLayout() {
     : undefined;
   const mainStyle = isMobileViewport
     ? {
-        ...mobileShellStyle,
-        ...mainBackgroundStyle,
+        ...(mobileShellStyle || {}),
+        ...(mainBackgroundStyle || {}),
         ...(shouldShowMobileNav
           ? {
               height: 'calc(100dvh - var(--mobile-bottom-nav-offset))',
@@ -96,10 +92,10 @@ export default function AppLayout() {
     : mainBackgroundStyle;
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] bg-background font-sans">
-      {routeUiConfig.hasDesktopSidebar && <DesktopSidebar />}
+    <div className="flex min-h-screen min-h-[100dvh] bg-k-bg font-sans text-k-ink">
+      {routeUiConfig.hasDesktopSidebar && !isMobileViewport && <DesktopSidebar />}
       <main
-        className={`flex-1 h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
+        className={`flex-1 flex flex-col h-screen h-[100dvh] ${mainOverflowClass} relative scroll-smooth`}
         style={mainStyle}
       >
         <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
@@ -108,11 +104,14 @@ export default function AppLayout() {
         {shouldShowMobileHeader && (
           <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
         )}
+        {routeUiConfig.hasDesktopSidebar && !isMobileViewport && (
+          <DesktopHeader />
+        )}
 
         <div
           data-mobile-page-mode={routeUiConfig.mobilePageMode}
           data-mobile-bottom-nav-safe={shouldShowMobileNav ? 'true' : undefined}
-          className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-4 sm:p-6 md:p-10' : 'p-0'}`}
+          className={`${routeShellClass} ${shouldUseDesktopPadding ? 'p-[28px]' : 'p-0'}`}
           style={mobileShellStyle}
         >
           {allowRouteMotion ? (

@@ -275,20 +275,7 @@ const TopikWritingPage: React.FC = () => {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <DesktopTopikWritingPage
-        state={state}
-        loadingContent={loadingContent}
-        resolvedQuestions={resolvedQuestions}
-        examId={examId}
-        topikLobbyPath={topikLobbyPath}
-        writingReturnPath={writingReturnPath}
-        navigate={navigate}
-        setPageState={setPageState}
-        startUpgradeFlow={startUpgradeFlow}
-        getEntitlementErrorData={getEntitlementErrorData}
-        notify={notify}
-        t={t}
-      />
+      <DesktopTopikWritingPage />
     </Suspense>
   );
 };

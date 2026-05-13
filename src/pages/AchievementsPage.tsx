@@ -4,10 +4,25 @@ import { useTranslation } from 'react-i18next';
 import { MobileAchievementsPanel } from '../components/mobile/MobileAchievementsPanel';
 import { PageShell, KT } from '../components/mobile/ksoft/ksoft';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const AchievementsPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+
+  if (!isMobile) {
+    return (
+      <div className="p-6">
+        <div className="mb-4 text-[12px] font-bold text-k-sub uppercase tracking-wider">
+          ACHIEVEMENTS · 成就与徽章
+        </div>
+        <div className="rounded-[28px] bg-k-card p-8 shadow-k-sh-sm border border-k-line">
+          <MobileAchievementsPanel />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <PageShell>

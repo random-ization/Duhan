@@ -246,6 +246,159 @@ export const search = query({
   },
 });
 
+// List facets for filtering and stats
+export const listFacets = query({
+  args: {
+    query: v.optional(v.string()),
+    sourceModules: v.optional(v.array(v.string())),
+    noteTypes: v.optional(v.array(v.string())),
+    statuses: v.optional(v.array(v.string())),
+    hasNote: v.optional(v.boolean()),
+    hasHighlight: v.optional(v.boolean()),
+    notebookId: v.optional(v.id('note_pages')),
+    updatedAfter: v.optional(v.number()),
+    updatedBefore: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) {
+      return {
+        total: 0,
+        todayAdded: 0,
+        withNote: 0,
+        withHighlight: 0,
+        sources: [],
+        noteTypes: [],
+        statuses: [],
+      };
+    }
+
+    const now = Date.now();
+    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
+
+    const pages = await ctx.db
+      .query('note_pages')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .take(MAX_PAGE_SCAN);
+
+    // Apply filters similar to search but without the query text first for facet calculation
+    const filteredPages = pages.filter(page => {
+      if (page.isArchived) return false;
+      
+      const metadata = normalizeMetadata(page.metadata);
+      if (args.notebookId && page.parentPageId !== args.notebookId) return false;
+      if (args.updatedAfter && page.updatedAt < args.updatedAfter) return false;
+      if (args.updatedBefore && page.updatedAt > args.updatedBefore) return false;
+      if (args.hasNote !== undefined && (!!page.hasNote) !== args.hasNote) return false;
+      if (args.hasHighlight !== undefined && (!!page.hasHighlight) !== args.hasHighlight) return false;
+      
+      // We don't apply sourceModules/noteTypes/statuses/query here 
+      // because facets usually show counts across ALL available options 
+      // within the current broad context (like a notebook).
+      return true;
+    });
+
+    const total = filteredPages.length;
+    let todayAdded = 0;
+    let withNote = 0;
+    let withHighlight = 0;
+
+    const sourceMap = new Map<string, { count: number; unreviewed: number; todayAdded: number }>();
+    const noteTypeMap = new Map<string, number>();
+    const statusMap = new Map<string, number>();
+
+    for (const page of filteredPages) {
+      if (page.createdAt > twentyFourHoursAgo) todayAdded++;
+      if (page.hasNote) withNote++;
+      if (page.hasHighlight) withHighlight++;
+
+      // Source Module facets
+      const source = page.sourceModule || 'manual';
+      const sourceData = sourceMap.get(source) || { count: 0, unreviewed: 0, todayAdded: 0 };
+      sourceData.count++;
+      if (!page.lastReviewedAt) sourceData.unreviewed++;
+      if (page.createdAt > twentyFourHoursAgo) sourceData.todayAdded++;
+      sourceMap.set(source, sourceData);
+
+      // Note Type facets
+      const noteType = page.noteType || 'default';
+      noteTypeMap.set(noteType, (noteTypeMap.get(noteType) || 0) + 1);
+
+      // Status facets
+      const status = page.status || 'draft';
+      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+    }
+
+    return {
+      total,
+      todayAdded,
+      withNote,
+      withHighlight,
+      sources: Array.from(sourceMap.entries()).map(([key, data]) => ({
+        key,
+        ...data,
+      })),
+      noteTypes: Array.from(noteTypeMap.entries()).map(([key, count]) => ({
+        key,
+        count,
+      })),
+      statuses: Array.from(statusMap.entries()).map(([key, count]) => ({
+        key,
+        count,
+      })),
+    };
+  },
+});
+
+// List pages in the review queue
+export const listReviewQueue = query({
+  args: {
+    status: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return [];
+
+    const limit = Math.min(args.limit || 50, 200);
+    const status = args.status || 'queued';
+
+    const queueItems = await ctx.db
+      .query('note_review_queue')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .filter(q => q.eq('status', status))
+      .take(limit);
+
+    const pages = [];
+    for (const item of queueItems) {
+      const page = await ctx.db.get(item.pageId);
+      if (page && !page.isArchived) {
+        pages.push({
+          ...page,
+          queueId: item._id,
+          scheduledFor: item.scheduledFor,
+        });
+      }
+    }
+
+    return pages;
+  },
+});
+
+// List note templates
+export const listTemplates = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return [];
+
+    return await ctx.db
+      .query('note_templates')
+      .withIndex('by_user', q => q.eq('userId', userId))
+      .collect();
+  },
+});
+
 // Helper functions
 const normalizeMetadata = (metadata: unknown): PageMetadata => {
   if (!metadata || typeof metadata !== 'object') return {};

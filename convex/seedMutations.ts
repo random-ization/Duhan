@@ -156,6 +156,7 @@ export const initInstitute = internalMutation({
         ? Math.floor(args.totalUnits)
         : null;
     const effectiveTotalUnits = totalUnitsOverride ?? seed.totalUnits;
+    const estimatedTotalMinutes = Math.max(1, effectiveTotalUnits) * 30;
     const effectiveLevels = seed.levels.map((levelItem, idx) =>
       idx === 0 ? { ...levelItem, units: effectiveTotalUnits } : levelItem
     );
@@ -175,6 +176,12 @@ export const initInstitute = internalMutation({
       if (existing.publisher !== seed.publisher) patch.publisher = seed.publisher;
       if (existing.displayLevel !== seed.displayLevel) patch.displayLevel = seed.displayLevel;
       if (existing.totalUnits !== effectiveTotalUnits) patch.totalUnits = effectiveTotalUnits;
+      if (
+        typeof (existing as { estimatedTotalMinutes?: number }).estimatedTotalMinutes !== 'number' ||
+        (existing as { estimatedTotalMinutes?: number }).estimatedTotalMinutes! <= 0
+      ) {
+        patch.estimatedTotalMinutes = estimatedTotalMinutes;
+      }
       if (existing.volume !== seed.volume) patch.volume = seed.volume;
       if (JSON.stringify(existing.levels) !== JSON.stringify(effectiveLevels))
         patch.levels = effectiveLevels;
@@ -201,6 +208,7 @@ export const initInstitute = internalMutation({
       publisher: seed.publisher,
       displayLevel: seed.displayLevel,
       totalUnits: effectiveTotalUnits,
+      estimatedTotalMinutes,
       volume: seed.volume,
     });
 

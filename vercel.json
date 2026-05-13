@@ -126,17 +126,17 @@
       "permanent": true
     },
     {
-      "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)/",
+      "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets|\\.well-known).*)/",
       "destination": "/en/:path",
       "permanent": true
     },
     {
-      "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)",
+      "source": "/:path((?!en|zh|vi|mn|api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets|\\.well-known).*)",
       "destination": "/en/:path",
       "permanent": true
     },
     {
-      "source": "/:path((?!api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets).*)/",
+      "source": "/:path((?!api|_next|static|favicon.ico|logo.png|sitemap.xml|robots.txt|locales|assets|\\.well-known).*)/",
       "destination": "/:path",
       "permanent": true
     }

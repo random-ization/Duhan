@@ -3,11 +3,19 @@ import { httpAction } from './_generated/server';
 import { auth } from './auth';
 import { paymentLogger, podcastLogger } from './logger';
 import { getPublicObjectUrl } from './storage';
+import { api } from './_generated/api';
 
 type WebhookResult = { success: boolean; error?: string };
 type LemonWebhookArgs = { body: string; signature: string };
 type DeepgramWebhookArgs = { episodeId: string; language?: string; payloadJson: string };
 const WEBHOOK_ERROR_RESPONSE = 'Webhook processing failed';
+
+const MOBILE_CORS_HEADERS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 const lemonWebhookAction = makeFunctionReference<'action', LemonWebhookArgs, WebhookResult>(
   'lemonsqueezy:handleWebhook'
@@ -160,5 +168,185 @@ http.route({
     }
   }),
 });
+
+// ─── Mobile Auth API ───────────────────────────────────────────────────────────
+
+http.route({
+  path: '/api/mobile/auth/signIn',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { email, password } = await request.json();
+      if (!email || !password) {
+        return new Response(JSON.stringify({ error: 'MISSING_CREDENTIALS' }), {
+          status: 400,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      const result = await ctx.runAction(api.auth.signIn, {
+        provider: 'password',
+        params: { email, password, flow: 'signIn' },
+      });
+      if (!result.tokens) {
+        return new Response(JSON.stringify({ error: 'INVALID_CREDENTIALS' }), {
+          status: 401,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      return new Response(JSON.stringify({ token: result.tokens.token, refreshToken: result.tokens.refreshToken }), {
+        status: 200,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'SIGN_IN_FAILED';
+      return new Response(JSON.stringify({ error: message }), {
+        status: 401,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    }
+  }),
+});
+
+http.route({
+  path: '/api/mobile/auth/signUp',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { email, password, name } = await request.json();
+      if (!email || !password) {
+        return new Response(JSON.stringify({ error: 'MISSING_CREDENTIALS' }), {
+          status: 400,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      const result = await ctx.runAction(api.auth.signIn, {
+        provider: 'password',
+        params: { email, password, name, flow: 'signUp' },
+      });
+      if (!result.tokens) {
+        return new Response(JSON.stringify({ error: 'SIGNUP_FAILED' }), {
+          status: 400,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      return new Response(JSON.stringify({ token: result.tokens.token, refreshToken: result.tokens.refreshToken }), {
+        status: 201,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'SIGNUP_FAILED';
+      return new Response(JSON.stringify({ error: message }), {
+        status: 400,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    }
+  }),
+});
+
+http.route({
+  path: '/api/mobile/auth/refresh',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { refreshToken } = await request.json();
+      if (!refreshToken) {
+        return new Response(JSON.stringify({ error: 'MISSING_REFRESH_TOKEN' }), {
+          status: 400,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      const result = await ctx.runAction(api.auth.signIn, {
+        refreshToken,
+      });
+      if (!result.tokens) {
+        return new Response(JSON.stringify({ error: 'TOKEN_EXPIRED' }), {
+          status: 401,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      return new Response(JSON.stringify({ token: result.tokens.token, refreshToken: result.tokens.refreshToken }), {
+        status: 200,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    } catch (error: unknown) {
+      return new Response(JSON.stringify({ error: 'REFRESH_FAILED' }), {
+        status: 401,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    }
+  }),
+});
+
+http.route({
+  path: '/api/mobile/auth/signOut',
+  method: 'POST',
+  handler: httpAction(async (ctx) => {
+    try {
+      await ctx.runAction(api.auth.signOut, {});
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    } catch {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    }
+  }),
+});
+
+http.route({
+  path: '/api/mobile/auth/oauth/exchange',
+  method: 'POST',
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const { code, verifier } = await request.json();
+      if (!code || !verifier) {
+        return new Response(JSON.stringify({ error: 'MISSING_OAUTH_PARAMS' }), {
+          status: 400,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      const result = await ctx.runAction(api.auth.signIn, {
+        params: { code },
+        verifier,
+      });
+      if (!result.tokens) {
+        return new Response(JSON.stringify({ error: 'OAUTH_EXCHANGE_FAILED' }), {
+          status: 401,
+          headers: MOBILE_CORS_HEADERS,
+        });
+      }
+      return new Response(JSON.stringify({ token: result.tokens.token, refreshToken: result.tokens.refreshToken }), {
+        status: 200,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'OAUTH_EXCHANGE_FAILED';
+      return new Response(JSON.stringify({ error: message }), {
+        status: 401,
+        headers: MOBILE_CORS_HEADERS,
+      });
+    }
+  }),
+});
+
+// CORS preflight for all mobile auth routes
+for (const path of [
+  '/api/mobile/auth/signIn',
+  '/api/mobile/auth/signUp',
+  '/api/mobile/auth/refresh',
+  '/api/mobile/auth/signOut',
+  '/api/mobile/auth/oauth/exchange',
+]) {
+  http.route({
+    path,
+    method: 'OPTIONS',
+    handler: httpAction(async () => {
+      return new Response(null, { status: 204, headers: MOBILE_CORS_HEADERS });
+    }),
+  });
+}
 
 export default http;

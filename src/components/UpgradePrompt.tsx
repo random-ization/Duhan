@@ -39,13 +39,13 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({ isOpen, onClose, language
         <DialogOverlay
           unstyled
           closeOnClick={false}
-          className="fixed inset-0 bg-black/50 z-50 p-4"
+          className="bg-black/50 p-4"
         />
         <DialogContent
           unstyled
           closeOnEscape={false}
           lockBodyScroll={false}
-          className="fixed inset-0 z-[51] flex items-center justify-center p-4 pointer-events-none data-[state=closed]:pointer-events-none"
+          className="fixed inset-0 flex items-center justify-center p-4 data-[state=closed]:pointer-events-none"
         >
           <Card className="pointer-events-auto bg-card rounded-2xl max-w-md w-full shadow-2xl animate-in zoom-in-95 overflow-hidden">
             {/* Header */}

@@ -140,7 +140,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Chính sách quyền riêng tư - DuHan',
         description:
-          'Tìm hiểu cách DuHan bảo vệ quyền riêng tư và dữ liệu cá nhân của bạn, cùng cam kết bảo mật dữ liệu.',
+          'Tìm hiểu cách DuHan bảo vệ quyền riêng tư and dữ liệu cá nhân của bạn, cùng cam kết bảo mật dữ liệu.',
         keywords: 'chính sách riêng tư, bảo vệ dữ liệu, quyền riêng tư',
       },
       mn: {
@@ -271,7 +271,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Lộ trình học ngữ pháp tiếng Hàn - DuHan',
         description:
-          'Học ngữ pháp tiếng Hàn theo nhóm chức năng, so sánh mẫu tương tự và luyện đầu ra có mục tiêu.',
+          'Học ngữ pháp tiếng Hàn theo nhóm chức năng, so sánh mẫu tương tự and luyện đầu ra có mục tiêu.',
         keywords:
           'ngữ pháp tiếng Hàn, lộ trình ngữ pháp tiếng Hàn, luyện ngữ pháp tiếng Hàn',
       },
@@ -307,7 +307,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Hệ thống ghi nhớ từ vựng tiếng Hàn - DuHan',
         description:
-          'Xây dựng khả năng nhớ từ vựng tiếng Hàn dài hạn với SRS, chính tả và ôn theo ngữ cảnh.',
+          'Xây dựng khả năng nhớ từ vựng tiếng Hàn dài hạn với SRS, chính tả and ôn theo ngữ cảnh.',
         keywords: 'từ vựng tiếng Hàn, ghi nhớ từ vựng, SRS tiếng Hàn, luyện chính tả tiếng Hàn',
       },
       mn: {
@@ -341,7 +341,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Chiến lược luyện đọc tiếng Hàn - DuHan',
         description:
-          'Tăng tốc độ và độ hiểu tiếng Hàn với tài liệu theo cấp độ, vòng đọc chủ động và tổng kết lỗi.',
+          'Tăng tốc độ and độ hiểu tiếng Hàn với tài liệu theo cấp độ, vòng đọc chủ động and tổng kết lỗi.',
         keywords:
           'luyện đọc tiếng Hàn, đọc hiểu tiếng Hàn, chiến lược đọc TOPIK, học đọc tiếng Hàn',
       },
@@ -377,7 +377,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Hướng dẫn luyện phát âm tiếng Hàn - DuHan',
         description:
-          'Luyện phát âm tiếng Hàn bằng shadowing, ghi âm đối chiếu và quy trình sửa lỗi tác động cao.',
+          'Luyện phát âm tiếng Hàn bằng shadowing, ghi âm đối chiếu and quy trình sửa lỗi tác động cao.',
         keywords:
           'phát âm tiếng Hàn, luyện nói tiếng Hàn, shadowing tiếng Hàn, học phát âm tiếng Hàn',
       },
@@ -413,7 +413,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Chiến lược viết TOPIK (Câu 51-54) - DuHan',
         description:
-          'Chiến lược nâng điểm viết TOPIK với mẫu cấu trúc, checklist sửa bài và luyện đề bấm giờ.',
+          'Chiến lược nâng điểm viết TOPIK với mẫu cấu trúc, checklist sửa bài and luyện đề bấm giờ.',
         keywords: 'viết TOPIK, chiến lược viết TOPIK, luyện viết tiếng Hàn, TOPIK câu 54',
       },
       mn: {
@@ -443,7 +443,7 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Đăng nhập - DuHan học tiếng Hàn',
         description:
-          'Đăng nhập DuHan để tiếp tục học tiếng Hàn, theo dõi tiến độ và truy cập nội dung cá nhân.',
+          'Đăng nhập DuHan để tiếp tục học tiếng Hàn, theo dõi tiến độ and truy cập nội dung cá nhân.',
         keywords: 'đăng nhập, học tiếng Hàn, tài khoản',
       },
       mn: {
@@ -473,14 +473,14 @@ export const PUBLIC_ROUTES = [
       vi: {
         title: 'Đăng ký - DuHan học tiếng Hàn',
         description:
-          'Tạo tài khoản DuHan miễn phí và bắt đầu học tiếng Hàn ngay hôm nay.',
+          'Tạo tài khoản DuHan miễn phí and bắt đầu học tiếng Hàn ngay hôm nay.',
         keywords: 'đăng ký, tạo tài khoản, bắt đầu học tiếng Hàn',
       },
       mn: {
         title: 'Бүртгүүлэх - DuHan солонгос хэл',
         description:
           'DuHan дээр үнэгүй бүртгүүлж, солонгос хэл суралцах аяллаа өнөөдөр эхлүүлээрэй.',
-        keywords: 'бүртгүүлэх, шинэ бүртгэл, солонгос хэл сурах',
+        keywords: 'бүртгүүлэх, шинэ бүртгэл, солон公室 хэл сурах',
       },
     },
   },
@@ -536,6 +536,70 @@ export const PUBLIC_ROUTES = [
         title: 'Нууц үг мартсан - DuHan',
         description: 'DuHan бүртгэлийн нууц үгээ шинэчлэхийн тулд имэйл хаягаа оруулна уу.',
         keywords: 'нууц үг мартсан, нууц үг сэргээх, бүртгэл сэргээх',
+      },
+    },
+  },
+  {
+    path: '/features/topik',
+    indexable: true,
+    meta: {
+      title: 'TOPIK Exam Preparation & AI Writing Feedback - DuHan',
+      description: 'Prepare for TOPIK I & II with real past papers, CBT exam environment simulation, and AI-powered writing feedback. Boost your score with DuHan.',
+      keywords: 'TOPIK prep, TOPIK exam, Korean writing feedback, TOPIK reading, TOPIK listening',
+    },
+    metaByLang: {
+      zh: {
+        title: 'TOPIK 备考中心与 AI 写作批改 - DuHan',
+        description: '使用历年真题、全真 CBT 机考模拟与 AI 写作实时批改准备 TOPIK I & II。助你高效突破韩语等级考试。',
+        keywords: 'TOPIK 备考, 韩语等级考试, TOPIK 写作批改, TOPIK 真题, 韩语考试技巧',
+      },
+    },
+  },
+  {
+    path: '/features/vocab',
+    indexable: true,
+    meta: {
+      title: 'Scientific Korean Vocabulary Learning with FSRS - DuHan',
+      description: 'Master Korean words with the FSRS memory algorithm. 4 practice modes, deep dictionary integration, and context-based review system.',
+      keywords: 'Korean vocabulary, FSRS algorithm, learn Korean words, flashcards, Korean study app',
+    },
+    metaByLang: {
+      zh: {
+        title: '科学韩语词汇记忆系统与 FSRS 算法 - DuHan',
+        description: '利用先进的 FSRS 记忆算法科学记忆韩语单词。包含 4 种练习模式、权威词典集成与语境复习系统。',
+        keywords: '韩语词汇, FSRS 算法, 韩语背单词, 科学记忆法, 韩语学习工具',
+      },
+    },
+  },
+  {
+    path: '/features/listening',
+    indexable: true,
+    meta: {
+      title: 'Immersive Korean Listening with Podcasts & Media - DuHan',
+      description: 'Improve your Korean listening with real podcasts and videos. Features 0.5x-1.5x speed control, interactive scripts, and AI transcription.',
+      keywords: 'Korean listening, Korean podcasts, immersive Korean, listening practice, learn Korean through drama',
+    },
+    metaByLang: {
+      zh: {
+        title: '播客与媒体沉浸式韩语听力训练 - DuHan',
+        description: '通过真实播客与视频素材提升韩语听力。支持 0.5x-1.5x 变速控制、交互式脚本与 AI 实时转录。',
+        keywords: '韩语听力, 韩语播客, 沉浸式学韩语, 听力训练, 看剧学韩语',
+      },
+    },
+  },
+  {
+    path: '/features/reading',
+    indexable: true,
+    meta: {
+      title: 'Graded Korean Reading Library (L1-L6) - DuHan',
+      description: 'Learn to read Korean with step-by-step graded stories. AI-powered word extraction, sentence analysis, and interactive background knowledge.',
+      keywords: 'Korean reading, graded reading Korean, learn to read Korean, TOPIK reading strategy',
+    },
+    metaByLang: {
+      zh: {
+        title: '分级韩语阅读库 (L1-L6) 与 AI 辅助 - DuHan',
+        description: '通过 L1-L6 科学分级素材学习韩语阅读。具备 AI 自动提词、长难句分析与交互式背景知识。',
+        keywords: '韩语阅读, 分级阅读, 学读韩语, TOPIK 阅读技巧, 韩语精读',
       },
     },
   },

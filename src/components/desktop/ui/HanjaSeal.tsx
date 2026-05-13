@@ -1,17 +1,37 @@
 import React from 'react';
+import { cn } from '../../../lib/utils';
+import { LogoIcon } from '../../ui/Logo';
 
-export interface HanjaSealProps {
+interface HanjaSealProps {
   c: string;
   size?: number;
   color?: string;
   bg?: string;
   round?: number;
+  className?: string;
 }
 
-export function HanjaSeal({ c, size = 40, color, bg, round = 8 }: HanjaSealProps) {
+const BRAND_CHARS = ['韓', '恆', '두'];
+
+export function HanjaSeal({
+  c,
+  size = 40,
+  color,
+  bg,
+  round = 8,
+  className,
+}: HanjaSealProps) {
+  // If it's a brand character, show the new LogoIcon
+  if (BRAND_CHARS.includes(c)) {
+    return <LogoIcon size={size} className={className} />;
+  }
+
   return (
     <div
-      className="flex items-center justify-center k-serif font-medium leading-none tracking-tighter"
+      className={cn(
+        'grid place-items-center font-k-serif font-medium leading-none tracking-tighter',
+        className
+      )}
       style={{
         width: size,
         height: size,

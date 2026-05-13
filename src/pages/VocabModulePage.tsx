@@ -42,6 +42,10 @@ import MobileVocabView from '../components/mobile/MobileVocabView';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../components/ui';
 import { Button } from '../components/ui';
+import VocabLearnOverlay from '../features/vocab/components/VocabLearnOverlay';
+import VocabQuiz from '../features/vocab/components/VocabQuiz';
+import VocabTest from '../features/vocab/components/VocabTest';
+import type { Language } from '../types';
 import type { LearningSessionSnapshot } from '../features/vocab/components/VocabQuiz';
 import type { VocabTestSessionSnapshot } from '../features/vocab/components/VocabTest';
 import type { FlashcardSessionSnapshot } from '../features/vocab/components/FlashcardView';
@@ -223,7 +227,20 @@ function resolveCourseBreadcrumbLabel(
 ): string {
   const localized = course ? getLocalizedContent(course, 'name', language) : undefined;
   if (localized) return localized;
-  if (course?.name) return course.name;
+  if (course?.name) {
+    let name = course.nameZh || course.name;
+    let levelDisplay = (course as any).displayLevel || '';
+    if (levelDisplay) {
+      if (/^\d+$/.test(levelDisplay)) {
+        levelDisplay = `${levelDisplay}级`;
+      } else if (levelDisplay.includes('-')) {
+        const [l, v] = levelDisplay.split('-');
+        levelDisplay = `${l}级 ${v}册`;
+      }
+    }
+    const volume = (course as any).volume || '';
+    return [name, levelDisplay, volume].filter(Boolean).join(' ');
+  }
   if (instituteId) return instituteId;
   return 'Course';
 }
@@ -234,12 +251,8 @@ const isLevelConfig = (value: unknown): value is LevelConfig => {
   return typeof candidate.level === 'number' && typeof candidate.units === 'number';
 };
 
-// Extracted constants for styles to prevent recreation on every render
-const BACKGROUND_STYLE = {
-  backgroundColor: '#F0F4F8',
-  backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)',
-  backgroundSize: '24px 24px',
-} as const;
+// Standard background class
+const CONTAINER_CLASS = "min-h-screen bg-k-bg";
 
 function useSyncInstituteSelection(params: {
   instituteId: string | undefined;
@@ -501,6 +514,7 @@ function VocabModulePage() {
         pronunciation: word.pronunciation,
         hanja: word.hanja,
         partOfSpeech: word.partOfSpeech as VocabularyItem['partOfSpeech'],
+        tips: word.tips,
         exampleSentence: word.exampleSentence,
         exampleMeaning: word.exampleMeaning,
         exampleTranslation: word.exampleMeaning,
@@ -1259,7 +1273,11 @@ function VocabModulePage() {
         testResumeSnapshot={testResumeSnapshot}
         onAbandonActiveSession={handleAbandonActiveSession}
         onSessionSnapshot={(mode: 'flashcard' | 'learn' | 'test', completed: number, total: number) => {
-          let snapshot: any;
+          let snapshot:
+            | FlashcardSessionSnapshot
+            | LearningSessionSnapshot
+            | Partial<VocabTestSessionSnapshot>
+            | undefined;
           if (mode === 'flashcard') {
             snapshot = {
               cardIndex: completed,
@@ -1300,7 +1318,7 @@ function VocabModulePage() {
           if (snapshot) {
             void persistLearningSnapshot(
               mode === 'flashcard' ? 'FLASHCARD' : mode === 'learn' ? 'LEARN' : 'TEST',
-              snapshot
+              snapshot as any
             );
           }
         }}
@@ -1321,8 +1339,8 @@ function VocabModulePage() {
   }
 
   const renderTopBar = () => (
-    <div className="flex items-center justify-between mb-6 z-50 relative">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center gap-3">
         {/* Back Button */}
         <Button
           type="button"
@@ -1332,134 +1350,176 @@ function VocabModulePage() {
             void flushQueue();
             navigate(`/course/${instituteId}`);
           }}
-          className="w-10 h-10 bg-card border-2 border-border rounded-xl flex items-center justify-center hover:border-foreground transition-colors shadow-sm text-muted-foreground hover:text-foreground"
+          className="w-10 h-10 bg-k-card border border-k-divider rounded-xl flex items-center justify-center hover:border-k-crimson hover:text-k-crimson transition-colors shadow-sm"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
 
         {/* Scope Dropdown */}
-        <div className="relative">
-          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                className="flex items-center gap-3 bg-card border-2 border-foreground rounded-xl px-4 py-2 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] transition-all active:translate-y-0 active:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
-              >
-                <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-400/14 border border-green-200 dark:border-green-300/25 flex items-center justify-center text-lg">
-                  📚
-                </div>
-                <div className="text-left mr-2">
-                  <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                    {labels.vocab?.currentScope || 'Current Scope'}
-                  </div>
-                  <div className="font-black text-foreground leading-none">
-                    {selectedUnitId === 'ALL'
-                      ? labels.vocab?.allUnits || 'All Units'
-                      : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 text-muted-foreground transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent
-              unstyled
-              className="absolute top-full left-0 mt-2 w-64 bg-card border-2 border-foreground rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden z-50"
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              className="flex items-center gap-3 bg-k-card border border-k-divider rounded-xl px-4 py-1.5 hover:border-k-crimson transition-all shadow-sm"
             >
-              <div className="p-2 space-y-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="auto"
-                  onClick={() => {
-                    requestUnitSwitch('ALL');
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25' : 'hover:bg-muted text-muted-foreground'}`}
-                >
-                  <span>📚 {labels.vocab?.allUnits || 'All Units'} (Level 1A)</span>
-                  <span
-                    className={`px-1.5 rounded text-[10px] ${selectedUnitId === 'ALL' ? 'bg-card border border-green-200 dark:border-green-300/25' : 'text-muted-foreground'}`}
-                  >
-                    {allWords.length}
-                  </span>
-                </Button>
-                <div className="h-px bg-muted my-1" />
-                {availableUnits.map(u => {
-                  const count = unitCounts.get(u) || 0;
-                  const disabled = count === 0;
-                  return (
-                    <Button
-                      key={u}
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={() => {
-                        if (disabled) return;
-                        requestUnitSwitch(u);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg font-medium text-sm flex justify-between items-center ${(() => {
-                        if (selectedUnitId === u)
-                          return 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-400/12 dark:text-green-200 dark:border-green-300/25';
-                        if (disabled) return 'text-muted-foreground cursor-not-allowed';
-                        return 'hover:bg-muted text-muted-foreground hover:text-foreground';
-                      })()}`}
-                    >
-                      <span>
-                        {(() => {
-                          if (u === 0) return labels.vocab?.unassigned || 'Unassigned';
-                          return `${labels.vocab?.unit || 'Unit'} ${u}`;
-                        })()}
-                      </span>
-                      <span className="text-muted-foreground text-xs">{count}</span>
-                    </Button>
-                  );
-                })}
+              <div className="w-7 h-7 rounded-lg bg-k-mint-deep/10 flex items-center justify-center text-base">
+                📚
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              <div className="text-left">
+                <div className="text-[10px] text-k-sub font-bold uppercase tracking-wider leading-tight">
+                  {labels.vocab?.currentScope || 'Current Scope'}
+                </div>
+                <div className="font-extrabold text-k-ink text-[13px] leading-tight">
+                  {selectedUnitId === 'ALL'
+                    ? labels.vocab?.allUnits || 'All Units'
+                    : `${labels.vocab?.unit || 'Unit'} ${selectedUnitId}`}
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-k-sub transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+              />
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            unstyled
+            className="w-64 bg-k-card border border-k-divider rounded-xl shadow-xl overflow-hidden z-50 p-2 space-y-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => {
+                requestUnitSwitch('ALL');
+                setDropdownOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center ${selectedUnitId === 'ALL' ? 'bg-k-mint-deep/10 text-k-ink border border-k-divider' : 'hover:bg-k-bg2 text-k-sub'}`}
+            >
+              <span>📚 {labels.vocab?.allUnits || 'All Units'}</span>
+              <span className="text-[10px] font-bold text-k-sub bg-k-bg px-1.5 py-0.5 rounded border border-k-divider">
+                {allWords.length}
+              </span>
+            </Button>
+            <div className="h-px bg-k-divider my-1 mx-2" />
+            <div className="max-h-60 overflow-y-auto pr-1">
+              {availableUnits.map(u => {
+                const count = unitCounts.get(u) || 0;
+                const disabled = count === 0;
+                return (
+                  <Button
+                    key={u}
+                    type="button"
+                    variant="ghost"
+                    size="auto"
+                    onClick={() => {
+                      if (disabled) return;
+                      requestUnitSwitch(u);
+                      setDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center mb-1 ${selectedUnitId === u ? 'bg-k-mint-deep/10 text-k-ink border border-k-divider' : 'hover:bg-k-bg2 text-k-sub'}`}
+                  >
+                    <span>{u === 0 ? labels.vocab?.unassigned || 'Unassigned' : `${labels.vocab?.unit || 'Unit'} ${u}`}</span>
+                    <span className="text-[10px] text-k-sub">{count}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Mastery */}
-      <div className="hidden md:flex items-center gap-3 bg-card px-4 py-2 rounded-xl border border-border">
-        <div className="text-right">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase">
-            {labels.vocab?.mastery || 'Mastery'}
+      <div className="flex items-center gap-3">
+        {/* Mastery Stats */}
+        <div className="flex items-center gap-3 bg-k-card px-4 py-1.5 rounded-xl border border-k-divider shadow-sm">
+          <div className="text-right">
+            <div className="text-[10px] font-bold text-k-sub uppercase leading-tight">
+              {labels.vocab?.mastery || 'Mastery'}
+            </div>
+            <div className="font-extrabold text-[13px] text-k-ink leading-tight">
+              {masteryCount} / {filteredWords.length}
+            </div>
           </div>
-          <div className="font-black text-sm text-foreground">
-            {masteryCount} / {filteredWords.length}
+          <div className="w-8 h-8 relative">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-k-bg2)" strokeWidth="4" />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                stroke="var(--color-k-mint-deep)"
+                strokeWidth="4"
+                strokeDasharray={`${(masteryCount / Math.max(filteredWords.length, 1)) * 100} 100`}
+              />
+            </svg>
           </div>
         </div>
-        <div className="w-10 h-10 relative">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f1f5f9" strokeWidth="4" />
-            <circle
-              cx="18"
-              cy="18"
-              r="15.9155"
-              fill="none"
-              stroke="#4ADE80"
-              strokeWidth="4"
-              strokeDasharray={`${(masteryCount / Math.max(filteredWords.length, 1)) * 100} 100`}
-            />
-          </svg>
-        </div>
-      </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="auto"
-        onClick={() => navigate('/courses')}
-        className="hidden md:inline-flex rounded-xl border-2 border-foreground bg-card px-3 py-2 text-xs font-black text-foreground"
-      >
-        {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}
-      </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => navigate('/courses')}
+          className="rounded-xl border border-k-divider bg-k-card px-4 py-2 text-[12px] font-bold text-k-sub hover:text-k-crimson hover:border-k-crimson transition-all shadow-sm"
+        >
+          {labels.learningFlow?.actions?.switchMaterial || 'Switch textbook'}
+        </Button>
+      </div>
     </div>
+  );
+
+  const renderOverlays = () => (
+    <>
+      {learnOpen && (
+        <VocabLearnOverlay
+          open={learnOpen}
+          onClose={() => setLearnOpen(false)}
+          language={language as Language}
+          title={labels.vocab?.learn || 'Learn'}
+          variant="panel"
+        >
+          <VocabQuiz
+            words={gameWords}
+            courseId={instituteId}
+            onComplete={() => {
+              void flushQueue();
+              void completeSessionForMode('LEARN');
+            }}
+            variant="learn"
+            resumeSnapshot={learnResumeSnapshot}
+            onSessionSnapshot={snapshot => {
+              latestLearnSnapshotRef.current = snapshot;
+              void persistLearningSnapshot('LEARN', snapshot);
+            }}
+            language={language as Language}
+          />
+        </VocabLearnOverlay>
+      )}
+      {testOpen && (
+        <VocabLearnOverlay
+          open={testOpen}
+          onClose={() => setTestOpen(false)}
+          language={language as Language}
+          title={labels.vocab?.quiz || 'Test'}
+          variant="panel"
+        >
+          <VocabTest
+            words={filteredWords}
+            language={language as Language}
+            scopeTitle={resolveCourseBreadcrumbLabel(course, language, instituteId)}
+            resumeSnapshot={testResumeSnapshot}
+            onClose={() => setTestOpen(false)}
+            onSessionSnapshot={snapshot => {
+              latestTestSnapshotRef.current = snapshot;
+              void persistLearningSnapshot('TEST', snapshot);
+            }}
+            onComplete={() => completeSessionForMode('TEST')}
+          />
+        </VocabLearnOverlay>
+      )}
+    </>
   );
 
   const handleTabClick = (tabId: TabId) => {
@@ -1479,7 +1539,7 @@ function VocabModulePage() {
   };
 
   const renderModeTabs = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
       {tabs.map(tab => {
         let isActive = false;
         if (tab.id === 'learn') {
@@ -1496,18 +1556,14 @@ function VocabModulePage() {
             variant="ghost"
             size="auto"
             onClick={() => handleTabClick(tab.id)}
-            className={`bg-card border-2 rounded-xl p-3 flex items-center justify-center gap-2 relative overflow-hidden transition-all ${isActive
-                ? 'border-foreground shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
-                : 'border-transparent hover:border-foreground shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+            className={`bg-k-card border rounded-2xl p-4 flex items-center justify-center gap-3 relative overflow-hidden transition-all shadow-sm ${isActive
+                ? 'border-k-crimson ring-1 ring-k-crimson/20 bg-k-crimson/5'
+                : 'border-k-divider hover:border-k-crimson/50 hover:bg-k-bg2'
               }`}
           >
-            {isActive && <div className="absolute inset-0 bg-green-50 dark:bg-green-400/12 z-0" />}
-            {isActive && (
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-[#4ADE80] dark:bg-green-300" />
-            )}
-            <span className="relative z-10 text-xl">{tab.emoji}</span>
+            <span className="text-2xl">{tab.emoji}</span>
             <span
-              className={`relative z-10 font-black text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'
+              className={`font-extrabold text-[14px] ${isActive ? 'text-k-crimson' : 'text-k-sub'
                 }`}
             >
               {tab.label}
@@ -1587,7 +1643,7 @@ function VocabModulePage() {
         user={user}
         navigate={navigate}
         backPath={resolveSafeReturnTo(searchParams.get('returnTo'), '/courses')}
-        BACKGROUND_STYLE={BACKGROUND_STYLE}
+
 
         resolveCourseBreadcrumbLabel={resolveCourseBreadcrumbLabel}
         getLabel={getLabel}
@@ -1599,6 +1655,7 @@ function VocabModulePage() {
         renderEmptyContent={renderEmptyContent}
         renderTopBar={renderTopBar}
         renderModeTabs={renderModeTabs}
+        renderOverlays={renderOverlays}
       />
     </Suspense>
   );

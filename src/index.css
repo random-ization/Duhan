@@ -14,6 +14,7 @@
  * not emit the classes that file uses.
  */
 @import 'tailwindcss' source(none);
+@config "../tailwind.config.js";
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -57,7 +58,7 @@
   --mobile-floating-offset: calc(var(--mobile-bottom-nav-offset) + 16px);
   --mobile-header-offset: calc(var(--mobile-safe-top) + 8px);
 
-  --background: 210 33% 95%;
+  --background: 40 43% 97%;
   --foreground: 222.2 47.4% 11.2%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 47.4% 11.2%;
@@ -92,6 +93,31 @@
   --sidebar-accent-foreground: 222.2 47.4% 11.2%;
   --sidebar-border: 214.3 31.8% 87.4%;
   --sidebar-ring: 238.7 83.5% 66.7%;
+
+  /* K-Soft Design System Variables */
+  --color-k-bg: #FBF8F3;
+  --color-k-bg2: #F5EFE5;
+  --color-k-card: #FFFFFF;
+  --color-k-ink: #1F1B17;
+  --color-k-ink2: #3D3832;
+  --color-k-sub: #8C8377;
+  --color-k-sub-light: #B8AFA2;
+  --color-k-line: rgba(31, 27, 23, 0.08);
+  --color-k-line2: rgba(31, 27, 23, 0.14);
+  --color-k-pink: #F5C7C0;
+  --color-k-pink-deep: #C97A6E;
+  --color-k-mint: #C8DCCF;
+  --color-k-mint-deep: #5B8472;
+  --color-k-butter: #F7E8B8;
+  --color-k-butter-deep: #A8872E;
+  --color-k-lilac: #D8CFE6;
+  --color-k-lilac-deep: #7E6AA8;
+  --color-k-sky: #BDD4E0;
+  --color-k-sky-deep: #3F6A85;
+  --color-k-crimson: #A23B2E;
+  --color-k-indigo: #2F3F68;
+  --color-k-jade: #4C6B4E;
+  --color-k-gold: #B38941;
 }
 
 .dark {
@@ -253,11 +279,6 @@
       0 10px 20px -5px hsl(var(--border) / 0.3);
   }
 
-  /* Neobrutalism Dotted Background */
-  .dotted-bg {
-    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.15) 1.5px, transparent 1.5px);
-    background-size: 24px 24px;
-  }
 
   /* Premium Mesh Gradient Animation */
   .mesh-gradient {
@@ -353,6 +374,14 @@
     to {
       transform: translateX(50%);
     }
+  }
+
+  .shadow-k-shLg {
+    box-shadow: 0 8px 20px rgba(31, 27, 23, 0.08), 0 24px 60px rgba(31, 27, 23, 0.1);
+  }
+
+  .shadow-k-sh {
+    box-shadow: 0 2px 8px rgba(31, 27, 23, 0.04), 0 12px 32px rgba(31, 27, 23, 0.06);
   }
 }
 

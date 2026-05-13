@@ -79,8 +79,8 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     hasFooter: false,
     hasHeader: false,
     usePatternBackground: false,
-    useDesktopContainerPadding: false,
-    useDesktopMaxWidth: false,
+    useDesktopContainerPadding: true,
+    useDesktopMaxWidth: true,
     headerType: 'section',
     headerAction: 'search',
     headerTitle: 'nav.courses',
@@ -130,6 +130,18 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     headerTitle: 'community.title',
     headerTitleDefault: 'Community',
     mobilePageMode: segments[1] === 'add' ? 'workspace' : 'hub',
+  }),
+  leaderboard: () => ({
+    hasFooter: false,
+    hasHeader: false,
+    usePatternBackground: false,
+    useDesktopContainerPadding: false,
+    useDesktopMaxWidth: false,
+    headerType: 'section',
+    headerAction: 'none',
+    headerTitle: 'leaderboard.title',
+    headerTitleDefault: 'Leaderboard',
+    mobilePageMode: 'hub',
   }),
   media: () => ({
     hasFooter: false,
@@ -210,18 +222,18 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     };
   },
   typing: () => ({
-    hasDesktopSidebar: false,
+    hasDesktopSidebar: true,
     hasFooter: false,
     hasHeader: false,
-    usePatternBackground: false,
-    useDesktopContainerPadding: false,
-    useDesktopMaxWidth: false,
+    usePatternBackground: true,
+    useDesktopContainerPadding: true,
+    useDesktopMaxWidth: true,
     headerType: 'detail',
     headerAction: 'more',
     headerTitle: 'sidebar.typing',
     headerTitleDefault: 'Typing',
-    allowHiddenChrome: true,
-    mobilePageMode: 'immersive',
+    allowHiddenChrome: false,
+    mobilePageMode: 'workspace',
   }),
   'vocab-book': segments => {
     const isImmersive = IMMERSIVE_VOCAB_ROUTES.has(segments[1] || '');
@@ -258,13 +270,13 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
   podcasts: segments => {
     if (segments[1] === 'player') {
       return {
-        hasDesktopSidebar: false,
+        hasDesktopSidebar: true,
         hasBottomNav: false,
         hasHeader: false,
         hasFooter: false,
         usePatternBackground: false,
-        useDesktopContainerPadding: false,
-        useDesktopMaxWidth: false,
+        useDesktopContainerPadding: true,
+        useDesktopMaxWidth: true,
         allowHiddenChrome: true,
         mobilePageMode: 'immersive',
       };
@@ -332,7 +344,7 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
   achievements: () => ({
     hasFooter: false,
     hasHeader: false,
-    hasBottomNav: false,
+    hasBottomNav: true,
     usePatternBackground: false,
     useDesktopContainerPadding: false,
     useDesktopMaxWidth: false,

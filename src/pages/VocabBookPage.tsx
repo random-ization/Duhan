@@ -47,9 +47,9 @@ const LazyMobileVocabDashboard = lazy(() =>
   }))
 );
 
-const DesktopVocabBookPage = lazy(() =>
-  import('./desktop/DesktopVocabBookPage').then(module => ({
-    default: module.DesktopVocabBookPage,
+const DesktopVocabHub = lazy(() =>
+  import('./desktop/DesktopVocabHub').then(module => ({
+    default: module.default,
   }))
 );
 
@@ -91,13 +91,20 @@ const VocabBookPage: React.FC = () => {
   const exportPdf = useAction(VOCAB_PDF.exportVocabBookPdf);
 
   const trimmedSearch = searchQuery.trim();
-  const reviewSummary = useQuery(VOCAB.getReviewSummary, { savedByUserOnly: true });
+  const allCourses = useMemo(() => searchParams.get('all') === 'true', [searchParams]);
+  const courseId = searchParams.get('courseId') || undefined;
+
+  const reviewSummary = useQuery(VOCAB.getReviewSummary, { 
+    savedByUserOnly: !courseId && !allCourses,
+    courseId
+  });
   const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     search: trimmedSearch || undefined,
-    savedByUserOnly: true,
+    savedByUserOnly: !courseId && !allCourses,
     category: activeCategory,
     cursor: pageCursor || undefined,
+    courseId,
     limit: VOCAB_PAGE_SIZE,
   });
 
@@ -406,7 +413,7 @@ const VocabBookPage: React.FC = () => {
     }
   };
 
-  const startLearning = (mode: 'immerse' | 'listen' | 'dictation' | 'spelling') => {
+  const startLearning = (mode: 'flashcard' | 'learn' | 'test' | 'match') => {
     const params = new URLSearchParams();
     // If the current category has no items but others do, we should probably
     // default to a category that has items or allow learning from all.
@@ -505,7 +512,7 @@ const VocabBookPage: React.FC = () => {
     params.set('category', activeCategory);
     params.set('focus', wordId);
     if (trimmedSearch) params.set('q', trimmedSearch);
-    navigate(buildVocabBookModePath('immerse', params));
+    navigate(buildVocabBookModePath('flashcard', params));
   };
 
   const pronounceWord = useCallback((word: VocabBookItemDto) => {
@@ -554,67 +561,7 @@ const VocabBookPage: React.FC = () => {
 
   return (
     <Suspense fallback={<ContentSkeleton />}>
-      <DesktopVocabBookPage
-        navigate={navigate}
-        labels={labels}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        stats={stats}
-        visibleItems={visibleItems}
-        visibleWordIds={visibleWordIds}
-        selectedWordIds={selectedWordIds}
-        allVisibleSelected={allVisibleSelected}
-        selectedCount={selectedCount}
-        toggleSelectAllVisible={toggleSelectAllVisible}
-        toggleSelectWord={toggleSelectWord}
-        pronounceWord={pronounceWord}
-        openImmersiveForWord={openImmersiveForWord}
-        expandedId={expandedId}
-        toggleExpand={toggleExpand}
-        masteryPendingId={masteryPendingId}
-        setMastery={setMastery}
-        setOptimisticMastery={setOptimisticMastery}
-        optimisticMastery={optimisticMastery}
-        notify={notify}
-        startLearning={startLearning}
-        loading={loading}
-        loadingMore={loadingMore}
-        hasMore={hasMore}
-        setPageCursor={setPageCursor}
-        nextCursor={nextCursor}
-        viewerAccess={viewerAccess}
-        startUpgradeFlow={startUpgradeFlow}
-        setExportOpen={setExportOpen}
-        exportOpen={exportOpen}
-        exporting={exporting}
-        exportMode={exportMode}
-        setExportMode={setExportMode}
-        exportShuffle={exportShuffle}
-        setExportShuffle={setExportShuffle}
-        exportSubtitle={exportSubtitle}
-        langListLabel={langListLabel}
-        langListDesc={langListDesc}
-        onExport={onExport}
-        runBulkSetMastery={runBulkSetMastery}
-        runBulkRemove={runBulkRemove}
-        bulkPending={bulkPending}
-        isMobileListMode={isMobileListMode}
-        returnToPath={returnToPath}
-        searchParams={searchParams}
-        language={language}
-        getLocalizedMeaning={getLocalizedMeaning}
-        updateEstimatedRowHeight={updateEstimatedRowHeight}
-        windowedItems={windowedItems}
-        filterButtons={filterButtons}
-        Dialog={Dialog}
-        DialogPortal={DialogPortal}
-        DialogOverlay={DialogOverlay}
-        DialogContent={DialogContent}
-        expandMeaningLabel={expandMeaningLabel}
-        collapseMeaningLabel={collapseMeaningLabel}
-      />
+      <DesktopVocabHub />
     </Suspense>
   );
 }

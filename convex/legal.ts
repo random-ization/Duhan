@@ -13,7 +13,7 @@ const DOCUMENTS = {
   },
   refund: {
     title: 'Refund Policy',
-    content: `# Refund Policy\n\nLast updated: March 19, 2026\n\n## Refunds\nIf you are not satisfied, contact us within 14 days for a full refund.`,
+    content: `# Refund Policy\n\nLast updated: March 19, 2026\n\n## Free Trial\nEligible paid plans may include a 7-day free trial. Cancel before the trial ends to avoid being charged.\n\n## Refund Requests\nBecause DuHan is delivered digitally, refund requests are reviewed case by case. We consider factors such as duplicate charges, billing mistakes, material technical issues, prior usage, and applicable consumer law.\n\n## Merchant of Record\nPayments are processed by Lemon Squeezy as merchant of record. Lemon Squeezy may also issue refunds or handle chargebacks under its platform rules. Approved refunds are returned to the original payment method and may take several business days to settle.`,
   },
 };
 

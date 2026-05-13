@@ -11,6 +11,7 @@ import type {
   GlobalUserSettingsUpdate,
   StoredGlobalUserSettings,
 } from '../types/globalUserSettings';
+import type { LearnerStatsDto, CourseDashboardDto } from '../../convex/learningStats';
 
 export type NoArgs = Record<string, never>;
 
@@ -288,6 +289,7 @@ import {
   VocabBookPageDto,
   VocabReviewSummaryDto,
   VocabDashboardInsightsDto,
+  UnitProgressDto,
 } from '../../convex/vocab';
 
 export const VOCAB = {
@@ -313,6 +315,8 @@ export const VOCAB = {
       selectedWordIds?: string[];
       category?: 'ALL' | 'UNLEARNED' | 'DUE' | 'MASTERED';
       cursor?: string;
+      courseId?: string;
+      unit?: number;
     },
     VocabBookPageDto
   >('vocab:getVocabBookPage'),
@@ -334,6 +338,7 @@ export const VOCAB = {
       completedAt?: number;
     } | null
   >('vocab:getActiveLearningSession'),
+  getUnitProgress: qRef<{ courseId: string }, UnitProgressDto[]>('vocab:getUnitProgress'),
   // Mutations
   updateProgress: mRef<
     { wordId: string; quality: number },
@@ -449,6 +454,7 @@ export const VOCAB = {
   removeFromVocabBookBulk: mRef<{ wordIds: Id<'words'>[] }, { success: boolean; removed: number }>(
     'vocab:removeFromVocabBookBulk'
   ),
+  getForecast: qRef<NoArgs, number[]>('vocab:getForecast'),
 };
 
 export const ENTITLEMENTS = {
@@ -602,6 +608,7 @@ export const TOPIK = {
     PaginationResult<TopikExamDto>
   >('topik:getExams'),
   getUpcoming: qRef<NoArgs, TopikExamDto | null>('topik:getUpcoming'),
+  getLobbyStats: qRef<NoArgs, { upcomingExam: { round: number; date?: number; title: string } | null; weakAreas: Array<{ type: string; score: number; label: string; subLabel: string }> }>('topik:getLobbyStats'),
   getExamById: qRef<{ examId: string }, TopikExamDto | null>('topik:getExamById'),
   getExamQuestions: qRef<{ examId: string }, TopikQuestionDto[]>('topik:getExamQuestions'),
   // Mutations
@@ -909,16 +916,48 @@ import type {
 } from '../../convex/groups';
 import type { LeagueMetaDto, LeagueEntryDto } from '../../convex/league';
 export const COMMUNITY = {
+  getViewer: qRef<NoArgs, { _id: Id<'users'>; name?: string; avatar: string | null } | null>(
+    'community:getViewer'
+  ),
+  getCommunityFeed: qRef<{ limit?: number; filter?: string }, CommunityActivityDto[]>(
+    'community:getCommunityFeed'
+  ),
   getRecentFriendActivity: qRef<{ limit?: number }, CommunityActivityDto[]>(
     'community:getRecentFriendActivity'
   ),
-  likeActivity: mRef<{ activityId: Id<'learning_events'> }, { liked: boolean; likeCount: number }>(
-    'community:likeActivity'
-  ),
+  createPost: mRef<
+    {
+      content: string;
+      type?: 'all' | 'following' | 'milestones' | 'qa' | 'resources';
+      images?: string[];
+      attachment?: { type: string; id: string; title: string; description?: string };
+    },
+    string
+  >('community:createPost'),
+  likeActivity: mRef<
+    { activityId: string; kind: 'event' | 'post' },
+    { liked: boolean; likeCount: number }
+  >('community:likeActivity'),
   unlikeActivity: mRef<
-    { activityId: Id<'learning_events'> },
+    { activityId: string; kind: 'event' | 'post' },
     { liked: boolean; likeCount: number }
   >('community:unlikeActivity'),
+  addComment: mRef<
+    { postId: Id<'community_posts'>; content: string },
+    Id<'community_comments'>
+  >('community:addComment'),
+  getComments: qRef<
+    { postId: Id<'community_posts'> },
+    Array<{
+      _id: Id<'community_comments'>;
+      postId: Id<'community_posts'>;
+      userId: Id<'users'>;
+      content: string;
+      createdAt: number;
+      userName: string;
+      userAvatar: string | null;
+    }>
+  >('community:getComments'),
 };
 
 export const FRIENDS = {
@@ -1489,6 +1528,49 @@ export const NOTE_PAGES = {
       buckets?: Array<{ key: string; title: string; icon: string; count: number }>;
     }
   >('notePages:migrateNotesIntoSourceNotebooks'),
+};
+
+/**
+ * TYPING PRACTICE REFS
+ */
+export const TYPING = {
+  listTexts: qRef<
+    { type?: string; category?: string; onlyPublic?: boolean; paginationOpts: PaginationOptions },
+    PaginationResult<any>
+  >('typing:listTexts'),
+  getText: qRef<{ id: Id<'typing_texts'> }, any>('typing:getText'),
+  listCategories: qRef<NoArgs, string[]>('typing:listCategories'),
+  getUserStats: qRef<NoArgs, any>('typing:getUserStats'),
+  saveRecord: mRef<
+    {
+      practiceMode: string;
+      categoryId?: Id<'typing_texts'>;
+      wpm: number;
+      accuracy: number;
+      errorCount: number;
+      duration: number;
+      charactersTyped: number;
+      sentencesCompleted: number;
+      targetWpm?: number;
+      isTargetAchieved?: boolean;
+    },
+    Id<'typing_records'>
+  >('typing:saveRecord'),
+};
+
+/**
+ * USER & STATS REFS
+ */
+export const USER_STATS = {
+  getStats: qRef<NoArgs, LearnerStatsDto>('userStats:getStats'),
+  getCourseDashboard: qRef<NoArgs, CourseDashboardDto>('userStats:getCourseDashboard'),
+};
+
+export const USERS = {
+  updateCurrentCourse: mRef<
+    { courseId: string; level?: number; unit?: number; module?: string },
+    { success: boolean }
+  >('users:updateCurrentCourse'),
 };
 
 /**

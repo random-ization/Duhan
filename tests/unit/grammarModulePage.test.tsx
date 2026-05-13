@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -127,61 +127,18 @@ describe('GrammarModulePage AI panel persistence', () => {
     });
   });
 
-  it('defaults to open AI panel when no localStorage preference', async () => {
+  it('renders the AI Sentence Check section', async () => {
     renderPage();
 
-    expect(screen.getByText('AI Grammar Tutor')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Hide AI/i })).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(window.localStorage.getItem('grammar_ai_panel_open')).toBe('1');
-    });
-  });
-
-  it('respects closed preference and persists when reopened', async () => {
-    window.localStorage.setItem('grammar_ai_panel_open', '0');
-    renderPage();
-
-    expect(screen.queryByText('AI Grammar Tutor')).not.toBeInTheDocument();
-    const showButton = screen.getByRole('button', { name: /Show AI/i });
-    fireEvent.click(showButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('AI Grammar Tutor')).toBeInTheDocument();
-      expect(window.localStorage.getItem('grammar_ai_panel_open')).toBe('1');
-    });
-  });
-
-  it('renders safely when localStorage access is blocked', () => {
-    const originalLocalStorage = window.localStorage;
-
-    Object.defineProperty(window, 'localStorage', {
-      configurable: true,
-      value: {
-        getItem: vi.fn(() => {
-          throw new DOMException('Blocked', 'SecurityError');
-        }),
-        setItem: vi.fn(() => {
-          throw new DOMException('Blocked', 'SecurityError');
-        }),
-      },
-    });
-
-    renderPage();
-
-    expect(screen.getByText('AI Grammar Tutor')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Hide AI/i })).toBeInTheDocument();
-
-    Object.defineProperty(window, 'localStorage', {
-      configurable: true,
-      value: originalLocalStorage,
-    });
+    expect(screen.getByText('AI Sentence Check')).toBeInTheDocument();
   });
 
   it('routes desktop switch textbook to the course library', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Switch textbook' }));
+    // In DesktopGrammarModulePage, the back button is the first one with a ChevronLeft
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[0]); 
 
     expect(screen.getByTestId('current-location')).toHaveTextContent('/en/courses');
   });

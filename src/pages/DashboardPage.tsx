@@ -24,6 +24,7 @@ import {
   resolveLearningEntryTarget,
   TOPIK_GRAMMAR_COURSE_ID,
 } from '../utils/learningFlow';
+import type { LearnerStatsDto } from '../../convex/learningStats';
 
 const LazyMobileDashboard = lazy(() =>
   import('../components/mobile/MobileDashboard').then(module => ({
@@ -32,6 +33,7 @@ const LazyMobileDashboard = lazy(() =>
 );
 
 const DesktopDashboardPage = lazy(() => import('./desktop/DesktopDashboardPage'));
+const DesktopCourseDashboard = lazy(() => import('./desktop/DesktopCourseDashboard'));
 
 const LazyEditableDashboardGrid = lazy(() =>
   import('../components/dashboard/EditableDashboardGrid').then(module => ({
@@ -389,6 +391,7 @@ function DashboardPage() {
     >('progress:getCourseProgress'),
     dashboardView === 'practice' ? 'skip' : getCourseProgressArgs(user, selectedInstitute)
   );
+  const stats = useQuery(qRef<Record<string, never>, LearnerStatsDto>('userStats:getStats'));
 
   const savedWordsCount = getSavedWordsCount(vocabBookCount);
   const { currentUnit, progressPercent } = useMemo(
@@ -473,47 +476,16 @@ function DashboardPage() {
 
   return (
     <Suspense fallback={<ContentSkeleton />}>
-      <DesktopDashboardPage
-        navigate={navigate}
-        t={t}
-        user={user}
-        dashboardLanguage={dashboardLanguage}
-        enableDesktopKsoftDashboard={enableDesktopKsoftDashboard}
-        greeting={greeting}
-        learnerName={learnerName}
-        isPremiumUser={isPremiumUser}
-        showUpgradeBanner={showUpgradeBanner}
-        upgradeBannerRefreshKey={upgradeBannerRefreshKey}
-        setUpgradeBannerRefreshKey={setUpgradeBannerRefreshKey}
-        startUpgradeFlow={startUpgradeFlow}
-        upgradeFlowLoading={upgradeFlowLoading}
-        dashboardView={dashboardView}
-        dueReviews={dueReviews}
-        reviewSummary={reviewSummary}
-        currentMaterialMeta={currentMaterialMeta}
-        learningEntranceCards={learningEntranceCards}
-        learningEntryTarget={learningEntryTarget}
-        grammarEntryTarget={grammarEntryTarget}
-        setSelectedInstitute={setSelectedInstitute}
-        setSelectedLevel={setSelectedLevel}
-        isEditing={isEditing}
-        cardOrder={cardOrder}
-        updateCardOrder={updateCardOrder}
-        gridClassName={gridClassName}
-        dailyPhrase={dailyPhrase}
-        isSpeaking={isSpeaking}
-        onSpeakDailyPhrase={onSpeakDailyPhrase}
-        isInstituteNameLoading={isInstituteNameLoading}
-        instituteName={instituteName}
-        selectedLevel={selectedLevel}
-        currentUnit={currentUnit}
-        progressPercent={progressPercent}
-        savedWordsCount={savedWordsCount}
-        trackEvent={trackEvent}
-        safeSetLocalStorageItem={safeSetLocalStorageItem}
-        dismissDashboardUpgradeBanner={dismissDashboardUpgradeBanner}
-        getDashboardGridClassName={getDashboardGridClassName}
-      />
+      {enableDesktopKsoftDashboard ? (
+        <DesktopCourseDashboard
+          courseProgress={courseProgress ?? null}
+          reviewSummary={reviewSummary ?? null}
+          dailyPhrase={dailyPhrase ?? null}
+          stats={stats ?? null}
+        />
+      ) : (
+        <DesktopDashboardPage />
+      )}
     </Suspense>
   );
 }

@@ -2324,6 +2324,227 @@ export const translateReadingParagraphs = action({
   },
 });
 
+type TopikWritingMaterialQuestionInput = {
+  number: number;
+  questionType: string;
+  score?: number;
+  title?: string;
+};
+
+type TopikWritingMaterialFallbackItem = {
+  number: number;
+  instruction: string;
+  contextBox: string;
+};
+
+type TopikWritingMaterialFallbackResult = {
+  items: TopikWritingMaterialFallbackItem[];
+  errorCode?: string;
+};
+
+function normalizeTopikWritingQuestionType(raw: string): 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY' {
+  const normalized = raw.trim().toUpperCase();
+  if (normalized === 'GRAPH_ESSAY') return 'GRAPH_ESSAY';
+  if (normalized === 'OPINION_ESSAY') return 'OPINION_ESSAY';
+  return 'FILL_BLANK';
+}
+
+function buildDefaultTopikWritingMaterial(
+  question: TopikWritingMaterialQuestionInput,
+  language: SupportedTranslationLanguage
+): TopikWritingMaterialFallbackItem {
+  const type = normalizeTopikWritingQuestionType(question.questionType);
+  const scoreHint = typeof question.score === 'number' && question.score > 0 ? question.score : undefined;
+
+  if (language === 'en') {
+    if (type === 'GRAPH_ESSAY') {
+      return {
+        number: question.number,
+        instruction: `Write a graph-based explanatory essay in Korean (about 200-300 chars).${scoreHint ? ` (${scoreHint} pts)` : ''}`,
+        contextBox:
+          'Use the trend in the chart, compare at least two groups, and include one clear concluding sentence.',
+      };
+    }
+    if (type === 'OPINION_ESSAY') {
+      return {
+        number: question.number,
+        instruction: `Write an opinion essay in Korean (about 400-700 chars).${scoreHint ? ` (${scoreHint} pts)` : ''}`,
+        contextBox:
+          'State your position clearly, support it with reasons and examples, and finish with a concise conclusion.',
+      };
+    }
+    return {
+      number: question.number,
+      instruction: `Complete the blank naturally in Korean based on the prompt.${scoreHint ? ` (${scoreHint} pts)` : ''}`,
+      contextBox: 'Focus on grammar fit, coherence, and tone consistency with surrounding sentences.',
+    };
+  }
+
+  if (type === 'GRAPH_ESSAY') {
+    return {
+      number: question.number,
+      instruction: `请根据图表信息完成韩语说明文（约200-300字）。${scoreHint ? `（${scoreHint}分）` : ''}`,
+      contextBox: '请比较至少两组数据，描述主要趋势，并用一句话总结原因或启示。',
+    };
+  }
+  if (type === 'OPINION_ESSAY') {
+    return {
+      number: question.number,
+      instruction: `请围绕题目完成韩语议论文（约400-700字）。${scoreHint ? `（${scoreHint}分）` : ''}`,
+      contextBox: '先明确立场，再给出2-3个理由和例子，最后用简短结论收束全文。',
+    };
+  }
+  return {
+    number: question.number,
+    instruction: `请根据上下文完成韩语填空，确保语法和语气自然。${scoreHint ? `（${scoreHint}分）` : ''}`,
+    contextBox: '注意前后句逻辑关系，优先使用与主题一致的词汇和语法结构。',
+  };
+}
+
+export const generateTopikWritingMaterialFallback = action({
+  args: {
+    questions: v.array(
+      v.object({
+        number: v.number(),
+        questionType: v.string(),
+        score: v.optional(v.number()),
+        title: v.optional(v.string()),
+      })
+    ),
+    language: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<TopikWritingMaterialFallbackResult> => {
+    const startedAt = Date.now();
+    const normalizedLanguage = normalizeTargetLanguage(args.language) || 'zh';
+    const normalizedQuestions = args.questions.slice(0, 8);
+    if (normalizedQuestions.length === 0) {
+      return { items: [] };
+    }
+
+    let userId: Id<'users'> | undefined;
+    try {
+      userId = await guardAiAction(ctx, 'topik_writing_material_fallback');
+    } catch (error) {
+      await logAiFailure(ctx, {
+        feature: 'topik_writing_material_fallback',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
+      return {
+        items: normalizedQuestions.map(question =>
+          buildDefaultTopikWritingMaterial(question, normalizedLanguage)
+        ),
+        errorCode: resolveReadableAiErrorCode(error),
+      };
+    }
+
+    try {
+      const languageLabel = READING_RESPONSE_LANGUAGE_LABELS[normalizedLanguage] || '简体中文';
+      const { completion, provider } = await runChatCompletionWithFallback(
+        ({ client, provider }) =>
+          client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: `You generate fallback materials for TOPIK II writing questions.
+Return strict JSON only with this shape:
+{"items":[{"number":51,"instruction":"...","contextBox":"..."}]}
+Rules:
+- Keep "number" unchanged.
+- "instruction" must be concise and actionable.
+- "contextBox" should provide practical writing guidance or mini context.
+- Output language must be ${languageLabel}.
+- Never return markdown fences.`,
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  questions: normalizedQuestions.map(question => ({
+                    number: question.number,
+                    questionType: normalizeTopikWritingQuestionType(question.questionType),
+                    score: question.score ?? null,
+                    title: question.title ?? null,
+                  })),
+                }),
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        { label: 'topik_writing_material_fallback' }
+      );
+
+      const usage = completion.usage;
+      await ctx.runMutation(logUsageMutation, {
+        userId,
+        feature: 'topik_writing_material_fallback',
+        model: provider.model,
+        status: 'success',
+        provider: provider.provider,
+        durationMs: Date.now() - startedAt,
+        promptTokens: usage?.prompt_tokens,
+        completionTokens: usage?.completion_tokens,
+        totalTokens: usage?.total_tokens,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      const parsed = (parseJsonObjectFromModelContent(content || '') || {}) as {
+        items?: unknown;
+      };
+      const rawItems = Array.isArray(parsed.items) ? parsed.items : [];
+      const generatedByNumber = new Map<number, TopikWritingMaterialFallbackItem>();
+
+      for (const candidate of rawItems) {
+        if (!candidate || typeof candidate !== 'object') continue;
+        const row = candidate as Record<string, unknown>;
+        const number = typeof row.number === 'number' ? Math.round(row.number) : null;
+        if (number === null) continue;
+        const instruction =
+          typeof row.instruction === 'string' && row.instruction.trim().length > 0
+            ? row.instruction.trim()
+            : '';
+        const contextBox =
+          typeof row.contextBox === 'string' && row.contextBox.trim().length > 0
+            ? row.contextBox.trim()
+            : '';
+        generatedByNumber.set(number, {
+          number,
+          instruction,
+          contextBox,
+        });
+      }
+
+      const items = normalizedQuestions.map(question => {
+        const generated = generatedByNumber.get(question.number);
+        const fallback = buildDefaultTopikWritingMaterial(question, normalizedLanguage);
+        return {
+          number: question.number,
+          instruction: generated?.instruction || fallback.instruction,
+          contextBox: generated?.contextBox || fallback.contextBox,
+        };
+      });
+      return { items };
+    } catch (error) {
+      await logAiFailure(ctx, {
+        userId,
+        feature: 'topik_writing_material_fallback',
+        model: 'mimo-v2-flash',
+        provider: 'openai',
+        startedAt,
+        error,
+      });
+      return {
+        items: normalizedQuestions.map(question =>
+          buildDefaultTopikWritingMaterial(question, normalizedLanguage)
+        ),
+        errorCode: resolveReadableAiErrorCode(error),
+      };
+    }
+  },
+});
+
 export const batchTranslate = action({
   args: {
     texts: v.array(v.string()),

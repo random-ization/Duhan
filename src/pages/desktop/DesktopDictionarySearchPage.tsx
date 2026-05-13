@@ -1,7 +1,8 @@
-import React from 'react';
-import { ArrowLeft, ExternalLink, Loader2, Search } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input } from '../../components/ui';
-import type { SearchAllResult } from '../../utils/convexRefs';
+import React, { useMemo } from 'react';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { Search, Volume2, Clock, Link as LinkIcon, ChevronRight } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 type DictionaryEntry = {
   targetCode: string;
@@ -14,56 +15,64 @@ type DictionaryEntry = {
     order: number;
     definition: string;
     translation?: { lang: string; word: string; definition: string };
+    examples?: Array<{ ko: string; translation?: string }>;
   }>;
 };
 
-type SearchResult = {
-  total: number;
-  start: number;
-  num: number;
-  entries: DictionaryEntry[];
-};
-
-type SearchScope = 'all' | 'dictionary';
-type GlobalSearchBucket = keyof SearchAllResult['buckets'];
-
-interface DesktopDictionarySearchPageProps {
+type DesktopDictionarySearchPageProps = {
   navigate: (path: string) => void;
   t: any;
-  scope: SearchScope;
+  scope: string;
   returnTo: string;
   query: string;
   setQuery: (q: string) => void;
   isSearching: boolean;
   error: string | null;
-  result: SearchResult | null;
+  result: { entries: DictionaryEntry[] } | null;
   onSubmit: (e: React.FormEvent) => void;
-  handleOpenDetail: (entry: DictionaryEntry) => Promise<void>;
+  handleOpenDetail: (entry: DictionaryEntry) => void;
   detailOpen: boolean;
   setDetailOpen: (open: boolean) => void;
   detailEntry: DictionaryEntry | null;
   detailLoading: boolean;
   detailError: string | null;
-  detailSenses: Array<{
-    order: number;
-    definition: string;
-    translation?: { lang: string; word: string; definition: string };
-  }>;
+  detailSenses: any[];
   showGlobalEmpty: boolean;
   hasGlobalResults: boolean;
-  globalSearchResult: SearchAllResult | undefined;
-  getGlobalBucketLabel: (bucket: GlobalSearchBucket, t: any) => string;
+  globalSearchResult: any;
+  getGlobalBucketLabel: any;
   getMeaning: (entry: DictionaryEntry) => string;
   cleanDictionaryText: (text: string) => string;
+};
+
+function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
+  return (
+    <div className="mb-[22px]">
+      <div className="mb-2.5 flex items-baseline px-0.5">
+        {kanji && (
+          <span className="mr-1.5 font-k-serif text-[14px] font-medium text-k-crimson">
+            {kanji}
+          </span>
+        )}
+        <span className="text-[11px] font-extrabold tracking-[0.4px] text-k-ink uppercase opacity-40">
+          {title}
+        </span>
+        {action && (
+          <span className="ml-auto text-[10px] font-black text-k-sub cursor-pointer hover:text-k-ink transition-colors uppercase tracking-wider">
+            {action}
+          </span>
+        )}
+      </div>
+      <div className="rounded-[24px] bg-k-card shadow-k-sh-sm border border-k-line/5" style={{ padding: pad }}>
+        {children}
+      </div>
+    </div>
+  );
 }
 
-const GLOBAL_BUCKET_ORDER: GlobalSearchBucket[] = ['grammar', 'book', 'podcast', 'note'];
-
-export const DesktopDictionarySearchPage: React.FC<DesktopDictionarySearchPageProps> = ({
+export default function DesktopDictionarySearchPage({
   navigate,
   t,
-  scope,
-  returnTo,
   query,
   setQuery,
   isSearching,
@@ -71,275 +80,222 @@ export const DesktopDictionarySearchPage: React.FC<DesktopDictionarySearchPagePr
   result,
   onSubmit,
   handleOpenDetail,
-  detailOpen,
-  setDetailOpen,
   detailEntry,
   detailLoading,
   detailError,
-  detailSenses,
-  showGlobalEmpty,
-  hasGlobalResults,
-  globalSearchResult,
-  getGlobalBucketLabel,
   getMeaning,
-  cleanDictionaryText,
-}) => {
+  cleanDictionaryText
+}: DesktopDictionarySearchPageProps) {
+  
+  // Get all examples from all senses
+  const exampleSentences = useMemo(() => {
+    if (!detailEntry?.senses) return [];
+    return detailEntry.senses.flatMap(s => s.examples || []).slice(0, 6);
+  }, [detailEntry]);
+
+  // Handle speak
+  const handleSpeak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ko-KR';
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Temporary search history - ideally from local storage or backend
+  const searchHistory = ['한국어', '공부', '바다', '하늘'];
+
   return (
-    <div className="min-h-[100dvh] bg-background pb-safe">
-      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-lg border-b border-border px-4 md:px-8 py-3 md:py-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-3 mb-3 md:mb-4">
-            <Button
-              type="button"
-              onClick={() => navigate(returnTo)}
-              variant="ghost"
-              size="auto"
-              className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center"
-              aria-label={t('common.back', { defaultValue: 'Back' })}
-            >
-              <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            <h1 className="text-lg font-black text-foreground">
-              {scope === 'all'
-                ? t('common.search', { defaultValue: 'Search' })
-                : t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
-            </h1>
-          </div>
-
-          <form onSubmit={onSubmit} className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={
-                scope === 'all'
-                  ? t('search.globalPlaceholder', {
-                      defaultValue: 'Search grammar, books, podcasts, notes...',
-                    })
-                  : t('dashboard.dictionary.placeholder', {
-                      defaultValue: 'Search Korean word...',
-                    })
-              }
-              className="w-full !h-11 !rounded-xl !border-border !bg-muted !pl-9 !pr-20 text-sm font-semibold text-foreground focus-visible:!ring-2 focus-visible:!ring-indigo-300 dark:focus-visible:!ring-indigo-200/70 focus-visible:!bg-card !shadow-none"
-            />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="auto"
-              disabled={isSearching || !query.trim()}
-              loading={isSearching}
-              loadingText={t('search', { defaultValue: 'Search' })}
-              loadingIconClassName="w-3 h-3"
-              className="absolute right-1.5 top-1.5 h-8 px-3 rounded-lg bg-primary text-white text-xs font-bold !border-0 !shadow-none"
-            >
-              {t('search', { defaultValue: 'Search' })}
-            </Button>
-          </form>
+    <div className="p-10 max-w-[1400px] mx-auto">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+           <div className="w-1.5 h-1.5 rounded-full bg-k-crimson" />
+           <h2 className="text-[12px] font-black uppercase tracking-[0.2em] text-k-sub">
+             DICTIONARY · {detailEntry?.word || query || '搜词'}
+           </h2>
         </div>
-      </header>
+      </div>
 
-      <main className="px-4 md:px-8 max-w-3xl mx-auto py-6 pb-[130px] md:pb-32">
-        {isSearching && (
-          <div className="py-16 flex flex-col items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <span className="text-sm font-semibold">
-              {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
-            </span>
-          </div>
-        )}
-
-        {!isSearching && error && (
-          <div className="rounded-xl border border-rose-200 dark:border-rose-300/35 bg-rose-50 dark:bg-rose-400/12 p-4 text-sm font-semibold text-rose-700 dark:text-rose-200">
-            {error}
-          </div>
-        )}
-
-        {!isSearching &&
-          !error &&
-          scope === 'dictionary' &&
-          result &&
-          result.entries.length === 0 && (
-            <div className="py-16 text-center text-muted-foreground">
-              <p className="text-sm font-semibold">
-                {t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
-              </p>
+      <div className="grid grid-cols-[340px_1fr] items-start gap-10">
+        <aside className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+          <DesktopCard pad={16} className="bg-k-bg2/40 border-none shadow-none">
+            <form onSubmit={onSubmit} className="relative mb-4">
+              <div className="flex items-center gap-3 rounded-2xl bg-k-card px-4 py-3 shadow-k-sh-sm border border-k-line/5">
+                <Search size={18} className={cn("transition-colors", isSearching ? "text-k-crimson animate-pulse" : "text-k-sub")} />
+                <input
+                  className="flex-1 bg-transparent font-sans text-[14px] font-extrabold text-k-ink outline-none placeholder:text-k-sub/40"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="输入韩语单词..."
+                />
+              </div>
+            </form>
+            <div className="flex flex-wrap gap-2">
+              <DesignChip tone="ink" size="sm" className="px-3 py-1.5 text-[10px] font-black">韩→中</DesignChip>
+              <DesignChip tone="muted" size="sm" className="px-3 py-1.5 text-[10px] font-black opacity-40">中→韩</DesignChip>
+              <DesignChip tone="muted" size="sm" className="px-3 py-1.5 text-[10px] font-black opacity-40">韩→英</DesignChip>
             </div>
+          </DesktopCard>
+
+          {result && result.entries.length > 0 && (
+            <DRail kanji="果" title="搜索结果" pad={0}>
+               <div className="max-h-[400px] overflow-y-auto py-2">
+                 {result.entries.map((entry) => (
+                   <div
+                     key={entry.targetCode}
+                     onClick={() => handleOpenDetail(entry)}
+                     className={cn(
+                       "flex flex-col gap-0.5 px-5 py-3.5 cursor-pointer transition-all border-l-4",
+                       detailEntry?.targetCode === entry.targetCode 
+                        ? "border-k-crimson bg-k-bg2" 
+                        : "border-transparent hover:bg-k-bg2/60"
+                     )}
+                   >
+                     <div className="flex items-center justify-between">
+                       <span className="text-[15px] font-black text-k-ink">{entry.word}</span>
+                       <span className="text-[10px] font-bold text-k-sub opacity-40 uppercase tracking-widest">{entry.pos}</span>
+                     </div>
+                     <span className="text-[12px] font-medium text-k-sub line-clamp-1">{getMeaning(entry)}</span>
+                   </div>
+                 ))}
+               </div>
+            </DRail>
           )}
 
-        {!isSearching &&
-          !error &&
-          scope === 'dictionary' &&
-          result &&
-          result.entries.length > 0 && (
-            <div className="space-y-2">
-              {result.entries.map(entry => (
-                <article
-                  key={entry.targetCode}
-                  className="rounded-xl border border-border bg-card p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-xl md:text-2xl font-black text-foreground">
-                        {entry.word}
-                      </h2>
-                      <p className="text-xs md:text-sm font-semibold text-muted-foreground mt-1">
-                        {[entry.pronunciation, entry.pos].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-[15px] md:text-base text-muted-foreground leading-relaxed">
-                    {getMeaning(entry) ||
-                      t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
-                  </p>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground font-semibold">
-                      #{entry.targetCode}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="auto"
-                      onClick={() => void handleOpenDetail(entry)}
-                      className="h-8 px-3 rounded-lg border border-border bg-muted text-foreground text-xs font-bold"
-                    >
-                      {t('common.details', { defaultValue: 'Details' })}
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
+          <DRail kanji="史" title="搜索历史" pad={0}>
+            {searchHistory.map((w, i, a) => (
+              <div
+                key={i}
+                onClick={() => setQuery(w)}
+                className="flex cursor-pointer items-center justify-between px-5 py-3 transition-colors hover:bg-k-bg2 group"
+                style={{ borderBottom: i < a.length - 1 ? '1px solid var(--color-k-line)' : 'none' }}
+              >
+                <div className="flex items-center gap-3">
+                  <Clock size={14} className="text-k-sub/20 group-hover:text-k-crimson/40 transition-colors" />
+                  <span className="text-[13px] font-extrabold text-k-ink tracking-tight">{w}</span>
+                </div>
+                <ChevronRight size={14} className="text-k-sub/20 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            ))}
+          </DRail>
+        </aside>
 
-        {!isSearching && !error && showGlobalEmpty && (
-          <div className="py-16 text-center text-muted-foreground">
-            <p className="text-sm font-semibold">
-              {t('search.noResults', { defaultValue: 'No matching results' })}
-            </p>
-          </div>
-        )}
+        <main className="animate-in fade-in slide-in-from-right-4 duration-700">
+          {detailLoading ? (
+            <DesktopCard pad={40} className="flex flex-col items-center justify-center min-h-[500px]">
+               <div className="w-12 h-12 rounded-full border-4 border-k-line/20 border-t-k-crimson animate-spin mb-6" />
+               <p className="text-[13px] font-black text-k-sub uppercase tracking-[0.2em]">正在获取词条详情...</p>
+            </DesktopCard>
+          ) : detailEntry ? (
+            <div className="space-y-6">
+              <DesktopCard pad={40} className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                   <LinkIcon size={120} />
+                </div>
 
-        {!isSearching && !error && scope === 'all' && hasGlobalResults && globalSearchResult && (
-          <div className="space-y-5">
-            {GLOBAL_BUCKET_ORDER.map(bucket => {
-              const bucketHits = globalSearchResult.buckets[bucket];
-              if (!bucketHits || bucketHits.length === 0) return null;
-              return (
-                <section key={bucket} className="space-y-2">
-                  <h2 className="text-xs font-black tracking-widest text-muted-foreground uppercase">
-                    {getGlobalBucketLabel(bucket, t)}
-                  </h2>
-                  <div className="space-y-2">
-                    {bucketHits.map(hit => (
+                <div className="relative z-10">
+                  <div className="mb-6 flex items-baseline flex-wrap gap-4">
+                    <h1 className="font-k-serif text-[56px] font-medium tracking-tight text-k-ink leading-none">
+                      {detailEntry.word}
+                    </h1>
+                    <div className="flex items-center gap-3 mb-2">
+                       <span className="text-[18px] font-bold text-k-sub/60 font-sans tracking-tight">
+                        [ {detailEntry.pronunciation || '...'} ]
+                      </span>
                       <button
-                        key={`${bucket}-${hit.id}`}
-                        type="button"
-                        onClick={() => navigate(hit.linkPath)}
-                        className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left shadow-sm"
+                        onClick={() => handleSpeak(detailEntry.word)}
+                        className="group w-10 h-10 rounded-full flex items-center justify-center bg-k-ink text-k-bg hover:bg-k-crimson transition-all shadow-k-sh-sm"
                       >
-                        <div className="text-sm font-bold text-foreground leading-tight">
-                          {hit.title}
-                        </div>
-                        {hit.subtitle ? (
-                          <div className="mt-1 text-xs font-semibold text-muted-foreground">
-                            {hit.subtitle}
-                          </div>
-                        ) : null}
+                        <Volume2 size={18} className="group-hover:scale-110 transition-transform" />
                       </button>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      <Dialog open={scope === 'dictionary' ? detailOpen : false} onOpenChange={setDetailOpen}>
-        <DialogContent className="w-[min(92vw,760px)] max-h-[85vh] overflow-hidden p-0">
-          <div className="border-b border-border px-5 py-4 md:px-6 md:py-5">
-            <DialogHeader>
-              <DialogTitle className="text-2xl md:text-3xl font-black text-foreground">
-                {detailEntry?.word ||
-                  t('dashboard.dictionary.label', { defaultValue: 'Dictionary' })}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground font-semibold">
-                {[detailEntry?.pronunciation, detailEntry?.pos, detailEntry?.wordGrade]
-                  .filter(Boolean)
-                  .join(' · ') ||
-                  t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="px-5 py-4 md:px-6 md:py-5 overflow-y-auto max-h-[calc(85vh-120px)]">
-            {detailLoading && (
-              <div className="py-8 flex items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm font-semibold">
-                  {t('dashboard.dictionary.searching', { defaultValue: 'Searching...' })}
-                </span>
-              </div>
-            )}
-
-            {!detailLoading && detailError && (
-              <div className="rounded-xl border border-rose-200 dark:border-rose-300/35 bg-rose-50 dark:bg-rose-400/12 p-4 text-sm font-semibold text-rose-700 dark:text-rose-200">
-                {detailError}
-              </div>
-            )}
-
-            {!detailLoading && !detailError && detailSenses.length > 0 && (
-              <div className="space-y-3">
-                {detailSenses.map((sense, idx) => (
-                  <section
-                    key={`${detailEntry?.targetCode || 'detail'}-${sense.order}-${idx}`}
-                    className="rounded-xl border border-border bg-muted/30 p-4"
-                  >
-                    <div className="text-xs font-black text-muted-foreground mb-2">
-                      {t('dashboard.dictionary.sense', { defaultValue: 'Sense' })}{' '}
-                      {sense.order || idx + 1}
                     </div>
-                    {sense.translation?.word && (
-                      <p className="text-sm font-bold text-foreground">{sense.translation.word}</p>
-                    )}
-                    <p className="text-sm md:text-base text-foreground leading-relaxed mt-1">
-                      {cleanDictionaryText(
-                        sense.translation?.definition ||
-                          sense.definition ||
-                          sense.translation?.word ||
-                          ''
-                      ) ||
-                        t('dashboard.dictionary.noResults', { defaultValue: 'No results found' })}
-                    </p>
-                    {sense.definition && (
-                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                        {cleanDictionaryText(sense.definition)}
-                      </p>
-                    )}
-                  </section>
-                ))}
-              </div>
-            )}
+                  </div>
 
-            {!detailLoading && !detailError && detailEntry?.link && (
-              <div className="mt-4">
-                <a
-                  href={detailEntry.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
-                >
-                  {t('dashboard.dictionary.viewSource', {
-                    defaultValue: 'Open official dictionary source',
-                  })}
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+                  <div className="flex flex-wrap gap-3 mb-10">
+                    <DesignChip tone="ink" size="sm" className="px-4 py-1.5 text-[11px] font-black">
+                      {detailEntry.pos || '未知品类'}
+                    </DesignChip>
+                    {detailEntry.wordGrade && (
+                      <DesignChip tone="crimson" size="sm" className="px-4 py-1.5 text-[11px] font-black">
+                        {detailEntry.wordGrade}
+                      </DesignChip>
+                    )}
+                    <DesignChip tone="muted" size="sm" className="px-4 py-1.5 text-[11px] font-black opacity-40">
+                      词频 5/5
+                    </DesignChip>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-k-line/10 pt-10">
+                    <section>
+                      <h3 className="mb-5 text-[11px] font-black uppercase tracking-[0.2em] text-k-sub opacity-40">释义 / Senses</h3>
+                      <div className="space-y-8">
+                        {detailEntry.senses.map((sense, i) => (
+                          <div key={i} className="group">
+                             <div className="flex items-start gap-4">
+                                <span className="mt-1 flex-shrink-0 w-6 h-6 rounded-lg bg-k-ink/5 flex items-center justify-center text-[11px] font-black text-k-crimson">
+                                  {sense.order || i+1}
+                                </span>
+                                <div>
+                                   <p className="font-k-serif text-[22px] font-medium leading-[1.3] text-k-ink mb-1">
+                                     {cleanDictionaryText(sense.translation?.word || sense.definition)}
+                                   </p>
+                                   {sense.translation?.definition && (
+                                     <p className="text-[14px] font-medium text-k-sub leading-relaxed opacity-80">
+                                       {cleanDictionaryText(sense.translation.definition)}
+                                     </p>
+                                   )}
+                                </div>
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="mb-5 text-[11px] font-black uppercase tracking-[0.2em] text-k-sub opacity-40">例句 / Examples</h3>
+                      <div className="space-y-4">
+                        {exampleSentences.length > 0 ? (
+                          exampleSentences.map((s, i) => (
+                            <div key={i} className="p-5 rounded-[20px] bg-k-bg2 border border-k-line/5 hover:border-k-crimson/20 transition-all group">
+                              <p className="font-k-serif text-[15px] leading-relaxed text-k-ink mb-2 group-hover:text-k-crimson transition-colors">{s.ko}</p>
+                              {s.translation && (
+                                <p className="text-[12px] font-bold text-k-sub opacity-60 leading-relaxed">{s.translation}</p>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="py-12 flex flex-col items-center justify-center text-center opacity-40">
+                             <p className="text-[12px] font-black uppercase tracking-widest text-k-sub">暂无例句数据</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </DesktopCard>
+              
+              {/* Optional related section if we have data later */}
+              <DRail kanji="關" title="派生与相关" action="查看全部 →" pad={0}>
+                 <div className="py-4 px-6 text-center">
+                    <p className="text-[12px] font-black text-k-sub opacity-20 uppercase tracking-widest">相关词条模块开发中</p>
+                 </div>
+              </DRail>
+            </div>
+          ) : (
+            <DesktopCard pad={40} className="flex flex-col items-center justify-center min-h-[500px] bg-k-bg2/20 border-dashed border-2">
+               <div className="w-20 h-20 rounded-[30px] bg-k-card shadow-k-sh-sm flex items-center justify-center mb-8">
+                 <Search size={32} className="text-k-sub/20" />
+               </div>
+               <h2 className="text-[20px] font-black text-k-ink mb-2">准备好开启探索了吗？</h2>
+               <p className="text-[14px] font-medium text-k-sub max-w-[300px] text-center opacity-60 mb-8">
+                 在左侧输入韩语单词，我们将为您提供来自权威词典的详细解析。
+               </p>
+               <div className="flex gap-4">
+                 <button onClick={() => setQuery('바다')} className="px-5 py-2 rounded-xl bg-k-card text-[12px] font-black text-k-ink border border-k-line/10 hover:border-k-crimson transition-all">바다 (大海)</button>
+                 <button onClick={() => setQuery('공부')} className="px-5 py-2 rounded-xl bg-k-card text-[12px] font-black text-k-ink border border-k-line/10 hover:border-k-crimson transition-all">공부 (学习)</button>
+               </div>
+            </DesktopCard>
+          )}
+        </main>
+      </div>
     </div>
   );
-};
-
-export default DesktopDictionarySearchPage;
+}

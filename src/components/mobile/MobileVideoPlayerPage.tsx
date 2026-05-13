@@ -6,7 +6,7 @@ import { useQuery, useAction, useMutation } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
-import { aRef, ENTITLEMENTS, qRef } from '../../utils/convexRefs';
+import { aRef, ENTITLEMENTS, mRef, qRef } from '../../utils/convexRefs';
 import { MobileDictionarySheet } from './MobileDictionarySheet';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
@@ -21,6 +21,7 @@ import { MobileImmersiveHeader } from './MobileImmersiveHeader';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 import { KT } from './ksoft/ksoft';
 import { useTranslation } from 'react-i18next';
+import { useGlobalSettings } from '../../hooks/useGlobalSettings';
 
 const LazyVideoPlayer = React.lazy(() => import('../media/VidstackVideoPlayer'));
 
@@ -72,6 +73,7 @@ export const MobileVideoPlayerPage: React.FC = () => {
   const { startUpgradeFlow } = useUpgradeFlow();
   const { saveWord } = useUserActions();
   const labels = getLabels(language);
+  const { settings: globalSettings, updateSettings: updateGlobalSettings } = useGlobalSettings();
   const playerRef = useRef<MediaPlayerInstance>(null);
   const segmentRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const dictionaryRequestRef = useRef(0);
@@ -91,6 +93,9 @@ export const MobileVideoPlayerPage: React.FC = () => {
     >('dictionary:searchDictionary')
   );
   const consumeMediaPlay = useMutation(ENTITLEMENTS.consumeMediaPlay);
+  const saveVideoProgress = useMutation(
+    mRef<{ videoId: string; progress: number; duration?: number }, null>('videos:saveProgress')
+  );
 
   const convexVideo = useQuery(
     qRef<{ id: string }, ConvexVideoDoc | null>('videos:get'),
@@ -98,7 +103,10 @@ export const MobileVideoPlayerPage: React.FC = () => {
   );
 
   const [currentTime, setCurrentTime] = useState(0);
-  const [showTranslation, setShowTranslation] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(
+    () => globalSettings.mediaSubtitleMode === 'BILINGUAL'
+  );
+  const [autoScroll, setAutoScroll] = useState(() => globalSettings.mediaAutoScroll);
   const [selectedWordObj, setSelectedWordObj] = useState<{ word: string; meaning: string } | null>(
     null
   );
@@ -156,16 +164,25 @@ export const MobileVideoPlayerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (activeSegmentIndex >= 0 && segmentRefs.current[activeSegmentIndex]) {
+    if (autoScroll && activeSegmentIndex >= 0 && segmentRefs.current[activeSegmentIndex]) {
       segmentRefs.current[activeSegmentIndex]?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
     }
-  }, [activeSegmentIndex]);
+  }, [activeSegmentIndex, autoScroll]);
 
+  const lastSaveRef = useRef(0);
   const handleTimeUpdate = (detail: MediaTimeUpdateEventDetail) => {
     setCurrentTime(detail.currentTime);
+    if (id && detail.currentTime - lastSaveRef.current >= 10) {
+      lastSaveRef.current = detail.currentTime;
+      saveVideoProgress({
+        videoId: id,
+        progress: detail.currentTime,
+        duration: playerRef.current?.duration || undefined,
+      }).catch(() => {});
+    }
   };
 
   const seekTo = (time: number) => {
@@ -333,31 +350,64 @@ export const MobileVideoPlayerPage: React.FC = () => {
           ) : null
         }
         actions={
-          <button
-            type="button"
-            onClick={() => setShowTranslation(!showTranslation)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              height: 36,
-              padding: '0 12px',
-              borderRadius: 18,
-              border: showTranslation ? `1px solid rgba(162,59,46,0.2)` : `1px solid ${KT.line}`,
-              background: showTranslation ? 'rgba(162,59,46,0.08)' : KT.card,
-              color: showTranslation ? KT.crimson : KT.sub,
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: KT.font,
-              letterSpacing: 0.5,
-            }}
-          >
-            <Languages size={14} />
-            {showTranslation
-              ? t('common.on', { defaultValue: 'On' })
-              : t('common.off', { defaultValue: 'Off' })}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                const nextValue = !showTranslation;
+                setShowTranslation(nextValue);
+                void updateGlobalSettings({
+                  mediaSubtitleMode: nextValue ? 'BILINGUAL' : 'SOURCE_ONLY',
+                });
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                height: 36,
+                padding: '0 12px',
+                borderRadius: 18,
+                border: showTranslation ? `1px solid rgba(162,59,46,0.2)` : `1px solid ${KT.line}`,
+                background: showTranslation ? 'rgba(162,59,46,0.08)' : KT.card,
+                color: showTranslation ? KT.crimson : KT.sub,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: KT.font,
+                letterSpacing: 0.5,
+              }}
+            >
+              <Languages size={14} />
+              {showTranslation ? '双语' : '原文'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const nextValue = !autoScroll;
+                setAutoScroll(nextValue);
+                void updateGlobalSettings({ mediaAutoScroll: nextValue });
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                height: 36,
+                padding: '0 12px',
+                borderRadius: 18,
+                border: autoScroll ? `1px solid rgba(162,59,46,0.2)` : `1px solid ${KT.line}`,
+                background: autoScroll ? 'rgba(162,59,46,0.08)' : KT.card,
+                color: autoScroll ? KT.crimson : KT.sub,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: KT.font,
+                letterSpacing: 0.5,
+              }}
+            >
+              <Clock size={14} />
+              {autoScroll ? '跟随' : '手动'}
+            </button>
+          </div>
         }
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

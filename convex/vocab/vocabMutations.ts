@@ -4,11 +4,11 @@
  */
 
 import { mutation } from '../_generated/server';
-import { v } from 'convex/values';
+import { v, ConvexError } from 'convex/values';
 import { getAuthUserId, requireAdmin } from '../utils';
 
 import { vocabLogger } from '../logger';
-import { cleanupUndefinedFields } from '../vocabHelpers';
+import { cleanupUndefinedFields, mapFsrsStateToStatus } from '../vocabHelpers';
 
 // Save word to vocabulary
 export const saveWord = mutation({
@@ -27,7 +27,7 @@ export const saveWord = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Authentication required');
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
 
     // Check if word already exists
     const existing = await ctx.db
@@ -75,7 +75,7 @@ export const updateProgress = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Authentication required');
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
 
     const existing = await ctx.db
       .query('user_vocab_progress')
@@ -101,6 +101,124 @@ export const updateProgress = mutation({
     }
 
     return { success: true };
+  },
+});
+
+// Update vocabulary progress (V2 with FSRS support)
+export const updateProgressV2 = mutation({
+  args: {
+    wordId: v.id('words'),
+    rating: v.number(),
+    fsrsState: v.object({
+      state: v.number(),
+      due: v.number(),
+      stability: v.number(),
+      difficulty: v.number(),
+      elapsed_days: v.number(),
+      scheduled_days: v.number(),
+      learning_steps: v.number(),
+      reps: v.number(),
+      lapses: v.number(),
+      last_review: v.union(v.number(), v.null()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
+
+    const existing = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', args.wordId))
+      .first();
+
+    const now = Date.now();
+    const status = mapFsrsStateToStatus(args.fsrsState.state, args.fsrsState.stability);
+    
+    const updates = {
+      ...args.fsrsState,
+      status,
+      nextReviewAt: args.fsrsState.due,
+      lastReviewedAt: args.fsrsState.last_review ?? now,
+      last_review: args.fsrsState.last_review ?? undefined,
+      updatedAt: now,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, updates);
+    } else {
+      await ctx.db.insert('user_vocab_progress', {
+        userId,
+        wordId: args.wordId,
+        ...updates,
+      });
+    }
+
+    return { success: true, progress: updates };
+  },
+});
+
+// Update vocabulary progress (Batch)
+export const updateProgressBatch = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        wordId: v.id('words'),
+        rating: v.number(),
+        fsrsState: v.object({
+          state: v.number(),
+          due: v.number(),
+          stability: v.number(),
+          difficulty: v.number(),
+          elapsed_days: v.number(),
+          scheduled_days: v.number(),
+          learning_steps: v.number(),
+          reps: v.number(),
+          lapses: v.number(),
+          last_review: v.union(v.number(), v.null()),
+        }),
+        reviewDurationMs: v.optional(v.number()),
+        reviewedAt: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
+
+    const now = Date.now();
+    let updated = 0;
+    let inserted = 0;
+
+    for (const item of args.items) {
+      const existing = await ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', item.wordId))
+        .first();
+
+      const status = mapFsrsStateToStatus(item.fsrsState.state, item.fsrsState.stability);
+      const updates = {
+        ...item.fsrsState,
+        status,
+        nextReviewAt: item.fsrsState.due,
+        lastReviewedAt: item.reviewedAt ?? item.fsrsState.last_review ?? now,
+        last_review: item.fsrsState.last_review ?? undefined,
+        updatedAt: now,
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, updates);
+        updated++;
+      } else {
+        await ctx.db.insert('user_vocab_progress', {
+          userId,
+          wordId: item.wordId,
+          ...updates,
+        });
+        inserted++;
+      }
+    }
+
+    return { success: true, processed: args.items.length, updated, inserted };
   },
 });
 
@@ -169,7 +287,7 @@ export const setMastery = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error('Authentication required');
+    if (!userId) throw new ConvexError({ code: 'UNAUTHORIZED' });
 
     const existing = await ctx.db
       .query('user_vocab_progress')

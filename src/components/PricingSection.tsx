@@ -7,25 +7,26 @@ import { notify } from '../utils/notify';
 import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import type { ViewerAccessSnapshot } from '../utils/entitlements';
+import { Check, Star, Zap } from 'lucide-react';
 
 function resolvePlanHighlights(language: string) {
   const isZh = language === 'zh' || language.startsWith('zh-');
   if (isZh) {
     return {
       monthly: [
-        '\u5168\u90e8\u6559\u6750\u8bfe\u7a0b',
-        '\u5168\u90e8 TOPIK / \u5199\u4f5c\u771f\u9898',
-        '\u5a92\u4f53\u65e0\u9650\u64ad\u653e + AI Credit \u63d0\u5347',
+        '全部教材课程完整解锁',
+        '全部 TOPIK / 写作真题库',
+        '媒体无限播放 + AI Credit 提升',
       ],
       annual: [
-        '\u5305\u542b\u6708\u4ed8\u5168\u90e8\u6743\u76ca',
-        '\u66f4\u4f4e\u957f\u671f\u6210\u672c，\u9002\u5408\u6301\u7eed\u5907\u8003',
-        '\u5386\u53f2\u5206\u6790、PDF \u5bfc\u51fa、\u5168\u7ad9 AI \u6df1\u5ea6\u4f7f\u7528',
+        '包含月付全部权益',
+        '极低长期成本，适合深度备考',
+        '历史分析、PDF 导出、AI 深度解析',
       ],
       lifetime: [
-        '\u6743\u76ca\u4e0e Pro \u76f8\u540c',
-        '\u672a\u6765\u65b0\u589e Pro \u529f\u80fd\u7ee7\u7eed\u5305\u542b',
-        '\u4e00\u6b21\u4e70\u65ad，\u4e0d\u518d\u7eed\u8d39',
+        '权益与 Pro 相同',
+        '未来新增功能自动包含',
+        '一次买断，终身拥有',
       ],
     };
   }
@@ -70,34 +71,10 @@ const PricingSection: React.FC<PricingSectionProps> = ({
     string,
     { symbol: string; monthly: string; annual: string; lifetime: string; currency: string }
   > = {
-    en: {
-      symbol: '$',
-      monthly: '4.99',
-      annual: '19.99',
-      lifetime: '39.99',
-      currency: 'USD',
-    },
-    zh: {
-      symbol: '¥',
-      monthly: '19',
-      annual: '69',
-      lifetime: '128',
-      currency: 'CNY',
-    },
-    vi: {
-      symbol: '₫',
-      monthly: '69.000',
-      annual: '249.000',
-      lifetime: '499.000',
-      currency: 'VND',
-    },
-    mn: {
-      symbol: '₮',
-      monthly: '9,900',
-      annual: '35,000',
-      lifetime: '69,000',
-      currency: 'MNT',
-    },
+    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', currency: 'USD' },
+    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', currency: 'CNY' },
+    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', currency: 'VND' },
+    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', currency: 'MNT' },
   };
 
   const language = i18n.language;
@@ -107,23 +84,14 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   const effectiveViewerAccess = viewerAccessOverride ?? viewerAccess;
 
   const handleSubscribe = (planId: CheckoutPlan) => {
-    if (authLoading) {
-      return;
-    }
-
+    if (authLoading) return;
     if (!effectiveUser) {
-      startUpgradeFlow({
-        plan: planId,
-        source,
-        returnTo: '/dashboard',
-      });
+      startUpgradeFlow({ plan: planId, source, returnTo: '/dashboard' });
       return;
     }
-
     if (onSubscribe) {
       onSubscribe(planId);
     } else {
-      // Fallback default behavior
       notify.info(t('pricing.paymentUpgrading'));
     }
   };
@@ -131,8 +99,6 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   const getOriginalPrice = (lang: string) => {
     if (lang === 'zh') return '¥228';
     if (lang === 'en') return '$69.99';
-    if (lang === 'vi') return '₫699.000';
-    if (lang === 'mn') return '₮99,000';
     return undefined;
   };
 
@@ -143,135 +109,121 @@ const PricingSection: React.FC<PricingSectionProps> = ({
   const plans = [
     {
       id: 'MONTHLY',
-      title: t('plan.monthly', 'Monthly'),
-      price: `${priceConfig.symbol}${priceConfig.monthly}`,
-      period: t('period.per_month', '/ month'),
-      features: [...planHighlights.monthly],
+      title: t('plan.monthly'),
+      price: priceConfig.monthly,
+      symbol: priceConfig.symbol,
+      period: t('period.per_month'),
+      features: planHighlights.monthly,
       highlight: false,
       type: SubscriptionType.MONTHLY,
     },
     {
       id: 'ANNUAL',
-      title: t('plan.annual', 'Annual'),
-      price: `${priceConfig.symbol}${priceConfig.annual}`,
-      period: t('period.per_year', '/ year'),
+      title: t('plan.annual'),
+      price: priceConfig.annual,
+      symbol: priceConfig.symbol,
+      period: t('period.per_year'),
       originalPrice: getOriginalPrice(language),
       discount: t('pricing.discount', '70% OFF'),
-      features: [...planHighlights.annual],
+      features: planHighlights.annual,
       highlight: true,
       type: SubscriptionType.ANNUAL,
     },
     {
       id: 'LIFETIME',
-      title: t('plan.lifetime', 'Lifetime'),
-      price: `${priceConfig.symbol}${priceConfig.lifetime}`,
-      period: t('period.once', 'one-time'),
-      features: [...planHighlights.lifetime],
+      title: t('plan.lifetime'),
+      price: priceConfig.lifetime,
+      symbol: priceConfig.symbol,
+      period: t('period.once'),
+      features: planHighlights.lifetime,
       highlight: false,
       type: SubscriptionType.LIFETIME,
     },
   ];
 
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8">
+    <div className="py-24 px-6 bg-k-bg">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-foreground dark:text-white sm:text-4xl">
+        <div className="text-center mb-16">
+          <h2 className="font-k-serif text-[40px] md:text-[56px] font-black text-k-ink leading-tight mb-6">
             {t('pricing.title', 'Invest in your Korean Fluency')}
           </h2>
-          <p className="mt-4 text-xl text-muted-foreground dark:text-muted-foreground">
+          <p className="text-xl text-k-sub font-medium opacity-80 max-w-2xl mx-auto">
             {t('pricing.subtitle', 'Choose the plan that fits your pace.')}
           </p>
         </div>
 
-        <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {plans.map(plan => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden transition-transform hover:scale-105 ${
+              className={`flex flex-col p-8 rounded-[40px] border-2 transition-all duration-300 ${
                 plan.highlight
-                  ? 'border-2 border-indigo-500 dark:border-indigo-300/70 z-10 scale-105'
-                  : 'border border-border dark:border-border'
-              } bg-card dark:bg-muted`}
+                  ? 'border-k-ink bg-k-ink text-white shadow-pop-large scale-105 z-10'
+                  : 'border-k-ink/10 bg-white text-k-ink shadow-sm hover:border-k-ink/30'
+              }`}
             >
-              {plan.highlight && (
-                <div className="absolute top-0 right-0 left-0 bg-indigo-500 dark:bg-indigo-400 text-white dark:text-primary-foreground text-xs font-bold text-center py-1 uppercase tracking-wider">
-                  {t('pricing.recommended')}
+              <div className="mb-8">
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="text-xl font-black">{plan.title}</h3>
+                  {plan.highlight && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-k-crimson text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
+                      <Star size={10} className="fill-white" />
+                      {t('pricing.recommended')}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              <div className="p-6 md:p-8">
-                <h3 className="text-lg font-medium text-foreground dark:text-white">
-                  {plan.title}
-                </h3>
-
-                <div className="mt-4 flex items-baseline justify-center">
-                  <span className="text-5xl font-extrabold text-foreground dark:text-white tracking-tight">
+                <div className="flex items-baseline gap-1">
+                  <span className={`font-k-serif text-[24px] font-medium ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}>
+                    {plan.symbol}
+                  </span>
+                  <span className="font-k-serif text-[56px] font-black leading-none">
                     {plan.price}
                   </span>
-                  <span className="ml-1 text-xl font-medium text-muted-foreground dark:text-muted-foreground">
+                  <span className={`text-[14px] font-bold ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}>
                     {plan.period}
                   </span>
                 </div>
 
                 {plan.originalPrice && (
-                  <div className="mt-1 text-center">
-                    <span className="text-muted-foreground line-through mr-2">
-                      {plan.originalPrice}
-                    </span>
-                    <span className="text-green-500 dark:text-emerald-300 font-semibold">
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[14px] line-through opacity-40">{plan.originalPrice}</span>
+                    <span className="text-[12px] font-black text-k-crimson bg-k-crimson/10 px-2 py-0.5 rounded uppercase">
                       {plan.discount}
                     </span>
                   </div>
                 )}
-
-                <ul className="mt-6 space-y-4">
-                  {plan.features.map(feature => (
-                    <li key={`${plan.id}-${feature}`} className="flex">
-                      <svg
-                        className="flex-shrink-0 w-6 h-6 text-green-500 dark:text-emerald-300"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="ml-3 text-base text-muted-foreground dark:text-muted-foreground">
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
               </div>
 
-              <div className="p-6 md:p-8 bg-muted dark:bg-muted/30">
+              <ul className="space-y-4 mb-10 flex-1">
+                {plan.features.map(feature => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <div className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full shrink-0 ${
+                      plan.highlight ? 'bg-white/10 text-k-crimson' : 'bg-k-ink/5 text-k-crimson'
+                    }`}>
+                      <Check size={10} strokeWidth={4} />
+                    </div>
+                    <span className="text-[14px] font-medium leading-tight opacity-90">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div>
                 {currentPlan === plan.type ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    disabled
-                    className="w-full py-3 px-4 border border-transparent rounded-xl text-center font-medium bg-green-100 text-green-700 dark:bg-emerald-400/15 dark:text-emerald-200 cursor-default"
-                  >
+                  <div className={`w-full py-4 text-center text-[14px] font-black rounded-2xl ${
+                    plan.highlight ? 'bg-white/10 text-white' : 'bg-k-ink/5 text-k-ink opacity-50'
+                  }`}>
                     {t('pricing.currentPlan')}
-                  </Button>
+                  </div>
                 ) : (
                   <Button
-                    type="button"
-                    size="auto"
                     onClick={() => handleSubscribe(plan.id as CheckoutPlan)}
-                    disabled={authLoading}
                     loading={authLoading}
-                    loadingText={t('common.loading', { defaultValue: 'Loading...' })}
-                    className={`w-full py-3 px-4 rounded-xl shadow-md text-center font-semibold transition-all ${
+                    className={`w-full h-[60px] rounded-2xl text-[16px] font-black shadow-pop-small active:scale-[0.98] transition-all ${
                       plan.highlight
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 dark:from-indigo-400 dark:to-violet-400 dark:hover:from-indigo-300 dark:hover:to-violet-300 text-white dark:text-primary-foreground shadow-indigo-500/30 dark:shadow-indigo-400/25'
-                        : 'bg-card dark:bg-muted text-indigo-600 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-300/30 hover:bg-indigo-50 dark:hover:bg-indigo-400/12'
+                        ? 'bg-k-crimson text-white hover:bg-red-500'
+                        : 'bg-k-ink text-white hover:bg-black'
                     }`}
                   >
                     {t('button.upgrade', 'Upgrade Now')}

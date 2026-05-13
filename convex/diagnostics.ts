@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import { v } from "convex/values";
 
 // Return diagnostic data for all courses
 export const getHealthStats = query({
@@ -49,6 +50,27 @@ export const getHealthStats = query({
                 scan: scanTime,
                 userCount
             }
+        };
+    }
+});
+
+export const checkCourseVocab = query({
+    args: { courseId: v.string() },
+    handler: async (ctx, args) => {
+        const apps = await ctx.db
+            .query("vocabulary_appearances")
+            .withIndex("by_course_unit", q => q.eq("courseId", args.courseId))
+            .collect();
+        
+        const unitMap = new Map<number, number>();
+        apps.forEach(a => {
+            unitMap.set(a.unitId, (unitMap.get(a.unitId) || 0) + 1);
+        });
+        
+        return {
+            courseId: args.courseId,
+            totalApps: apps.length,
+            units: Array.from(unitMap.entries()).map(([id, count]) => ({ unitId: id, count }))
         };
     }
 });

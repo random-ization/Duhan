@@ -4,3 +4,4 @@ export * from './Card';
 export * from './SectionHead';
 export * from './ProgressRing';
 export * from './StreakRow';
+export * from './DRail';

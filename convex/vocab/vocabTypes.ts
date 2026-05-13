@@ -26,6 +26,8 @@ export type VocabProgressDto = {
 
 export type VocabStatsDto = {
   total: number;
+  dueReviews: number;
+  unlearned: number;
   mastered: number;
 };
 
@@ -135,6 +137,14 @@ export type VocabReviewDeckDto = {
   exampleZh?: string;
   exampleVi?: string;
   exampleMn?: string;
+
+  // Tips (synonyms / antonyms / nuance) pulled from the master words table.
+  // Used by the flashcard "相关词" panel.
+  tips?: {
+    synonyms?: string[];
+    antonyms?: string[];
+    nuance?: string;
+  };
 
   // Progress fields
   status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
@@ -270,6 +280,10 @@ export type VocabBookItemDto = {
   exampleMeaningEn?: string;
   exampleMeaningVi?: string;
   exampleMeaningMn?: string;
+  example?: string;
+  exampleZh?: string;
+  exampleVi?: string;
+  exampleMn?: string;
 
   // Progress fields
   status: 'NEW' | 'NOT_STARTED' | 'LEARNING' | 'REVIEW' | 'MASTERED';
@@ -311,4 +325,11 @@ export type LearningSessionDto = {
   updatedAt: number;
   completedAt?: number;
   snapshot?: unknown;
+};
+
+export type UnitProgressDto = {
+  unitId: number;
+  totalWords: number;
+  masteredWords: number;
+  progressPercent: number;
 };

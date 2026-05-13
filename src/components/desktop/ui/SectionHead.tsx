@@ -1,25 +1,25 @@
 import React from 'react';
-import clsx from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../../../lib/utils';
 
-export interface SectionHeadProps {
+interface SectionHeadProps {
   kanji?: string;
   title: string;
   action?: string;
-  onActionClick?: () => void;
+  onAction?: () => void;
   className?: string;
 }
 
-export function SectionHead({ kanji, title, action, onActionClick, className }: SectionHeadProps) {
+export function SectionHead({ kanji, title, action, onAction, className }: SectionHeadProps) {
   return (
     <div
-      className={twMerge(
-        clsx('flex items-baseline justify-between px-1 mb-3', className)
+      className={cn(
+        'mb-3 flex items-baseline justify-between px-1',
+        className
       )}
     >
       <div className="flex items-baseline gap-2">
         {kanji && (
-          <span className="font-k-serif text-base font-medium text-k-crimson opacity-85">
+          <span className="font-k-serif text-[16px] font-medium text-k-crimson/85">
             {kanji}
           </span>
         )}
@@ -29,7 +29,7 @@ export function SectionHead({ kanji, title, action, onActionClick, className }: 
       </div>
       {action && (
         <button
-          onClick={onActionClick}
+          onClick={onAction}
           className="text-[11px] font-semibold text-k-sub hover:text-k-ink transition-colors"
         >
           {action} →

@@ -1,8 +1,9 @@
-import { v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { v, ConvexError } from 'convex/values';
+import { mutation, query, QueryCtx } from './_generated/server';
 import { paginationOptsValidator } from 'convex/server';
-import { requireAdmin } from './utils';
+import { getAuthUserId, requireAdmin } from './utils';
 import { internal } from './_generated/api';
+import type { Id } from './_generated/dataModel';
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -164,24 +165,11 @@ export const saveRecord = mutation({
     isTargetAchieved: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error('Unauthorized');
+    const userId = await getAuthUserId(ctx);
 
-    const userByToken = await ctx.db
-      .query('users')
-      .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
-      .first();
-    const email = identity.email;
-    const userRecord =
-      userByToken ||
-      (email
-        ? await ctx.db
-            .query('users')
-            .withIndex('email', q => q.eq('email', email))
-            .unique()
-        : null);
+    const userRecord = await ctx.db.get(userId);
 
-    if (!userRecord) throw new Error('User not found');
+    if (!userRecord) throw new ConvexError({ code: 'USER_NOT_FOUND', message: 'User not found' });
 
     await ctx.db.insert('typing_records', {
       userId: userRecord._id,
@@ -202,21 +190,25 @@ export const getUserStats = query({
       .query('users')
       .withIndex('by_token', q => q.eq('token', identity.tokenIdentifier))
       .first();
+    if (userByToken) {
+      return buildUserStats(ctx, userByToken._id);
+    }
     const email = identity.email;
-    const userRecord =
-      userByToken ||
-      (email
-        ? await ctx.db
-            .query('users')
-            .withIndex('email', q => q.eq('email', email))
-            .unique()
-        : null);
-
+    if (!email) return null;
+    const userRecord = await ctx.db
+      .query('users')
+      .withIndex('email', q => q.eq('email', email))
+      .unique();
     if (!userRecord) return null;
 
+    return buildUserStats(ctx, userRecord._id);
+  },
+});
+
+async function buildUserStats(ctx: QueryCtx, userId: Id<'users'>) {
     const records = await ctx.db
       .query('typing_records')
-      .withIndex('by_user', q => q.eq('userId', userRecord._id))
+      .withIndex('by_user', q => q.eq('userId', userId))
       .order('desc')
       .take(100);
 
@@ -240,13 +232,13 @@ export const getUserStats = query({
     const [totalTests, recentWeeklyRecords] = await Promise.all([
       ctx.db
         .query('typing_records')
-        .withIndex('by_user', q => q.eq('userId', userRecord._id))
+        .withIndex('by_user', q => q.eq('userId', userId))
         .collect()
         .then(res => res.length),
       ctx.db
         .query('typing_records')
         .withIndex('by_user_createdAt', q =>
-          q.eq('userId', userRecord._id).gte('createdAt', weekStart)
+          q.eq('userId', userId).gte('createdAt', weekStart)
         )
         .collect(),
     ]);
@@ -271,5 +263,4 @@ export const getUserStats = query({
       lastCategoryId: latestRecord?.categoryId ?? null,
       latestAccuracy: latestRecord?.accuracy ?? null,
     };
-  },
-});
+}

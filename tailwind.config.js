@@ -49,6 +49,7 @@ export default {
         // K-Soft Fonts
         'k-sans': ['"Pretendard"', '-apple-system', 'system-ui', '"PingFang SC"', 'sans-serif'],
         'k-serif': ['"Noto Serif KR"', 'Georgia', 'serif'],
+        'k-mono': ['"Space Grotesk"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         'k-xs': '10px',

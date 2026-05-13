@@ -1100,40 +1100,22 @@ export default function ReadingArticlePage() {
         <DesktopReadingArticlePage
           t={t}
           navigate={navigate}
-          backPath={backPath}
           resolvedArticle={resolvedArticle}
-          difficultyClass={difficultyClass}
           difficultyLabel={difficultyLabel}
           sourceDisplayLabel={sourceDisplayLabel}
           increaseFontSize={increaseFontSize}
           toggleSpeak={toggleSpeak}
           speaking={speaking}
-          speakingLoading={speakingLoading}
-          ttsError={ttsError}
-          translationError={translationError}
-          translationLoading={translationLoading}
-          translationEnabled={translationEnabled}
           onToggleTranslation={onToggleTranslation}
+          translationEnabled={translationEnabled}
           fontSize={fontSize}
           paragraphs={paragraphs}
           translations={translations}
-          draftNote={draftNote}
-          notes={notes}
-          getNoteVisualState={getNoteVisualState}
-          focusNote={focusNote}
-          setHoveredNoteId={setHoveredNoteId}
-          contentRef={contentRef}
           wordCount={wordCount}
-          translationLabel={translationLabel}
           publishedDateLabel={publishedDateLabel}
           readingSidebarContent={readingSidebarContent}
-          selectionToolbar={selectionToolbar}
-          noteColor={noteColor}
-          setNoteColor={setNoteColor}
-          onLookupSelection={onLookupSelection}
-          onSaveSelectionWord={onSaveSelectionWord}
-          startNoteFromSelection={startNoteFromSelection}
-          setSelectionToolbar={setSelectionToolbar}
+          onWordClick={onWordClick}
+          activeWord={activeWord}
         />
       )}
     </Suspense>

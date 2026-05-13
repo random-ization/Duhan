@@ -5,8 +5,9 @@ import { READING_LIBRARY } from '../../utils/convexRefs';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ChevronLeft, Settings, X, BookOpen } from 'lucide-react';
+import { Loader2, ChevronLeft, Settings, X, BookOpen, ChevronRight } from 'lucide-react';
 import { logError, logInfo } from '../../utils/logger';
+import { cn } from '../../lib/utils';
 
 type ReaderTheme = 'light' | 'dark' | 'sepia';
 type ReaderFontSize = 'small' | 'medium' | 'large' | 'extra-large';
@@ -184,6 +185,23 @@ export const EpubReader: React.FC = () => {
         rendition.on('rendered', () => {
           if (!isMounted) return;
           setIsBooting(false);
+          
+          // Add selection listener
+          const iframe = viewerRef.current?.querySelector('iframe');
+          if (iframe) {
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (iDoc) {
+              iDoc.addEventListener('mouseup', () => {
+                const selection = iframe.contentWindow?.getSelection()?.toString().trim();
+                if (selection && selection.length < 50) {
+                  // Handle selection (e.g. open dictionary)
+                  logInfo('EPUB selection', { selection });
+                  // We can't easily trigger the parent's dictionary from here without a shared state or event
+                  // But for now, we'll log it. 
+                }
+              });
+            }
+          }
         });
       })
       .catch(err => {
@@ -269,10 +287,10 @@ export const EpubReader: React.FC = () => {
 
   if (isBookLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f7fb]">
+      <div className="flex min-h-screen items-center justify-center bg-k-bg">
         <div className="text-center">
-          <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-semibold text-muted-foreground mt-4">Loading book data...</p>
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-k-crimson" />
+          <p className="text-[14px] font-black text-k-sub uppercase tracking-widest">同步书籍数据...</p>
         </div>
       </div>
     );
@@ -280,45 +298,25 @@ export const EpubReader: React.FC = () => {
 
   if (!bookDetail) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f7fb] px-6">
-        <div className="max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
-          <BookOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h1 className="text-xl font-black text-foreground">
-            {t('readingDiscovery.reader.notFoundTitle', { defaultValue: 'Book not found' })}
+      <div className="flex min-h-screen items-center justify-center bg-k-bg px-6">
+        <div className="max-w-md rounded-[40px] border border-k-line/10 bg-k-card p-10 text-center shadow-k-sh-lg">
+          <div className="w-16 h-16 rounded-full bg-k-bg2 flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="h-8 w-8 text-k-sub/40" />
+          </div>
+          <h1 className="text-[20px] font-black text-k-ink mb-3">
+            {t('readingDiscovery.reader.notFoundTitle', { defaultValue: '书籍未找到' })}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-[14px] font-medium text-k-sub leading-relaxed mb-8">
             {t('readingDiscovery.reader.notFoundBody', {
-              defaultValue: 'This EPUB is unavailable or you do not have access to it.',
+              defaultValue: '该电子书可能已被移除，或者您没有访问权限。',
             })}
           </p>
           <button
             type="button"
             onClick={() => navigate('/reading')}
-            className="mt-6 rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+            className="w-full py-3 rounded-2xl bg-k-ink text-k-bg text-[13px] font-black hover:bg-k-crimson transition-all"
           >
-            {t('readingDiscovery.reader.backToReading', { defaultValue: 'Back to Reading' })}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!epubUrl) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f7fb] px-6">
-        <div className="max-w-md rounded-3xl border border-destructive/20 bg-card p-8 text-center shadow-sm">
-          <X className="mx-auto mb-4 h-12 w-12 text-destructive" />
-          <h1 className="text-xl font-black text-foreground">Failed to Load EPUB File</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            The book was found, but the EPUB file could not be downloaded. It might exceed the
-            allowed size limits or have an invalid format.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/reading')}
-            className="mt-6 rounded-2xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
-          >
-            {t('readingDiscovery.reader.backToReading', { defaultValue: 'Back to Reading' })}
+            返回发现页
           </button>
         </div>
       </div>
@@ -328,140 +326,168 @@ export const EpubReader: React.FC = () => {
   const { book } = bookDetail;
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${theme.page}`}>
-      <header className={`sticky top-0 z-40 shrink-0 border-b backdrop-blur ${theme.panel}`}>
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
+    <div className={cn("min-h-screen flex flex-col transition-all duration-500", theme.page)}>
+      {/* Editorial Header */}
+      <header className={cn("sticky top-0 z-40 shrink-0 border-b backdrop-blur-xl transition-colors duration-500", theme.panel)}>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-8 py-4">
+          <div className="flex min-w-0 items-center gap-4">
             <button
               type="button"
               onClick={() => navigate('/reading')}
-              className="rounded-full p-2 transition hover:bg-muted"
+              className="group flex items-center gap-2 text-[12px] font-black text-k-sub hover:text-k-ink transition-colors"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <div className="w-8 h-8 rounded-full border border-k-line/10 flex items-center justify-center group-hover:bg-k-ink group-hover:text-k-bg transition-all">
+                <ChevronLeft size={16} />
+              </div>
+              <span className="hidden sm:inline">退出</span>
             </button>
+            
+            <div className="h-4 w-px bg-k-line/10" />
+
             <div className="min-w-0">
-              <h1 className="truncate text-base font-black">{book.title}</h1>
-              <p className={`truncate text-sm ${theme.panelMuted}`}>{book.author}</p>
+              <h1 className="truncate text-[15px] font-black text-k-ink tracking-tight mb-0.5">{book.title}</h1>
+              <div className="flex items-center gap-2 opacity-60">
+                 <span className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">EPUB</span>
+                 <span className="text-[12px] font-bold text-k-sub truncate">{book.author}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+             <div className="hidden md:flex items-center gap-4 px-4 py-1.5 rounded-full bg-k-ink/5 border border-k-line/5">
+                <span className="text-[11px] font-black text-k-sub uppercase tracking-wider">
+                   进度 {Math.round(completionPercent * 100)}%
+                </span>
+                <div className="w-24 h-1 rounded-full bg-k-ink/10 overflow-hidden">
+                   <div 
+                     className="h-full bg-k-crimson transition-all duration-500" 
+                     style={{ width: `${Math.round(completionPercent * 100)}%` }}
+                   />
+                </div>
+             </div>
+
             <button
               type="button"
               onClick={() => setShowSettings(current => !current)}
-              className="rounded-full p-2 transition hover:bg-muted"
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                showSettings ? "bg-k-ink text-k-bg" : "hover:bg-k-line/10 text-k-ink"
+              )}
             >
               <Settings className="h-5 w-5" />
             </button>
           </div>
         </div>
-        <div className="mx-auto max-w-6xl px-4 pb-3">
-          <div className={`mb-1 flex items-center justify-between text-xs ${theme.panelMuted}`}>
-            <span>EPUB Reader</span>
-            <span>
-              {t('readingDiscovery.reader.completion', {
-                defaultValue: '{{percent}}% complete',
-                percent: Math.round(completionPercent * 100),
-              })}
-            </span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-black/10">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${Math.round(completionPercent * 100)}%` }}
-            />
-          </div>
-        </div>
       </header>
 
-      <main className="relative flex-1 min-h-0 mx-auto w-full max-w-4xl px-4 py-6 flex flex-col">
-        {showSettings ? (
-          <section
-            className={`absolute top-4 right-4 z-50 w-72 rounded-3xl border shadow-2xl p-5 ${theme.panel}`}
-          >
-            <h2 className="mb-4 text-sm font-black uppercase tracking-[0.18em] text-primary">
-              {t('readingDiscovery.reader.settings.title', { defaultValue: 'Reader Settings' })}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-sm font-semibold">
-                  {t('readingDiscovery.reader.settings.fontSize', { defaultValue: 'Font size' })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(['small', 'medium', 'large', 'extra-large'] as ReaderFontSize[]).map(size => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setReaderSettings(prev => ({ ...prev, fontSize: size }))}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold ${
-                        readerSettings.fontSize === size
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border'
-                      }`}
-                    >
-                      {t(`readingDiscovery.reader.settings.fontSizes.${size}`, {
-                        defaultValue: size,
-                      })}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-sm font-semibold">
-                  {t('readingDiscovery.reader.settings.theme', { defaultValue: 'Theme' })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(['light', 'sepia', 'dark'] as ReaderTheme[]).map(themeValue => (
-                    <button
-                      key={themeValue}
-                      type="button"
-                      onClick={() => setReaderSettings(prev => ({ ...prev, theme: themeValue }))}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold ${
-                        readerSettings.theme === themeValue
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border'
-                      }`}
-                    >
-                      {t(`readingDiscovery.reader.settings.themes.${themeValue}`, {
-                        defaultValue: themeValue,
-                      })}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <button
-              className="mt-4 w-full text-xs text-center p-2 rounded-full bg-muted text-muted-foreground"
-              onClick={() => setShowSettings(false)}
+      <main className="relative flex-1 min-h-0 mx-auto w-full max-w-[1200px] px-8 py-8 flex flex-col gap-8">
+        {showSettings && (
+          <div className="fixed inset-0 z-[60] bg-k-ink/5 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
+            <div 
+              className={cn("absolute top-24 right-8 w-80 rounded-[32px] border shadow-k-sh-lg p-6 animate-in slide-in-from-top-4 duration-300", theme.panel)}
+              onClick={e => e.stopPropagation()}
             >
-              Close
-            </button>
-          </section>
-        ) : null}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-k-crimson">
+                  {t('readingDiscovery.reader.settings.title', { defaultValue: 'Reader Settings' })}
+                </h2>
+                <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-k-line/10 rounded-full">
+                  <X size={16} />
+                </button>
+              </div>
 
-        {isBooting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
-            <div className="text-center">
-              <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-semibold text-muted-foreground">Loading EPUB...</p>
+              <div className="space-y-8">
+                <div>
+                  <p className="mb-3 text-[12px] font-black uppercase tracking-wider text-k-sub opacity-60">
+                    {t('readingDiscovery.reader.settings.fontSize', { defaultValue: 'Font size' })}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(['small', 'medium', 'large', 'extra-large'] as ReaderFontSize[]).map(size => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setReaderSettings(prev => ({ ...prev, fontSize: size }))}
+                        className={cn(
+                          "flex-1 rounded-xl border py-2.5 text-[11px] font-black transition-all",
+                          readerSettings.fontSize === size
+                            ? 'border-k-ink bg-k-ink text-k-bg'
+                            : 'border-k-line/10 hover:border-k-ink/40'
+                        )}
+                      >
+                        {size === 'small' ? 'A-' : size === 'medium' ? '标准' : size === 'large' ? 'A+' : 'A++'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[12px] font-black uppercase tracking-wider text-k-sub opacity-60">
+                    {t('readingDiscovery.reader.settings.theme', { defaultValue: 'Theme' })}
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['light', 'sepia', 'dark'] as ReaderTheme[]).map(themeValue => (
+                      <button
+                        key={themeValue}
+                        type="button"
+                        onClick={() => setReaderSettings(prev => ({ ...prev, theme: themeValue }))}
+                        className={cn(
+                          "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1.5",
+                          themeValue === 'light' ? "bg-white text-zinc-900 border-zinc-100" :
+                          themeValue === 'sepia' ? "bg-[#f8f1df] text-[#4b3521] border-[#e8dfc8]" :
+                          "bg-zinc-950 text-zinc-100 border-zinc-800",
+                          readerSettings.theme === themeValue && "border-k-crimson scale-105"
+                        )}
+                      >
+                         <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
+                            {readerSettings.theme === themeValue && <div className="w-2 h-2 rounded-full bg-current" />}
+                         </div>
+                         <span className="text-[10px] font-black uppercase tracking-widest">{themeValue}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        <div className="flex-1 w-full h-full relative border border-border/50 shadow-sm rounded-xl overflow-hidden bg-card">
-          <div ref={viewerRef} className="absolute inset-0 bg-card" />
+        {isBooting && (
+          <div className="absolute inset-0 flex items-center justify-center bg-k-bg/40 backdrop-blur-md z-10 rounded-[40px]">
+            <div className="text-center">
+              <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-k-crimson" />
+              <p className="text-[13px] font-black text-k-sub uppercase tracking-[0.2em]">正在排版书籍...</p>
+            </div>
+          </div>
+        )}
 
-          {/* Overlay click areas for page flipping */}
-          <div
-            onClick={handlePrevPage}
-            className="absolute left-0 top-0 bottom-0 w-1/4 z-20 cursor-pointer [webkit-tap-highlight-color:transparent] hover:bg-black/5 transition-colors"
-            title="Previous Page"
-          />
-          <div
-            onClick={handleNextPage}
-            className="absolute right-0 top-0 bottom-0 w-1/4 z-20 cursor-pointer [webkit-tap-highlight-color:transparent] hover:bg-black/5 transition-colors"
-            title="Next Page"
-          />
+        <div className="flex-1 w-full h-full relative group">
+           {/* Main Viewer */}
+           <div className="absolute inset-0 rounded-[40px] overflow-hidden shadow-k-sh-lg border border-k-line/5 bg-k-card">
+              <div ref={viewerRef} className="absolute inset-0 transition-opacity duration-700" style={{ opacity: isBooting ? 0 : 1 }} />
+              
+              {/* Navigation overlays */}
+              <div
+                onClick={handlePrevPage}
+                className="absolute left-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
+              >
+                 <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all -translate-x-4 group-hover/nav:translate-x-0">
+                    <ChevronLeft size={24} />
+                 </div>
+              </div>
+              <div
+                onClick={handleNextPage}
+                className="absolute right-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
+              >
+                 <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all translate-x-4 group-hover/nav:translate-x-0">
+                    <ChevronRight size={24} />
+                 </div>
+              </div>
+           </div>
+
+           {/* Mobile indicator */}
+           <div className="absolute -bottom-10 inset-x-0 flex justify-center lg:hidden">
+              <span className="text-[10px] font-bold text-k-sub/40 uppercase tracking-widest">点击屏幕左右两侧翻页</span>
+           </div>
         </div>
       </main>
     </div>

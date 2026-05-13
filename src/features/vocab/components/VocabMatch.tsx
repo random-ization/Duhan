@@ -457,6 +457,7 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
 
   return (
     <div
+      className="mx-auto w-full max-w-[800px]"
       style={{
         height: '100%',
         display: 'grid',
@@ -537,7 +538,9 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
         </div>
       </div>
 
-      <div style={{ padding: '0 14px 8px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+      <div 
+        className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5 px-3.5 pb-2"
+      >
         {cards.map(card => (
           <MatchButton
             key={card.id}

@@ -588,30 +588,7 @@ export default function ReadingDiscoveryPage() {
 
   return (
     <Suspense fallback={<ContentSkeleton />}>
-      <DesktopReadingDiscoveryPage
-        t={t}
-        language={language}
-        weeklyReadCount={weeklyReadCount}
-        estimatedWords={estimatedWords}
-        pictureBooks={pictureBooks}
-        pictureBookLevelOptions={pictureBookLevelOptions}
-        pictureBookLevelFilter={pictureBookLevelFilter}
-        filteredPictureBooks={filteredPictureBooks}
-        feedReady={feedReady}
-        feed={feed}
-        topNews={topNews}
-        featuredNews={featuredNews}
-        secondaryNews={secondaryNews}
-        wikiArticles={wikiArticles}
-        userId={userId}
-        manualRefreshing={manualRefreshing}
-        refreshMessage={refreshMessage}
-        difficultyFilter={difficultyFilter}
-        currentPath={currentPath}
-        updateFilterParams={updateFilterParams}
-        onManualRefresh={onManualRefresh}
-        navigate={navigate}
-      />
+      <DesktopReadingDiscoveryPage />
     </Suspense>
   );
 }

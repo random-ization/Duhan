@@ -21,6 +21,7 @@ interface LayoutDashboardState {
 interface LayoutChromeState {
   isMobileMenuOpen: boolean;
   sidebarHidden: boolean;
+  sidebarCollapsed: boolean;
   footerHidden: boolean;
 }
 
@@ -30,6 +31,7 @@ interface LayoutActions {
   resetLayout: () => void;
   toggleMobileMenu: () => void;
   setSidebarHidden: (hidden: boolean) => void;
+  toggleSidebar: () => void;
   setFooterHidden: (hidden: boolean) => void;
   setContextualSidebar: (sidebar: ContextualSidebarState, ownerId?: string) => void;
   clearContextualSidebar: (id?: string, ownerId?: string) => void;
@@ -91,6 +93,18 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const toggleMobileMenu = useCallback(() => setIsMobileMenuOpen(prev => !prev), []);
 
   const [sidebarHidden, setSidebarHidden] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (globalThis.window === undefined) return false;
+    return safeGetLocalStorageItem('sidebar_collapsed') === 'true';
+  });
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      safeSetLocalStorageItem('sidebar_collapsed', String(next));
+      return next;
+    });
+  }, []);
+
   const [footerHidden, setFooterHidden] = useState(false);
   const [contextualSidebar, setContextualSidebarState] =
     useState<StoredContextualSidebarState | null>(null);
@@ -121,9 +135,10 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     () => ({
       isMobileMenuOpen,
       sidebarHidden,
+      sidebarCollapsed,
       footerHidden,
     }),
-    [isMobileMenuOpen, sidebarHidden, footerHidden]
+    [isMobileMenuOpen, sidebarHidden, sidebarCollapsed, footerHidden]
   );
 
   const actions = useMemo<LayoutActions>(
@@ -133,6 +148,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       resetLayout,
       toggleMobileMenu,
       setSidebarHidden,
+      toggleSidebar,
       setFooterHidden,
       setContextualSidebar,
       clearContextualSidebar,
@@ -142,6 +158,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       updateCardOrder,
       resetLayout,
       toggleMobileMenu,
+      setSidebarHidden,
+      toggleSidebar,
       setContextualSidebar,
       clearContextualSidebar,
     ]

@@ -24,6 +24,15 @@ import {
 import { Button, Input } from '../../components/ui';
 import type { LabelsBundle, VocabBookCategory, ExportMode } from '../VocabBookPage';
 import type { VocabBookItemDto } from '../../../convex/vocab';
+import type { Id } from '../../../convex/_generated/dataModel';
+import type { CheckoutPlan, UpgradeFlowSource } from '../../utils/subscriptionPlan';
+
+interface UpgradeFlowArgs {
+  plan?: CheckoutPlan;
+  source: UpgradeFlowSource | string;
+  returnTo?: string;
+  requireReviewPage?: boolean;
+}
 
 interface ExportModeOption {
   mode: ExportMode;
@@ -75,18 +84,28 @@ interface DesktopVocabBookPageProps {
   expandedId: string | null;
   toggleExpand: (id: string) => void;
   masteryPendingId: string | null;
-  setMastery: (opts: { wordId: any; mastered: boolean }) => Promise<any>;
+  setMastery: (opts: { wordId: Id<'words'> | string; mastered: boolean }) => Promise<void>;
   setOptimisticMastery: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   optimisticMastery: Record<string, boolean>;
-  notify: any;
-  startLearning: (mode: 'immerse' | 'listen' | 'dictation' | 'spelling') => void;
+  notify: {
+    success: (message: string) => void;
+    error: (message: string) => void;
+    info: (message: string) => void;
+  };
+  startLearning: (mode: 'flashcard' | 'learn' | 'match' | 'test') => void;
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
   setPageCursor: (cursor: string | null) => void;
   nextCursor: string | null;
-  viewerAccess: any;
-  startUpgradeFlow: (opts: any) => void;
+  viewerAccess: {
+    isPremium: boolean;
+    flags: {
+      pdfExport: boolean;
+      [key: string]: boolean;
+    };
+  } | null;
+  startUpgradeFlow: (opts: UpgradeFlowArgs) => void;
   setExportOpen: (open: boolean) => void;
   exportOpen: boolean;
   exporting: boolean;
@@ -119,10 +138,27 @@ interface DesktopVocabBookPageProps {
     count: number;
     color: 'blue' | 'amber' | 'emerald';
   }>;
-  Dialog: any;
-  DialogPortal: any;
-  DialogOverlay: any;
-  DialogContent: any;
+  Dialog: React.ComponentType<{
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    children?: React.ReactNode;
+  }>;
+  DialogPortal: React.ComponentType<{ children?: React.ReactNode }>;
+  DialogOverlay: React.ComponentType<{
+    className?: string;
+    unstyled?: boolean;
+    forceMount?: boolean;
+    closeOnClick?: boolean;
+    children?: React.ReactNode;
+  }>;
+  DialogContent: React.ComponentType<{
+    className?: string;
+    unstyled?: boolean;
+    forceMount?: boolean;
+    closeOnEscape?: boolean;
+    lockBodyScroll?: boolean;
+    children?: React.ReactNode;
+  }>;
   expandMeaningLabel: string;
   collapseMeaningLabel: string;
 }
@@ -762,7 +798,7 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => startLearning('immerse')}
+              onClick={() => startLearning('flashcard')}
               disabled={stats.total === 0}
               className="py-3 rounded-[1.4rem] bg-transparent hover:bg-violet-50 text-slate-500 hover:text-violet-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -778,7 +814,23 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => startLearning('listen')}
+              onClick={() => startLearning('learn')}
+              disabled={stats.total === 0}
+              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-violet-50 text-slate-500 hover:text-violet-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <BookOpen className="w-5 h-5" />
+                <span className="text-[11px] font-black tracking-wide">
+                  {labels.vocab?.modeLearn || 'Learn'}
+                </span>
+              </div>
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={() => startLearning('match')}
               disabled={stats.total === 0}
               className="py-3 rounded-[1.4rem] bg-transparent hover:bg-amber-50 text-slate-500 hover:text-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -794,23 +846,7 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
               type="button"
               variant="ghost"
               size="auto"
-              onClick={() => startLearning('dictation')}
-              disabled={stats.total === 0}
-              className="py-3 rounded-[1.4rem] bg-transparent hover:bg-rose-50 text-slate-500 hover:text-rose-600 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <PencilLine className="w-5 h-5" />
-                <span className="text-[11px] font-black tracking-wide">
-                  {labels.vocab?.modeDictation || 'Dictation'}
-                </span>
-              </div>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => startLearning('spelling')}
+              onClick={() => startLearning('test')}
               disabled={stats.total === 0}
               className="py-3 rounded-[1.4rem] bg-transparent hover:bg-teal-50 text-slate-500 hover:text-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
             >

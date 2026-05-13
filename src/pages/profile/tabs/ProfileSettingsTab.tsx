@@ -22,6 +22,7 @@ import {
   NOTIFICATIONS,
   type NotificationDto,
   type NotificationPreferencesDto,
+  mRef,
 } from '../../../utils/convexRefs';
 import { notify } from '../../../utils/notify';
 import { formatNotificationTime } from '../../../utils/notificationFormat';
@@ -35,9 +36,11 @@ import {
 
 interface ProfileSettingsTabProps {
   labels: ProfileLabels;
+  section?: SettingsSection;
 }
 
 type SettingsLanguage = 'zh' | 'en' | 'vi' | 'mn';
+export type SettingsSection = 'notifications' | 'language' | 'all';
 
 type LanguageOption = {
   code: SettingsLanguage;
@@ -242,7 +245,10 @@ function timeZoneLabel() {
   }
 }
 
-export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }) => {
+export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({
+  labels,
+  section = 'all',
+}) => {
   const { i18n, t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -258,6 +264,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }
   const recentNotifications = useQuery(NOTIFICATIONS.listRecent, { limit: 15 });
   const vapidPublicKey = useQuery(NOTIFICATIONS.getVapidPublicKey, {});
   const updatePreferences = useMutation(NOTIFICATIONS.updatePreferences);
+  const updateUserSettings = useMutation(
+    mRef<{ displayLanguage?: SettingsLanguage }, unknown>('userSettings:updateSettings')
+  );
   const subscribePush = useMutation(NOTIFICATIONS.subscribePush);
   const unsubscribePush = useMutation(NOTIFICATIONS.unsubscribePush);
   const markRead = useMutation(NOTIFICATIONS.markRead);
@@ -450,6 +459,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }
     const nextPath = `/${segments.join('/')}${location.search}${location.hash}`;
     safeSetLocalStorageItem('preferredLanguage', nextLanguage);
     safeSetLocalStorageItem('preferredLanguageSource', 'user');
+    void updateUserSettings({ displayLanguage: nextLanguage }).catch(() => {
+      // Keep local language switching responsive even if the settings sync fails.
+    });
     void i18n.changeLanguage(nextLanguage);
     navigate(nextPath, { replace: true });
   };
@@ -494,23 +506,24 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }
 
   return (
     <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <section>
-        <SectionHead kanji="告" title={copy.notificationTitle} />
-        <div className="mt-3">
-          <Card pad={18}>
-            <div className="flex items-start gap-3">
-              <HanjaSeal c="鈴" size={46} bg={KT.butterDeep} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[17px] font-black" style={{ color: KT.ink }}>
-                  {copy.notificationTitle}
+      {(section === 'notifications' || section === 'all') && (
+        <section>
+          <SectionHead kanji="告" title={copy.notificationTitle} />
+          <div className="mt-3">
+            <Card pad={18}>
+              <div className="flex items-start gap-3">
+                <HanjaSeal c="鈴" size={46} bg={KT.butterDeep} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[17px] font-black" style={{ color: KT.ink }}>
+                    {copy.notificationTitle}
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed" style={{ color: KT.sub }}>
+                    {copy.notificationSub}
+                  </p>
                 </div>
-                <p className="mt-1 text-sm leading-relaxed" style={{ color: KT.sub }}>
-                  {copy.notificationSub}
-                </p>
               </div>
-            </div>
 
-            <div className="mt-5 space-y-3">
+              <div className="mt-5 space-y-3">
               <button
                 type="button"
                 onClick={() => void toggleMaster()}
@@ -863,7 +876,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }
           </Card>
         </div>
       </section>
+      )}
 
+      {(section === 'language' || section === 'all') && (
       <section>
         <SectionHead kanji="語" title={labels.profile?.displayLanguage || copy.languageTitle} />
         <div className="mt-3">
@@ -930,6 +945,7 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ labels }
           </Card>
         </div>
       </section>
+      )}
     </div>
   );
 };

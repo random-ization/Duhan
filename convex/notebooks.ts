@@ -42,6 +42,37 @@ const NotebookContentValidator = v.union(
   NotebookVocabContentValidator
 );
 
+const derivePreview = (
+  content:
+    | string
+    | {
+        text?: string;
+        questionText?: string;
+        word?: string;
+        meaning?: string;
+        notes?: string;
+      }
+) => {
+  if (typeof content === 'string') {
+    return content.slice(0, 100);
+  }
+  if ('text' in content && typeof content.text === 'string' && content.text.trim()) {
+    return content.text.trim().slice(0, 100);
+  }
+  if ('questionText' in content && typeof content.questionText === 'string') {
+    return content.questionText.trim().slice(0, 100);
+  }
+  if ('word' in content && typeof content.word === 'string') {
+    const meaning =
+      'meaning' in content && typeof content.meaning === 'string' ? content.meaning.trim() : '';
+    return meaning ? `${content.word.trim()} · ${meaning}`.slice(0, 100) : content.word.trim().slice(0, 100);
+  }
+  if ('notes' in content && typeof content.notes === 'string' && content.notes.trim()) {
+    return content.notes.trim().slice(0, 100);
+  }
+  return '';
+};
+
 // Save notebook entry
 export const save = mutation({
   args: {
@@ -55,12 +86,35 @@ export const save = mutation({
 
     const { type, title, content, tags } = args;
 
-    // Generate preview from content
-    let preview = '';
-    if (typeof content === 'string') {
-      preview = content.slice(0, 100);
-    } else if ('text' in content && typeof content.text === 'string') {
-      preview = content.text.slice(0, 100);
+    const preview = derivePreview(content);
+    const normalizedTitle = title.trim();
+    const normalizedTags = tags || [];
+
+    const existing = await ctx.db
+      .query('notebooks')
+      .withIndex('by_user_type', q => q.eq('userId', userId).eq('type', type))
+      .collect();
+    const matched = existing.find(row => row.title.trim() === normalizedTitle);
+
+    if (matched) {
+      await ctx.db.patch(matched._id, {
+        title,
+        content,
+        preview,
+        tags: normalizedTags,
+      });
+      return {
+        success: true,
+        data: {
+          id: matched._id,
+          type,
+          title,
+          preview,
+          tags: normalizedTags,
+          createdAt: new Date(matched.createdAt).toISOString(),
+          updated: true,
+        },
+      };
     }
 
     const notebookId = await ctx.db.insert('notebooks', {
@@ -69,7 +123,7 @@ export const save = mutation({
       title,
       content,
       preview,
-      tags: tags || [],
+      tags: normalizedTags,
       createdAt: Date.now(),
     });
 
@@ -80,8 +134,9 @@ export const save = mutation({
         type,
         title,
         preview,
-        tags: tags || [],
+        tags: normalizedTags,
         createdAt: new Date().toISOString(),
+        updated: false,
       },
     };
   },

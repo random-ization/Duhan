@@ -985,59 +985,20 @@ const ReaderDisplayControls: React.FC<{
   onToggleRedEye: () => void;
   t: TFunction;
 }> = ({ fontScale, onChange, redEyeEnabled, onToggleRedEye, t }) => (
-  <Card
-    pad={14}
+  <div
     style={{
       background: 'rgba(255,255,255,0.92)',
       boxShadow: KT.shSm,
       backdropFilter: 'blur(16px)',
+      borderRadius: 20,
+      border: `1px solid ${KT.line}`,
+      padding: '6px 8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     }}
   >
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: KT.bg2, color: KT.ink }}
-        >
-          <Type size={16} />
-        </div>
-        <div className="min-w-0">
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: KT.sub }}>
-            {t('grammarDetail.readerControls', { defaultValue: 'READER' })}
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: KT.ink }}>
-            {t('grammarDetail.redEyeMode', { defaultValue: 'Red eye mode' })}
-          </div>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onToggleRedEye}
-        aria-pressed={redEyeEnabled}
-        aria-label={t('grammarDetail.redEyeMode', { defaultValue: 'Red eye mode' })}
-        title={
-          redEyeEnabled
-            ? t('grammarDetail.redEyeOn', {
-                defaultValue: 'Red eye mode on: hide translations and answers',
-              })
-            : t('grammarDetail.redEyeOff', {
-                defaultValue: 'Red eye mode off: show translations and answers',
-              })
-        }
-        className="flex h-10 min-w-10 items-center justify-center rounded-full transition-all active:scale-95"
-        style={{
-          border: redEyeEnabled ? `1px solid ${KT.crimson}44` : `1px solid ${KT.line}`,
-          background: redEyeEnabled ? `${KT.pink}88` : KT.card,
-          color: redEyeEnabled ? KT.crimson : KT.sub,
-          boxShadow: KT.shSm,
-        }}
-      >
-        {redEyeEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
-
-    <div className="mt-3 flex items-center gap-2">
+    <div className="flex items-center gap-1">
       {READER_FONT_SCALE_OPTIONS.map(option => {
         const active = option.value === fontScale;
         return (
@@ -1045,17 +1006,12 @@ const ReaderDisplayControls: React.FC<{
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            aria-pressed={active}
-            aria-label={`${t('grammarDetail.fontSize', { defaultValue: 'Font size' })}: ${t(option.titleKey, { defaultValue: option.titleDefault })}`}
-            title={`${t('grammarDetail.fontSize', { defaultValue: 'Font size' })}: ${t(option.titleKey, { defaultValue: option.titleDefault })}`}
-            className="flex h-9 min-w-[3rem] items-center justify-center rounded-full px-3 transition-all active:scale-95"
+            className="flex h-9 px-3 items-center justify-center rounded-xl transition-all active:scale-95"
             style={{
-              border: active ? `1px solid ${KT.ink}` : `1px solid ${KT.line}`,
-              background: active ? KT.ink : KT.card,
+              background: active ? KT.ink : 'transparent',
               color: active ? KT.card : KT.sub,
-              fontSize: 12,
+              fontSize: option.value === 'compact' ? 12 : option.value === 'comfortable' ? 14 : 16,
               fontWeight: 800,
-              boxShadow: KT.shSm,
             }}
           >
             {option.label}
@@ -1063,7 +1019,22 @@ const ReaderDisplayControls: React.FC<{
         );
       })}
     </div>
-  </Card>
+
+    <div className="h-4 w-[1px] bg-zinc-200 mx-1" />
+
+    <button
+      type="button"
+      onClick={onToggleRedEye}
+      className="flex h-9 w-12 items-center justify-center rounded-xl transition-all active:scale-95"
+      style={{
+        background: redEyeEnabled ? `${KT.pink}88` : 'transparent',
+        color: redEyeEnabled ? KT.crimson : KT.sub,
+        border: redEyeEnabled ? `1px solid ${KT.crimson}22` : 'none',
+      }}
+    >
+      {redEyeEnabled ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  </div>
 );
 
 export default function MobileGrammarDetailSheet({
@@ -1090,6 +1061,9 @@ export default function MobileGrammarDetailSheet({
 
   const dragStartY = useRef(0);
   const readerScrollRef = useRef<HTMLDivElement | null>(null);
+  const updateUserSettings = useMutation(
+    mRef<{ fontScale?: ReaderFontScale }, unknown>('userSettings:updateSettings')
+  );
 
   useEffect(() => {
     safeSetLocalStorageItem(RED_EYE_STORAGE_KEY, redEyeEnabled ? '1' : '0');
@@ -1097,7 +1071,15 @@ export default function MobileGrammarDetailSheet({
 
   useEffect(() => {
     safeSetLocalStorageItem(READER_FONT_SCALE_STORAGE_KEY, fontScale);
-  }, [fontScale]);
+    const timeoutId = window.setTimeout(() => {
+      void updateUserSettings({ fontScale }).catch(() => {
+        // 用户未登录或网络抖动时，继续保留本地字体偏好，不中断阅读。
+      });
+    }, 300);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [fontScale, updateUserSettings]);
 
   const checkAction = useAction(
     aRef<
@@ -1391,10 +1373,10 @@ export default function MobileGrammarDetailSheet({
                   boxShadow: KT.sh,
                 }}
               >
-                <div className="flex items-start gap-4">
-                  <HanjaSeal c={tone.seal} size={56} bg={tone.deep} round={14} />
+                <div className="flex items-center gap-3">
+                  <HanjaSeal c={tone.seal} size={44} bg={tone.deep} round={12} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                       <Chip tone={tone.chipTone} size="sm">
                         {grammar.type}
                       </Chip>
@@ -1402,121 +1384,36 @@ export default function MobileGrammarDetailSheet({
                       <Chip tone="ink" size="sm">
                         {statusLabel}
                       </Chip>
-                      {markdownDocument.trim() ? <Chip size="sm">Markdown</Chip> : null}
                     </div>
 
                     <div
                       style={{
-                        marginTop: 12,
-                        fontSize: 30,
+                        marginTop: 4,
+                        fontSize: 24,
                         fontWeight: 800,
                         color: KT.ink,
-                        letterSpacing: -1,
-                        lineHeight: 1.04,
+                        letterSpacing: -0.6,
+                        lineHeight: 1.1,
                       }}
                     >
                       {localizedTitle}
                     </div>
-
-                    {localizedSummary ? (
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontSize: 13,
-                          color: KT.ink2,
-                          lineHeight: 1.65,
-                          display: '-webkit-box',
-                          WebkitLineClamp: isExpanded ? 4 : 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {localizedSummary}
-                      </div>
-                    ) : null}
                   </div>
                 </div>
 
-                <div
-                  className="mt-4 grid gap-2"
-                  style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
-                >
+                {/* Simplified Expand/Collapse handle */}
+                <div className="mt-4 flex justify-center">
                   <div
+                    className="flex items-center gap-1.5 rounded-full px-3 py-1"
                     style={{
-                      borderRadius: 16,
-                      background: 'rgba(255,255,255,0.78)',
-                      padding: '10px 12px',
-                    }}
-                  >
-                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
-                      {t('grammarDetail.progress', { defaultValue: 'PROFICIENCY' })}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
-                      {proficiencyValue}%
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      borderRadius: 16,
-                      background: 'rgba(255,255,255,0.78)',
-                      padding: '10px 12px',
-                    }}
-                  >
-                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
-                      {t('grammarDetail.examples', { defaultValue: 'Examples' })}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
-                      {examples.length}
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      borderRadius: 16,
-                      background: 'rgba(255,255,255,0.78)',
-                      padding: '10px 12px',
-                    }}
-                  >
-                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 1 }}>
-                      {t('grammarDetail.quizzes', { defaultValue: 'Quizzes' })}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 800, color: KT.ink }}>
-                      {quizItems.length}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div
-                      style={{
-                        height: 6,
-                        borderRadius: 999,
-                        overflow: 'hidden',
-                        background: 'rgba(31,27,23,0.12)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${proficiencyValue}%`,
-                          height: '100%',
-                          borderRadius: 999,
-                          background: tone.deep,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-2 rounded-2xl"
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(255,255,255,0.78)',
+                      background: 'rgba(255,255,255,0.6)',
                       color: tone.deep,
-                      boxShadow: KT.shSm,
+                      fontSize: 10,
+                      fontWeight: 800,
                     }}
                   >
-                    <Sparkles size={14} />
-                    <span style={{ fontSize: 11, fontWeight: 800 }}>
+                    <Sparkles size={12} />
+                    <span>
                       {isExpanded
                         ? t('grammarDetail.collapse', { defaultValue: 'Collapse' })
                         : t('grammarDetail.expand', { defaultValue: 'Expand' })}
@@ -1549,6 +1446,7 @@ export default function MobileGrammarDetailSheet({
               data-red-eye={redEyeEnabled ? 'on' : 'off'}
               style={readerVars}
             >
+              {/* Reader Controls */}
               <div className="sticky top-0 z-10 pb-3" onWheel={forwardWheelToReader}>
                 <ReaderDisplayControls
                   fontScale={fontScale}
@@ -1785,93 +1683,6 @@ export default function MobileGrammarDetailSheet({
                 </Card>
               ) : null}
 
-              {grammar.sourceMeta ? (
-                <Card pad={18} style={{ marginTop: 12, boxShadow: KT.shSm }}>
-                  <SectionHead
-                    kanji="源"
-                    title={t('grammarDetail.sourceMeta', { defaultValue: 'Content source' })}
-                  />
-                  <div className="mt-3 grid gap-3">
-                    <div
-                      style={{
-                        borderRadius: 16,
-                        background: KT.bg2,
-                        padding: '12px 14px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 800,
-                          color: KT.sub,
-                          letterSpacing: 0.9,
-                        }}
-                      >
-                        {t('grammarDetail.sourceType', { defaultValue: 'Source type' })}
-                      </div>
-                      <div style={{ marginTop: 5, fontSize: 13, color: KT.ink, lineHeight: 1.6 }}>
-                        {grammar.sourceMeta.sourceType}
-                      </div>
-                    </div>
-
-                    {grammar.sourceMeta.sourcePath ? (
-                      <div
-                        style={{
-                          borderRadius: 16,
-                          background: KT.bg2,
-                          padding: '12px 14px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            color: KT.sub,
-                            letterSpacing: 0.9,
-                          }}
-                        >
-                          {t('grammarDetail.sourcePath', { defaultValue: 'Source path' })}
-                        </div>
-                        <div
-                          style={{
-                            marginTop: 5,
-                            fontSize: 12,
-                            color: KT.ink,
-                            lineHeight: 1.6,
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          {grammar.sourceMeta.sourcePath}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {importedAtLabel ? (
-                      <div
-                        style={{
-                          borderRadius: 16,
-                          background: KT.bg2,
-                          padding: '12px 14px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            color: KT.sub,
-                            letterSpacing: 0.9,
-                          }}
-                        >
-                          {t('grammarDetail.importedAt', { defaultValue: 'Imported' })}
-                        </div>
-                        <div style={{ marginTop: 5, fontSize: 13, color: KT.ink, lineHeight: 1.6 }}>
-                          {importedAtLabel}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
-              ) : null}
 
               <div style={{ height: 18 }} />
             </article>

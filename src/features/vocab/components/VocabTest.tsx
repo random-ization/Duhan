@@ -266,7 +266,7 @@ function ResultScreen({
         background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
       }}
     >
-      <div className="mx-auto flex h-full w-full max-w-[440px] min-h-0 flex-col px-4 pb-4 pt-[calc(env(safe-area-inset-top)+12px)]">
+      <div className="mx-auto flex h-full w-full max-w-[800px] min-h-0 flex-col px-4 pb-4 pt-[calc(env(safe-area-inset-top)+12px)]">
         <div
           style={{
             borderRadius: 24,
@@ -740,7 +740,7 @@ function RunningScreen({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col"
+      className="flex h-full w-full min-h-0 flex-col"
       style={{
         background: `radial-gradient(ellipse at 20% 0%, ${KT.bg2} 0%, ${KT.bg} 60%)`,
       }}
@@ -757,7 +757,7 @@ function RunningScreen({
           padding: 'calc(env(safe-area-inset-top) + 10px) 16px 10px',
         }}
       >
-        <div className="flex items-center gap-2">
+        <div className="mx-auto flex w-full max-w-[800px] items-center gap-2">
           <button
             type="button"
             onClick={onClose}
@@ -800,7 +800,7 @@ function RunningScreen({
           </div>
         </div>
         <div
-          className="mt-2 grid gap-[4px]"
+          className="mx-auto mt-2 grid w-full max-w-[800px] gap-[4px]"
           style={{ gridTemplateColumns: `repeat(${Math.max(progressPellets.length, 1)}, minmax(0,1fr))` }}
         >
           {progressPellets.map((item, idx) => (
@@ -817,7 +817,7 @@ function RunningScreen({
       </header>
 
       <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-2 pt-3">
-        <div className="mx-auto w-full max-w-[440px]">
+        <div className="mx-auto w-full max-w-[800px]">
           {active ? (
             <MobileRunningCard
               card={active}
@@ -839,7 +839,7 @@ function RunningScreen({
           WebkitBackdropFilter: 'blur(10px)',
         }}
       >
-        <div className="mx-auto flex w-full max-w-[440px] gap-2">
+        <div className="mx-auto flex w-full max-w-[800px] gap-2">
           <button
             type="button"
             onClick={goToNextCard}
@@ -874,7 +874,7 @@ function RunningScreen({
           </button>
         </div>
         {submitAttempted && !isAllAnswered ? (
-          <div className="mx-auto mt-2 w-full max-w-[440px]" style={{ fontSize: 12, fontWeight: 700, color: KT.pinkDeep }}>
+          <div className="mx-auto mt-2 w-full max-w-[800px]" style={{ fontSize: 12, fontWeight: 700, color: KT.pinkDeep }}>
             {labels.vocabTest?.unansweredWarning || 'Some questions are unanswered.'}
           </div>
         ) : null}
@@ -940,7 +940,7 @@ function SettingsScreen({
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[440px] px-4 pb-5 pt-[calc(env(safe-area-inset-top)+12px)]">
+    <div className="mx-auto w-full max-w-[800px] px-4 pb-5 pt-[calc(env(safe-area-inset-top)+12px)]">
       <div
         style={{
           background: KT.card,
@@ -1006,7 +1006,7 @@ function SettingsScreen({
               </span>
             ) : null}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {modeMeta.map(item => {
               const selected = enabledTypes[item.key];
               const disabled = item.disabled === true;

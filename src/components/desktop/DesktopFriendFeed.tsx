@@ -30,7 +30,7 @@ export function DesktopFriendFeed() {
     });
   }, [activities, overrides]);
 
-  const toggleLike = async (activityId: Id<'learning_events'>) => {
+  const toggleLike = async (activityId: string) => {
     const key = String(activityId);
     if (pending[key]) return;
     const source = rows.find(item => item.key === key);
@@ -46,8 +46,8 @@ export function DesktopFriendFeed() {
 
     try {
       const result = nextLiked
-        ? await likeActivity({ activityId })
-        : await unlikeActivity({ activityId });
+        ? await likeActivity({ activityId, kind: 'event' })
+        : await unlikeActivity({ activityId, kind: 'event' });
       setOverrides(current => ({
         ...current,
         [key]: { liked: result.liked, likeCount: result.likeCount },
@@ -105,7 +105,7 @@ export function DesktopFriendFeed() {
               </div>
               <button
                 type="button"
-                onClick={() => void toggleLike(item.activityId)}
+                onClick={() => void toggleLike(String(item.activityId))}
                 disabled={pending[item.key]}
                 style={{
                   marginTop: 6,

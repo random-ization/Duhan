@@ -14,11 +14,16 @@ import {
   Headphones,
   BookOpen,
   PenLine,
+  LayoutGrid,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { DesktopCard } from '../components/desktop/ui/DesktopCard';
+import { HanjaSeal } from '../components/desktop/ui/HanjaSeal';
+import { DesignChip } from '../components/desktop/ui/DesignChip';
+import { KT } from '../theme/ksoftTokens';
 import BackButton from '../components/ui/BackButton';
 import { useTranslation } from 'react-i18next';
-import { qRef } from '../utils/convexRefs';
+import { qRef, TOPIK } from '../utils/convexRefs';
 import { api } from '../../convex/_generated/api';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -41,46 +46,11 @@ import {
 const TopikModule = lazy(() => import('../components/topik'));
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
-const ONE_DAY_MS = 86400000;
-type ReminderLevel = 'none' | 'good' | 'warn' | 'danger';
 
 const stripLocalePrefix = (pathname: string): string => {
   const pathSegments = pathname.split('/').filter(Boolean);
   const hasLocalePrefix = pathSegments[0] && LOCALE_PREFIXES.includes(pathSegments[0]);
   return hasLocalePrefix ? `/${pathSegments.slice(1).join('/')}` : pathname;
-};
-
-const getReminderLevel = (daysSince: number): ReminderLevel => {
-  if (daysSince < 0) return 'none';
-  if (daysSince <= 2) return 'good';
-  if (daysSince <= 6) return 'warn';
-  return 'danger';
-};
-
-const getReminderMessage = (
-  daysSince: number,
-  t: ReturnType<typeof useTranslation>['t']
-): string => {
-  if (daysSince < 0) {
-    return t('topikLobby.reminder.firstTime', {
-      defaultValue: 'Start your first TOPIK simulation!',
-    });
-  }
-  if (daysSince <= 2) {
-    return t('topikLobby.reminder.good', {
-      defaultValue: 'Great streak! Keep the momentum.',
-    });
-  }
-  if (daysSince <= 6) {
-    return t('topikLobby.reminder.warn', {
-      count: daysSince,
-      defaultValue: `${daysSince} days since last practice — stay sharp!`,
-    });
-  }
-  return t('topikLobby.reminder.danger', {
-    count: daysSince,
-    defaultValue: `${daysSince} days away — memory may have faded!`,
-  });
 };
 
 const TopikPage: React.FC = () => {
@@ -103,6 +73,7 @@ const TopikPage: React.FC = () => {
   );
 
   const writingSessions = useQuery(api.topikWriting.getUserSessions, user ? {} : 'skip');
+  const lobbyStats = useQuery(TOPIK.getLobbyStats, user ? {} : 'skip');
 
   const examHistory = React.useMemo(() => {
     return [...(examAttempts ?? []), ...(writingSessions ?? [])] as ExamAttempt[];
@@ -140,92 +111,6 @@ const TopikPage: React.FC = () => {
     [filterType, topikExams]
   );
 
-  const topikLobbyStats = React.useMemo(() => {
-    const totalAttempts = examHistory.length;
-    const examTypeMap = new Map(topikExams.map(e => [e.id, e.type]));
-
-    let scoreSum = 0;
-    let passCount = 0;
-    let topScore = 0;
-    let readingAttempts = 0;
-    let listeningAttempts = 0;
-    let writingAttempts = 0;
-    let readingBest = 0;
-    let listeningBest = 0;
-    let writingBest = 0;
-    let lastTimestamp = 0;
-    const attemptedIds = new Set<string>();
-
-    for (const attempt of examHistory) {
-      const score = attempt.score || 0;
-      scoreSum += score;
-      if (score >= 60) passCount += 1;
-      if (score > topScore) topScore = score;
-
-      if (attempt.examId) {
-        attemptedIds.add(attempt.examId);
-        const examType = examTypeMap.get(attempt.examId);
-        if (examType === 'READING') {
-          readingAttempts += 1;
-          if (score > readingBest) readingBest = score;
-        } else if (examType === 'LISTENING') {
-          listeningAttempts += 1;
-          if (score > listeningBest) listeningBest = score;
-        } else if (examType === 'WRITING') {
-          writingAttempts += 1;
-          if (score > writingBest) writingBest = score;
-        }
-      }
-
-      const timestamp = attempt.timestamp || 0;
-      if (timestamp > lastTimestamp) lastTimestamp = timestamp;
-    }
-
-    const avgScore = totalAttempts > 0 ? Math.round((scoreSum / totalAttempts) * 10) / 10 : 0;
-    const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
-
-    const recent5 = [...examHistory]
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, 5)
-      .map(e => e.score || 0)
-      .reverse();
-    const trendUp = recent5.length >= 2 && recent5[recent5.length - 1] >= recent5[0];
-
-    const daysSince = lastTimestamp > 0 ? Math.floor((now - lastTimestamp) / ONE_DAY_MS) : -1;
-
-    const recommended = topikExams.find(e => !attemptedIds.has(e.id));
-
-    const reminderLevel = getReminderLevel(daysSince);
-    const reminderColors = {
-      none: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-400/20 text-blue-700 dark:text-blue-300',
-      good: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-400/20 text-emerald-700 dark:text-emerald-300',
-      warn: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-400/20 text-amber-700 dark:text-amber-300',
-      danger:
-        'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-400/20 text-rose-700 dark:text-rose-300',
-    }[reminderLevel];
-    const reminderIcon = { none: '✨', good: '🟢', warn: '🟡', danger: '🔴' }[reminderLevel];
-    const reminderMsg = getReminderMessage(daysSince, t);
-
-    return {
-      topScore,
-      totalAttempts,
-      avgScore,
-      passRate,
-      readingAttempts,
-      listeningAttempts,
-      writingAttempts,
-      readingBest,
-      listeningBest,
-      writingBest,
-      hasRecentTrend: recent5.length >= 2,
-      trendUp,
-      maxScore: 100,
-      reminderColors,
-      reminderIcon,
-      reminderMsg,
-      recommended,
-    };
-  }, [examHistory, now, t, topikExams]);
 
   const topikContextualContent = React.useMemo(
     () => (
@@ -331,8 +216,8 @@ const TopikPage: React.FC = () => {
     return (
       <Suspense
         fallback={
-          <div className="min-h-screen flex items-center justify-center bg-background">
-            <div className="text-sm font-semibold text-muted-foreground">
+          <div className="min-h-screen flex items-center justify-center bg-k-bg">
+            <div className="text-sm font-semibold text-k-sub">
               {t('loading', { defaultValue: 'Loading...' })}
             </div>
           </div>
@@ -374,266 +259,90 @@ const TopikPage: React.FC = () => {
 
   // Desktop Lobby View
   return (
-    <div
-      className="min-h-screen bg-background p-6 md:p-12 font-sans pb-32"
-      style={{
-        backgroundImage: 'radial-gradient(hsl(var(--border) / 0.75) 1.5px, transparent 1.5px)',
-        backgroundSize: '24px 24px',
-      }}
-    >
-      <div className="max-w-7xl mx-auto space-y-12">
-        <div className="flex items-center gap-4 mb-4">
-          <BackButton onClick={() => navigate(topikBackPath)} />
-          <div>
-            <h2 className="text-4xl font-black font-display text-foreground tracking-tight">
-              {t('dashboard.topik.examCenter')}
-            </h2>
-            <p className="text-muted-foreground font-bold">{t('dashboard.topik.realExam')}</p>
+    <div className="min-h-screen bg-k-bg p-8 md:p-14 font-k-sans pb-32">
+      <div className="max-w-6xl mx-auto">
+        {/* Premium Header */}
+        <div className="mb-12 flex items-end gap-6">
+          <div className="flex-1">
+            <div className="mb-3 flex items-center gap-3">
+              <BackButton onClick={() => navigate(topikBackPath)} />
+              <div className="font-k-serif text-[14px] tracking-[4px] text-k-crimson uppercase font-medium">
+                TOPIK · 韓語能力考試
+              </div>
+            </div>
+            <div className="flex items-center gap-5">
+              <HanjaSeal c="試" size={64} bg="var(--color-k-crimson)" round={16} />
+              <div>
+                <h1 className="text-[48px] font-extrabold leading-[1.1] tracking-[-1.5px] text-k-ink">
+                  {t('dashboard.topik.examCenter')}
+                </h1>
+                <p className="mt-1 text-[17px] font-medium text-k-sub">
+                  {t('dashboard.topik.realExam')} · {filteredExams.length}{' '}
+                  {t('topikLobby.examsAvailable', { defaultValue: 'exams' })}
+                </p>
+              </div>
+            </div>
           </div>
-          <img src="/emojis/Trophy.png" className="w-14 h-14 animate-bounce-slow" alt="" />
+          <div className="hidden lg:block">
+            <img src="/emojis/Trophy.png" className="w-20 h-20 animate-bounce-slow opacity-80" alt="" />
+          </div>
         </div>
 
-        {/* ─── TOPIK Stats Card ─── */}
-        <div className="rounded-2xl border-2 border-border bg-card shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
-            {/* ── Panel 1: Core Stats ── */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <img src="/emojis/Trophy.png" className="w-8 h-8" alt="" />
-                <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                  {t('topikLobby.statsTitle', { defaultValue: 'My Stats' })}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  {
-                    label: t('dashboard.topik.bestLabel', { defaultValue: 'Best Score' }),
-                    value: topikLobbyStats.topScore,
-                    color: 'text-amber-600 dark:text-amber-300',
-                  },
-                  {
-                    label: t('topikLobby.avgScore', { defaultValue: 'Avg. Score' }),
-                    value: topikLobbyStats.avgScore,
-                    color: 'text-indigo-600 dark:text-indigo-300',
-                  },
-                  {
-                    label: t('topikLobby.passRate', { defaultValue: 'Pass Rate' }),
-                    value: `${topikLobbyStats.passRate}%`,
-                    color:
-                      topikLobbyStats.passRate >= 60
-                        ? 'text-emerald-600 dark:text-emerald-300'
-                        : 'text-rose-500 dark:text-rose-400',
-                  },
-                  {
-                    label: t('dashboard.topik.totalAttempts', { defaultValue: 'Attempts' }),
-                    value: topikLobbyStats.totalAttempts,
-                    color: 'text-foreground',
-                  },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-muted rounded-xl p-3 text-center">
-                    <div className={`text-2xl font-black ${color}`}>{value}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wide">
-                      {label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Panel 2: Subject Breakdown ── */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📊</span>
-                <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                  {t('topikLobby.breakdown', { defaultValue: 'Subject Breakdown' })}
-                </span>
-              </div>
-              <div className="space-y-4">
-                {[
-                  {
-                    label: t('dashboard.topik.reading', { defaultValue: 'Reading' }),
-                    best: topikLobbyStats.readingBest,
-                    attempts: topikLobbyStats.readingAttempts,
-                    color: 'bg-blue-500',
-                  },
-                  {
-                    label: t('dashboard.topik.listening', { defaultValue: 'Listening' }),
-                    best: topikLobbyStats.listeningBest,
-                    attempts: topikLobbyStats.listeningAttempts,
-                    color: 'bg-violet-500',
-                  },
-                  {
-                    label: t('dashboard.topik.writing', { defaultValue: 'Writing' }),
-                    best: topikLobbyStats.writingBest,
-                    attempts: topikLobbyStats.writingAttempts,
-                    color: 'bg-emerald-500',
-                  },
-                ].map(({ label, best, attempts, color }) => (
-                  <div key={label}>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm font-bold text-foreground">{label}</span>
-                      <span className="text-xs font-bold text-muted-foreground">
-                        {attempts > 0
-                          ? `${t('dashboard.topik.bestLabel', { defaultValue: 'Best' })}: ${best}`
-                          : t('topikLobby.notTried', { defaultValue: 'Not tried' })}
-                      </span>
-                    </div>
-                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${color} transition-all duration-700`}
-                        style={{
-                          width:
-                            attempts > 0
-                              ? `${Math.min(100, (best / topikLobbyStats.maxScore) * 100)}%`
-                              : '0%',
-                        }}
-                      />
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-1 font-medium">
-                      {attempts > 0
-                        ? t('topikLobby.subjectAttempts', {
-                            count: attempts,
-                            defaultValue: `${attempts} attempts`,
-                          })
-                        : t('topikLobby.tryThisSection', {
-                            defaultValue: '← Try this section!',
-                          })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {topikLobbyStats.hasRecentTrend && (
-                <div
-                  className={`text-xs font-bold mt-2 flex items-center gap-1.5 ${topikLobbyStats.trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}
-                >
-                  {topikLobbyStats.trendUp ? '↗' : '↘'}{' '}
-                  {topikLobbyStats.trendUp
-                    ? t('topikLobby.trendUp', {
-                        defaultValue: 'Score improving in last 5 attempts',
-                      })
-                    : t('topikLobby.trendDown', {
-                        defaultValue: 'Score declining — focus on weak areas',
-                      })}
-                </div>
-              )}
-            </div>
-
-            {/* ── Panel 3: Reminder ── */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">💡</span>
-                <span className="font-black text-sm text-foreground uppercase tracking-wider">
-                  {t('topikLobby.todayTitle', { defaultValue: "Today's Tip" })}
-                </span>
-              </div>
-              <div
-                className={`rounded-xl border p-3 text-sm font-medium ${topikLobbyStats.reminderColors}`}
+        {/* Filters and Search Area */}
+        <div className="mb-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex items-center gap-2 bg-k-card p-1.5 rounded-[20px] border border-k-line shadow-k-sh-sm">
+            {[
+              { id: 'READING', icon: BookOpen, label: t('dashboard.topik.reading'), tone: 'indigo' },
+              {
+                id: 'LISTENING',
+                icon: Headphones,
+                label: t('dashboard.topik.listening'),
+                tone: 'crimson',
+              },
+              { id: 'WRITING', icon: PenLine, label: t('dashboard.topik.writing'), tone: 'jade' },
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilterType(f.id as any)}
+                className={clsx(
+                  'px-6 py-2.5 rounded-[15px] text-[13px] font-extrabold transition-all flex items-center gap-2.5 cursor-pointer',
+                  filterType === f.id
+                    ? 'bg-k-ink text-k-bg shadow-lg scale-[1.02]'
+                    : 'text-k-sub hover:text-k-ink hover:bg-k-bg2'
+                )}
               >
-                {topikLobbyStats.reminderIcon} {topikLobbyStats.reminderMsg}
-              </div>
-              {topikLobbyStats.recommended ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                    {t('topikLobby.recommended', { defaultValue: 'Recommended' })}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="auto"
-                    onClick={() =>
-                      navigate(withReturnTo(`/topik/${topikLobbyStats.recommended?.id}`))
-                    }
-                    className="w-full flex items-center justify-between rounded-xl px-4 py-3 font-bold text-sm hover:opacity-90 transition group"
-                  >
-                    <span>{topikLobbyStats.recommended.title}</span>
-                    <ArrowRight
-                      size={16}
-                      className="group-hover:translate-x-1 transition-transform"
-                    />
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground font-medium text-center">
-                    {t('topikLobby.estimatedTime', { defaultValue: 'Est. time:' })}{' '}
-                    {topikLobbyStats.recommended.timeLimit}{' '}
-                    {t('topikLobby.minutes', { defaultValue: 'min' })}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <div className="text-2xl mb-1">🎉</div>
-                  <p className="text-xs font-bold text-muted-foreground">
-                    {t('topikLobby.allDone', {
-                      defaultValue: "You've tried all available exams!",
-                    })}
-                  </p>
-                </div>
-              )}
-            </div>
+                <f.icon size={16} /> {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <DesignChip tone="muted" size="md">
+              {t('topikLobby.allLevels', { defaultValue: 'ALL LEVELS' })}
+            </DesignChip>
           </div>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex items-center gap-2 bg-card p-1.5 rounded-xl border-2 border-foreground shadow-pop w-fit">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setFilterType('READING')}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
-              filterType === 'READING'
-                ? 'bg-blue-600 dark:bg-blue-500 text-primary-foreground dark:text-primary-foreground'
-                : 'text-muted-foreground hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/15'
-            )}
-          >
-            <BookOpen size={16} /> {t('dashboard.topik.reading')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setFilterType('LISTENING')}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
-              filterType === 'LISTENING'
-                ? 'bg-violet-600 dark:bg-violet-500 text-primary-foreground dark:text-primary-foreground'
-                : 'text-muted-foreground hover:text-violet-600 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/15'
-            )}
-          >
-            <Headphones size={16} /> {t('dashboard.topik.listening')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setFilterType('WRITING')}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-black transition-all flex items-center gap-2',
-              filterType === 'WRITING'
-                ? 'bg-rose-500 dark:bg-rose-500 text-primary-foreground'
-                : 'text-muted-foreground hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/15'
-            )}
-          >
-            <PenLine size={16} /> {t('dashboard.topik.writing')}
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8">
-          {/* Writing Exam Grid */}
-          <div className="space-y-6">
-            <h3 className="font-black text-xl flex items-center gap-2 text-foreground">
-              <Target size={20} />{' '}
-              {filterType === 'WRITING'
-                ? t('dashboard.topik.writingMockExams')
-                : t('dashboard.topik.recommended')}
-            </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-12 items-start">
+          {/* Left: Exams Grid */}
+          <div className="space-y-8">
+            <div className="flex items-baseline gap-3">
+              <span className="font-k-serif text-[22px] font-medium text-k-crimson opacity-80">
+                {filterType === 'WRITING' ? '筆' : filterType === 'READING' ? '閱' : '聽'}
+              </span>
+              <h3 className="text-[20px] font-extrabold tracking-[-0.5px] text-k-ink">
+                {filterType === 'WRITING'
+                  ? t('dashboard.topik.writingMockExams')
+                  : t('dashboard.topik.recommended')}
+              </h3>
+              <div className="h-[1px] flex-1 bg-k-line"></div>
+            </div>
 
             {filterType === 'WRITING' ? (
               writingExams.length === 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  <DesktopCard
+                    pad={0}
                     onClick={() =>
                       notify.info(
                         t('dashboard.topik.writingComingSoon', {
@@ -641,111 +350,97 @@ const TopikPage: React.FC = () => {
                         })
                       )
                     }
-                    className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
+                    className="group flex flex-col transition-all hover:shadow-k-sh-lg cursor-pointer border border-transparent hover:border-k-line overflow-hidden"
                   >
-                    <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                    <div className="p-4 flex items-center gap-4 bg-k-crimson text-k-bg relative overflow-hidden">
                       <div
-                        className="absolute inset-0 opacity-20"
+                        className="absolute inset-0 opacity-10"
                         style={{
                           backgroundImage:
-                            'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
+                            'repeating-linear-gradient(45deg,var(--color-k-bg) 0,var(--color-k-bg) 2px,transparent 2px,transparent 10px)',
                         }}
                       />
-                      <div className="text-3xl font-black text-yellow-300 font-display z-10">
-                        <PenLine size={28} />
-                      </div>
-                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
+                      <PenLine size={20} className="z-10 text-k-butter" />
+                      <div className="text-[10px] font-bold tracking-widest uppercase z-10 text-k-bg/80">
                         {t('dashboard.topik.writingCardLabel')}
                       </div>
                     </div>
-                    <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div className="p-5 flex-1 flex flex-col gap-4">
                       <div>
-                        <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
+                        <h4 className="font-extrabold text-[16px] tracking-tight text-k-ink group-hover:text-k-crimson transition leading-snug">
                           {t('dashboard.topik.writingMockTitle')}
                         </h4>
-                        <p className="text-xs font-bold text-muted-foreground mt-1">
+                        <p className="text-[12px] font-medium text-k-sub mt-1 leading-relaxed line-clamp-2">
                           {t('dashboard.topik.writingMockDesc')}
                         </p>
-                        <div className="flex gap-3 mt-2">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                            <Clock size={12} /> {t('topikLobby.timeLimit', { count: 50 })}
-                          </div>
-                        </div>
                       </div>
-                      <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                        <span className="text-[10px] font-bold text-muted-foreground">
-                          {t('dashboard.topik.clickStart')}
-                        </span>
-                        <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
-                          {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
+                      <div className="flex justify-between items-center mt-auto">
+                        <DesignChip tone="muted" size="sm">
+                          {t('topikLobby.timeLimit', { count: 50 })}
+                        </DesignChip>
+                        <span className="bg-k-crimson text-k-bg px-4 py-1.5 rounded-xl font-bold text-[11px] shadow-sm group-hover:scale-105 transition inline-flex items-center gap-1.5">
+                          {t('dashboard.topik.startWriting')} <ArrowRight size={14} />
                         </span>
                       </div>
                     </div>
-                  </Button>
+                  </DesktopCard>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   {writingExams.map(exam => (
-                    <Button
+                    <DesktopCard
                       key={exam.id}
-                      type="button"
-                      variant="ghost"
-                      size="auto"
+                      pad={0}
                       onClick={() => navigate(withReturnTo(`/topik/writing/${exam.id}`))}
-                      className="!flex !items-stretch !justify-start text-left bg-card rounded-2xl border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden min-h-[140px] w-full h-auto !whitespace-normal p-0"
+                      className="group flex flex-col transition-all hover:shadow-k-sh-lg cursor-pointer border border-transparent hover:border-k-line overflow-hidden"
                     >
-                      <div className="p-4 flex flex-col items-center justify-center text-primary-foreground w-32 shrink-0 relative overflow-hidden bg-rose-500">
+                      <div className="p-4 flex items-center justify-between bg-k-crimson text-k-bg relative overflow-hidden">
                         <div
-                          className="absolute inset-0 opacity-20"
+                          className="absolute inset-0 opacity-10"
                           style={{
                             backgroundImage:
-                              'repeating-linear-gradient(45deg,hsl(var(--primary-foreground)) 0,hsl(var(--primary-foreground)) 2px,transparent 2px,transparent 10px)',
+                              'repeating-linear-gradient(45deg,var(--color-k-bg) 0,var(--color-k-bg) 2px,transparent 2px,transparent 10px)',
                           }}
                         />
-                        <div className="text-3xl font-black text-yellow-300 font-display z-10">
-                          {exam.round}
-                        </div>
-                        <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                          {t('dashboard.topik.writingCardLabel')}
-                        </div>
-                      </div>
-                      <div className="p-4 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h4 className="font-black text-lg text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-300 transition">
-                            {exam.title}
-                          </h4>
-                          <div className="flex gap-3 mt-2">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                              <Clock size={12} />{' '}
-                              {t('topikLobby.timeLimit', { count: exam.timeLimit })}
-                            </div>
+                        <div className="flex items-center gap-3 z-10">
+                          <div className="text-[18px] font-black font-k-serif text-k-butter">
+                            {exam.round}
+                          </div>
+                          <div className="text-[10px] font-bold tracking-widest uppercase text-k-bg/80">
+                            {t('dashboard.topik.writingCardLabel')}
                           </div>
                         </div>
-                        <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                          <span className="text-[10px] font-bold text-muted-foreground">
-                            {t('dashboard.topik.clickStart')}
-                          </span>
-                          <span className="bg-rose-500 text-primary-foreground px-3 py-1.5 rounded-lg font-bold text-xs shadow-md group-hover:scale-105 transition inline-flex items-center gap-1">
-                            {t('dashboard.topik.startWriting')} <ArrowRight size={12} />
+                        <PenLine size={16} className="z-10 text-k-butter opacity-60" />
+                      </div>
+                      <div className="p-5 flex-1 flex flex-col gap-4">
+                        <div>
+                          <h4 className="font-extrabold text-[16px] tracking-tight text-k-ink group-hover:text-k-crimson transition leading-snug">
+                            {exam.title}
+                          </h4>
+                        </div>
+                        <div className="flex justify-between items-center mt-auto">
+                          <DesignChip tone="muted" size="sm">
+                            {t('topikLobby.timeLimit', { count: exam.timeLimit })}
+                          </DesignChip>
+                          <span className="bg-k-crimson text-k-bg px-4 py-1.5 rounded-xl font-bold text-[11px] shadow-sm group-hover:scale-105 transition inline-flex items-center gap-1.5">
+                            {t('dashboard.topik.startWriting')} <ArrowRight size={14} />
                           </span>
                         </div>
                       </div>
-                    </Button>
+                    </DesktopCard>
                   ))}
                 </div>
               )
             ) : filteredExams.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 {filteredExams.map(exam => {
                   const isLocked = canAccessContent != null && !canAccessContent(exam);
                   const showLockedUpgradeCard = isLocked && expandedLockedExamId === exam.id;
 
                   return (
-                    <Button
+                    <DesktopCard
                       key={exam.id}
-                      type="button"
-                      variant="ghost"
-                      size="auto"
+                      pad={0}
                       onClick={() => {
                         if (isLocked) {
                           setExpandedLockedExamId(exam.id);
@@ -754,161 +449,212 @@ const TopikPage: React.FC = () => {
                         setExpandedLockedExamId(null);
                         navigate(withReturnTo(`/topik/${exam.id}`));
                       }}
-                      className="!flex !items-stretch !justify-start bg-card rounded-2xl p-0 border-2 border-foreground shadow-pop hover:-translate-y-1 transition cursor-pointer group overflow-hidden flex-col md:flex-row h-auto min-h-[140px] w-full text-left"
+                      className={clsx(
+                        'group flex flex-col transition-all hover:shadow-k-sh-lg cursor-pointer border border-transparent hover:border-k-line overflow-hidden',
+                        isLocked && 'opacity-80'
+                      )}
                     >
                       <div
                         className={clsx(
-                          'p-4 flex flex-col items-center justify-center text-primary-foreground w-full md:w-32 shrink-0 relative overflow-hidden',
-                          exam.type === 'READING' ? 'bg-primary' : 'bg-blue-800 dark:bg-blue-700'
+                          'p-4 flex items-center justify-between text-k-bg relative overflow-hidden transition-all',
+                          exam.type === 'READING' ? 'bg-k-indigo' : 'bg-k-crimson'
                         )}
                       >
                         <div
-                          className="absolute inset-0 opacity-20"
+                          className="absolute inset-0 opacity-10"
                           style={{
                             backgroundImage:
-                              'repeating-linear-gradient(45deg, hsl(var(--primary-foreground)) 0, hsl(var(--primary-foreground)) 2px, transparent 2px, transparent 10px)',
+                              'repeating-linear-gradient(45deg, var(--color-k-bg) 0, var(--color-k-bg) 2px, transparent 2px, transparent 10px)',
                           }}
                         ></div>
-                        <div className="text-3xl font-black text-yellow-400 dark:text-amber-300 font-display z-10">
-                          {exam.round}
+                        <div className="flex items-center gap-3 z-10">
+                          <div className="text-[18px] font-black font-k-serif text-k-butter">
+                            {exam.round}
+                          </div>
+                          <div className="text-[10px] font-bold tracking-widest uppercase text-k-bg/80">
+                            {exam.type === 'READING' ? '閱讀測验' : '聽力測验'}
+                          </div>
                         </div>
-                        <div className="text-[10px] font-bold tracking-widest uppercase z-10 mt-1">
-                          {exam.type === 'READING'
-                            ? `${formatTopikLabel(exam.level)} ${t('dashboard.topik.reading')}`
-                            : `${formatTopikLabel(exam.level)} ${t('dashboard.topik.listening')}`}
-                        </div>
+                        {isLocked && (
+                          <DesignChip tone="butter" size="sm" className="z-10">
+                            {t('pricingDetails.upgradeGuide.badge')}
+                          </DesignChip>
+                        )}
                       </div>
-                      <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div className="p-5 flex-1 flex flex-col gap-4">
                         <div>
-                          <div className="flex justify-between items-start mb-1 gap-2">
-                            <h4 className="font-black text-lg text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition">
-                              {exam.title}
-                            </h4>
-                            <span
-                              className={clsx(
-                                'text-[10px] font-black px-2 py-0.5 rounded border',
-                                isLocked
-                                  ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-400/40'
-                                  : exam.type === 'READING'
-                                    ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-400/40'
-                                    : 'bg-rose-100 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/40'
-                              )}
-                            >
-                              {isLocked
-                                ? t('pricingDetails.upgradeGuide.badge', {
-                                    defaultValue: 'Premium only',
-                                  })
-                                : exam.type === 'READING'
-                                  ? t('dashboard.topik.reading')
-                                  : t('dashboard.topik.listening')}
-                            </span>
-                          </div>
-                          <p className="text-muted-foreground text-xs font-bold">
-                            {t('topikLobby.roundTitle', { round: exam.round })}
-                          </p>
-                          <div className="flex gap-4 mt-2">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                              <Clock size={12} />{' '}
+                          <h4
+                            className={clsx(
+                              'font-extrabold text-[16px] tracking-tight transition leading-tight mb-2',
+                              exam.type === 'READING'
+                                ? 'text-k-ink group-hover:text-k-indigo'
+                                : 'text-k-ink group-hover:text-k-crimson'
+                            )}
+                          >
+                            {exam.title}
+                          </h4>
+                          <div className="flex gap-2">
+                            <DesignChip tone="muted" size="sm">
                               {t('topikLobby.timeLimit', { count: exam.timeLimit })}
-                            </div>
+                            </DesignChip>
+                            {!isLocked && (
+                              <DesignChip
+                                tone={exam.type === 'READING' ? 'sky' : 'pink'}
+                                size="sm"
+                              >
+                                {exam.type === 'READING' ? 'READ' : 'LIST'}
+                              </DesignChip>
+                            )}
                           </div>
+
                           {showLockedUpgradeCard ? (
-                            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                              <div className="flex items-center gap-2 text-amber-700">
-                                <Archive size={14} />
-                                <span className="text-[11px] font-black uppercase tracking-wide">
-                                  {t('pricingDetails.upgradeGuide.badge', {
-                                    defaultValue: 'Premium only',
-                                  })}
-                                </span>
-                              </div>
-                              <h5 className="mt-2 text-sm font-black text-slate-900">
+                            <div className="mt-4 rounded-xl border border-k-butter bg-k-card p-4 shadow-sm">
+                              <h5 className="text-[14px] font-extrabold text-k-ink">
                                 {upgradeCopy.lockedTitle}
                               </h5>
-                              <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
+                              <p className="mt-1 text-[11px] font-medium leading-relaxed text-k-sub">
                                 {upgradeCopy.lockedNote}
                               </p>
-                              <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
-                                {upgradeCopy.bullets.slice(0, 3).map(item => (
-                                  <li key={item}>{item}</li>
-                                ))}
-                              </ul>
-                              <p className="mt-3 text-[11px] font-bold text-slate-500">
-                                {upgradeCopy.lockedCtaHint}
-                              </p>
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={event => {
-                                  event.stopPropagation();
-                                  onShowUpgradePrompt();
-                                }}
-                                loading={upgradeFlowLoading}
-                                loadingText={t('common.loading', { defaultValue: 'Loading...' })}
-                                disabled={upgradeFlowLoading}
-                                className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
-                              >
-                                {t('pricingDetails.upgradeGuide.cta', {
-                                  defaultValue: 'View plans and continue',
-                                })}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={event => {
-                                  event.stopPropagation();
-                                  setExpandedLockedExamId(current =>
-                                    current === exam.id ? null : current
-                                  );
-                                }}
-                                className="mt-2 rounded-xl border-amber-300 bg-white px-4 py-2 text-sm text-slate-700"
-                              >
-                                {t('pricingDetails.upgradeGuide.dismiss', {
-                                  defaultValue: 'Maybe later',
-                                })}
-                              </Button>
+                              <div className="mt-4 flex gap-2">
+                                <button
+                                  onClick={event => {
+                                    event.stopPropagation();
+                                    onShowUpgradePrompt();
+                                  }}
+                                  disabled={upgradeFlowLoading}
+                                  className="flex-1 rounded-lg bg-k-ink px-3 py-1.5 text-[11px] font-extrabold text-k-bg hover:opacity-90 transition-opacity"
+                                >
+                                  {t('pricingDetails.upgradeGuide.cta')}
+                                </button>
+                                <button
+                                  onClick={event => {
+                                    event.stopPropagation();
+                                    setExpandedLockedExamId(null);
+                                  }}
+                                  className="rounded-lg border border-k-line bg-k-bg2 px-3 py-1.5 text-[11px] font-extrabold text-k-ink hover:bg-k-line2"
+                                >
+                                  {t('pricingDetails.upgradeGuide.dismiss')}
+                                </button>
+                              </div>
                             </div>
                           ) : null}
                         </div>
-                        <div className="mt-3 flex justify-between items-center border-t border-border pt-3">
-                          <span className="text-[10px] font-bold text-muted-foreground">
-                            {isLocked
-                              ? showLockedUpgradeCard
-                                ? t('pricingDetails.upgradeGuide.unlockToContinue', {
-                                    defaultValue: 'Unlock to continue',
-                                  })
-                                : t('pricingDetails.upgradeGuide.previewCta', {
-                                    defaultValue: 'Tap to view upgrade options',
-                                  })
-                              : t('dashboard.topik.clickStart')}
-                          </span>
-                          <span
-                            className={clsx(
-                              'px-3 py-1.5 rounded-lg font-bold text-xs shadow-md inline-flex items-center gap-1 transition',
-                              isLocked
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-primary text-primary-foreground group-hover:scale-105'
-                            )}
-                          >
-                            {isLocked
-                              ? t('pricingDetails.upgradeGuide.badge', {
-                                  defaultValue: 'Premium only',
-                                })
-                              : t('dashboard.topik.startNow')}{' '}
-                            <ArrowRight size={12} />
-                          </span>
-                        </div>
+                        {!showLockedUpgradeCard && (
+                          <div className="flex justify-between items-center mt-auto border-t border-k-line pt-3">
+                            <span className="text-[10px] font-bold text-k-sub uppercase tracking-wider">
+                              {isLocked
+                                ? t('pricingDetails.upgradeGuide.previewCta')
+                                : t('dashboard.topik.clickStart')}
+                            </span>
+                            <span
+                              className={clsx(
+                                'px-4 py-1.5 rounded-xl font-bold text-[11px] shadow-sm inline-flex items-center gap-1.5 transition',
+                                isLocked
+                                  ? 'bg-k-bg2 text-k-sub border border-k-line'
+                                  : 'bg-k-ink text-k-bg group-hover:scale-105'
+                              )}
+                            >
+                              {isLocked ? 'LOCKED' : t('dashboard.topik.startNow')}{' '}
+                              <ArrowRight size={14} />
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    </Button>
+                    </DesktopCard>
                   );
                 })}
               </div>
             ) : (
-              <div className="bg-card rounded-[2rem] p-8 border-2 border-border text-center">
-                <p className="text-muted-foreground font-bold">{t('topikLobby.noExams')}</p>
-              </div>
+              <DesktopCard className="text-center py-20">
+                <p className="text-k-sub font-bold text-[15px]">{t('topikLobby.noExams')}</p>
+              </DesktopCard>
             )}
+          </div>
+
+          {/* Right: Sidebar Stats */}
+          <div className="space-y-10 sticky top-8">
+            {/* 1. Countdown Module */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <HanjaSeal c="日" size={24} bg="var(--color-k-crimson)" round={6} className="text-[12px]" />
+                <h4 className="text-[15px] font-extrabold text-k-ink">{t('dashboard.topik.nextExamTitle', { defaultValue: '距下次考试' })}</h4>
+              </div>
+              <DesktopCard className="text-center py-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-k-crimson/5 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+                
+                {lobbyStats?.upcomingExam ? (
+                  <>
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-[64px] font-black font-k-serif text-k-crimson leading-none">
+                        {Math.ceil((lobbyStats.upcomingExam.date! - now) / (1000 * 60 * 60 * 24))}
+                      </span>
+                      <span className="text-[28px] font-black font-k-serif text-k-crimson">日</span>
+                    </div>
+                    <p className="mt-3 text-[13px] font-bold text-k-sub">
+                      第 {lobbyStats.upcomingExam.round} 回 TOPIK · {new Date(lobbyStats.upcomingExam.date!).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    {/* Fallback if no upcoming exam in DB */}
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-[64px] font-black font-k-serif text-k-crimson leading-none">
+                        67
+                      </span>
+                      <span className="text-[28px] font-black font-k-serif text-k-crimson">日</span>
+                    </div>
+                    <p className="mt-3 text-[13px] font-bold text-k-sub">
+                      第 99 回 TOPIK · 7月6日
+                    </p>
+                  </>
+                )}
+              </DesktopCard>
+            </div>
+
+            {/* 2. Weak Points Module */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <HanjaSeal c="弱" size={24} bg="var(--color-k-crimson)" round={6} className="text-[12px]" />
+                <h4 className="text-[15px] font-extrabold text-k-ink">{t('dashboard.topik.weakAreasTitle', { defaultValue: '待加强' })}</h4>
+              </div>
+              <DesktopCard pad={0} className="overflow-hidden">
+                <div className="divide-y divide-k-line">
+                  {lobbyStats?.weakAreas && lobbyStats.weakAreas.length > 0 ? (
+                    lobbyStats.weakAreas.map((area, idx) => (
+                      <div key={area.type} className="p-5 hover:bg-k-bg/50 transition-colors group">
+                        <div className="flex justify-between items-start mb-1">
+                          <h5 className="text-[16px] font-extrabold text-k-ink group-hover:text-k-crimson transition">
+                            <span className="mr-2 font-k-serif text-k-crimson">{area.label}</span>
+                            <span className="text-[14px] text-k-sub">· {area.subLabel}</span>
+                          </h5>
+                        </div>
+                        <p className="text-[12px] font-bold text-k-sub">
+                          {t('dashboard.topik.recentScore', { defaultValue: '近期得分' })} <span className="text-k-ink">{area.score}%</span>
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      {/* Placeholders if no history */}
+                      <div className="p-5 opacity-40">
+                        <h5 className="text-[16px] font-extrabold text-k-ink">
+                          <span className="mr-2 font-k-serif">쓰기</span>
+                          <span className="text-[14px]">· 论说文</span>
+                        </h5>
+                        <p className="text-[12px] font-bold text-k-sub">近期得分 --%</p>
+                      </div>
+                      <div className="p-5 opacity-40">
+                        <h5 className="text-[16px] font-extrabold text-k-ink">
+                          <span className="mr-2 font-k-serif">듣기</span>
+                          <span className="text-[14px]">· 高级听力</span>
+                        </h5>
+                        <p className="text-[12px] font-bold text-k-sub">近期得分 --%</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </DesktopCard>
+            </div>
           </div>
         </div>
       </div>

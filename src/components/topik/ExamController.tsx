@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  MediaPlayer,
-  MediaProvider,
-  PlayButton,
-  VolumeSlider,
-  TimeSlider,
-  SeekButton,
-} from '@vidstack/react';
-import {
   Play,
   Pause,
   Grid, // Overview icon
@@ -50,9 +42,14 @@ export const ExamController: React.FC<ExamControllerProps> = ({
   const { t } = useTranslation();
   const normalizedAudioUrl = normalizePublicAssetUrl(audioUrl) || audioUrl;
   const [showOverview, setShowOverview] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
 
   // Auto-scroll the question list to keep current question in view
   const listRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (listRef.current) {
@@ -65,6 +62,37 @@ export const ExamController: React.FC<ExamControllerProps> = ({
     }
   }, [currentQuestionIndex]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const syncTime = () => setCurrentTime(audio.currentTime);
+    const syncDuration = () => {
+      setCurrentTime(audio.currentTime);
+      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+
+    audio.volume = volume;
+    audio.addEventListener('timeupdate', syncTime);
+    audio.addEventListener('loadedmetadata', syncDuration);
+    audio.addEventListener('durationchange', syncDuration);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', syncTime);
+      audio.removeEventListener('loadedmetadata', syncDuration);
+      audio.removeEventListener('durationchange', syncDuration);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [volume]);
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -72,60 +100,110 @@ export const ExamController: React.FC<ExamControllerProps> = ({
   };
 
   const isLowTime = timeLeft < 300; // 5 minutes warning
+  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const togglePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      try {
+        await audio.play();
+      } catch {
+        setIsPlaying(false);
+      }
+      return;
+    }
+    audio.pause();
+  };
+
+  const seekBy = (seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(duration || 0, audio.currentTime + seconds));
+  };
+
+  const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const nextPercent = Number(event.target.value);
+    audio.currentTime = duration > 0 ? (nextPercent / 100) * duration : 0;
+    setCurrentTime(audio.currentTime);
+  };
+
+  const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextVolume = Number(event.target.value);
+    setVolume(nextVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = nextVolume;
+    }
+  };
 
   const renderAudioControls = () => (
     <div className="flex flex-col items-center gap-3 my-1 w-full px-2">
-      {/* Volume Slider (Vertical) */}
-      <div className="h-20 py-2 group/volume flex justify-center w-full relative">
-        <VolumeSlider.Root
-          className="relative flex flex-col items-center select-none touch-none w-6 h-full group/volume cursor-pointer"
-          orientation="vertical"
-        >
-          <VolumeSlider.Track className="relative w-1.5 h-full bg-muted rounded-full overflow-hidden">
-            <VolumeSlider.TrackFill className="absolute bottom-0 w-full bg-indigo-500 rounded-full will-change-[height] h-[var(--slider-fill)]" />
-          </VolumeSlider.Track>
-          <VolumeSlider.Thumb className="absolute w-3 h-3 bg-indigo-600 rounded-full shadow-md opacity-0 group-hover/volume:opacity-100 left-1/2 -translate-x-1/2 focus:opacity-100" />
-        </VolumeSlider.Root>
-
-        {/* Playback speed label (decoration) */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-4 text-[9px] font-mono text-muted-foreground font-bold whitespace-nowrap">
+      <div className="w-full px-1 flex flex-col items-center gap-2">
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={handleVolumeChange}
+          className="h-1.5 w-full cursor-pointer accent-indigo-600"
+          aria-label={t('common.volume', { defaultValue: 'Volume' })}
+        />
+        <div className="text-[9px] font-mono text-muted-foreground font-bold whitespace-nowrap">
           Vol
         </div>
       </div>
 
       <div className="w-full px-1 flex flex-col items-center gap-2 mt-4">
-        {/* Progress Bar (Horizontal) */}
-        <TimeSlider.Root className="group relative flex items-center w-full h-4 cursor-pointer touch-none select-none">
-          <TimeSlider.Track className="relative w-full h-1 bg-muted rounded-full overflow-hidden">
-            <TimeSlider.TrackFill className="absolute h-full bg-indigo-500 rounded-full will-change-[width] w-[var(--slider-fill)]" />
-            <TimeSlider.Progress className="absolute h-full bg-indigo-300 rounded-full w-[var(--slider-progress)] will-change-[width]" />
-          </TimeSlider.Track>
-          <TimeSlider.Thumb className="absolute w-2.5 h-2.5 bg-indigo-600 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity ring-2 ring-indigo-500/50" />
-        </TimeSlider.Root>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={0.1}
+          value={progressPercent}
+          onChange={handleProgressChange}
+          className="h-1.5 w-full cursor-pointer accent-indigo-600"
+          aria-label={t('common.progress', { defaultValue: 'Progress' })}
+        />
 
         {/* Seek Buttons Row */}
         <div className="flex items-center justify-between w-full px-1">
-          <SeekButton
-            seconds={-10}
+          <button
+            type="button"
+            onClick={() => seekBy(-10)}
             className="text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <Rewind className="w-3 h-3" />
-          </SeekButton>
-          <SeekButton
-            seconds={10}
+          </button>
+          <div className="text-[10px] font-mono font-bold text-muted-foreground">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+          <button
+            type="button"
+            onClick={() => seekBy(10)}
             className="text-muted-foreground hover:text-muted-foreground transition-colors"
           >
             <FastForward className="w-3 h-3" />
-          </SeekButton>
+          </button>
         </div>
 
         {/* Play/Pause Button */}
-        <PlayButton className="w-12 h-12 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all flex items-center justify-center shrink-0 shadow-pop active:scale-95 group mt-1">
-          {/* Show Play when PAUSED (data-paused present) */}
-          <Play className="w-5 h-5 ml-0.5 fill-current hidden group-data-[paused]:block" />
-          {/* Show Pause when PLAYING (data-paused NOT present) */}
-          <Pause className="w-5 h-5 fill-current block group-data-[paused]:hidden" />
-        </PlayButton>
+        <button
+          type="button"
+          onClick={() => {
+            void togglePlayback();
+          }}
+          className="w-12 h-12 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all flex items-center justify-center shrink-0 shadow-pop active:scale-95 group mt-1"
+          aria-label={isPlaying ? t('common.pause', { defaultValue: 'Pause' }) : t('common.play', { defaultValue: 'Play' })}
+        >
+          {isPlaying ? (
+            <Pause className="w-5 h-5 fill-current" />
+          ) : (
+            <Play className="w-5 h-5 ml-0.5 fill-current" />
+          )}
+        </button>
       </div>
     </div>
   );
@@ -193,10 +271,15 @@ export const ExamController: React.FC<ExamControllerProps> = ({
             <PopoverAnchor>
               <div className="relative border border-border shadow-xl rounded-[40px] w-[90px] transition-all duration-300 ease-out flex flex-col overflow-hidden bg-card">
                 {normalizedAudioUrl ? (
-                  <MediaPlayer src={normalizedAudioUrl} className="w-full h-full flex flex-col">
-                    <MediaProvider />
+                  <>
+                    <audio
+                      key={normalizedAudioUrl}
+                      ref={audioRef}
+                      src={normalizedAudioUrl}
+                      preload="metadata"
+                    />
                     {renderContent()}
-                  </MediaPlayer>
+                  </>
                 ) : (
                   renderContent()
                 )}

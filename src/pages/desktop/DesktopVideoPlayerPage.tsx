@@ -1,737 +1,273 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import {
-  ArrowLeft,
-  Video,
-  Languages,
-  Loader2,
-  Eye,
-  Volume2,
-  Plus,
-  X,
-  BookOpen,
-  List,
-} from 'lucide-react';
-import { useQuery, useAction, useMutation } from 'convex/react';
-import { useAuth } from '../../contexts/AuthContext';
-import { getLabel, getLabels } from '../../utils/i18n';
-import type { Language } from '../../types';
-import type { MediaPlayerInstance, MediaTimeUpdateEventDetail } from '@vidstack/react';
-import { aRef, ENTITLEMENTS, qRef } from '../../utils/convexRefs';
-import { MobileSheet } from '../../components/mobile/MobileSheet';
-import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import { useTTS } from '../../hooks/useTTS';
-import { extractBestMeaning, normalizeLookupWord } from '../../utils/dictionaryMeaning';
-import { useUserActions } from '../../hooks/useUserActions';
-import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
-import { Button } from '../../components/ui';
-import { AppBreadcrumb } from '../../components/common/AppBreadcrumb';
-import { useUpgradeFlow } from '../../hooks/useUpgradeFlow';
-import { getEntitlementErrorData } from '../../utils/entitlements';
-import { notify } from '../../utils/notify';
-import { buildMediaPath } from '../../utils/mediaRoutes';
-import { resolveSafeReturnTo } from '../../utils/navigation';
-import { buildVideoPlayerPath } from '../../utils/videoRoutes';
-import { normalizePublicAssetUrl } from '../../utils/imageSrc';
+import React from 'react';
+import { useQuery } from 'convex/react';
+import { useParams, useNavigate as useRouterNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { useGlobalSettings } from '../../hooks/useGlobalSettings';
+import { qRef } from '../../utils/convexRefs';
+import type { Doc, Id } from '../../../convex/_generated/dataModel';
 
-const LazyVideoPlayer = React.lazy(() => import('../../components/media/VidstackVideoPlayer'));
+type VideoItem = Doc<'videos'> & {
+  id: Id<'videos'>;
+  transcriptData?: Array<{ ko: string; cn: string; time: number }>;
+};
 
-interface TranscriptSegment {
-  start: number;
-  end: number;
-  text: string;
-  translation?: string;
+function formatDuration(seconds?: number): string {
+  if (!seconds) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-interface VideoData {
-  id: string;
-  title: string;
-  description?: string;
-  videoUrl: string;
-  thumbnailUrl?: string;
-  level: string;
-  duration?: number;
-  transcriptData?: TranscriptSegment[];
-  views: number;
-}
-
-type ConvexVideoDoc = Omit<VideoData, 'id'> & { _id: string };
-
-interface DictionaryEntry {
-  targetCode: string;
-  word: string;
-  pronunciation?: string;
-  pos?: string;
-  senses: Array<{
-    order: number;
-    definition: string;
-    translation?: { lang: string; word: string; definition: string };
-  }>;
-}
-
-interface SearchResult {
-  total: number;
-  start: number;
-  num: number;
-  entries: DictionaryEntry[];
-}
-
-type SelectedWordState = {
-  word: string;
-  meaning: string;
-  position: { x: number; y: number };
-};
-
-type SearchDictionaryFn = (args: {
-  query: string;
-  translationLang?: string;
-  start?: number;
-  num?: number;
-  part?: string;
-  sort?: string;
-}) => Promise<SearchResult>;
-
-const POPUP_WIDTH = 260;
-const POPUP_HEIGHT = 180;
-const POPUP_PADDING = 8;
-
-const resolveTranslationLang = (language: Language): Language | undefined => {
-  if (language === 'en' || language === 'zh' || language === 'vi' || language === 'mn') {
-    return language;
-  }
-  return undefined;
-};
-
-const toVideoData = (convexVideo: ConvexVideoDoc | null | undefined): VideoData | null => {
-  if (!convexVideo) return null;
-  return {
-    ...convexVideo,
-    id: convexVideo._id,
-    videoUrl: normalizePublicAssetUrl(convexVideo.videoUrl) || convexVideo.videoUrl,
-    thumbnailUrl: normalizePublicAssetUrl(convexVideo.thumbnailUrl) || undefined,
-    duration: convexVideo.duration || undefined,
-    description: convexVideo.description || undefined,
-    transcriptData: convexVideo.transcriptData || undefined,
-  };
-};
-
-const getActiveSegment = (video: VideoData | null, currentTime: number): number => {
-  if (!video?.transcriptData) return -1;
-  return video.transcriptData.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
-};
-
-const getVideoLoadError = (
-  convexVideo: ConvexVideoDoc | null | undefined,
-  labels: ReturnType<typeof getLabels>
-): string | null => {
-  if (convexVideo !== null) return null;
-  return getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found';
-};
-
-const buildVideoUpgradeReturnTarget = (videoId: string | undefined, returnTo: string): string => {
-  if (!videoId) return buildMediaPath('video');
-  return buildVideoPlayerPath(videoId, returnTo);
-};
-
-const getPopupPosition = (rect: DOMRect): { x: number; y: number } => {
-  const x = Math.min(
-    Math.max(POPUP_PADDING, rect.left),
-    Math.max(POPUP_PADDING, window.innerWidth - POPUP_WIDTH - POPUP_PADDING)
-  );
-  const y = Math.min(
-    Math.max(POPUP_PADDING, rect.bottom + POPUP_PADDING),
-    Math.max(POPUP_PADDING, window.innerHeight - POPUP_HEIGHT - POPUP_PADDING)
-  );
-  return { x, y };
-};
-
-const updateMeaningIfCurrent = (
-  requestRef: React.MutableRefObject<number>,
-  requestId: number,
-  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>,
-  meaning: string
-) => {
-  if (requestRef.current !== requestId) return;
-  setSelectedWord(prev => (prev ? { ...prev, meaning } : prev));
-};
-
-const fetchWordMeaning = async ({
-  clickedWord,
-  fallbackMeaning,
-  translationLang,
-  searchDictionary,
-  requestRef,
-  requestId,
-  setSelectedWord,
-}: {
-  clickedWord: string;
-  fallbackMeaning: string;
-  translationLang: Language | undefined;
-  searchDictionary: SearchDictionaryFn;
-  requestRef: React.MutableRefObject<number>;
-  requestId: number;
-  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
-}) => {
-  try {
-    const res = await searchDictionary({
-      query: clickedWord,
-      translationLang,
-      num: 10,
-      part: 'word',
-      sort: 'dict',
-    });
-    const meaning = extractBestMeaning(res, clickedWord, fallbackMeaning);
-    updateMeaningIfCurrent(requestRef, requestId, setSelectedWord, meaning);
-  } catch {
-    updateMeaningIfCurrent(requestRef, requestId, setSelectedWord, fallbackMeaning);
-  }
-};
-
-const processWordClickEvent = ({
-  labels,
-  dictionaryRequestRef,
-  translationLang,
-  searchDictionary,
-  setSelectedWord,
-  e,
-}: {
-  labels: ReturnType<typeof getLabels>;
-  dictionaryRequestRef: React.MutableRefObject<number>;
-  translationLang: Language | undefined;
-  searchDictionary: SearchDictionaryFn;
-  setSelectedWord: React.Dispatch<React.SetStateAction<SelectedWordState | null>>;
-  e: React.MouseEvent | React.KeyboardEvent;
-}) => {
-  const target = e.target;
-  if (!(target instanceof HTMLElement)) return;
-  const wordEl = target.closest<HTMLElement>('[data-word]');
-  if (!wordEl) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-  const clickedWord = normalizeLookupWord(wordEl.dataset.word ?? '');
-  if (!clickedWord) return;
-
-  const fallbackMeaning = labels.dashboard?.common?.noMeaning || 'No meaning available';
-  const requestId = dictionaryRequestRef.current + 1;
-  dictionaryRequestRef.current = requestId;
-
-  setSelectedWord({
-    word: clickedWord,
-    meaning: labels.dashboard?.common?.loading || 'Looking up...',
-    position: getPopupPosition(wordEl.getBoundingClientRect()),
-  });
-
-  void fetchWordMeaning({
-    clickedWord,
-    fallbackMeaning,
-    translationLang,
-    searchDictionary,
-    requestRef: dictionaryRequestRef,
-    requestId,
-    setSelectedWord,
-  });
-};
-
-interface WordPopupProps {
-  word: string;
-  meaning: string;
-  position: { x: number; y: number };
-  onClose: () => void;
-  onSpeak: () => void;
-  onSave: () => void;
-  language: Language;
-}
-
-const WordPopup: React.FC<WordPopupProps> = ({
-  word,
-  meaning,
-  position,
-  onClose,
-  onSpeak,
-  onSave,
-  language,
-}) => {
-  const labels = getLabels(language);
+function DRail({ kanji, title, action, children, pad = 14 }: { 
+  kanji?: string; 
+  title: string; 
+  action?: string; 
+  children: React.ReactNode; 
+  pad?: number 
+}) {
   return (
-    <Popover open onOpenChange={open => !open && onClose()}>
-      <PopoverPortal>
-        <PopoverContent
-          unstyled
-          data-popup
-          className="fixed z-50 min-w-[180px] rounded-xl border-2 border-foreground bg-[#FDFBF7] dark:bg-card p-4 shadow-[4px_4px_0px_0px_#18181B] font-sans"
-          style={{ left: Math.min(position.x, window.innerWidth - 220), top: position.y }}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={onClose}
-            className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover:bg-red-500 dark:hover:bg-rose-400 transition border-0"
-          >
-            <X className="w-3 h-3" />
-          </Button>
-          <div className="text-xl font-black text-foreground mb-3">{word}</div>
-          <div className="text-sm text-muted-foreground mb-3">{meaning}</div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={onSpeak}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-card border-2 border-foreground rounded-lg font-bold text-xs hover:bg-muted shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
-            >
-              <Volume2 className="w-3 h-3" />
-              {getLabel(labels, ['dashboard', 'common', 'read']) || 'Read aloud'}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={onSave}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-lime-300 dark:bg-lime-400/80 border-2 border-foreground rounded-lg font-bold text-xs hover:bg-lime-400 dark:hover:bg-lime-300 shadow-[2px_2px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
-            >
-              <Plus className="w-3 h-3" />
-              {getLabel(labels, ['dashboard', 'common', 'favorite']) || 'Save'}
-            </Button>
-          </div>
-        </PopoverContent>
-      </PopoverPortal>
-    </Popover>
-  );
-};
-
-interface TranscriptPanelContentProps {
-  video: VideoData;
-  labels: ReturnType<typeof getLabels>;
-  activeSegmentIndex: number;
-  segmentRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
-  seekTo: (time: number) => void;
-  formatTime: (seconds: number) => string;
-  handleWordClick: (e: React.MouseEvent | React.KeyboardEvent) => void;
-  showTranslation: boolean;
-}
-
-const TranscriptPanelContent: React.FC<TranscriptPanelContentProps> = ({
-  video,
-  labels,
-  activeSegmentIndex,
-  segmentRefs,
-  seekTo,
-  formatTime,
-  handleWordClick,
-  showTranslation,
-}) => {
-  if (!video.transcriptData || video.transcriptData.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground font-sans">
-        <Video className="w-12 h-12 mx-auto mb-4 opacity-30" />
-        <p className="font-bold">
-          {getLabel(labels, ['dashboard', 'video', 'noSubtitles']) || 'No Subtitles'}
-        </p>
-        <p className="text-sm mt-1">
-          {getLabel(labels, ['dashboard', 'video', 'noSubtitlesDesc']) ||
-            'This video has no subtitles yet'}
-        </p>
+    <div className="mb-[22px]">
+      <div className="mb-2.5 flex items-baseline px-0.5">
+        {kanji && (
+          <span className="mr-1.5 font-k-serif text-[14px] font-medium text-k-crimson">
+            {kanji}
+          </span>
+        )}
+        <span className="text-[11px] font-extrabold tracking-[0.4px] text-k-ink">
+          {title}
+        </span>
+        {action && (
+          <span className="ml-auto text-[10px] font-bold text-k-sub cursor-pointer hover:text-k-ink">
+            {action}
+          </span>
+        )}
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 font-sans">
-      {video.transcriptData.map((segment, index) => {
-        const isActive = index === activeSegmentIndex;
-        const segmentId = `segment-${index}-${segment.start}`;
-
-        return (
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            key={segmentId}
-            ref={el => {
-              segmentRefs.current[index] = el;
-            }}
-            onClick={() => seekTo(segment.start)}
-            className={`!block !font-normal p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-300 ${
-              isActive
-                ? 'bg-indigo-100 border-indigo-400 dark:bg-indigo-400/12 dark:border-indigo-300/40 shadow-[4px_4px_0px_0px_#6366f1] dark:shadow-[4px_4px_0px_0px_rgba(129,140,248,0.3)] scale-[1.02]'
-                : 'bg-card border-border hover:border-border'
-            }`}
-          >
-            <div className="text-xs font-mono text-muted-foreground mb-2">
-              {formatTime(segment.start)} - {formatTime(segment.end)}
-            </div>
-
-            <div
-              className={`text-lg font-medium leading-relaxed text-left w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-300 dark:focus-visible:ring-indigo-200 rounded px-1 ${
-                isActive ? 'text-foreground' : 'text-muted-foreground'
-              }`}
-              onClick={handleWordClick}
-            >
-              {segment.text.split(/(\s+)/).map((part, wordIndex) => {
-                const word = part.trim();
-                if (!word) {
-                  const spaceId = `space-${index}-${wordIndex}`;
-                  return <span key={spaceId}>{part}</span>;
-                }
-                const wordId = `word-${index}-${wordIndex}-${word}`;
-                return (
-                  <span
-                    key={wordId}
-                    data-word={word}
-                    className={`cursor-pointer rounded px-0.5 transition-colors ${
-                      isActive
-                        ? 'hover:bg-indigo-200 dark:hover:bg-indigo-300/20'
-                        : 'hover:bg-yellow-100 dark:hover:bg-amber-300/20'
-                    }`}
-                  >
-                    {word}
-                  </span>
-                );
-              })}
-            </div>
-
-            {showTranslation && segment.translation && (
-              <div className="text-sm text-muted-foreground mt-2 border-t border-border pt-2">
-                {segment.translation}
-              </div>
-            )}
-          </Button>
-        );
-      })}
+      <div className="rounded-[14px] bg-k-card shadow-k-sh-sm" style={{ padding: pad }}>
+        {children}
+      </div>
     </div>
   );
-};
+}
 
-export const DesktopVideoPlayerPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const navigate = useLocalizedNavigate();
-  const { language, user, viewerAccess } = useAuth();
-  const { startUpgradeFlow } = useUpgradeFlow();
-  const { saveWord } = useUserActions();
-  const labels = getLabels(language);
-  const { speak: speakTTS, stop: stopTTS } = useTTS();
-  const playerRef = useRef<MediaPlayerInstance>(null);
-  const segmentRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const searchDictionary = useAction(
-    aRef<
-      {
-        query: string;
-        translationLang?: string;
-        start?: number;
-        num?: number;
-        part?: string;
-        sort?: string;
-      },
-      SearchResult
-    >('dictionary:searchDictionary')
+export default function DesktopVideoPlayerPage() {
+  const { t, i18n } = useTranslation();
+  const { videoId } = useParams<{ videoId: string }>();
+  const routerNavigate = useRouterNavigate();
+  const { settings: globalSettings } = useGlobalSettings();
+  
+  // 获取视频详情
+  const video = useQuery(
+    qRef<{ id: Id<'videos'> }, VideoItem | null>('videos:get'),
+    videoId ? { id: videoId as Id<'videos'> } : 'skip'
   );
-  const consumeMediaPlay = useMutation(ENTITLEMENTS.consumeMediaPlay);
-  const dictionaryRequestRef = useRef(0);
-  const translationLang = useMemo(() => resolveTranslationLang(language), [language]);
-  const [unlockedPlaybackKey, setUnlockedPlaybackKey] = useState<string | null>(null);
-  const playbackResourceKey = id ? `video:${id}` : null;
-  const playbackUnlocked =
-    playbackResourceKey !== null && unlockedPlaybackKey === playbackResourceKey;
-  const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('video')),
-    [searchParams]
-  );
-  const upgradeReturnTarget = useMemo(
-    () => buildVideoUpgradeReturnTarget(id, backPath),
-    [id, backPath]
-  );
+  
+  // 获取推荐视频
+  const recommendedVideos = useQuery(qRef<Record<string, never>, VideoItem[]>('videos:list'));
 
-  useEffect(() => stopTTS, [stopTTS]);
-
-  const [currentTime, setCurrentTime] = useState(0);
-  const [showTranslation, setShowTranslation] = useState(true);
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
-  const [selectedWord, setSelectedWord] = useState<SelectedWordState | null>(null);
-
-  const convexVideo = useQuery(
-    qRef<{ id: string }, ConvexVideoDoc | null>('videos:get'),
-    id ? { id } : 'skip'
-  );
-
-  const video = useMemo<VideoData | null>(() => toVideoData(convexVideo), [convexVideo]);
-
-  const loading = convexVideo === undefined;
-  const error = getVideoLoadError(convexVideo, labels);
-
-  const activeSegmentIndex = useMemo(
-    () => getActiveSegment(video, currentTime),
-    [video, currentTime]
-  );
-
-  useEffect(() => {
-    if (activeSegmentIndex >= 0 && segmentRefs.current[activeSegmentIndex]) {
-      segmentRefs.current[activeSegmentIndex]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [activeSegmentIndex]);
-
-  const handleTimeUpdate = (detail: MediaTimeUpdateEventDetail) => {
-    setCurrentTime(detail.currentTime);
-  };
-
-  const seekTo = (time: number) => {
-    if (playerRef.current) {
-      playerRef.current.currentTime = time;
-      playerRef.current.play();
-    }
-  };
-
-  const ensurePlaybackAccess = async (): Promise<boolean> => {
-    if (viewerAccess?.isPremium) return true;
-    if (playbackUnlocked) return true;
-
-    if (!user) {
-      startUpgradeFlow({
-        plan: 'ANNUAL',
-        source: 'media_limit',
-        returnTo: upgradeReturnTarget,
-      });
-      return false;
-    }
-
-    try {
-      if (!playbackResourceKey) return false;
-      await consumeMediaPlay({ resourceKey: playbackResourceKey });
-      setUnlockedPlaybackKey(playbackResourceKey);
-      return true;
-    } catch (error) {
-      const entitlementError = getEntitlementErrorData(error);
-      if (playerRef.current) {
-        playerRef.current.pause();
-      }
-      if (entitlementError?.upgradeSource) {
-        startUpgradeFlow({
-          plan: 'ANNUAL',
-          source: entitlementError.upgradeSource,
-          returnTo: upgradeReturnTarget,
-        });
-        return false;
-      }
-      notify.error(
-        getLabel(labels, ['dashboard', 'video', 'playbackLocked']) ||
-          'Playback is unavailable right now.'
-      );
-      return false;
-    }
-  };
-
-  const handleWordClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    processWordClickEvent({
-      labels,
-      dictionaryRequestRef,
-      translationLang,
-      searchDictionary: searchDictionary as SearchDictionaryFn,
-      setSelectedWord,
-      e,
-    });
-  };
-
-  const speak = useCallback(
-    (text: string) => {
-      void speakTTS(text);
-    },
-    [speakTTS]
-  );
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-muted">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600 dark:text-indigo-300" />
-      </div>
-    );
+  function formatViews(views?: number): string {
+    if (!views) return '0';
+    if (i18n.language.startsWith('zh') && views >= 10000) return `${(views / 10000).toFixed(1)}${t('common.tenThousand')}`;
+    if (views >= 1000) return `${(views / 1000).toFixed(1)}k`;
+    return views.toString();
   }
 
-  if (error || !video) {
+  if (!videoId) {
     return (
-      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-muted">
-        <div className="text-center font-sans">
-          <p className="text-red-500 dark:text-rose-300 font-bold text-lg mb-4">
-            {error || getLabel(labels, ['dashboard', 'video', 'notFound']) || 'Video not found'}
-          </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate(backPath)}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold border-0 hover:bg-primary/90"
-          >
-            {getLabel(labels, ['dashboard', 'video', 'back']) || 'Back to Library'}
-          </Button>
+      <div className="p-6">
+        <div className="mb-4 text-[12px] font-bold text-k-sub">
+          {t('coursesOverview.desktop.video.title')}
         </div>
+        <DesktopCard pad={24}>
+          <div className="text-center text-[14px] font-semibold text-k-sub">
+            {t('coursesOverview.desktop.video.notSelected')}
+          </div>
+        </DesktopCard>
       </div>
     );
   }
 
-  const transcriptBody = (
-    <TranscriptPanelContent
-      video={video}
-      labels={labels}
-      activeSegmentIndex={activeSegmentIndex}
-      segmentRefs={segmentRefs}
-      seekTo={seekTo}
-      formatTime={formatTime}
-      handleWordClick={handleWordClick}
-      showTranslation={showTranslation}
-    />
-  );
+  if (video === undefined) {
+    return (
+      <div className="p-6">
+        <div className="mb-4 text-[12px] font-bold text-k-sub">
+          {t('coursesOverview.desktop.video.title')} · {t('common.loading', 'Loading...')}
+        </div>
+        <DesktopCard pad={24}>
+          <div className="text-center text-[14px] font-semibold text-k-sub">
+            {t('coursesOverview.desktop.video.loading')}
+          </div>
+        </DesktopCard>
+      </div>
+    );
+  }
+
+  if (!video) {
+    return (
+      <div className="p-6">
+        <div className="mb-4 text-[12px] font-bold text-k-sub">
+          {t('coursesOverview.desktop.video.title')} · {t('common.notFound', 'Not Found')}
+        </div>
+        <DesktopCard pad={24}>
+          <div className="text-center">
+            <div className="text-[18px] font-extrabold text-k-ink">{t('coursesOverview.desktop.video.notFound')}</div>
+            <button
+              onClick={() => routerNavigate('/media')}
+              className="mt-4 cursor-pointer rounded-[11px] border-none bg-k-ink px-4 py-2 text-[12px] font-bold text-k-bg"
+            >
+              {t('coursesOverview.desktop.podcast.backToMedia')}
+            </button>
+          </div>
+        </DesktopCard>
+      </div>
+    );
+  }
+
+  const transcript = video.transcriptData || [];
+  const relatedVideos = recommendedVideos
+    ?.filter(v => v.id !== video.id)
+    .slice(0, 3) || [];
+
+  // 提取视频中的生词（从字幕中获取唯一词汇）
+  const vocabFromTranscript = transcript.length > 0 
+    ? transcript.slice(0, 5).map(line => ({
+        w: (line as any).text?.split(' ').slice(0, 2).join(' ') || '',
+        m: (line as any).translation || (line as any).translationEn || '',
+      }))
+    : [
+        { w: '한옥', m: t('common.hanok', 'Hanok') },
+        { w: '마을', m: t('common.village', 'Village') },
+        { w: '산책', m: t('common.walk', 'Walk') },
+        { w: '골목', m: t('common.alley', 'Alley') },
+        { w: '전통', m: t('common.tradition', 'Tradition') },
+      ];
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-[radial-gradient(#d4d4d8_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(148,163,184,0.22)_1px,transparent_1px)] [background-size:20px_20px] bg-[#f4f4f5] dark:bg-background font-sans">
-      <header className="bg-[#FDFBF7] dark:bg-card border-b-2 border-foreground px-4 md:px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => navigate(backPath)}
-            className="w-10 h-10 bg-card border-2 border-foreground rounded-xl flex items-center justify-center hover:bg-muted shadow-[3px_3px_0px_0px_#18181B] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="hidden md:block">
-            <AppBreadcrumb
-              className="mb-1 max-w-[420px]"
-              items={[
-                { label: getLabel(labels, ['nav', 'media']) || 'Media', to: '/media' },
-                {
-                  label: getLabel(labels, ['dashboard', 'video', 'title']) || 'Video Center',
-                  to: '/videos',
-                },
-                { label: video.title },
-              ]}
-            />
-            <h1 className="font-black text-lg line-clamp-1">{video.title}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="w-4 h-4" />
-              {(getLabel(labels, ['dashboard', 'video', 'views']) || '{count} views').replace(
-                '{count}',
-                String(video.views)
+    <div className="p-6">
+      <div className="mb-4 text-[12px] font-bold text-k-sub">
+        {t('coursesOverview.desktop.video.title')} · {video.title || t('coursesOverview.desktop.video.title')}
+      </div>
+      
+      <div className="grid grid-cols-[1fr_320px] gap-[18px]">
+        <div>
+          <DesktopCard pad={0} className="overflow-hidden">
+            <div className="relative aspect-video overflow-hidden bg-k-ink">
+              {video.thumbnailUrl ? (
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt={video.title}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div 
+                  className="absolute inset-0"
+                  style={{ background: 'linear-gradient(135deg, var(--color-k-indigo) 0%, rgba(162,59,46,0.53) 100%)' }}
+                />
               )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setIsTranscriptOpen(true)}
-            className="lg:hidden px-3 py-2 bg-card border-2 border-foreground rounded-xl flex items-center gap-2 font-bold text-sm shadow-[2px_2px_0px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
-          >
-            <List className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {getLabel(labels, ['dashboard', 'video', 'subtitleList']) || 'Subtitles'}
-            </span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="auto"
-            onClick={() => setShowTranslation(!showTranslation)}
-            className={`px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all ${
-              showTranslation
-                ? 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-400/12 dark:border-blue-300/40 dark:text-blue-200'
-                : 'bg-card border-border text-muted-foreground'
-            }`}
-          >
-            <Languages className="w-4 h-4 inline mr-1" />
-            {getLabel(labels, ['dashboard', 'video', 'translation']) || 'Translation'}
-          </Button>
-        </div>
-      </header>
-
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-65px)] h-[calc(100dvh-65px)]">
-        <div className="lg:w-[70%] bg-black flex items-center justify-center">
-          {video && (
-            <Suspense
-              fallback={
-                <div className="w-full h-full flex items-center justify-center text-white text-sm">
-                  {getLabel(labels, ['dashboard', 'video', 'loadingPlayer']) || 'Loading player...'}
+              <div className="absolute inset-0 grid place-items-center">
+                <button className="flex h-[80px] w-[80px] cursor-pointer items-center justify-center rounded-full border-none bg-[rgba(255,255,255,0.95)] text-[28px] text-k-ink transition-transform hover:scale-105">
+                  ▶
+                </button>
+              </div>
+              <div className="absolute left-[22px] top-[18px]">
+                <DesignChip tone="ink" size="sm">
+                  {formatDuration(video.duration)} · {video.level || t('common.intermediate', 'Intermediate')}
+                </DesignChip>
+              </div>
+              
+              <div
+                className="absolute bottom-0 left-0 right-0 px-[22px] pb-[24px] pt-[60px]"
+                style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.7))' }}
+              >
+                {transcript.length > 0 && (
+                  <div className="absolute bottom-[56px] left-[22px] right-[22px] rounded-[10px] bg-[rgba(0,0,0,0.5)] px-[18px] py-[14px] backdrop-blur-md">
+                    <div className="font-k-serif text-[19px] font-medium tracking-[0.2px] text-k-card">
+                      {(transcript[0] as any).ko}
+                    </div>
+                    {globalSettings.mediaSubtitleMode === 'BILINGUAL' ? (
+                      <div className="mt-1 text-[12px] font-semibold text-[rgba(255,255,255,0.75)]">
+                        {i18n.language === 'zh' ? (transcript[0] as any).cn : (transcript[0] as any).en}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+                <div className="h-1 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.2)]">
+                  <div className="h-full w-[38%] bg-k-crimson" />
                 </div>
-              }
-            >
-              <LazyVideoPlayer
-                ref={playerRef}
-                src={video.videoUrl}
-                title={video.title}
-                poster={video.thumbnailUrl}
-                className="w-full h-full"
-                onTimeUpdate={handleTimeUpdate}
-                onPlay={() => {
-                  void ensurePlaybackAccess();
-                }}
-                playbackRates={viewerAccess?.flags.mediaSpeedControl ? undefined : [1]}
-              />
-            </Suspense>
-          )}
+              </div>
+            </div>
+            
+            <div className="p-[22px]">
+              <DesignChip tone="butter" size="sm">
+                VLOG · {video.level || t('common.culturalVisit', 'Cultural Visit')}
+              </DesignChip>
+              <div className="mt-2.5 text-[22px] font-extrabold tracking-[-0.5px] text-k-ink">
+                {video.title}
+              </div>
+              <div className="mt-1 text-[12px] font-semibold text-k-sub">
+                {t('coursesOverview.desktop.podcast.channel')} · {video.level || t('common.channel', 'Channel')} · {formatViews(video.views)} {t('coursesOverview.desktop.video.views')}
+              </div>
+              <div className="mt-3 flex gap-1.5">
+                {transcript.length > 0 && (
+                  <DesignChip tone="muted" size="sm">📝 {t('coursesOverview.desktop.video.fullTranscript')}</DesignChip>
+                )}
+                <DesignChip tone="muted" size="sm">📚 {t('coursesOverview.desktop.video.vocabCount', { count: vocabFromTranscript.length })}</DesignChip>
+                <DesignChip tone="muted" size="sm">⏱ {t('coursesOverview.desktop.video.slowPlayback')}</DesignChip>
+              </div>
+            </div>
+          </DesktopCard>
         </div>
 
-        <div className="hidden lg:flex lg:w-[30%] bg-[#FDFBF7] dark:bg-card border-foreground flex-col lg:border-l-2 lg:static lg:h-full lg:shadow-none lg:rounded-none">
-          <div className="sticky top-0 bg-[#FDFBF7] dark:bg-card border-b-2 border-border px-4 py-3 z-10">
-            <h2 className="font-black text-lg flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
-              {getLabel(labels, ['dashboard', 'video', 'realtimeSubtitles']) ||
-                'Real-time Subtitles'}
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">
-              {getLabel(labels, ['dashboard', 'video', 'hint']) ||
-                'Click sentence to jump, click word to look up'}
-            </p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4">{transcriptBody}</div>
+        <div>
+          <DRail kanji="次" title={t('coursesOverview.desktop.video.videoVocab')} pad={0}>
+            {vocabFromTranscript.map((v, i, a) => (
+              <div
+                key={i}
+                className="flex justify-between px-[14px] py-[8px]"
+                style={{ borderBottom: i < a.length - 1 ? '1px solid var(--color-k-line)' : 'none' }}
+              >
+                <span className="text-[13px] font-extrabold tracking-[-0.2px] text-k-ink">{v.w}</span>
+                <span className="text-[11px] font-semibold text-k-sub">{v.m}</span>
+              </div>
+            ))}
+          </DRail>
+
+          <DRail kanji="薦" title={t('coursesOverview.desktop.video.relatedVideos')} pad={0}>
+            {relatedVideos.length === 0 ? (
+              <div className="px-[14px] py-8 text-center text-[12px] font-semibold text-k-sub">
+                {t('coursesOverview.desktop.video.noRecommendations')}
+              </div>
+            ) : (
+              relatedVideos.map((v, i, a) => (
+                <div
+                  key={v.id}
+                  onClick={() => routerNavigate(`/video/${v.id}`)}
+                  className="flex cursor-pointer items-center gap-[10px] px-[14px] py-[10px] transition-colors hover:bg-k-bg2"
+                  style={{ borderBottom: i < a.length - 1 ? '1px solid var(--color-k-line)' : 'none' }}
+                >
+                  <div
+                    className="h-[36px] w-[64px] shrink-0 rounded-md overflow-hidden"
+                    style={{ 
+                      background: v.thumbnailUrl 
+                        ? `url(${v.thumbnailUrl}) center/cover` 
+                        : ['var(--color-k-pink)', 'var(--color-k-mint)', 'var(--color-k-butter)'][i % 3] 
+                    }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-extrabold text-k-ink">
+                      {v.title}
+                    </div>
+                    <div className="text-[10px] font-bold text-k-sub">
+                      {formatDuration(v.duration)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </DRail>
         </div>
       </div>
-
-      <MobileSheet
-        isOpen={isTranscriptOpen}
-        onClose={() => setIsTranscriptOpen(false)}
-        title={getLabel(labels, ['dashboard', 'video', 'subtitleList']) || 'Subtitles'}
-        height="half"
-      >
-        {transcriptBody}
-      </MobileSheet>
-
-      {selectedWord && (
-        <WordPopup
-          word={selectedWord.word}
-          meaning={selectedWord.meaning}
-          position={selectedWord.position}
-          onClose={() => setSelectedWord(null)}
-          onSpeak={() => speak(selectedWord.word)}
-          onSave={async () => {
-            try {
-              await saveWord(selectedWord.word, selectedWord.meaning);
-              toast.success(labels.dashboard?.common?.saved || 'Saved to vocab notebook');
-            } catch (err) {
-              console.error('Failed to save word:', err);
-              toast.error(labels.dashboard?.common?.saveFailed || 'Failed to save');
-            }
-            setSelectedWord(null);
-          }}
-          language={language}
-        />
-      )}
     </div>
   );
-};
-
-export default DesktopVideoPlayerPage;
+}

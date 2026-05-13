@@ -1,11 +1,34 @@
-import React, { type ReactNode } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Brain, Target, Clock, Flame, ArrowLeft, Zap, BarChart3 } from 'lucide-react';
+import React from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import { qRef, mRef } from '../../utils/convexRefs';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
+import type { Id } from '../../../convex/_generated/dataModel';
 
-interface DesktopReviewDashboardPageProps {
+type Mistake = {
+  _id: Id<'mistakes'>;
+  _creationTime: number;
+  userId: Id<'users'>;
+  wordId?: Id<'words'>;
+  korean: string;
+  english: string;
+  context?: string;
+  reviewCount?: number;
+  createdAt: number;
+};
+
+type MistakeStats = {
+  count: number;
+};
+
+function formatDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+interface DesktopReviewDashboardProps {
   dueNowCount: number;
   learnedCount: number;
   accuracy: number;
@@ -16,7 +39,7 @@ interface DesktopReviewDashboardPageProps {
   t: any;
 }
 
-export const DesktopReviewDashboardPage: React.FC<DesktopReviewDashboardPageProps> = ({
+export default function DesktopReviewDashboardPage({
   dueNowCount,
   learnedCount,
   accuracy,
@@ -24,279 +47,156 @@ export const DesktopReviewDashboardPage: React.FC<DesktopReviewDashboardPageProp
   dueItems,
   visibleDueItems,
   navigate,
-  t,
-}) => {
+  t: passedT,
+}: DesktopReviewDashboardProps) {
+  const { t: localT } = useTranslation();
+  const t = passedT || localT;
+  // 获取用户错题列表
+  const mistakes = useQuery(qRef<{ limit?: number }, Mistake[]>('user:getMistakes'), { limit: 200 });
+  
+  // 获取错题数量
+  const mistakesCount = useQuery(qRef<Record<string, never>, MistakeStats>('user:getMistakesCount'));
+  
+  // 删除单个错题
+  const removeMistake = useMutation(mRef<{ mistakeId: Id<'mistakes'> }, void>('user:removeMistake'));
+  
+  // 清空所有错题
+  const clearMistakes = useMutation(mRef<Record<string, never>, void>('user:clearMistakes'));
+
+  const handleRemoveMistake = async (mistakeId: Id<'mistakes'>) => {
+    try {
+      await removeMistake({ mistakeId });
+    } catch (error) {
+      console.error('Failed to remove mistake:', error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (window.confirm(t('coursesOverview.desktop.review.clearConfirm'))) {
+      try {
+        await clearMistakes();
+      } catch (error) {
+        console.error('Failed to clear mistakes:', error);
+      }
+    }
+  };
+
+  const dueReviews = mistakesCount?.count ?? 0;
+
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 font-sans pb-24">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header Section */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/courses')}
-              className="rounded-full hover:bg-muted"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-                <Sparkles className="w-8 h-8 text-amber-500" />
-                {t('reviewPage.dashboard.title', { defaultValue: 'Daily Review' })}
-              </h1>
-              <p className="text-muted-foreground mt-1 font-medium">
-                {t('reviewPage.dashboard.subtitle', {
-                  count: dueNowCount,
-                  defaultValue: `Keep your streak alive! You have ${dueNowCount} words due.`,
-                })}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-card rounded-full border border-border shadow-sm">
-              <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
-              <span className="font-bold text-foreground">
-                {t('reviewPage.dashboard.streakDays', {
-                  days: streak,
-                  defaultValue: `${streak} Days`,
-                })}
-              </span>
-            </div>
-          </div>
-        </header>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatsCard
-            icon={<Target className="text-emerald-500" />}
-            label={t('reviewPage.stats.accuracy', { defaultValue: 'Accuracy' })}
-            value={`${accuracy}%`}
-            subtext={t('reviewPage.stats.accuracy_sub', {
-              defaultValue: 'Derived from mastered ratio',
-            })}
-          />
-          <StatsCard
-            icon={<Zap className="text-indigo-500" />}
-            label={t('reviewPage.stats.learned', { defaultValue: 'Words Learned' })}
-            value={learnedCount}
-            subtext={t('reviewPage.stats.learned_sub', { defaultValue: 'Total active words' })}
-          />
-          <StatsCard
-            icon={<Clock className="text-rose-500" />}
-            label={t('reviewPage.stats.due', { defaultValue: 'Due Now' })}
-            value={dueNowCount}
-            subtext={t('reviewPage.stats.due_sub', { defaultValue: 'Ready to review' })}
-          />
-        </div>
-
-        {/* Main Review Modes */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">
-              {t('reviewPage.modes.title', { defaultValue: 'Choose a Mode' })}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ModeCard
-              title={t('reviewPage.modes.quick.title', { defaultValue: 'Quick Review' })}
-              description={t('reviewPage.modes.quick.desc', {
-                defaultValue: '10 random due words • 2 mins',
-              })}
-              icon={<Zap className="w-8 h-8 text-amber-500" />}
-              color="bg-amber-50 dark:bg-amber-900/10"
-              borderColor="border-amber-200 dark:border-amber-800"
-              btnText={t('reviewPage.modes.quick.btn', { defaultValue: 'Start Quick' })}
-              onClick={() => navigate('/review/quiz?mode=quick')}
-            />
-
-            <ModeCard
-              title={t('reviewPage.modes.full.title', { defaultValue: 'Full Review' })}
-              description={t('reviewPage.modes.full.desc', {
-                count: dueNowCount,
-                defaultValue: `Clear all ${dueNowCount} due words`,
-              })}
-              icon={<Brain className="w-8 h-8 text-indigo-500" />}
-              color="bg-indigo-50 dark:bg-indigo-900/10"
-              borderColor="border-indigo-200 dark:border-indigo-800"
-              btnText={t('reviewPage.modes.full.btn', { defaultValue: 'Start All' })}
-              recommended
-              recommendedText={t('reviewPage.modes.recommended', { defaultValue: 'RECOMMENDED' })}
-              onClick={() => navigate('/review/quiz?mode=full')}
-            />
-
-            <ModeCard
-              title={t('reviewPage.modes.weak.title', { defaultValue: 'Weakest Words' })}
-              description={t('reviewPage.modes.weak.desc', {
-                defaultValue: 'Focus on difficult items',
-              })}
-              icon={<Target className="w-8 h-8 text-rose-500" />}
-              color="bg-rose-50 dark:bg-rose-900/10"
-              borderColor="border-rose-200 dark:border-rose-800"
-              btnText={t('reviewPage.modes.weak.btn', { defaultValue: 'Improve' })}
-              onClick={() => navigate('/review/quiz?mode=weak')}
-            />
-          </div>
-        </div>
-
-        {/* Recent Activity / Tabs */}
-        <div className="pt-4">
-          <Tabs defaultValue="due" className="w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground">
-                {t('reviewPage.queue.title', { defaultValue: 'Word Queue' })}
-              </h2>
-              <TabsList>
-                <TabsTrigger value="due">
-                  {t('reviewPage.queue.due', { defaultValue: 'Due Review' })}
-                </TabsTrigger>
-                <TabsTrigger value="learned">
-                  {t('reviewPage.queue.mastered', { defaultValue: 'Mastered' })}
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="due">
-              <Card>
-                <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
-                  {dueItems.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      {t('reviewPage.queue.empty_due', {
-                        defaultValue: 'No words due for review! Good job.',
-                      })}
-                    </div>
-                  ) : (
-                    visibleDueItems.map(item => (
-                      <div
-                        key={item.id}
-                        className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
-                            {item.word.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-bold text-foreground text-lg">{item.word}</p>
-                            <p className="text-sm text-muted-foreground">{item.meaning}</p>
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="text-amber-600 border-amber-200 bg-amber-50"
-                        >
-                          {t('reviewPage.queue.due', { defaultValue: 'Due Review' })}
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                  {dueItems.length > visibleDueItems.length && (
-                    <div className="p-3 text-center text-xs text-muted-foreground">
-                      {t('reviewPage.queue.previewLimited', {
-                        count: visibleDueItems.length,
-                        total: dueItems.length,
-                        defaultValue: `Showing first ${visibleDueItems.length} of ${dueItems.length} words`,
-                      })}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="learned">
-              <div className="p-8 text-center text-muted-foreground">
-                {t('reviewPage.queue.empty_mastered', {
-                  defaultValue: 'List of mastered words will appear here.',
-                })}
+    <div className="p-6">
+      <div className="mb-4 text-[12px] font-bold text-k-sub">
+        {t('coursesOverview.desktop.review.title').toUpperCase()}
+      </div>
+      
+      <div className="mb-[18px] grid grid-cols-4 gap-[14px]">
+        {[
+          { k: '復', l: t('reviewPage.dashboard.title', { defaultValue: 'Vocabulary Review' }), n: dueNowCount.toString(), s: t('reviewPage.stats.due_sub', { defaultValue: 'Due for review' }), tone: 'var(--color-k-pink-deep)', action: true, path: '/review/quiz?mode=full', cta: t('common.start', 'Start') },
+          { k: '學', l: t('reviewPage.stats.learned', { defaultValue: 'Words Learned' }), n: learnedCount.toString(), s: t('reviewPage.stats.learned_sub', { defaultValue: 'Total words mastered' }), tone: 'var(--color-k-mint-deep)' },
+          { k: '績', l: t('reviewPage.stats.accuracy', { defaultValue: 'Accuracy' }), n: `${accuracy}%`, s: t('reviewPage.stats.accuracy_sub', { defaultValue: 'Mastery rate' }), tone: 'var(--color-k-butter-deep)' },
+          { k: '火', l: t('dashboard.desktop.streak', { defaultValue: 'Streak' }), n: streak.toString(), s: t('dashboard.desktop.consecutiveDays', { defaultValue: 'Days' }), tone: 'var(--color-k-crimson)' },
+        ].map((m, i) => (
+          <DesktopCard key={i} pad={22}>
+            <div className="mb-[14px] flex items-center justify-between">
+              <HanjaSeal c={m.k} size={48} bg={m.tone} round={12} />
+              <div className="font-k-serif text-[44px] font-medium leading-none tracking-[-1.2px] text-k-ink">
+                {m.n}
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+            <div className="text-[16px] font-extrabold text-k-ink">{m.l}</div>
+            <div className="mt-1 text-[11px] font-semibold text-k-sub">{m.s}</div>
+            {m.action && dueNowCount > 0 && (
+              <button
+                onClick={() => navigate(m.path || '/review/quiz')}
+                className="mt-[14px] cursor-pointer rounded-[11px] border-none bg-k-ink px-[16px] py-[10px] text-[12px] font-extrabold text-k-bg transition-transform hover:-translate-y-1"
+              >
+                {m.cta || 'Start'} →
+              </button>
+            )}
+          </DesktopCard>
+        ))}
+      </div>
+
+      <div className="mb-8">
+        <div className="mb-4 text-[12px] font-bold text-k-sub">
+          {t('coursesOverview.desktop.review.mistakesTitle', { defaultValue: 'MISTAKES' }).toUpperCase()}
+        </div>
+        <div className="grid grid-cols-2 gap-[14px]">
+          {[
+            { k: '誤', l: t('coursesOverview.desktop.review.totalMistakes'), n: (mistakesCount?.count ?? 0).toString(), s: t('coursesOverview.desktop.review.pendingReview'), tone: 'var(--color-k-crimson)' },
+            { k: '清', l: t('coursesOverview.desktop.review.clearMistakes'), n: (mistakesCount?.count ?? 0) > 0 ? t('common.clear', 'Clear') : '0', s: t('coursesOverview.desktop.review.mainSource'), tone: 'var(--color-k-ink)', action: true },
+          ].map((m, i) => (
+            <DesktopCard key={i} pad={22}>
+              <div className="mb-[14px] flex items-center justify-between">
+                <HanjaSeal c={m.k} size={48} bg={m.tone} round={12} />
+                <div className="font-k-serif text-[44px] font-medium leading-none tracking-[-1.2px] text-k-ink">
+                  {m.n}
+                </div>
+              </div>
+              <div className="text-[16px] font-extrabold text-k-ink">{m.l}</div>
+              <div className="mt-1 text-[11px] font-semibold text-k-sub">{m.s}</div>
+              {m.action && (mistakesCount?.count ?? 0) > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  className="mt-[14px] cursor-pointer rounded-[11px] border-none bg-k-ink px-[16px] py-[10px] text-[12px] font-extrabold text-k-bg transition-transform hover:-translate-y-1"
+                >
+                  {t('coursesOverview.desktop.review.clearMistakes')} →
+                </button>
+              )}
+            </DesktopCard>
+          ))}
         </div>
       </div>
+
+      <DesktopCard pad={0}>
+        <div
+          className="border-b px-[20px] py-[14px] flex items-center justify-between"
+          style={{ borderColor: 'var(--color-k-line)' }}
+        >
+          <span className="text-[13px] font-extrabold text-k-ink">{t('coursesOverview.desktop.review.mistakeList')}</span>
+          {dueReviews > 0 && (
+            <span className="text-[11px] font-bold text-k-sub">{t('coursesOverview.desktop.review.totalCount', { count: dueReviews })}</span>
+          )}
+        </div>
+        
+        {mistakes === undefined ? (
+          <div className="px-[20px] py-12 text-center text-[14px] font-semibold text-k-sub">
+            {t('common.loading', 'Loading...')}
+          </div>
+        ) : mistakes.length === 0 ? (
+          <div className="px-[20px] py-12 text-center">
+            <div className="text-[18px] font-extrabold text-k-ink">{t('coursesOverview.desktop.review.greatJob')}</div>
+            <div className="mt-2 text-[14px] font-semibold text-k-sub">{t('coursesOverview.desktop.review.noMistakes')}</div>
+          </div>
+        ) : (
+          mistakes.map((e, i, a) => (
+            <div
+              key={e._id}
+              className="flex items-center gap-[14px] px-[20px] py-[14px] transition-colors hover:bg-k-bg2"
+              style={{ borderBottom: i < a.length - 1 ? '1px solid var(--color-k-line)' : 'none' }}
+            >
+              <HanjaSeal c="誤" size={32} bg="var(--color-k-crimson)" round={8} />
+              <div className="flex-1">
+                <div className="text-[13px] font-extrabold text-k-ink">{e.korean}</div>
+                <div className="mt-0.5 text-[11px] font-semibold text-k-sub">
+                  {e.english} {e.context && `· ${e.context}`}
+                </div>
+              </div>
+              <DesignChip tone="muted" size="sm">{formatDate(e.createdAt)}</DesignChip>
+              {e.reviewCount && e.reviewCount > 0 && (
+                <DesignChip tone="pink" size="sm">{t('coursesOverview.desktop.review.reviewCount', { count: e.reviewCount })}</DesignChip>
+              )}
+              <button
+                onClick={() => handleRemoveMistake(e._id)}
+                className="cursor-pointer rounded-[9px] border px-[12px] py-[7px] text-[11px] font-bold text-k-crimson transition-transform hover:-translate-y-0.5 hover:bg-k-crimson hover:text-k-bg"
+                style={{ borderColor: 'var(--color-k-line2)', background: 'var(--color-k-card)' }}
+              >
+                {t('coursesOverview.desktop.review.remove')}
+              </button>
+            </div>
+          ))
+        )}
+      </DesktopCard>
     </div>
   );
-};
-
-// --- Helpers ---
-
-interface StatsCardProps {
-  icon: ReactNode;
-  label: string;
-  value: string | number;
-  subtext: string;
 }
-
-function StatsCard({ icon, label, value, subtext }: StatsCardProps) {
-  return (
-    <Card className="border shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-muted rounded-xl">{icon}</div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <h3 className="text-2xl font-bold text-foreground">{value}</h3>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center text-xs font-medium text-emerald-600">
-          <BarChart3 className="w-3 h-3 mr-1" />
-          {subtext}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-interface ModeCardProps {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  color: string;
-  borderColor: string;
-  btnText: string;
-  recommended?: boolean;
-  recommendedText?: string;
-  onClick: () => void;
-}
-
-function ModeCard({
-  title,
-  description,
-  icon,
-  color,
-  borderColor,
-  btnText,
-  recommended,
-  onClick,
-  recommendedText,
-}: ModeCardProps) {
-  return (
-    <Card
-      className={`relative overflow-hidden border-2 ${recommended ? 'border-indigo-500 dark:border-indigo-500 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20' : 'border-border hover:border-primary/40'} transition-all`}
-    >
-      {recommended && (
-        <div className="absolute top-0 right-0 bg-indigo-500 text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-bl-xl">
-          {recommendedText || 'RECOMMENDED'}
-        </div>
-      )}
-      <CardContent className="p-6 flex flex-col h-full">
-        <div
-          className={`w-14 h-14 rounded-2xl ${color} border ${borderColor} flex items-center justify-center mb-4`}
-        >
-          {icon}
-        </div>
-        <h3 className="text-xl font-bold text-foreground mb-1">{title}</h3>
-        <p className="text-muted-foreground font-medium mb-6 flex-1">{description}</p>
-        <Button
-          onClick={onClick}
-          className={`w-full ${recommended ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-          variant={recommended ? 'default' : 'secondary'}
-        >
-          {btnText}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-export default DesktopReviewDashboardPage;

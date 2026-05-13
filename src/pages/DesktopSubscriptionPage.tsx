@@ -1,16 +1,12 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import BackButton from '../components/ui/BackButton';
-import PricingSection from '../components/PricingSection';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-// `/pricing` is a SSG-prerendered public route, so we avoid pulling
-// `convex/react`. The checkout action is invoked only after a user click
-// and we attach the Convex Auth JWT from localStorage at call time.
 import { callAuthenticatedConvexAction } from '../utils/publicConvexClient';
 import {
   isSafeCheckoutUrl,
@@ -23,6 +19,10 @@ import { type CheckoutPlan } from '../utils/subscriptionPlan';
 import { trackEvent } from '../utils/analytics';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
 import { getSubscriptionPageCopy } from '../utils/subscriptionPageCopy';
+import { Check, Star, ShieldCheck, Zap } from 'lucide-react';
+import { HanjaSeal } from '../components/desktop/ui/HanjaSeal';
+
+type PricingMode = 'MONTHLY' | 'ANNUAL' | 'LIFETIME';
 
 const DesktopSubscriptionPage: React.FC = () => {
   const { user } = useAuth();
@@ -31,285 +31,299 @@ const DesktopSubscriptionPage: React.FC = () => {
   const location = useLocation();
 
   const meta = getRouteMeta(location.pathname);
+  const [mode, setMode] = useState<PricingMode>('ANNUAL');
+  const [checkoutPendingPlan, setCheckoutPendingPlan] = useState<CheckoutPlan | null>(null);
 
+  const pageCopy = useMemo(() => getSubscriptionPageCopy(i18n.language), [i18n.language]);
+  
   const showLocalizedPromo =
     i18n.language === 'zh' ||
     i18n.language === 'vi' ||
     i18n.language === 'mn' ||
     i18n.language.startsWith('zh-');
 
-  const [checkoutPendingPlan, setCheckoutPendingPlan] = React.useState<CheckoutPlan | null>(null);
-  const pageCopy = React.useMemo(() => getSubscriptionPageCopy(i18n.language), [i18n.language]);
-  const featureCards = React.useMemo(
-    () => [pageCopy.featureCards[0], pageCopy.featureCards[1], pageCopy.featureCards[2]],
-    [pageCopy.featureCards]
-  );
+  // Pricing configuration based on language
+  const PRICING_MAP: Record<string, any> = {
+    en: { symbol: '$', monthly: '4.99', annual: '19.99', lifetime: '39.99', unitM: '/ mo', unitA: '/ yr' },
+    zh: { symbol: '¥', monthly: '19', annual: '69', lifetime: '128', unitM: '/ 月', unitA: '/ 年' },
+    vi: { symbol: '₫', monthly: '69.000', annual: '249.000', lifetime: '499.000', unitM: '/ 月', unitA: '/ 年' },
+    mn: { symbol: '₮', monthly: '9,900', annual: '35,000', lifetime: '69,000', unitM: '/ 月', unitA: '/ 年' },
+  };
+
+  const config = PRICING_MAP[i18n.language] || PRICING_MAP['en'];
+
+  const handleSubscribe = async (plan: PricingMode) => {
+    const checkoutPlan = plan as CheckoutPlan;
+    if (checkoutPendingPlan) return;
+
+    trackEvent('checkout_start', {
+      language: i18n.language,
+      plan: checkoutPlan,
+      source: 'desktop_subscription_v2',
+    });
+
+    if (!user) {
+      // Use the localized login path
+      navigate('/login', { state: { from: location.pathname, plan: checkoutPlan } });
+      return;
+    }
+
+    try {
+      setCheckoutPendingPlan(checkoutPlan);
+      const checkoutArgs: LemonSqueezyCheckoutRequest = {
+        plan: checkoutPlan,
+        userId: user.id?.toString() || '',
+        userEmail: user.email || '',
+        userName: user.name || '',
+        region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
+        locale: i18n.language,
+        source: 'desktop_subscription_v2',
+        returnTo: '/dashboard',
+        appOrigin: globalThis.location.origin,
+      };
+
+      const { checkoutUrl } = await runConvexActionWithRetry(
+        () => callAuthenticatedConvexAction<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>(
+          'lemonsqueezy:createCheckout', 
+          checkoutArgs
+        ),
+        undefined,
+        { retries: 0 }
+      );
+
+      if (!isSafeCheckoutUrl(checkoutUrl)) throw new Error('Invalid checkout URL');
+
+      trackEvent('checkout_success', {
+        language: i18n.language,
+        plan: checkoutPlan,
+        source: 'desktop_subscription_v2',
+      });
+
+      globalThis.location.assign(checkoutUrl);
+    } catch (error) {
+      const err = error as Error;
+      logger.error('Checkout failed:', err);
+      notify.error(t('pricing.checkoutError', { defaultValue: '无法启动结账，请稍后重试' }));
+    } finally {
+      setCheckoutPendingPlan(null);
+    }
+  };
+
+  const commonFeatures = [
+    t('landing.v2.pricing.pro.f1', { defaultValue: '无限新学 + 无限复习' }),
+    t('landing.v2.pricing.pro.f2', { defaultValue: '完整课程 + TOPIK 1-6 级真题' }),
+    t('landing.v2.pricing.pro.f3', { defaultValue: '影视 / 播客 全库 + 双语字幕' }),
+    t('landing.v2.pricing.pro.f4', { defaultValue: 'AI 写作评分 + 听力倍速精听' }),
+    t('landing.v2.pricing.pro.f5', { defaultValue: '社区优先答疑 · 专家响应' }),
+    t('landing.v2.pricing.pro.f6', { defaultValue: '云端跨设备同步 + 离线下载' }),
+  ];
 
   return (
-    <div
-      className="relative min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden"
-      style={{
-        backgroundImage:
-          'radial-gradient(hsl(var(--border) / 0.65) 1px, transparent 1px), radial-gradient(hsl(var(--brand-indigo) / 0.08) 1px, transparent 1px)',
-        backgroundSize: '24px 24px, 48px 48px',
-        backgroundPosition: '0 0, 12px 12px',
-      }}
-    >
-      <div className="pointer-events-none absolute -top-20 left-[-6rem] h-72 w-72 rounded-full bg-indigo-400/15 blur-3xl dark:bg-indigo-300/10" />
-      <div className="pointer-events-none absolute -bottom-24 right-[-5rem] h-72 w-72 rounded-full bg-purple-400/12 blur-3xl dark:bg-purple-300/10" />
+    <div className="min-h-screen bg-k-bg py-12 px-6 lg:px-8">
       <Seo
         title={meta.title}
         description={meta.description}
         keywords={meta.keywords}
         noIndex={meta.noIndex}
       />
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header: Back Button & Language Selector */}
-        <div className="mb-8 flex justify-between items-center">
+      
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-16">
           <BackButton onClick={() => navigate(-1)} />
-
           <LanguageSwitcher />
-        </div>
+        </header>
 
-        <div className="text-center mb-16">
-          <span className="inline-block py-1 px-3 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200 font-bold text-sm mb-4">
-            {pageCopy.heroBadge}
-          </span>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">
+        {/* Hero Section */}
+        <div className="text-center mb-20">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-k-ink/10 bg-white px-4 py-1.5 shadow-sm">
+            <Star size={12} className="text-k-crimson fill-k-crimson" />
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-k-ink/60">
+              {pageCopy.heroBadge}
+            </span>
+          </div>
+          <h1 className="font-k-serif text-[48px] md:text-[72px] font-black leading-[1.1] tracking-tight text-k-ink mb-6">
             {pageCopy.heroTitle}
-          </h2>
-          <p className="text-xl text-slate-500 dark:text-slate-500 max-w-2xl mx-auto leading-relaxed">
+          </h1>
+          <p className="mx-auto max-w-2xl text-[18px] md:text-[20px] text-k-sub font-medium leading-relaxed opacity-80">
             {pageCopy.heroSubtitle}
           </p>
         </div>
 
-        {/* --- 1. Feature Breakdown Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-          {/* Feature 1: Textbooks */}
-          <div className="bg-white dark:bg-slate-50 p-8 rounded-3xl border border-slate-200 dark:border-slate-200 shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
-            <div className="w-14 h-14 bg-blue-50 text-blue-600 dark:bg-blue-400/12 dark:text-blue-200 rounded-2xl flex items-center justify-center mb-6">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-              {featureCards[0].title}
-            </h3>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-              {featureCards[0].description}
-            </p>
-            <ul className="space-y-3">
-              {featureCards[0].bullets.map(item => (
-                <li
-                  key={item}
-                  className="flex items-start gap-3 text-sm font-medium text-slate-500 dark:text-slate-500"
-                >
-                  <svg
-                    className="w-5 h-5 text-green-500 dark:text-emerald-300 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Feature 2: TOPIK */}
-          <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none hover:-translate-y-1 transition-transform relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-indigo-600 dark:bg-indigo-400 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
-            <div className="w-14 h-14 bg-white/10 text-indigo-300 dark:text-indigo-200 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-sm">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold mb-3">{featureCards[1].title}</h3>
-            <p className="text-primary-foreground/80 text-sm mb-6 leading-relaxed">
-              {featureCards[1].description}
-            </p>
-            <ul className="space-y-3">
-              {featureCards[1].bullets.map(item => (
-                <li
-                  key={item}
-                  className="flex items-start gap-3 text-sm font-medium text-primary-foreground/85"
-                >
-                  <svg
-                    className="w-5 h-5 text-indigo-300 dark:text-indigo-200 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Feature 3: Media / AI */}
-          <div className="bg-white dark:bg-slate-50 p-8 rounded-3xl border border-slate-200 dark:border-slate-200 shadow-lg shadow-indigo-100/50 dark:shadow-none hover:-translate-y-1 transition-transform">
-            <div className="w-14 h-14 bg-purple-50 text-purple-600 dark:bg-purple-400/12 dark:text-purple-200 rounded-2xl flex items-center justify-center mb-6">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-              {featureCards[2].title}
-            </h3>
-            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-              {featureCards[2].description}
-            </p>
-            <ul className="space-y-3">
-              {featureCards[2].bullets.map(item => (
-                <li
-                  key={item}
-                  className="flex items-start gap-3 text-sm font-medium text-slate-500 dark:text-slate-500"
-                >
-                  <svg
-                    className="w-5 h-5 text-purple-500 dark:text-purple-300 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
+        {/* Billing Toggle */}
+        <div className="mb-16 flex justify-center">
+          <div className="relative flex items-center p-1.5 bg-k-ink/5 rounded-2xl border-2 border-k-ink/5">
+            {[
+              { key: 'MONTHLY', label: t('plan.monthly', 'Monthly') },
+              { key: 'ANNUAL', label: t('plan.annual', 'Annual'), save: '70% OFF' },
+              { key: 'LIFETIME', label: t('plan.lifetime', 'Lifetime') },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setMode(tab.key as PricingMode)}
+                className={`relative px-8 py-3 rounded-xl text-[14px] font-black transition-all duration-300 z-10 ${
+                  mode === tab.key ? 'text-k-bg' : 'text-k-sub hover:text-k-ink'
+                }`}
+              >
+                {tab.label}
+                {tab.save && (
+                  <span className={`absolute -top-2 -right-1 px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider uppercase shadow-sm ${
+                    mode === tab.key ? 'bg-k-crimson text-white' : 'bg-k-ink/10 text-k-ink'
+                  }`}>
+                    {tab.save}
+                  </span>
+                )}
+              </button>
+            ))}
+            <div 
+              className="absolute top-1.5 bottom-1.5 bg-k-ink rounded-xl transition-all duration-300 shadow-lg"
+              style={{
+                width: 'calc(33.33% - 4px)',
+                left: mode === 'MONTHLY' ? '6px' : mode === 'ANNUAL' ? 'calc(33.33% + 2px)' : 'calc(66.66% - 2px)'
+              }}
+            />
           </div>
         </div>
 
-        {/* --- 2. Benefit Comparison Table --- */}
-        <div className="mb-24 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-200">
-          <div className="bg-slate-50 dark:bg-slate-50 p-6 border-b border-slate-200 dark:border-slate-200 text-center">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {pageCopy.comparisonTitle}
-            </h3>
-            <p className="text-slate-500 dark:text-slate-500 mt-2">{pageCopy.comparisonSubtitle}</p>
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-24">
+          {/* Monthly */}
+          <div className={`flex flex-col rounded-[40px] border-2 bg-white p-10 shadow-pop transition-all hover:-translate-y-2 ${mode === 'MONTHLY' ? 'border-k-ink' : 'border-k-ink/5'}`}>
+            <div className="mb-8">
+              <HanjaSeal c="月" size={48} bg="var(--color-k-ink)" color="var(--color-k-bg)" className="mb-6" />
+              <h3 className="text-[24px] font-black text-k-ink">{t('plan.monthly', 'Monthly')}</h3>
+              <p className="mt-2 text-[14px] text-k-sub font-medium opacity-70">{t('pricing.monthlyDesc', '适合短期突击学习')}</p>
+            </div>
+            <div className="mb-10 flex items-baseline gap-1.5">
+              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{config.symbol}</span>
+              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{config.monthly}</span>
+              <span className="text-[14px] font-bold text-k-sub opacity-50">{config.unitM}</span>
+            </div>
+            <ul className="mb-12 space-y-5 flex-1">
+              {commonFeatures.map((f, i) => (
+                <li key={i} className="flex items-start gap-4 text-[14px] text-k-ink font-medium">
+                  <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-ink/5 text-k-crimson">
+                    <Check size={10} strokeWidth={4} />
+                  </div>
+                  <span dangerouslySetInnerHTML={{ __html: f }} />
+                </li>
+              ))}
+            </ul>
+            <button 
+              onClick={() => handleSubscribe('MONTHLY')}
+              className="w-full rounded-2xl border-2 border-k-ink bg-transparent py-4 text-[15px] font-black text-k-ink hover:bg-k-ink hover:text-white transition-all active:scale-[0.98]"
+            >
+              {t('button.upgrade', 'Upgrade Now')}
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full bg-white dark:bg-slate-900 text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-200">
-                  <th className="p-4 text-left text-slate-500 font-medium w-1/3 pl-8">
-                    {t('pricingDetails.table.feature')}
-                  </th>
-                  <th className="p-4 text-center text-slate-500 font-medium w-1/3">{t('free')}</th>
-                  <th className="p-4 text-center text-indigo-600 dark:text-indigo-300 font-bold w-1/3 bg-indigo-50/30 dark:bg-indigo-900/10">
-                    Pro / Lifetime
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {pageCopy.comparisonRows.map(row => (
-                  <tr
-                    key={row.label}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-50/50 transition-colors"
-                  >
-                    <td className="p-4 pl-8 font-bold text-slate-500 dark:text-slate-500">
-                      {row.label}
-                    </td>
-                    <td className="p-4 text-center text-slate-500">{row.free}</td>
-                    <td className="p-4 text-center font-bold text-slate-900 dark:text-white bg-indigo-50/30 dark:bg-indigo-900/10">
-                      {row.paid}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          {/* Annual (Featured) */}
+          <div className="relative z-10 lg:scale-[1.08]">
+            <div className="h-full flex flex-col rounded-[44px] border-2 border-k-ink bg-k-ink p-1 shadow-pop-large">
+              <div className="flex-1 rounded-[40px] bg-k-ink p-10 text-white">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-k-crimson px-5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl">
+                  {t('pricing.recommended', 'Most Popular')}
+                </div>
+                <div className="mb-8">
+                  <img src="/logo.svg" alt="Duhan Logo" width={48} height={48} className="mb-6 rounded-[12px] shadow-pop-small" />
+                  <h3 className="text-[24px] font-black">{t('plan.annual', 'Annual')}</h3>
+                  <p className="mt-2 text-[14px] text-white/60 font-medium">{t('pricing.annualDesc', '最受核心学习者欢迎')}</p>
+                </div>
+                <div className="mb-10 flex items-baseline gap-1.5">
+                  <span className="font-k-serif text-[28px] font-medium text-white/40">{config.symbol}</span>
+                  <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter">{config.annual}</span>
+                  <span className="text-[14px] font-bold text-white/50">{config.unitA}</span>
+                </div>
+                <ul className="mb-12 space-y-5 flex-1">
+                  {commonFeatures.map((f, i) => (
+                    <li key={i} className="flex items-start gap-4 text-[14px] text-white font-medium">
+                      <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-crimson text-white">
+                        <Check size={10} strokeWidth={4} />
+                      </div>
+                      <span dangerouslySetInnerHTML={{ __html: f }} />
+                    </li>
+                  ))}
+                </ul>
+                <button 
+                  onClick={() => handleSubscribe('ANNUAL')}
+                  disabled={checkoutPendingPlan === 'ANNUAL'}
+                  className="w-full rounded-2xl bg-k-crimson py-5 text-[16px] font-black text-white hover:bg-red-500 transition-all active:scale-[0.98] shadow-pop-small"
+                >
+                  {checkoutPendingPlan === 'ANNUAL' ? t('common.loading') : t('button.upgrade', 'Upgrade Now')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Lifetime */}
+          <div className={`flex flex-col rounded-[40px] border-2 bg-white p-10 shadow-pop transition-all hover:-translate-y-2 ${mode === 'LIFETIME' ? 'border-k-ink' : 'border-k-ink/5'}`}>
+            <div className="mb-8">
+              <HanjaSeal c="永" size={48} bg="var(--color-k-ink)" color="var(--color-k-bg)" className="mb-6" />
+              <h3 className="text-[24px] font-black text-k-ink">{t('plan.lifetime', 'Lifetime')}</h3>
+              <p className="mt-2 text-[14px] text-k-sub font-medium opacity-70">{t('pricing.lifetimeDesc', '终身解锁，无后顾之忧')}</p>
+            </div>
+            <div className="mb-10 flex items-baseline gap-1.5">
+              <span className="font-k-serif text-[28px] font-medium text-k-ink/40">{config.symbol}</span>
+              <span className="font-k-serif text-[64px] font-black leading-none tracking-tighter text-k-ink">{config.lifetime}</span>
+              <span className="text-[14px] font-bold text-k-sub opacity-50">{t('period.once', 'once')}</span>
+            </div>
+            <ul className="mb-12 space-y-5 flex-1">
+              {commonFeatures.map((f, i) => (
+                <li key={i} className="flex items-start gap-4 text-[14px] text-k-ink font-medium">
+                  <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-ink/5 text-k-crimson">
+                    <Check size={10} strokeWidth={4} />
+                  </div>
+                  <span dangerouslySetInnerHTML={{ __html: f }} />
+                </li>
+              ))}
+            </ul>
+            <button 
+              onClick={() => handleSubscribe('LIFETIME')}
+              className="w-full rounded-2xl border-2 border-k-ink bg-transparent py-4 text-[15px] font-black text-k-ink hover:bg-k-ink hover:text-white transition-all active:scale-[0.98]"
+            >
+              {t('button.upgrade', 'Upgrade Now')}
+            </button>
           </div>
         </div>
 
-        {/* --- 3. Pricing Section --- */}
-        <PricingSection
-          onSubscribe={async plan => {
-            const checkoutPlan = plan as CheckoutPlan;
-            if (checkoutPendingPlan) return;
-            trackEvent('checkout_start', {
-              language: i18n.language,
-              plan: checkoutPlan,
-              source: 'desktop_subscription',
-            });
-            if (!user) {
-              return;
-            }
-            try {
-              setCheckoutPendingPlan(checkoutPlan);
-              const checkoutArgs: LemonSqueezyCheckoutRequest = {
-                plan: checkoutPlan,
-                userId: user.id?.toString() || '',
-                userEmail: user.email || '',
-                userName: user.name || '',
-                region: showLocalizedPromo ? 'REGIONAL' : 'GLOBAL',
-                locale: i18n.language,
-                source: 'desktop_subscription',
-                returnTo: '/dashboard',
-                appOrigin: globalThis.location.origin,
-              };
-              const { checkoutUrl } = await runConvexActionWithRetry(
-                () =>
-                  callAuthenticatedConvexAction<
-                    LemonSqueezyCheckoutRequest,
-                    LemonSqueezyCheckoutResult
-                  >('lemonsqueezy:createCheckout', checkoutArgs),
-                undefined,
-                { retries: 0 }
-              );
-              if (!isSafeCheckoutUrl(checkoutUrl)) {
-                throw new Error('Invalid checkout URL returned by provider');
-              }
-              trackEvent('checkout_success', {
-                language: i18n.language,
-                plan: checkoutPlan,
-                source: 'desktop_subscription',
-              });
-              globalThis.location.assign(checkoutUrl);
-            } catch (error) {
-              const err = error as Error;
-              logger.error('Checkout failed:', err);
-              const msg = err.message || 'Unknown error';
-              notify.error(`Failed to start checkout session: ${msg}`);
-            } finally {
-              setCheckoutPendingPlan(null);
-            }
-          }}
-          source="desktop_subscription"
-        />
+        {/* Feature Grid - Detailed Breakdown */}
+        <div className="bg-white rounded-[48px] p-12 md:p-16 border-2 border-k-ink/5 shadow-pop-large mb-24">
+          <div className="mb-12 text-center">
+            <h2 className="font-k-serif text-[36px] md:text-[48px] font-black text-k-ink mb-4">{pageCopy.comparisonTitle}</h2>
+            <p className="text-k-sub font-medium">{pageCopy.comparisonSubtitle}</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {[
+              { icon: <Zap className="text-k-crimson" />, title: t('feature.allCourses', '全库教材'), desc: t('feature.allCoursesDesc', '包含延世、首尔大、庆熙大等所有核心教材课程') },
+              { icon: <ShieldCheck className="text-k-crimson" />, title: t('feature.topikArchive', 'TOPIK 真题'), desc: t('feature.topikArchiveDesc', '1-6 级历年真题库，支持模拟考试与即时评分') },
+              { icon: <Zap className="text-k-crimson" />, title: t('feature.aiWriting', 'AI 写作评分'), desc: t('feature.aiWritingDesc', '基于大语言模型的精准批改，像私人教师一样纠正语法') },
+            ].map((item, idx) => (
+              <div key={idx} className="flex flex-col gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-k-ink/5 flex items-center justify-center">
+                  {item.icon}
+                </div>
+                <h4 className="text-[18px] font-black text-k-ink">{item.title}</h4>
+                <p className="text-[14px] text-k-sub leading-relaxed font-medium">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust Footer */}
+        <footer className="text-center pb-12">
+          <div className="flex flex-wrap justify-center gap-12 mb-8 opacity-40 grayscale">
+            <div className="font-black tracking-widest text-[11px]">WECHAT PAY</div>
+            <div className="font-black tracking-widest text-[11px]">ALIPAY</div>
+            <div className="font-black tracking-widest text-[11px]">UNIONPAY</div>
+            <div className="font-black tracking-widest text-[11px]">APPLE PAY</div>
+          </div>
+          <div className="inline-block px-8 py-4 bg-k-ink/5 rounded-2xl border border-k-ink/5">
+            <p className="text-[13px] text-k-sub font-medium italic">
+              {t('landing.v2.pricing.fine')}
+            </p>
+          </div>
+        </footer>
       </div>
     </div>
   );

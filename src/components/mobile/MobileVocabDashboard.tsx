@@ -71,9 +71,9 @@ const EMPTY_LEARNER_STATS: LearnerStatsDto = {
   totalWordsLearned: 0,
   totalGrammarLearned: 0,
   wordsToReview: 0,
-  vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+  vocabStats: { total: 0, dueReviews: 0, unlearned: 0, mastered: 0 },
   grammarStats: { total: 0, mastered: 0 },
-  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0 },
+  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0, unlearned: 0, mastered: 0, total: 0, recommendedToday: 0 },
   moduleBreakdown: [],
   recentSessions: [],
   totalMinutes: 0,
@@ -140,7 +140,7 @@ const getCopy = (language: string): DashboardCopy => {
       legendMore: '多',
       wordsUnit: '词',
       progressTitle: '课程进度',
-      openLibrary: '打开词库',
+      openLibrary: '词汇学习',
     };
   }
 
@@ -442,7 +442,7 @@ export const MobileVocabDashboard = ({
             letterSpacing: -0.8,
           }}
         >
-          단어장
+          词汇学习
         </div>
         <div style={{ fontSize: 13, color: KT.sub, marginTop: 4 }}>{copy.subtitle}</div>
 

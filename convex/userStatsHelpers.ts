@@ -69,12 +69,12 @@ export function startOfWeek(timestamp: number): number {
   return date.getTime();
 }
 
-export function buildEmptyUserStats(): LearnerStatsDto {
+export function buildEmptyUserStats(dailyGoal = DAILY_GOAL_MINUTES): LearnerStatsDto {
   return {
     streak: 0,
     weeklyActivity: WEEKDAY_LABELS.map(day => ({ day, minutes: 0 })),
     todayMinutes: 0,
-    dailyGoal: DAILY_GOAL_MINUTES,
+    dailyGoal,
     dailyProgress: 0,
     todayActivities: {
       wordsLearned: 0,
@@ -87,9 +87,17 @@ export function buildEmptyUserStats(): LearnerStatsDto {
     totalWordsLearned: 0,
     totalGrammarLearned: 0,
     wordsToReview: 0,
-    vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+    vocabStats: { total: 0, dueReviews: 0, unlearned: 0, mastered: 0 },
     grammarStats: { total: 0, mastered: 0 },
-    reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0 },
+    reviewStats: {
+      dueNow: 0,
+      dueSoon: 0,
+      savedWords: 0,
+      unlearned: 0,
+      mastered: 0,
+      total: 0,
+      recommendedToday: 0,
+    },
     moduleBreakdown: [],
     recentSessions: [],
     totalMinutes: 0,
@@ -299,8 +307,16 @@ export function buildModuleBreakdown(
     .sort((left, right) => right.minutes - left.minutes);
 }
 
-export function buildReviewStats(reviewStats: ReviewStatsDto): ReviewStatsDto {
-  return reviewStats;
+export function buildReviewStats(reviewStats: Partial<ReviewStatsDto>): ReviewStatsDto {
+  return {
+    dueNow: reviewStats.dueNow ?? 0,
+    dueSoon: reviewStats.dueSoon ?? 0,
+    savedWords: reviewStats.savedWords ?? 0,
+    unlearned: reviewStats.unlearned ?? 0,
+    mastered: reviewStats.mastered ?? 0,
+    total: reviewStats.total ?? 0,
+    recommendedToday: reviewStats.recommendedToday ?? 0,
+  };
 }
 
 export function buildCurrentProgress(

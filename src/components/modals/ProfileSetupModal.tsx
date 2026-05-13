@@ -38,12 +38,12 @@ export function ProfileSetupModal({ isOpen, onClose }: Readonly<ProfileSetupModa
         <DialogOverlay
           unstyled
           closeOnClick={false}
-          className="fixed inset-0 z-[80] bg-black/40 p-4"
+          className="fixed inset-0 bg-black/40 p-4"
         />
         <DialogContent
           unstyled
           closeOnEscape={false}
-          className="fixed inset-0 z-[81] flex items-center justify-center p-4 data-[state=closed]:pointer-events-none"
+          className="fixed inset-0 flex items-center justify-center p-4 data-[state=closed]:pointer-events-none"
         >
           <Card className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-xl">
             <CardContent className="p-6 sm:p-8">

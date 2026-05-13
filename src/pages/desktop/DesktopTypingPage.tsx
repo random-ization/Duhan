@@ -1,2032 +1,469 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
-import toast from 'react-hot-toast';
-import { useKoreanTyping, TypingMode } from '../../features/typing/hooks/useKoreanTyping';
-import { HiddenInput } from '../../features/typing/components/HiddenInput';
-import { KeyboardHints } from '../../features/typing/components/KeyboardHints';
-import { TypingResultsModal } from '../../features/typing/components/TypingResultsModal';
-import {
-  PRACTICE_CATEGORIES,
-  PracticeCategory,
-  PRACTICE_PARAGRAPHS,
-  PracticeParagraph,
-} from '../../features/typing/data/practiceTexts';
-import { ArrowLeft, Ghost } from 'lucide-react';
-import { useLayoutActions } from '../../contexts/LayoutContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { useMutation, useQuery } from 'convex/react';
-import { WordPractice } from '../../features/typing/components/WordPractice';
-import { api } from '../../../convex/_generated/api';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQuery, useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../../components/ui';
-import { Select } from '../../components/ui';
-import { VOCAB } from '../../utils/convexRefs';
-import { TypingLobby } from '../../features/typing/components/TypingLobby';
+import { api } from '../../../convex/_generated/api';
+import { TYPING, VOCAB } from '../../utils/convexRefs';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { useKoreanTyping } from '../../features/typing/hooks/useKoreanTyping';
+import { DesktopKeyboardHints } from '../../features/typing/components/DesktopKeyboardHints';
+import { PRACTICE_CATEGORIES, PRACTICE_PARAGRAPHS, PracticeCategory, PracticeParagraph } from '../../features/typing/data/practiceTexts';
+import { KT } from '../../components/mobile/ksoft/ksoft';
+import { RefreshCw, ArrowLeft, Play, Trophy, Keyboard, Type, FileText } from 'lucide-react';
 
-const keyboardThemeStyles = `
-    /* Prevent scrolling and touch events on game container */
-    .typing-practice-container {
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-    overscroll-behavior: none;
-}
+type GameState = 'lobby' | 'category-selection' | 'practicing' | 'results';
+type TypingMode = 'sentence' | 'word' | 'paragraph';
+type TypingGameData = PracticeCategory | PracticeParagraph | { courseId: string; title: string };
 
-  /* Keyboard Container - Transparent to let background shine */
-  .hg-theme-default {
-    background-color: transparent!important;
-    padding: 0!important;
-}
-  
-  .hg-row {
-    justify-content: center;
-    gap: 3px; /* Tighter spacing */
-    margin-bottom: 4px;
-}
-
-  /* Base Key Style - Soft Marshmallow Look */
-  .hg-button {
-    background: #ffffff!important;
-    color: #475569!important; /* slate-600 */
-    border: none!important;
-    border-bottom: 1px solid #e2e8f0!important;
-    border-radius: 0.3rem!important; /* Mini radius */
-    box-shadow: 0 2px 0 #cbd5e1, 0 1px 2px rgba(0, 0, 0, 0.05)!important;
-
-    font-weight: 600!important;
-    font-size: 11px!important; /* Tiny font */
-    height: 1.8rem!important; /* Ultra compact height */
-    min-width: 1.6rem!important;
-    margin: 0!important;
-
-    transition: all 0.05s ease!important;
-    display: flex!important;
-    align-items: center!important;
-    justify-content: center!important;
-}
-
-  /* Hover State */
-  .hg-button:hover {
-    background: #f8fafc!important;
-    transform: translateY(1px);
-    box-shadow: 0 2px 0 #cbd5e1!important;
-}
-
-  /* Active / Pressed State */
-  .hg-button:active, .hg-activeButton {
-    transform: translateY(3px)!important;
-    box-shadow: 0 0 0 #cbd5e1, inset 0 2px 4px rgba(0, 0, 0, 0.05)!important;
-    background: #f1f5f9!important;
-}
-
-  /* Highlighting Next Key (Guidance) */
-  .active-key-highlight {
-    background: #3b82f6!important; /* brand-500 */
-    color: #ffffff!important;
-    box-shadow: 0 3px 0 #1d4ed8, 0 4px 10px rgba(59, 130, 246, 0.4)!important;
-    animation: bounce-gentle 2s infinite!important;
-    z-index: 10;
-}
-
-@keyframes bounce-gentle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-2px); }
-}
-
-  /* Special Keys Styling */
-  .hg-button[data-skbtn="{bksp}"],
-  .hg-button[data-skbtn="{tab}"],
-  .hg-button[data-skbtn="{lock}"],
-  .hg-button[data-skbtn="{enter}"],
-  .hg-button[data-skbtn="{shiftleft}"], 
-  .hg-button[data-skbtn="{shiftright}"] {
-    background-color: #f1f5f9!important;
-    color: #94a3b8!important;
-    font-size: 11px!important;
-    border-bottom-color: #cbd5e1!important;
-    box-shadow: 0 3px 0 #cbd5e1!important;
-}
-
-  /* Override: Special keys should also highlight when active */
-  .hg-button.active-key-highlight[data-skbtn="{shiftleft}"],
-  .hg-button.active-key-highlight[data-skbtn="{shiftright}"],
-  .hg-button.active-key-highlight[data-skbtn="{bksp}"],
-  .hg-button.active-key-highlight[data-skbtn="{enter}"],
-  .hg-button.active-key-highlight[data-skbtn="{space}"] {
-    background: #3b82f6!important;
-    color: #ffffff!important;
-    box-shadow: 0 3px 0 #1d4ed8, 0 4px 10px rgba(59, 130, 246, 0.4)!important;
-    animation: bounce-gentle 2s infinite!important;
-}
-
-  .hg-button[data-skbtn="{space}"] {
-    min-width: 14rem!important;
-    color: transparent!important; /* Hide text on spacebar usually */
-}
-  .hg-button[data-skbtn="{space}"]:after {
-    content: "SPACE";
-    color: #cbd5e1;
-    font-size: 10px;
-    letter-spacing: 1px;
-}
-
-  /* Word Practice V6 Styles (Blue Compact Card) */
-  .word-prompt-card {
-    background: linear-gradient(145deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 14px 28px -10px rgba(37, 99, 235, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+function hashString(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
   }
-  .word-prompt-card:hover {
-    transform: scale(1.05);
-}
-`;
-
-const englishKeys = {
-  q: 'Q', w: 'W', e: 'E', r: 'R', t: 'T', y: 'Y', u: 'U', i: 'I', o: 'O', p: 'P',
-  a: 'A', s: 'S', d: 'D', f: 'F', g: 'G', h: 'H', j: 'J', k: 'K', l: 'L',
-  z: 'Z', x: 'X', c: 'C', v: 'V', b: 'B', n: 'N', m: 'M',
-};
-
-const englishKeyStyles = Object.entries(englishKeys)
-  .map(
-    ([key, label]) => `
-    .hg-button[data-skbtn="${key}"]::after {
-    content: "${label}";
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    font-size: 8px;
-    color: #94a3b8;
-    font-weight: 500;
-    line-height: normal;
-}
-`
-  )
-  .join('\n');
-
-type PracticeMode = 'sentence' | 'word' | 'paragraph';
-type GameState = 'lobby' | 'playing' | 'finished';
-
-type CourseVolumeSource = {
-  _id: string;
-  displayLevel?: string;
-  volume?: string;
-  levels?: Array<number | { level: number }> | null;
-};
-
-type CourseVolumeOption = {
-  id: string;
-  label: string;
-  sortKey: number;
-};
-
-type TypingTranslateFn = ReturnType<typeof useTranslation>['t'];
-
-function getCourseDisplayLevel(course: CourseVolumeSource): number {
-  const parsedDisplayLevel = Number.parseInt(course.displayLevel || '0');
-  if (parsedDisplayLevel > 0) return parsedDisplayLevel;
-  const firstLevel = course.levels?.[0];
-  if (typeof firstLevel === 'number') return firstLevel;
-  if (typeof firstLevel === 'object' && firstLevel !== null && 'level' in firstLevel) {
-    return firstLevel.level;
-  }
-  return 0;
+  return hash;
 }
 
-function buildCourseVolumeOption(
-  course: CourseVolumeSource,
-  t: TypingTranslateFn
-): CourseVolumeOption {
-  let level = getCourseDisplayLevel(course);
-  let volume = 0;
-  let label = course.displayLevel || course.volume || '1';
-
-  const levelVolumeMatch = course.volume?.match(/^(\d+)-(\d+)$/);
-  if (levelVolumeMatch) {
-    level = Number.parseInt(levelVolumeMatch[1]);
-    volume = Number.parseInt(levelVolumeMatch[2]);
-    label = t('typingLobby.volumeWithLevel', { level, volume });
-  } else if (level > 0 && course.volume) {
-    volume = Number.parseInt(course.volume) || 0;
-    label = t('typingLobby.volumeWithLevel', { level, volume: course.volume });
-  } else if (course.volume && !Number.isNaN(Number(course.volume))) {
-    volume = Number.parseInt(course.volume);
-    label = t('typingLobby.volumeOnly', { volume: course.volume });
-  } else if (course.volume) {
-    label = course.volume;
-  }
-
-  return {
-    id: course._id,
-    label,
-    sortKey: level * 100 + (volume || 0),
-  };
+function deterministicShuffle(items: string[]): string[] {
+  return items
+    .map((value, index) => ({ value, rank: hashString(`${value}:${index}`) }))
+    .sort((a, b) => a.rank - b.rank)
+    .map(item => item.value);
 }
 
-function buildCourseVolumeOptions(
-  courses: CourseVolumeSource[] | undefined,
-  t: TypingTranslateFn
-): CourseVolumeOption[] {
-  const uniqueOptions = new Map<string, CourseVolumeOption>();
-  courses?.forEach(course => {
-    const option = buildCourseVolumeOption(course, t);
-    if (!uniqueOptions.has(option.label)) {
-      uniqueOptions.set(option.label, option);
-    }
-  });
-  return Array.from(uniqueOptions.values()).sort((a, b) => a.sortKey - b.sortKey);
-}
-
-type CourseRecord = CourseVolumeSource & { name: string };
-
-type TypingPosition = {
-  index: number;
-  inputChar: string;
-  targetChar: string;
-  hasError: boolean;
-};
-
-function groupCoursesByName(courses: CourseRecord[]): Record<string, CourseRecord[]> {
-  const groups: Record<string, CourseRecord[]> = {};
-  courses.forEach(course => {
-    if (!groups[course.name]) {
-      groups[course.name] = [];
-    }
-    groups[course.name].push(course);
-  });
-  return groups;
-}
-
-function syncSelectedCourseNameState(args: {
-  courses: CourseRecord[];
-  selectedCourseId: string;
-  selectedCourseName: string;
-  coursesByName: Record<string, CourseRecord[]>;
-  setSelectedCourseName: React.Dispatch<React.SetStateAction<string>>;
-}) {
-  const { courses, selectedCourseId, selectedCourseName, coursesByName, setSelectedCourseName } =
-    args;
-  if (selectedCourseId) {
-    const selectedCourse = courses.find(course => course._id === selectedCourseId);
-    if (selectedCourse && selectedCourse.name !== selectedCourseName) {
-      setTimeout(() => setSelectedCourseName(selectedCourse.name), 0);
-    }
-    return;
-  }
-  if (courses.length > 0 && !selectedCourseName) {
-    const firstGroup = Object.keys(coursesByName)[0];
-    if (firstGroup) {
-      setTimeout(() => setSelectedCourseName(firstGroup), 0);
-    }
-  }
-}
-
-function resetSessionCounters(args: {
-  reset: () => void;
-  setElapsedTime: React.Dispatch<React.SetStateAction<number>>;
-  setSentencesCompleted: React.Dispatch<React.SetStateAction<number>>;
-  setTotalCharactersTyped: React.Dispatch<React.SetStateAction<number>>;
-}) {
-  args.reset();
-  args.setElapsedTime(0);
-  args.setSentencesCompleted(0);
-  args.setTotalCharactersTyped(0);
-}
-
-function getCurrentTypingPosition(args: {
-  targetText: string;
-  userInput: string;
-  checkInput: (
-    targetChar: string,
-    inputChar: string,
-    nextChar?: string
-  ) => 'pending' | 'correct' | 'incorrect';
-}): TypingPosition {
-  const { targetText, userInput, checkInput } = args;
-  for (let index = 0; index < targetText.length; index += 1) {
-    const inputChar = userInput[index];
-    const targetChar = targetText[index];
-    const nextChar = index + 1 < targetText.length ? targetText[index + 1] : undefined;
-    if (!inputChar) {
-      return { index, inputChar: '', targetChar, hasError: false };
-    }
-    const status = checkInput(targetChar, inputChar, nextChar);
-    if (status === 'pending') {
-      return { index, inputChar, targetChar, hasError: false };
-    }
-    if (status === 'incorrect') {
-      return { index, inputChar, targetChar, hasError: true };
-    }
-  }
-  return { index: targetText.length, inputChar: '', targetChar: '', hasError: false };
-}
-
-function formatTypingElapsedTime(seconds: number) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} `;
-}
-
-function maybeWarnImeMismatch(args: {
-  userInput: string;
-  hasWarnedRef: React.MutableRefObject<boolean>;
-  t: TypingTranslateFn;
-}) {
-  const { userInput, hasWarnedRef, t } = args;
-  if (/[a-zA-Z]{2,}/.test(userInput)) {
-    if (!hasWarnedRef.current) {
-      toast.error(
-        t('typingGame.switchImeWarning', {
-          defaultValue: 'English input detected. Please switch to Korean IME.',
-        }),
-        {
-          duration: 4000,
-          position: 'top-center',
-          style: {
-            background: '#334155',
-            color: '#fff',
-            fontWeight: 'bold',
-          },
-        }
-      );
-      hasWarnedRef.current = true;
-    }
-    return;
-  }
-  if (userInput.length === 0) {
-    hasWarnedRef.current = false;
-  }
-}
-
-function generateSentenceQueue(category: PracticeCategory, count: number = 4) {
-  const queue: string[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const sentence = category.sentences[Math.floor(Math.random() * category.sentences.length)];
-    queue.push(sentence);
-  }
-  return queue;
-}
-
-function handleStartWordMode(args: {
-  setPracticeMode: React.Dispatch<React.SetStateAction<PracticeMode>>;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  selectedCourseId: string;
-  courses: CourseRecord[];
-  setSelectedCourseId: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedCourseName: React.Dispatch<React.SetStateAction<string>>;
-  setSelectedUnitId: React.Dispatch<React.SetStateAction<number>>;
-  reset: () => void;
-  setElapsedTime: React.Dispatch<React.SetStateAction<number>>;
-  setSentencesCompleted: React.Dispatch<React.SetStateAction<number>>;
-  setTotalCharactersTyped: React.Dispatch<React.SetStateAction<number>>;
-}) {
-  const {
-    setPracticeMode,
-    setGameState,
-    selectedCourseId,
-    courses,
-    setSelectedCourseId,
-    setSelectedCourseName,
-    setSelectedUnitId,
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-  } = args;
-  setPracticeMode('word');
-  setGameState('playing');
-  if (!selectedCourseId && courses.length > 0) {
-    const firstCourse = courses[0];
-    setSelectedCourseId(firstCourse._id);
-    setSelectedCourseName(firstCourse.name);
-    setSelectedUnitId(1);
-  }
-  resetSessionCounters({
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-  });
-}
-
-function handleStartSentenceMode(args: {
-  setPracticeMode: React.Dispatch<React.SetStateAction<PracticeMode>>;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  reset: () => void;
-  setElapsedTime: React.Dispatch<React.SetStateAction<number>>;
-  setSentencesCompleted: React.Dispatch<React.SetStateAction<number>>;
-  setTotalCharactersTyped: React.Dispatch<React.SetStateAction<number>>;
-  selectedCategory: PracticeCategory | null;
-  setSelectedCategory: React.Dispatch<React.SetStateAction<PracticeCategory | null>>;
-  sentenceQueue: string[];
-  setSentenceQueue: React.Dispatch<React.SetStateAction<string[]>>;
-  setTargetText: React.Dispatch<React.SetStateAction<string>>;
-  categories: PracticeCategory[];
-}) {
-  const {
-    setPracticeMode,
-    setGameState,
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-    selectedCategory,
-    setSelectedCategory,
-    sentenceQueue,
-    setSentenceQueue,
-    setTargetText,
-    categories,
-  } = args;
-  setPracticeMode('sentence');
-  setGameState('playing');
-  resetSessionCounters({
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-  });
-
-  if (!selectedCategory && categories.length > 0) {
-    const category = categories[0];
-    setSelectedCategory(category);
-    const queue = generateSentenceQueue(category);
-    setSentenceQueue(queue);
-    setTargetText(queue[0]);
-    return;
-  }
-  if (!selectedCategory) return;
-  if (sentenceQueue.length === 0) {
-    const queue = generateSentenceQueue(selectedCategory);
-    setSentenceQueue(queue);
-    setTargetText(queue[0]);
-    return;
-  }
-  setTargetText(sentenceQueue[0]);
-}
-
-function handleStartParagraphMode(args: {
-  setPracticeMode: React.Dispatch<React.SetStateAction<PracticeMode>>;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  reset: () => void;
-  setElapsedTime: React.Dispatch<React.SetStateAction<number>>;
-  setSentencesCompleted: React.Dispatch<React.SetStateAction<number>>;
-  setTotalCharactersTyped: React.Dispatch<React.SetStateAction<number>>;
-  selectedParagraph: PracticeParagraph | null;
-  setSelectedParagraph: React.Dispatch<React.SetStateAction<PracticeParagraph | null>>;
-  setTargetText: React.Dispatch<React.SetStateAction<string>>;
-  paragraphs: PracticeParagraph[];
-}) {
-  const {
-    setPracticeMode,
-    setGameState,
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-    selectedParagraph,
-    setSelectedParagraph,
-    setTargetText,
-    paragraphs,
-  } = args;
-  setPracticeMode('paragraph');
-  setGameState('playing');
-  resetSessionCounters({
-    reset,
-    setElapsedTime,
-    setSentencesCompleted,
-    setTotalCharactersTyped,
-  });
-  if (!selectedParagraph && paragraphs.length > 0) {
-    const paragraph = paragraphs[0];
-    setSelectedParagraph(paragraph);
-    setTargetText(paragraph.text);
-    return;
-  }
-  if (selectedParagraph) {
-    setTargetText(selectedParagraph.text);
-  }
-}
-
-const SELECT_BOX_CLASS =
-  'w-full appearance-none bg-card rounded-2xl p-3 pl-4 pr-8 border border-border shadow-sm text-xs font-bold text-muted-foreground outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-300/40 cursor-pointer';
-const SENTENCE_SELECT_CLASS =
-  'h-auto w-full appearance-none bg-card rounded-2xl p-3 pl-12 pr-8 border border-border shadow-sm text-xs font-bold text-muted-foreground outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-300/40 cursor-pointer';
-
-const splitTypingSentences = (content: string): string[] => {
-  const lines = content
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean);
-  if (lines.length > 1) return lines;
-
-  const normalized = content.replace(/\s+/g, ' ').trim();
-  if (!normalized) return [];
-
-  const sentenceLike = normalized
-    .split(/(?<=[.!?。！？])\s+/)
-    .map(item => item.trim())
-    .filter(Boolean);
-
-  return sentenceLike.length > 0 ? sentenceLike : [normalized];
-};
-
-type TargetChar = {
-  char: string;
-  id: string;
-};
-
-type LiveTypingStats = {
-  wpm: number;
-  accuracy: number;
-};
-
-type SessionStats = {
-  wpm: number;
-  accuracy: number;
-  errorCount: number;
-  duration: number;
-};
-
-type WordPracticeEntry = {
-  id: string;
-  word: string;
-  meaning: string;
-};
-
-type TypingTextRecord = {
-  _id: string;
-  title: string;
-  content: string;
-  description?: string;
-  category?: string;
-};
-
-function getTypingModeTitle(practiceMode: PracticeMode, t: TypingTranslateFn) {
-  const titleByMode: Record<PracticeMode, string> = {
-    word: t('typingLobby.word.title'),
-    paragraph: t('typingLobby.paragraph.title'),
-    sentence: t('typingLobby.sentence.title'),
-  };
-  return titleByMode[practiceMode];
-}
-
-function getTypingDisplayChar(char: string, isCurrent: boolean, inputChar: string | undefined) {
-  if (isCurrent && inputChar) return inputChar;
-  if (char === ' ') return '\u00A0';
-  return char;
-}
-
-const TypingSelectChevron: React.FC = () => (
-  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-    <svg
-      className="h-4 w-4 text-muted-foreground"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </div>
-);
-
-const TypingFooterUser: React.FC<{
-  userAvatar?: string | null;
-  userName?: string | null;
-  t: TypingTranslateFn;
-}> = ({ userAvatar, userName, t }) => (
-  <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-muted-foreground font-medium">
-    <div className="w-6 h-6 rounded-full bg-muted overflow-hidden">
-      {userAvatar ? (
-        <img
-          src={userAvatar}
-          alt={t('typingGame.userAvatarAlt', { defaultValue: 'User' })}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <Ghost className="w-3 h-3 text-muted-foreground m-auto mt-1.5" />
-      )}
-    </div>
-    <span>
-      {t('typingGame.loggedInAs', { defaultValue: 'Logged in as' })}{' '}
-      {userName || t('typingGame.guest', { defaultValue: 'Guest' })}
-    </span>
-  </div>
-);
-
-const WordModeSelectors: React.FC<{
-  selectedCourseName: string;
-  coursesByName: Record<string, CourseRecord[]>;
-  onCourseNameChange: (courseName: string) => void;
-  selectedCourseId: string;
-  selectedCourseVolumeOptions: CourseVolumeOption[];
-  onCourseIdChange: (courseId: string) => void;
-  selectedUnitId: number;
-  onUnitChange: (unitId: number) => void;
-  t: TypingTranslateFn;
-}> = ({
-  selectedCourseName,
-  coursesByName,
-  onCourseNameChange,
-  selectedCourseId,
-  selectedCourseVolumeOptions,
-  onCourseIdChange,
-  selectedUnitId,
-  onUnitChange,
-  t,
-}) => (
-    <div className="space-y-2">
-      <div className="space-y-2">
-        <div className="relative group">
-          <Select
-            value={selectedCourseName}
-            onChange={e => onCourseNameChange(e.target.value)}
-            className={SELECT_BOX_CLASS}
-          >
-            <option value="" disabled>
-              {t('typingGame.selectCourse', { defaultValue: 'Select Course' })}
-            </option>
-            {Object.keys(coursesByName).map(name => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </Select>
-          <TypingSelectChevron />
-        </div>
-        {selectedCourseName && (
-          <div className="relative group">
-            <Select
-              value={selectedCourseId}
-              onChange={e => onCourseIdChange(e.target.value)}
-              className={SELECT_BOX_CLASS}
-            >
-              {selectedCourseVolumeOptions.map(option => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <TypingSelectChevron />
-          </div>
-        )}
-        <div className="relative group">
-          <Select
-            value={selectedUnitId}
-            onChange={e => onUnitChange(Number(e.target.value))}
-            className={SELECT_BOX_CLASS}
-          >
-            {Array.from({ length: 20 }, (_, index) => index + 1).map(unit => (
-              <option key={unit} value={unit}>
-                {t('typing.unit')} {unit}
-              </option>
-            ))}
-          </Select>
-          <TypingSelectChevron />
-        </div>
-      </div>
-    </div>
-  );
-
-const ParagraphModeSelector: React.FC<{
-  paragraphs: PracticeParagraph[];
-  selectedParagraphId: string;
-  onParagraphChange: (paragraphId: string) => void;
-}> = ({ paragraphs, selectedParagraphId, onParagraphChange }) => (
-  <div className="relative group">
-    <Select
-      value={selectedParagraphId}
-      onChange={e => onParagraphChange(e.target.value)}
-      className={SELECT_BOX_CLASS}
-    >
-      {paragraphs.map(paragraph => (
-        <option key={paragraph.id} value={paragraph.id}>
-          {paragraph.title}
-        </option>
-      ))}
-    </Select>
-    <TypingSelectChevron />
-  </div>
-);
-
-const SentenceModeSelector: React.FC<{
-  categories: PracticeCategory[];
-  selectedCategoryId: string;
-  selectedCategoryIcon: string;
-  onCategoryChange: (categoryId: string) => void;
-}> = ({ categories, selectedCategoryId, selectedCategoryIcon, onCategoryChange }) => (
-  <div className="relative group">
-    <Select
-      value={selectedCategoryId}
-      onChange={e => onCategoryChange(e.target.value)}
-      className={SENTENCE_SELECT_CLASS}
-    >
-      {categories.map(category => (
-        <option key={category.id} value={category.id}>
-          {category.icon} {category.title}
-        </option>
-      ))}
-    </Select>
-    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-lg filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
-      {selectedCategoryIcon}
-    </div>
-    <TypingSelectChevron />
-  </div>
-);
-
-const TypingModeSelectorPanel: React.FC<{
-  practiceMode: PracticeMode;
-  selectedCourseName: string;
-  coursesByName: Record<string, CourseRecord[]>;
-  onCourseNameChange: (courseName: string) => void;
-  selectedCourseId: string;
-  selectedCourseVolumeOptions: CourseVolumeOption[];
-  onCourseIdChange: (courseId: string) => void;
-  selectedUnitId: number;
-  onUnitChange: (unitId: number) => void;
-  paragraphs: PracticeParagraph[];
-  selectedParagraphId: string;
-  onParagraphChange: (paragraphId: string) => void;
-  sentenceCategories: PracticeCategory[];
-  selectedCategoryId: string;
-  selectedCategoryIcon: string;
-  onCategoryChange: (categoryId: string) => void;
-  t: TypingTranslateFn;
-}> = props => {
-  const panelByMode: Record<PracticeMode, React.ReactNode> = {
-    word: (
-      <WordModeSelectors
-        selectedCourseName={props.selectedCourseName}
-        coursesByName={props.coursesByName}
-        onCourseNameChange={props.onCourseNameChange}
-        selectedCourseId={props.selectedCourseId}
-        selectedCourseVolumeOptions={props.selectedCourseVolumeOptions}
-        onCourseIdChange={props.onCourseIdChange}
-        selectedUnitId={props.selectedUnitId}
-        onUnitChange={props.onUnitChange}
-        t={props.t}
-      />
-    ),
-    paragraph: (
-      <ParagraphModeSelector
-        paragraphs={props.paragraphs}
-        selectedParagraphId={props.selectedParagraphId}
-        onParagraphChange={props.onParagraphChange}
-      />
-    ),
-    sentence: (
-      <SentenceModeSelector
-        categories={props.sentenceCategories}
-        selectedCategoryId={props.selectedCategoryId}
-        selectedCategoryIcon={props.selectedCategoryIcon}
-        onCategoryChange={props.onCategoryChange}
-      />
-    ),
-  };
-
-  return <>{panelByMode[props.practiceMode]}</>;
-};
-
-const TypingKeyboardDeck: React.FC<{
-  nextJamo: string | null;
-  currentTargetChar: string;
-  hasError: boolean;
-  t: TypingTranslateFn;
-}> = ({ nextJamo, currentTargetChar, hasError, t }) => (
-  <div className="flex-shrink-0 bg-card border-t border-border py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.02)] z-30 w-full">
-    <div className="w-full max-w-[90rem] mx-auto flex flex-col gap-3">
-      <div className="flex justify-between items-center px-4">
-        <div className="text-xs font-bold text-muted-foreground flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${hasError ? 'bg-red-500 dark:bg-red-300' : 'bg-blue-500 dark:bg-blue-300'} animate-pulse`}
-          ></span>
-          <span>{t('typingGame.nextKey', { defaultValue: 'Next Key:' })}</span>
-          <span className="text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/14 px-2 py-0.5 rounded text-[11px] border border-blue-100 dark:border-blue-300/25">
-            {nextJamo || t('typingGame.enterKey', { defaultValue: 'Enter' })}
-          </span>
-        </div>
-        <div className="text-[10px] text-muted-foreground font-mono tracking-widest">
-          {t('typingGame.keyboardLayout', { defaultValue: '2-SET KOREAN' })}
-        </div>
-      </div>
-      <div className="p-3 bg-muted/50 rounded-3xl border border-border/60 select-none">
-        <KeyboardHints nextJamo={nextJamo} targetChar={currentTargetChar} hasError={hasError} />
-      </div>
-    </div>
-  </div>
-);
-
-const ParagraphTypedChar: React.FC<{
-  char: string;
-  id: string;
-  index: number;
-  currentTypingIndex: number;
-  userInput: string;
-  isFocused: boolean;
-}> = ({ char, id, index, currentTypingIndex, userInput, isFocused }) => {
-  const isCompleted = index < currentTypingIndex;
-  const isCurrent = index === currentTypingIndex;
-  const displayChar = getTypingDisplayChar(char, isCurrent, userInput[index]);
-  return (
-    <span
-      key={id}
-      id={isCurrent ? 'active-char' : undefined}
-      className={`
-transition-colors duration-100
-${isCompleted ? 'text-foreground' : 'text-muted-foreground'}
-${isCurrent ? 'bg-blue-100 dark:bg-blue-400/14 text-blue-600 dark:text-blue-300 relative rounded-sm' : ''}
-`}
-    >
-      {isCurrent && isFocused && (
-        <span className="absolute -left-[1px] top-1 bottom-1 w-[2px] bg-blue-500 dark:bg-blue-300 animate-pulse"></span>
-      )}
-      {displayChar}
-    </span>
-  );
-};
-
-const SentenceTypedChar: React.FC<{
-  char: string;
-  id: string;
-  index: number;
-  currentTypingIndex: number;
-  userInput: string;
-  isFocused: boolean;
-}> = ({ char, id, index, currentTypingIndex, userInput, isFocused }) => {
-  const isCompleted = index < currentTypingIndex;
-  const isCurrent = index === currentTypingIndex;
-  const isRemaining = index > currentTypingIndex;
-  const inputChar = userInput[index];
-  const displayChar = getTypingDisplayChar(char, isCurrent, inputChar);
-
-  return (
-    <span
-      key={id}
-      className={`
-transition-all duration-150 inline-block
-${isCompleted ? 'text-muted-foreground' : ''}
-${isCurrent ? 'text-foreground scale-110 transform cursor-text relative' : ''}
-${isRemaining ? 'text-muted-foreground' : ''}
-`}
-      style={
-        isCurrent
-          ? {
-            textShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          }
-          : undefined
-      }
-    >
-      {displayChar}
-      {isCurrent && inputChar && inputChar !== char && (
-        <span className="absolute top-full left-1/2 -translate-x-1/2 text-xs text-blue-300 dark:text-blue-200 opacity-70 mt-1 pointer-events-none">
-          {char}
-        </span>
-      )}
-      {isCurrent && isFocused && (
-        <span className="absolute -right-1 top-1 bottom-1 w-0.5 bg-blue-500 dark:bg-blue-300 rounded-full animate-pulse shadow-[0_0_4px_rgba(59,130,246,0.6)] dark:shadow-[0_0_4px_rgba(147,197,253,0.4)]"></span>
-      )}
-    </span>
-  );
-};
-
-const WordModeContent: React.FC<{
-  words?: WordPracticeEntry[];
-  onComplete: (resultStats: {
-    wpm: number;
-    accuracy: number;
-    errorCount: number;
-    duration: number;
-    wordsCompleted: number;
-  }) => Promise<void>;
-  onStatsUpdate: (stats: SessionStats) => void;
-  onBack: () => void;
-  t: TypingTranslateFn;
-}> = ({ words, onComplete, onStatsUpdate, onBack, t }) =>
-    words ? (
-      <WordPractice
-        words={words}
-        onComplete={onComplete}
-        onStatsUpdate={onStatsUpdate}
-        onBack={onBack}
-      />
-    ) : (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground font-medium animate-pulse">
-        {t('typingGame.loadingWords', { defaultValue: 'Loading words...' })}
-      </div>
-    );
-
-const ParagraphModeContent: React.FC<{
-  targetChars: TargetChar[];
-  currentTypingIndex: number;
-  userInput: string;
-  isFocused: boolean;
-  onFocusInput: () => void;
-  selectedParagraphTitle?: string;
-  elapsedTime: number;
-  formatTime: (seconds: number) => string;
-  nextJamo: string | null;
-  currentTargetChar: string;
-  hasError: boolean;
-  t: TypingTranslateFn;
-}> = ({
-  targetChars,
-  currentTypingIndex,
-  userInput,
-  isFocused,
-  onFocusInput,
-  selectedParagraphTitle,
-  elapsedTime,
-  formatTime,
-  nextJamo,
-  currentTargetChar,
-  hasError,
-  t,
-}) => (
-    <div className="flex-1 flex flex-col items-center justify-start bg-card min-h-0 w-full overflow-y-auto custom-scrollbar">
-      <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center gap-8 py-10 px-8 flex-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          className="w-full leading-loose text-left relative cursor-text text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed border-0 bg-transparent p-0"
-          onClick={onFocusInput}
-        >
-          <div className="text-2xl font-medium tracking-tight break-words whitespace-pre-wrap select-none leading-relaxed">
-            {targetChars.map(({ char, id }, index) => (
-              <ParagraphTypedChar
-                key={id}
-                char={char}
-                id={id}
-                index={index}
-                currentTypingIndex={currentTypingIndex}
-                userInput={userInput}
-                isFocused={isFocused}
-              />
-            ))}
-          </div>
-        </Button>
-        <div className="text-muted-foreground text-sm">
-          {selectedParagraphTitle} • {formatTime(elapsedTime)}
-        </div>
-      </div>
-      <TypingKeyboardDeck
-        nextJamo={nextJamo}
-        currentTargetChar={currentTargetChar}
-        hasError={hasError}
-        t={t}
-      />
-    </div>
-  );
-
-const SentenceModeContent: React.FC<{
-  targetChars: TargetChar[];
-  currentTypingIndex: number;
-  userInput: string;
-  isFocused: boolean;
-  onFocusInput: () => void;
-  sentenceQueue: string[];
-  nextJamo: string | null;
-  currentTargetChar: string;
-  hasError: boolean;
-  t: TypingTranslateFn;
-}> = ({
-  targetChars,
-  currentTypingIndex,
-  userInput,
-  isFocused,
-  onFocusInput,
-  sentenceQueue,
-  nextJamo,
-  currentTargetChar,
-  hasError,
-  t,
-}) => (
-    <>
-      <div className="flex-1 flex flex-col items-center justify-evenly bg-card min-h-0 w-full">
-        <div className="w-full h-full flex flex-col items-center justify-center gap-4 lg:gap-10 flex-1">
-          <div className="bg-card rounded-[2rem] p-8 lg:p-16 text-center relative overflow-visible shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] border border-white/80 dark:border-border group w-full transition-all duration-300">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-300/10 rounded-[2rem]"></div>
-            <div className="relative z-10">
-              <p className="text-lg md:text-2xl lg:text-3xl font-bold leading-relaxed tracking-tight break-keep select-none">
-                {targetChars.map(({ char, id }, index) => (
-                  <SentenceTypedChar
-                    key={id}
-                    char={char}
-                    id={id}
-                    index={index}
-                    currentTypingIndex={currentTypingIndex}
-                    userInput={userInput}
-                    isFocused={isFocused}
-                  />
-                ))}
-              </p>
-            </div>
-            {!isFocused && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                className="absolute inset-0 flex items-center justify-center bg-card/60 backdrop-blur-[2px] rounded-[2rem] z-20 transition-all cursor-pointer w-full border-0"
-                onClick={onFocusInput}
-              >
-                <div className="bg-blue-500 dark:bg-blue-400/80 text-primary-foreground px-6 py-2 rounded-full font-bold shadow-lg transform -translate-y-2 animate-bounce">
-                  {t('typingGame.clickToFocus', { defaultValue: 'Click to Focus' })}
-                </div>
-              </Button>
-            )}
-          </div>
-
-          <div
-            className={`
-w-full max-w-xl bg-card rounded-2xl p-3 lg:p-4 flex items-center justify-center border-2 transition-all duration-200
-${isFocused ? 'border-blue-100 dark:border-blue-300/30 shadow-lg shadow-blue-500/5 dark:shadow-blue-900/20 -translate-y-1' : 'border-transparent shadow-sm'}
-`}
-          >
-            <span className="text-lg lg:text-xl font-medium text-muted-foreground mr-1 opacity-50 select-none">
-              {userInput.slice(-15) || (
-                <span className="text-muted-foreground text-sm">
-                  {t('typingGame.startTyping', { defaultValue: 'Start typing...' })}
-                </span>
-              )}
-            </span>
-            {isFocused && (
-              <span className="w-0.5 h-6 bg-blue-500 dark:bg-blue-300 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.6)] dark:shadow-[0_0_8px_rgba(147,197,253,0.4)]"></span>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5 lg:gap-2 w-full mt-2">
-            {sentenceQueue.slice(1, 4).map((sentence, index) => (
-              <div
-                key={`queue-${index}-${sentence.substring(0, 20)}`}
-                className={`
-rounded-xl text-center font-medium transition-all duration-500 truncate
-${index === 0 ? 'w-[85%] bg-card/60 p-3 text-base text-muted-foreground shadow-sm' : 'w-[75%] bg-card/30 p-2 text-sm text-muted-foreground'}
-`}
-              >
-                <p className="truncate px-2">{sentence}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <TypingKeyboardDeck
-        nextJamo={nextJamo}
-        currentTargetChar={currentTargetChar}
-        hasError={hasError}
-        t={t}
-      />
-    </>
-  );
-
-const TypingMainContent: React.FC<{
-  practiceMode: PracticeMode;
-  wordPracticeWords?: WordPracticeEntry[];
-  onWordComplete: (resultStats: {
-    wpm: number;
-    accuracy: number;
-    errorCount: number;
-    duration: number;
-    wordsCompleted: number;
-  }) => Promise<void>;
-  onWordStatsUpdate: (stats: SessionStats) => void;
-  onBackToLobby: () => void;
-  targetChars: TargetChar[];
-  currentTypingIndex: number;
-  userInput: string;
-  isFocused: boolean;
-  onFocusInput: () => void;
-  selectedParagraphTitle?: string;
-  elapsedTime: number;
-  formatTime: (seconds: number) => string;
-  sentenceQueue: string[];
-  nextJamo: string | null;
-  currentTargetChar: string;
-  hasError: boolean;
-  t: TypingTranslateFn;
-}> = props => {
-  const contentByMode: Record<PracticeMode, React.ReactNode> = {
-    word: (
-      <WordModeContent
-        words={props.wordPracticeWords}
-        onComplete={props.onWordComplete}
-        onStatsUpdate={props.onWordStatsUpdate}
-        onBack={props.onBackToLobby}
-        t={props.t}
-      />
-    ),
-    paragraph: (
-      <ParagraphModeContent
-        targetChars={props.targetChars}
-        currentTypingIndex={props.currentTypingIndex}
-        userInput={props.userInput}
-        isFocused={props.isFocused}
-        onFocusInput={props.onFocusInput}
-        selectedParagraphTitle={props.selectedParagraphTitle}
-        elapsedTime={props.elapsedTime}
-        formatTime={props.formatTime}
-        nextJamo={props.nextJamo}
-        currentTargetChar={props.currentTargetChar}
-        hasError={props.hasError}
-        t={props.t}
-      />
-    ),
-    sentence: (
-      <SentenceModeContent
-        targetChars={props.targetChars}
-        currentTypingIndex={props.currentTypingIndex}
-        userInput={props.userInput}
-        isFocused={props.isFocused}
-        onFocusInput={props.onFocusInput}
-        sentenceQueue={props.sentenceQueue}
-        nextJamo={props.nextJamo}
-        currentTargetChar={props.currentTargetChar}
-        hasError={props.hasError}
-        t={props.t}
-      />
-    ),
-  };
-
-  return <>{contentByMode[props.practiceMode]}</>;
-};
-
-const TypingSidebar: React.FC<{
-  onBackToLobby: () => void;
-  practiceMode: PracticeMode;
-  t: TypingTranslateFn;
-  selectedCourseName: string;
-  coursesByName: Record<string, CourseRecord[]>;
-  onCourseNameChange: (courseName: string) => void;
-  selectedCourseId: string;
-  selectedCourseVolumeOptions: CourseVolumeOption[];
-  onCourseIdChange: (courseId: string) => void;
-  selectedUnitId: number;
-  onUnitChange: (unitId: number) => void;
-  paragraphs: PracticeParagraph[];
-  selectedParagraphId: string;
-  onParagraphChange: (paragraphId: string) => void;
-  sentenceCategories: PracticeCategory[];
-  selectedCategoryId: string;
-  selectedCategoryIcon: string;
-  onCategoryChange: (categoryId: string) => void;
-  elapsedTime: number;
-  formatTime: (seconds: number) => string;
-  currentTypingIndex: number;
-  targetTextLength: number;
-  liveStats: LiveTypingStats;
-  bestWpm: number;
-  onStopPractice: () => void;
-  userAvatar?: string | null;
-  userName?: string | null;
-}> = props => {
-  const optionalParagraphProgressByMode: Partial<Record<PracticeMode, React.ReactNode>> = {
-    paragraph: (
-      <div className="bg-card p-4 rounded-2xl shadow-sm border border-border/50 transition-transform hover:scale-[1.02]">
-        <div className="flex justify-between items-end mb-2">
-          <span className="text-xs text-muted-foreground font-medium">
-            {props.t('dashboard.quiz.progress')}
-          </span>
-          <span className="text-sm font-bold text-muted-foreground tabular-nums">
-            <span className="text-blue-600 dark:text-blue-300">{props.currentTypingIndex}</span>
-            <span className="text-muted-foreground mx-1">/</span>
-            {props.targetTextLength}
-          </span>
-        </div>
-        <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-          <div
-            className="bg-blue-500 dark:bg-blue-300 w-full h-full rounded-full origin-left transition-transform duration-300"
-            style={{
-              transform: `scaleX(${props.targetTextLength > 0 ? props.currentTypingIndex / props.targetTextLength : 0})`,
-            }}
-          ></div>
-        </div>
-      </div>
-    ),
-  };
-
-  return (
-    <aside className="w-[280px] flex-shrink-0 sidebar-glass flex flex-col z-20 shadow-sm transition-all duration-300 hidden md:flex border-r border-border/60">
-      <Button
-        type="button"
-        variant="ghost"
-        size="auto"
-        className="w-full p-6 flex items-center gap-3 cursor-text hover:bg-muted/80 transition-colors border-b border-border text-left"
-        onClick={props.onBackToLobby}
-      >
-        <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-        <span className="text-sm font-bold text-muted-foreground">
-          {props.t('typingLobby.back')}
-        </span>
-      </Button>
-
-      <div className="px-6 py-6 flex flex-col items-center">
-        <div className="bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-slate-200/50 dark:shadow-[0_10px_20px_-10px_rgba(148,163,184,0.28)] mb-6 transform hover:scale-105 transition-transform">
-          {getTypingModeTitle(props.practiceMode, props.t)}
-        </div>
-
-        <div className="w-full">
-          <TypingModeSelectorPanel
-            practiceMode={props.practiceMode}
-            selectedCourseName={props.selectedCourseName}
-            coursesByName={props.coursesByName}
-            onCourseNameChange={props.onCourseNameChange}
-            selectedCourseId={props.selectedCourseId}
-            selectedCourseVolumeOptions={props.selectedCourseVolumeOptions}
-            onCourseIdChange={props.onCourseIdChange}
-            selectedUnitId={props.selectedUnitId}
-            onUnitChange={props.onUnitChange}
-            paragraphs={props.paragraphs}
-            selectedParagraphId={props.selectedParagraphId}
-            onParagraphChange={props.onParagraphChange}
-            sentenceCategories={props.sentenceCategories}
-            selectedCategoryId={props.selectedCategoryId}
-            selectedCategoryIcon={props.selectedCategoryIcon}
-            onCategoryChange={props.onCategoryChange}
-            t={props.t}
-          />
-        </div>
-      </div>
-
-      <div className="flex-1 px-6 space-y-4 overflow-y-auto">
-        <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-          {props.t('typingGame.myStats', { defaultValue: 'My Stats' })}
-        </div>
-
-        <div className="bg-card p-4 rounded-2xl shadow-sm border border-border/50 transition-transform hover:scale-[1.02]">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-muted-foreground font-medium">
-              {props.t('typingGame.time', { defaultValue: 'Time' })}
-            </span>
-            <span className="text-lg font-mono font-bold text-muted-foreground tabular-nums">
-              {props.formatTime(props.elapsedTime)}
-            </span>
-          </div>
-          <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-blue-500 dark:bg-blue-300 w-full h-full rounded-full origin-left animate-[progress_1s_ease-out]"
-              style={{ transform: `scaleX(${Math.min(props.elapsedTime / 60, 1)})` }}
-            ></div>
-          </div>
-        </div>
-
-        {optionalParagraphProgressByMode[props.practiceMode] ?? null}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card p-3 rounded-2xl shadow-sm border border-border/50 text-center transition-transform hover:scale-[1.02]">
-            <div className="text-[10px] text-muted-foreground font-bold mb-1">WPM</div>
-            <div className="text-xl font-bold text-blue-600 dark:text-blue-300 tabular-nums">
-              {Math.round(props.liveStats.wpm)}
-            </div>
-          </div>
-          <div className="bg-card p-3 rounded-2xl shadow-sm border border-border/50 text-center transition-transform hover:scale-[1.02]">
-            <div className="text-[10px] text-muted-foreground font-bold mb-1">
-              {props.t('typingGame.accuracy', { defaultValue: 'Accuracy' })}
-            </div>
-            <div className="text-xl font-bold text-emerald-500 dark:text-emerald-300 tabular-nums">
-              {props.liveStats.accuracy.toFixed(0)}%
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card/50 p-3 rounded-2xl border border-border text-center">
-          <span className="text-[10px] text-muted-foreground">
-            {props.t('typingGame.bestRecord', { defaultValue: 'Best Record' })}
-          </span>
-          <div className="text-sm font-bold text-muted-foreground">{props.bestWpm} WPM</div>
-        </div>
-      </div>
-
-      <div className="p-6 bg-card/30">
-        <Button
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={props.onStopPractice}
-          className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 dark:bg-blue-400/80 dark:hover:bg-blue-300/80 text-primary-foreground rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 dark:shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <span>{props.t('typingGame.stopPractice', { defaultValue: 'Stop Practice' })}</span>
-        </Button>
-        <TypingFooterUser userAvatar={props.userAvatar} userName={props.userName} t={props.t} />
-      </div>
-    </aside>
-  );
-};
-
-const DesktopTypingGameLayout: React.FC<{
-  practiceMode: PracticeMode;
-  t: TypingTranslateFn;
-  onBackToLobby: () => void;
-  selectedCourseName: string;
-  coursesByName: Record<string, CourseRecord[]>;
-  onCourseNameChange: (courseName: string) => void;
-  selectedCourseId: string;
-  selectedCourseVolumeOptions: CourseVolumeOption[];
-  onCourseIdChange: (courseId: string) => void;
-  selectedUnitId: number;
-  onUnitChange: (unitId: number) => void;
-  paragraphs: PracticeParagraph[];
-  selectedParagraphId: string;
-  onParagraphChange: (paragraphId: string) => void;
-  sentenceCategories: PracticeCategory[];
-  selectedCategoryId: string;
-  selectedCategoryIcon: string;
-  onCategoryChange: (categoryId: string) => void;
-  elapsedTime: number;
-  formatTime: (seconds: number) => string;
-  currentTypingIndex: number;
-  targetTextLength: number;
-  liveStats: LiveTypingStats;
-  bestWpm: number;
-  onStopPractice: () => void;
-  userAvatar?: string | null;
-  userName?: string | null;
-  wordPracticeWords?: WordPracticeEntry[];
-  onWordComplete: (resultStats: {
-    wpm: number;
-    accuracy: number;
-    errorCount: number;
-    duration: number;
-    wordsCompleted: number;
-  }) => Promise<void>;
-  onWordStatsUpdate: (stats: SessionStats) => void;
-  targetChars: TargetChar[];
-  userInput: string;
-  isFocused: boolean;
-  onFocusInput: () => void;
-  selectedParagraphTitle?: string;
-  sentenceQueue: string[];
-  nextJamo: string | null;
-  currentTargetChar: string;
-  hasError: boolean;
-  showHiddenInput: boolean;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  setIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
-}> = ({
-  practiceMode,
-  t,
-  onBackToLobby,
-  selectedCourseName,
-  coursesByName,
-  onCourseNameChange,
-  selectedCourseId,
-  selectedCourseVolumeOptions,
-  onCourseIdChange,
-  selectedUnitId,
-  onUnitChange,
-  paragraphs,
-  selectedParagraphId,
-  onParagraphChange,
-  sentenceCategories,
-  selectedCategoryId,
-  selectedCategoryIcon,
-  onCategoryChange,
-  elapsedTime,
-  formatTime,
-  currentTypingIndex,
-  targetTextLength,
-  liveStats,
-  bestWpm,
-  onStopPractice,
-  userAvatar,
-  userName,
-  wordPracticeWords,
-  onWordComplete,
-  onWordStatsUpdate,
-  targetChars,
-  userInput,
-  isFocused,
-  onFocusInput,
-  selectedParagraphTitle,
-  sentenceQueue,
-  nextJamo,
-  currentTargetChar,
-  hasError,
-  showHiddenInput,
-  inputRef,
-  setIsFocused,
-}) => (
-    <div className="typing-practice-container flex h-screen font-sans overflow-hidden bg-card">
-      <style>
-        {keyboardThemeStyles} {englishKeyStyles}
-      </style>
-      <style>{`
-    .hg-button { position: relative!important; }
-`}</style>
-
-      <TypingSidebar
-        onBackToLobby={onBackToLobby}
-        practiceMode={practiceMode}
-        t={t}
-        selectedCourseName={selectedCourseName}
-        coursesByName={coursesByName}
-        onCourseNameChange={onCourseNameChange}
-        selectedCourseId={selectedCourseId}
-        selectedCourseVolumeOptions={selectedCourseVolumeOptions}
-        onCourseIdChange={onCourseIdChange}
-        selectedUnitId={selectedUnitId}
-        onUnitChange={onUnitChange}
-        paragraphs={paragraphs}
-        selectedParagraphId={selectedParagraphId}
-        onParagraphChange={onParagraphChange}
-        sentenceCategories={sentenceCategories}
-        selectedCategoryId={selectedCategoryId}
-        selectedCategoryIcon={selectedCategoryIcon}
-        onCategoryChange={onCategoryChange}
-        elapsedTime={elapsedTime}
-        formatTime={formatTime}
-        currentTypingIndex={currentTypingIndex}
-        targetTextLength={targetTextLength}
-        liveStats={liveStats}
-        bestWpm={bestWpm}
-        onStopPractice={onStopPractice}
-        userAvatar={userAvatar}
-        userName={userName}
-      />
-
-      <main className="flex-1 flex flex-col relative z-10">
-        <TypingMainContent
-          practiceMode={practiceMode}
-          wordPracticeWords={wordPracticeWords}
-          onWordComplete={onWordComplete}
-          onWordStatsUpdate={onWordStatsUpdate}
-          onBackToLobby={onBackToLobby}
-          targetChars={targetChars}
-          currentTypingIndex={currentTypingIndex}
-          userInput={userInput}
-          isFocused={isFocused}
-          onFocusInput={onFocusInput}
-          selectedParagraphTitle={selectedParagraphTitle}
-          elapsedTime={elapsedTime}
-          formatTime={formatTime}
-          sentenceQueue={sentenceQueue}
-          nextJamo={nextJamo}
-          currentTargetChar={currentTargetChar}
-          hasError={hasError}
-          t={t}
-        />
-        {showHiddenInput && (
-          <HiddenInput
-            ref={inputRef}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-          />
-        )}
-      </main>
-    </div>
-  );
-
-export const DesktopTypingPage: React.FC = () => {
-  // -- LAYOUT CONTROL --
-  const { setSidebarHidden, setFooterHidden } = useLayoutActions();
-
-  // -- USER --
-  const { user } = useAuth();
-
-  // -- CONVEX --
-  const saveTypingRecord = useMutation(api.typing.saveRecord);
-  const userStats = useQuery(api.typing.getUserStats);
-
-  // Word Practice Data
-  const rawCourses = useQuery(api.institutes.getAll);
-  const courses = useMemo(() => (rawCourses || []) as CourseRecord[], [rawCourses]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [selectedUnitId, setSelectedUnitId] = useState<number>(1);
-
-  // Group courses by name for Volume selection
-  const coursesByName = useMemo(() => groupCoursesByName(courses), [courses]);
-
-  const [selectedCourseName, setSelectedCourseName] = useState<string>('');
-
-  // Update selectedCourseName when courses load or selectedCourseId changes
-  useEffect(() => {
-    syncSelectedCourseNameState({
-      courses,
-      selectedCourseId,
-      selectedCourseName,
-      coursesByName,
-      setSelectedCourseName,
-    });
-  }, [selectedCourseId, courses, coursesByName, selectedCourseName]);
-
-  const courseWords = useQuery(
-    VOCAB.getOfCourse,
-    selectedCourseId ? { courseId: selectedCourseId, unitId: selectedUnitId } : 'skip'
-  );
-  const sentenceTextsResult = useQuery(api.typing.listTexts, {
-    type: 'SENTENCE',
-    onlyPublic: user?.role === 'ADMIN' ? undefined : true,
-    paginationOpts: { numItems: 200, cursor: null },
-  });
-  const articleTextsResult = useQuery(api.typing.listTexts, {
-    type: 'ARTICLE',
-    onlyPublic: user?.role === 'ADMIN' ? undefined : true,
-    paginationOpts: { numItems: 200, cursor: null },
-  });
-
-  const { t } = useTranslation();
-  const selectedCourseVolumeOptions = useMemo(
-    () =>
-      buildCourseVolumeOptions(
-        coursesByName[selectedCourseName] as CourseVolumeSource[] | undefined,
-        t
-      ),
-    [coursesByName, selectedCourseName, t]
-  );
-  const navigate = useNavigate();
+export default function DesktopTypingPage() {
+  const { t, i18n } = useTranslation();
   const [gameState, setGameState] = useState<GameState>('lobby');
-  const [selectedCategory, setSelectedCategory] = useState<PracticeCategory | null>(null);
-  const [selectedParagraph, setSelectedParagraph] = useState<PracticeParagraph | null>(null);
-  const [practiceMode, setPracticeMode] = useState<PracticeMode>('sentence');
-  const [sentenceQueue, setSentenceQueue] = useState<string[]>([]);
+  const [mode, setMode] = useState<TypingMode>('sentence');
+  const [selectedData, setSelectedData] = useState<TypingGameData | null>(null);
+  
+  // Results and Session State
+  const [queue, setQueue] = useState<string[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [sessionResults, setSessionResults] = useState<any>(null);
 
-  // Session Tracking
-  const [sentencesCompleted, setSentencesCompleted] = useState(0);
-  const [totalCharactersTyped, setTotalCharactersTyped] = useState(0);
-  const [showResultsModal, setShowResultsModal] = useState(false);
-  const [sessionStats, setSessionStats] = useState({
-    wpm: 0,
-    accuracy: 100,
-    errorCount: 0,
-    duration: 0,
-  });
-  const targetWpm = 200;
+  // Stats from DB
+  const userStats = useQuery(api.typing.getUserStats);
+  const saveRecord = useMutation(TYPING.saveRecord);
 
-  const [targetText, setTargetText] = useState('');
+  // Course Data for Word Mode
+  const rawCourses = useQuery(api.institutes.getAll);
+  const courses = useMemo(() => rawCourses || [], [rawCourses]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
-  const targetChars = useMemo(() => {
-    return targetText.split('').map((char, i) => ({
-      char,
-      id: `char-${i}-${targetText.length}`,
-    }));
-  }, [targetText]);
-
-  const [mode] = useState<TypingMode>('sentence');
-  const [isFocused, setIsFocused] = useState(true);
-  const [elapsedTime, setElapsedTime] = useState(0);
-
-  const sentenceCategories = useMemo<PracticeCategory[]>(() => {
-    const sentencePage = (sentenceTextsResult?.page ?? []) as TypingTextRecord[];
-    const articlePage = (articleTextsResult?.page ?? []) as TypingTextRecord[];
-
-    const grouped = new Map<string, PracticeCategory>();
-    sentencePage.forEach(text => {
-      const rawCategory = text.category?.trim() || 'Custom';
-      const key = rawCategory.toLowerCase();
-      const sentences = splitTypingSentences(text.content);
-      if (sentences.length === 0) return;
-
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          id: `db-${key}`,
-          title: rawCategory,
-          description: text.description || `Typing sentences in ${rawCategory}`,
-          icon: '📝',
-          sentences: [],
-        });
-      }
-
-      const item = grouped.get(key)!;
-      item.sentences.push(...sentences);
-    });
-
-    const sentenceCategoriesBuilt = Array.from(grouped.values()).filter(
-      category => category.sentences.length > 0
-    );
-
-    const articleCategoriesBuilt = articlePage
-      .map(text => {
-        const sentences = splitTypingSentences(text.content);
-        if (sentences.length === 0) return null;
-        return {
-          id: `article-${text._id}`,
-          title: text.title || 'Article Sentences',
-          description: text.description || 'Sentences extracted from article content',
-          icon: '📰',
-          sentences,
-        } as PracticeCategory;
-      })
-      .filter((item): item is PracticeCategory => Boolean(item));
-
-    const merged = [...sentenceCategoriesBuilt, ...articleCategoriesBuilt];
-    return merged.length > 0 ? merged : PRACTICE_CATEGORIES;
-  }, [sentenceTextsResult, articleTextsResult]);
-
-  const practiceParagraphs = useMemo<PracticeParagraph[]>(() => {
-    const page = (articleTextsResult?.page ?? []) as TypingTextRecord[];
-    if (page.length === 0) return PRACTICE_PARAGRAPHS;
-
-    const built = page
-      .map(text => ({
-        id: `db-${text._id}`,
-        title: text.title,
-        description: text.description || 'Typing article from admin content',
-        text: text.content,
-      }))
-      .filter(item => item.text.trim().length > 0);
-
-    return built.length > 0 ? built : PRACTICE_PARAGRAPHS;
-  }, [articleTextsResult]);
-
-  const effectiveSelectedCategory =
-    selectedCategory && sentenceCategories.some(item => item.id === selectedCategory.id)
-      ? selectedCategory
-      : sentenceCategories[0] || null;
-
-  const effectiveSelectedParagraph =
-    selectedParagraph && practiceParagraphs.some(item => item.id === selectedParagraph.id)
-      ? selectedParagraph
-      : practiceParagraphs[0] || null;
-
-  useEffect(() => {
-    setSidebarHidden(gameState === 'playing');
-    setFooterHidden(true);
-    return () => {
-      setSidebarHidden(false);
-      setFooterHidden(false);
-    };
-  }, [gameState, setSidebarHidden, setFooterHidden]);
-
-  const {
-    userInput,
-    phase,
-    stats,
-    inputRef,
-    reset,
-    checkInput,
-    getNextJamo,
+  const targetText = queue[queueIndex] || '';
+  const { 
+    userInput, 
+    completedIndex, 
+    phase, 
+    stats, 
+    inputRef, 
+    reset, 
+    getNextJamo, 
+    isComposing 
   } = useKoreanTyping(targetText, mode);
 
-  const startGame = (category: PracticeCategory) => {
-    setSelectedCategory(category);
-    const queue = generateSentenceQueue(category);
-    setSentenceQueue(queue);
-    setTargetText(queue[0]);
-    setGameState('playing');
-    setSentencesCompleted(0);
-    setTotalCharactersTyped(0);
-    setElapsedTime(0);
-    reset();
-  };
-
-  const nextSentence = useCallback(() => {
-    if (!effectiveSelectedCategory) return;
-
-    setSentencesCompleted(prev => prev + 1);
-    setTotalCharactersTyped(prev => prev + targetText.length);
-
-    const newSentence =
-      effectiveSelectedCategory.sentences[
-      Math.floor(Math.random() * effectiveSelectedCategory.sentences.length)
-      ];
-    const nextQueue = [...sentenceQueue.slice(1), newSentence];
-
-    setSentenceQueue(nextQueue);
-    setTargetText(nextQueue[0]);
-    reset();
-
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
-  }, [effectiveSelectedCategory, sentenceQueue, targetText, reset, inputRef]);
-
-  const endSession = useCallback(async () => {
-    const finalStats = {
-      wpm: Math.round(stats.wpm),
-      accuracy: stats.accuracy,
-      errorCount: stats.errorCount,
-      duration: elapsedTime,
-    };
-    setSessionStats(finalStats);
-    setShowResultsModal(true);
-
+  const handleCompleteSession = useCallback(async () => {
+    setGameState('results');
+    setSessionResults(stats);
+    
     try {
-      if (effectiveSelectedCategory) {
-        await saveTypingRecord({
-          practiceMode,
-          categoryId: effectiveSelectedCategory.id,
-          wpm: finalStats.wpm,
-          accuracy: finalStats.accuracy,
-          errorCount: finalStats.errorCount,
-          duration: finalStats.duration,
-          charactersTyped: totalCharactersTyped + userInput.length,
-          sentencesCompleted: sentencesCompleted,
-          targetWpm,
-          isTargetAchieved: finalStats.wpm >= targetWpm,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to save typing record:', error);
-    }
-  }, [
-    stats,
-    elapsedTime,
-    effectiveSelectedCategory,
-    practiceMode,
-    saveTypingRecord,
-    totalCharactersTyped,
-    userInput.length,
-    sentencesCompleted,
-  ]);
-
-  const handleRetry = () => {
-    setShowResultsModal(false);
-    if (effectiveSelectedCategory) {
-      startGame(effectiveSelectedCategory);
-    }
-  };
-
-  const handleQuit = () => {
-    setShowResultsModal(false);
-    setGameState('lobby');
-    setSelectedCategory(null);
-  };
-
-  const handleWordComplete = useCallback(
-    async (resultStats: {
-      wpm: number;
-      accuracy: number;
-      errorCount: number;
-      duration: number;
-      wordsCompleted: number;
-    }) => {
-      setSessionStats({
-        wpm: resultStats.wpm,
-        accuracy: resultStats.accuracy,
-        errorCount: resultStats.errorCount,
-        duration: resultStats.duration,
+      await saveRecord({
+        practiceMode: mode,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errorCount: stats.errorCount,
+        duration: Math.floor((Date.now() - (stats.startTime || Date.now())) / 1000),
+        charactersTyped: completedIndex,
+        sentencesCompleted: queue.length,
+        targetWpm: 40,
+        isTargetAchieved: stats.wpm >= 40,
       });
-      setShowResultsModal(true);
+    } catch (e) {
+      console.error('Failed to save record:', e);
+    }
+  }, [completedIndex, mode, queue.length, saveRecord, stats]);
 
-      try {
-        await saveTypingRecord({
-          practiceMode: 'word',
-          categoryId: selectedCourseId,
-          wpm: resultStats.wpm,
-          accuracy: resultStats.accuracy,
-          errorCount: resultStats.errorCount,
-          duration: resultStats.duration,
-          charactersTyped: 0,
-          sentencesCompleted: resultStats.wordsCompleted,
-          targetWpm: 200,
-          isTargetAchieved: resultStats.wpm >= 200,
-        });
-      } catch (error) {
-        console.error('Failed to save word practice record:', error);
-      }
-    },
-    [selectedCourseId, saveTypingRecord]
-  );
-
+  // Practice logic: Next item or Finish
   useEffect(() => {
-    if (phase === 'finish') {
+    if (phase === 'finish' && gameState === 'practicing') {
       const timer = setTimeout(() => {
-        nextSentence();
-      }, 500);
+        if (queueIndex < queue.length - 1) {
+          setQueueIndex(prev => prev + 1);
+          reset();
+        } else {
+          void handleCompleteSession();
+        }
+      }, 600);
       return () => clearTimeout(timer);
     }
-  }, [phase, nextSentence]);
+  }, [gameState, handleCompleteSession, phase, queue.length, queueIndex, reset]);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (phase === 'typing' && stats.startTime) {
-      interval = setInterval(() => {
-        const now = Date.now();
-        setElapsedTime(Math.floor((now - stats.startTime!) / 1000));
-      }, 1000);
-    } else if (phase === 'start') {
-      setTimeout(() => setElapsedTime(0), 0);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [phase, stats.startTime]);
+  const startPracticing = (selectedMode: TypingMode, data: TypingGameData, textList: string[]) => {
+    setMode(selectedMode);
+    setSelectedData(data);
+    const shuffled = deterministicShuffle(textList);
+    setQueue(selectedMode === 'paragraph' ? [textList[0]] : shuffled.slice(0, 10)); // Limit to 10 for word/sentence
+    setQueueIndex(0);
+    setGameState('practicing');
+    reset();
+    // Ensure focus after state change
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState === 'playing') {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setGameState('lobby');
-          setSelectedCategory(null);
-        }
-      }
-    };
-    globalThis.addEventListener('keydown', handleKeyDown);
-    return () => globalThis.removeEventListener('keydown', handleKeyDown);
-  }, [gameState]);
-
-  const hasWarnedRef = useRef(false);
-  useEffect(() => {
-    maybeWarnImeMismatch({
-      userInput,
-      hasWarnedRef,
-      t,
-    });
-  }, [userInput, t]);
-
-  const {
-    index: currentTypingIndex,
-    inputChar: currentInputChar,
-    targetChar: currentTargetChar,
-    hasError,
-  } = useMemo(
-    () =>
-      getCurrentTypingPosition({
-        targetText,
-        userInput,
-        checkInput,
-      }),
-    [targetText, userInput, checkInput]
-  );
-  const nextTargetChar =
-    currentTypingIndex + 1 < targetText.length ? targetText[currentTypingIndex + 1] : undefined;
-  const nextJamo = currentTargetChar
-    ? getNextJamo(currentTargetChar, currentInputChar, nextTargetChar)
-    : null;
-
-  const formatTime = formatTypingElapsedTime;
-  const wordPracticeWords = useMemo(
-    () =>
-      courseWords?.map(word => ({ id: word._id, word: word.word, meaning: word.meaning ?? '' })),
-    [courseWords]
+  // Helper to get words for a course
+  const courseWords = useQuery(
+    VOCAB.getOfCourse,
+    mode === 'word' && selectedCourseId ? { courseId: selectedCourseId as any, unitId: 1 } : 'skip'
   );
 
-  const handleBackToLobby = () => {
-    setGameState('lobby');
-    setSelectedCategory(null);
+  const formatNumber = (n: number): string => {
+    return n.toLocaleString(i18n.language === 'zh' ? 'zh-CN' : 'en-US');
   };
 
-  const handleStartWord = () => {
-    handleStartWordMode({
-      setPracticeMode,
-      setGameState,
-      selectedCourseId,
-      courses,
-      setSelectedCourseId,
-      setSelectedCourseName,
-      setSelectedUnitId,
-      reset,
-      setElapsedTime,
-      setSentencesCompleted,
-      setTotalCharactersTyped,
-    });
-  };
+  const renderLobby = () => (
+    <div className="max-w-[1000px] mx-auto py-8 px-6">
+      <div className="mb-10 flex items-center justify-between">
+        <div>
+          <div className="text-[12px] font-bold text-k-crimson tracking-[3px] mb-1">寫 · TYPING</div>
+          <h1 className="text-[32px] font-extrabold text-k-ink tracking-[-0.8px]">
+            {t('typingLobby.title', 'Typing Practice')}
+          </h1>
+          <p className="text-k-sub mt-1 font-medium">
+            {t('typing.mobile.lobbyIntro', 'Build rhythm with sentence, word, and paragraph drills.')}
+          </p>
+        </div>
+        
+        {userStats && (
+          <div className="flex gap-4">
+            <DesktopCard pad={14} className="min-w-[120px] text-center">
+              <div className="text-[10px] font-bold text-k-sub uppercase mb-1 tracking-wider">{t('typing.mobile.bestWpm', 'Best WPM')}</div>
+              <div className="text-[22px] font-black text-k-ink">{userStats.highestWpm}</div>
+            </DesktopCard>
+            <DesktopCard pad={14} className="min-w-[120px] text-center">
+              <div className="text-[10px] font-bold text-k-sub uppercase mb-1 tracking-wider">{t('typingGame.accuracy', 'Accuracy')}</div>
+              <div className="text-[22px] font-black text-k-mint-deep">{userStats.averageAccuracy}%</div>
+            </DesktopCard>
+          </div>
+        )}
+      </div>
 
-  const handleStartSentence = () => {
-    handleStartSentenceMode({
-      setPracticeMode,
-      setGameState,
-      reset,
-      setElapsedTime,
-      setSentencesCompleted,
-      setTotalCharactersTyped,
-      selectedCategory: effectiveSelectedCategory,
-      setSelectedCategory,
-      sentenceQueue,
-      setSentenceQueue,
-      setTargetText,
-      categories: sentenceCategories,
-    });
-  };
+      <div className="grid grid-cols-3 gap-6">
+        {[
+          { id: 'word', title: t('typingLobby.word.title', 'Word'), desc: t('typingLobby.word.desc', 'Practice individual words to build muscle memory.'), icon: <Type className="w-8 h-8" />, tone: 'var(--color-k-lilac)' },
+          { id: 'sentence', title: t('typingLobby.sentence.title', 'Sentence'), desc: t('typingLobby.sentence.desc', 'Type common phrases and daily expressions.'), icon: <Keyboard className="w-8 h-8" />, tone: 'var(--color-k-sky)' },
+          { id: 'paragraph', title: t('typingLobby.paragraph.title', 'Paragraph'), desc: t('typingLobby.paragraph.desc', 'Immerse yourself in poems and longer texts.'), icon: <FileText className="w-8 h-8" />, tone: 'var(--color-k-butter)' },
+        ].map((m) => (
+          <button
+            key={m.id}
+            onClick={() => {
+              setMode(m.id as TypingMode);
+              setGameState('category-selection');
+            }}
+            className="group relative flex flex-col text-left transition-all hover:-translate-y-1 active:scale-[0.98]"
+          >
+            <DesktopCard pad={32} className="h-full border-2 border-transparent hover:border-k-line transition-colors overflow-hidden">
+              <div 
+                className="w-16 h-16 rounded-[22px] flex items-center justify-center mb-6 transition-transform group-hover:scale-110"
+                style={{ backgroundColor: m.tone, color: '#FFFFFF' }}
+              >
+                {m.icon}
+              </div>
+              <h3 className="text-[22px] font-black text-k-ink mb-3 tracking-tight">{m.title}</h3>
+              <p className="text-k-sub leading-relaxed font-medium text-[14px]">{m.desc}</p>
+              
+              <div className="mt-8 flex items-center text-k-ink font-bold text-[13px]">
+                {t('common.start', 'Start Now')} <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
+              </div>
+              
+              {/* Decorative element */}
+              <div className="absolute -bottom-4 -right-4 opacity-[0.03] pointer-events-none transform rotate-12 scale-150">
+                {m.icon}
+              </div>
+            </DesktopCard>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-  const handleStartParagraph = () => {
-    handleStartParagraphMode({
-      setPracticeMode,
-      setGameState,
-      reset,
-      setElapsedTime,
-      setSentencesCompleted,
-      setTotalCharactersTyped,
-      selectedParagraph: effectiveSelectedParagraph,
-      setSelectedParagraph,
-      setTargetText,
-      paragraphs: practiceParagraphs,
-    });
-  };
+  const renderCategorySelection = () => (
+    <div className="max-w-[1000px] mx-auto py-8 px-6">
+      <button 
+        onClick={() => setGameState('lobby')}
+        className="flex items-center gap-2 text-k-sub hover:text-k-ink font-bold text-[14px] mb-8 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" /> {t('common.back', 'Back to Lobby')}
+      </button>
 
-  const handleCourseNameChange = (newName: string) => {
-    setSelectedCourseName(newName);
-    const variants = coursesByName[newName] || [];
-    if (variants.length > 0) {
-      setSelectedCourseId(variants[0]._id);
-    }
-    setSelectedUnitId(1);
-    reset();
-  };
+      <h2 className="text-[28px] font-black text-k-ink mb-8 tracking-tight">
+        {mode === 'word' ? t('typingLobby.word.title') : mode === 'sentence' ? t('typingLobby.sentence.title') : t('typingLobby.paragraph.title')} · {t('common.select', 'Select Content')}
+      </h2>
 
-  const handleCourseIdChange = (courseId: string) => {
-    setSelectedCourseId(courseId);
-    setSelectedUnitId(1);
-    reset();
-  };
+      {mode === 'word' ? (
+        <div className="grid grid-cols-2 gap-6">
+          {courses.map(course => (
+            <button
+              key={course._id}
+              onClick={() => {
+                setSelectedCourseId(course._id);
+                // In a real app, you'd wait for courseWords or pass a callback
+              }}
+              className="group text-left"
+            >
+              <DesktopCard pad={24} className={`transition-all hover:border-k-ink/30 border-2 ${selectedCourseId === course._id ? 'border-k-ink bg-k-ink/5' : 'border-transparent'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <DesignChip tone="lilac">{course.displayLevel || 'Level'}</DesignChip>
+                  {selectedCourseId === course._id && <div className="text-k-ink font-bold text-xs">SELECTED</div>}
+                </div>
+                <div className="text-[18px] font-black text-k-ink mb-1">{course.name}</div>
+                <div className="text-k-sub font-medium text-sm">{course.volume || 'Standard Volume'}</div>
+                
+                {selectedCourseId === course._id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (courseWords) {
+                        const words = courseWords.flatMap(w => typeof w.word === 'string' && w.word.length > 0 ? [w.word] : []);
+                        startPracticing('word', { courseId: course._id, title: course.name }, words);
+                      }
+                    }}
+                    className="mt-6 w-full py-3 bg-k-ink text-k-bg rounded-xl font-bold flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]"
+                  >
+                    <Play className="w-4 h-4 fill-current" /> {t('typing.mobile.startWordPractice')}
+                  </button>
+                )}
+              </DesktopCard>
+            </button>
+          ))}
+        </div>
+      ) : mode === 'sentence' ? (
+        <div className="grid grid-cols-2 gap-6">
+          {PRACTICE_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => startPracticing('sentence', cat, cat.sentences)}
+              className="group text-left"
+            >
+              <DesktopCard pad={24} className="h-full border-2 border-transparent hover:border-k-sky/30 transition-all hover:-translate-y-1">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-2xl">{cat.icon}</span>
+                  <DesignChip tone="sky">{cat.sentences.length} {t('typing.mobile.sets')}</DesignChip>
+                </div>
+                <div className="text-[20px] font-black text-k-ink mb-2">{cat.title}</div>
+                <p className="text-k-sub font-medium text-sm leading-relaxed">{cat.description}</p>
+              </DesktopCard>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-6">
+          {PRACTICE_PARAGRAPHS.map(para => (
+            <button
+              key={para.id}
+              onClick={() => startPracticing('paragraph', para, [para.text])}
+              className="group text-left"
+            >
+              <DesktopCard pad={24} className="h-full border-2 border-transparent hover:border-k-butter/30 transition-all hover:-translate-y-1">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-2xl">📜</span>
+                  <DesignChip tone="butter">{t('typing.mobile.longText')}</DesignChip>
+                </div>
+                <div className="text-[20px] font-black text-k-ink mb-2">{para.title}</div>
+                <p className="text-k-sub font-medium text-sm leading-relaxed line-clamp-2">{para.description}</p>
+              </DesktopCard>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
-  const handleUnitChange = (unitId: number) => {
-    setSelectedUnitId(unitId);
-    reset();
-  };
-
-  const handleParagraphChange = (paragraphId: string) => {
-    const paragraph = practiceParagraphs.find(item => item.id === paragraphId);
-    if (!paragraph) return;
-    setSelectedParagraph(paragraph);
-    setTargetText(paragraph.text);
-    reset();
-    setElapsedTime(0);
-    setSentencesCompleted(0);
-    setTotalCharactersTyped(0);
-  };
-
-  const handleCategoryChange = (categoryId: string) => {
-    const category = sentenceCategories.find(item => item.id === categoryId);
-    if (!category) return;
-    setSelectedCategory(category);
-    const queue = generateSentenceQueue(category);
-    setSentenceQueue(queue);
-    setTargetText(queue[0]);
-    reset();
-  };
-
-  const updateWordSessionStats = (wordStats: SessionStats) => {
-    setSessionStats({
-      wpm: wordStats.wpm,
-      accuracy: wordStats.accuracy,
-      errorCount: wordStats.errorCount,
-      duration: wordStats.duration,
-    });
-  };
-
-  if (gameState === 'lobby') {
-    return (
-      <TypingLobby
-        onBack={() => navigate('/courses')}
-        onStartWord={handleStartWord}
-        onStartSentence={handleStartSentence}
-        onStartParagraph={handleStartParagraph}
-      />
+  const renderPracticing = () => {
+    const nextJamo = getNextJamo(
+      targetText[completedIndex] || '',
+      userInput[completedIndex] || '',
+      targetText[completedIndex + 1]
     );
-  }
+
+    return (
+      <div className="max-w-[900px] mx-auto py-10 px-6">
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <DesignChip tone={mode === 'word' ? 'lilac' : mode === 'sentence' ? 'sky' : 'butter'} size="sm">
+              {mode.toUpperCase()}
+            </DesignChip>
+            <div className="text-[13px] font-bold text-k-sub">
+              {selectedData?.title || 'Practice'} · {queueIndex + 1} / {queue.length}
+            </div>
+          </div>
+          
+          <div className="flex gap-6">
+            <div className="text-center">
+              <div className="text-[10px] font-bold text-k-sub uppercase tracking-wider">WPM</div>
+              <div className="text-[20px] font-black text-k-ink tabular-nums">{stats.wpm}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] font-bold text-k-sub uppercase tracking-wider">ACC</div>
+              <div className="text-[20px] font-black text-k-mint-deep tabular-nums">{stats.accuracy}%</div>
+            </div>
+          </div>
+        </div>
+
+        <DesktopCard pad={40} className="relative mb-10 min-h-[260px] flex flex-col justify-center overflow-hidden">
+          {/* Practice Text Rendering */}
+          <div className="relative z-10 font-k-serif text-[32px] leading-[1.6] tracking-tight flex flex-wrap gap-y-2">
+            {targetText.split('').map((char, idx) => {
+              const isCompleted = idx < completedIndex;
+              const isCurrent = idx === completedIndex;
+              
+              let color = 'rgba(31,27,23,0.3)'; // Default
+              let bgColor = 'transparent';
+              
+              if (isCompleted) color = 'var(--color-k-mint-deep)';
+              if (isCurrent) {
+                color = 'var(--color-k-ink)';
+                bgColor = 'var(--color-k-butter)';
+              }
+
+              return (
+                <span 
+                  key={idx} 
+                  className={`relative transition-all duration-150 ${isCurrent ? 'scale-110 font-bold' : ''}`}
+                  style={{ color, backgroundColor: bgColor, borderRadius: 4, padding: '0 2px' }}
+                >
+                  {char}
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="mt-12 pt-8 border-t border-k-line/30">
+            <div className="text-[11px] font-bold text-k-sub uppercase tracking-[2px] mb-4">
+              {t('coursesOverview.desktop.typing.yourInput', 'Your Input')}
+            </div>
+            <div className="relative h-[40px] flex items-center">
+              <input
+                ref={inputRef}
+                type="text"
+                autoFocus
+                autoComplete="off"
+                className="absolute inset-0 opacity-0 cursor-default"
+                value={userInput}
+                onChange={() => {}} // Handled by useKoreanTyping internal listeners
+              />
+              <div 
+                className="text-[24px] font-medium text-k-ink tracking-wide font-k-serif"
+                onClick={() => inputRef.current?.focus()}
+              >
+                {userInput || <span className="text-k-line">{t('coursesOverview.desktop.typing.clickToStart')}</span>}
+                <span className="ml-1 inline-block w-[2px] h-[24px] bg-k-crimson animate-pulse align-middle" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Background decoration */}
+          <div className="absolute top-4 right-4 text-[120px] font-black text-k-ink/5 pointer-events-none select-none font-k-serif">
+            {completedIndex === targetText.length ? '✓' : mode === 'word' ? '詞' : mode === 'sentence' ? '文' : '段'}
+          </div>
+        </DesktopCard>
+
+        {/* Keyboard Hints */}
+        <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <DesktopKeyboardHints 
+            nextJamo={nextJamo} 
+            targetChar={targetText[completedIndex] || ''} 
+            hasError={false} // Hook doesn't expose error state directly in this simple version
+          />
+        </div>
+        
+        <div className="mt-8 flex justify-center gap-4">
+          <button 
+            onClick={() => {
+              if (confirm('Quit practice?')) setGameState('lobby');
+            }}
+            className="px-6 py-3 rounded-xl border border-k-line font-bold text-k-sub hover:bg-k-bg2 transition-colors"
+          >
+            {t('common.cancel', 'Cancel')}
+          </button>
+          <button 
+            onClick={() => {
+              reset();
+              inputRef.current?.focus();
+            }}
+            className="px-6 py-3 rounded-xl border border-k-line font-bold text-k-ink hover:bg-k-bg2 transition-colors flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" /> {t('common.restart', 'Restart')}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderResults = () => (
+    <div className="max-w-[800px] mx-auto py-16 px-6 text-center">
+      <div className="mb-8 inline-flex p-6 rounded-full bg-k-butter/20 text-k-butter">
+        <Trophy className="w-16 h-16 fill-current" />
+      </div>
+      
+      <h2 className="text-[40px] font-black text-k-ink tracking-tighter mb-2">
+        {t('typing.mobile.resultsTitle', 'Great Practice!')}
+      </h2>
+      <p className="text-k-sub font-medium text-lg mb-12">
+        {t('typing.mobile.resultsSubtitle', 'Consistency is the key to mastering Korean typing.')}
+      </p>
+
+      <div className="grid grid-cols-3 gap-6 mb-12">
+        <DesktopCard pad={24}>
+          <div className="text-[12px] font-bold text-k-sub uppercase tracking-wider mb-2">{t('coursesOverview.desktop.typing.speed')}</div>
+          <div className="text-[32px] font-black text-k-ink">{sessionResults?.wpm} <span className="text-sm font-bold text-k-sub">WPM</span></div>
+        </DesktopCard>
+        <DesktopCard pad={24}>
+          <div className="text-[12px] font-bold text-k-sub uppercase tracking-wider mb-2">{t('coursesOverview.desktop.typing.accuracy')}</div>
+          <div className="text-[32px] font-black text-k-mint-deep">{sessionResults?.accuracy}%</div>
+        </DesktopCard>
+        <DesktopCard pad={24}>
+          <div className="text-[12px] font-bold text-k-sub uppercase tracking-wider mb-2">{t('typingGame.errorCount', 'Errors')}</div>
+          <div className="text-[32px] font-black text-k-crimson">{sessionResults?.errorCount}</div>
+        </DesktopCard>
+      </div>
+
+      <div className="flex flex-col items-center gap-4">
+        <button
+          onClick={() => {
+            setGameState('practicing');
+            setQueueIndex(0);
+            reset();
+            setTimeout(() => inputRef.current?.focus(), 100);
+          }}
+          className="w-[240px] py-4 bg-k-ink text-k-bg rounded-2xl font-black text-[16px] shadow-lg hover:scale-[1.02] transition-transform"
+        >
+          {t('common.tryAgain', 'Try Again')}
+        </button>
+        <button
+          onClick={() => setGameState('lobby')}
+          className="w-[240px] py-4 bg-transparent text-k-sub rounded-2xl font-bold text-[15px] hover:text-k-ink transition-colors"
+        >
+          {t('common.backToDashboard', 'Back to Lobby')}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <>
-      <DesktopTypingGameLayout
-        practiceMode={practiceMode}
-        t={t}
-        onBackToLobby={handleBackToLobby}
-        selectedCourseName={selectedCourseName}
-        coursesByName={coursesByName}
-        onCourseNameChange={handleCourseNameChange}
-        selectedCourseId={selectedCourseId}
-        selectedCourseVolumeOptions={selectedCourseVolumeOptions}
-        onCourseIdChange={handleCourseIdChange}
-        selectedUnitId={selectedUnitId}
-        onUnitChange={handleUnitChange}
-        paragraphs={practiceParagraphs}
-        selectedParagraphId={effectiveSelectedParagraph?.id || ''}
-        onParagraphChange={handleParagraphChange}
-        sentenceCategories={sentenceCategories}
-        selectedCategoryId={effectiveSelectedCategory?.id || ''}
-        selectedCategoryIcon={effectiveSelectedCategory?.icon || '📝'}
-        onCategoryChange={handleCategoryChange}
-        elapsedTime={elapsedTime}
-        formatTime={formatTime}
-        currentTypingIndex={currentTypingIndex}
-        targetTextLength={targetText.length}
-        liveStats={{ wpm: stats.wpm, accuracy: stats.accuracy }}
-        bestWpm={userStats?.highestWpm || 0}
-        onStopPractice={endSession}
-        userAvatar={user?.avatar}
-        userName={user?.name}
-        wordPracticeWords={wordPracticeWords}
-        onWordComplete={handleWordComplete}
-        onWordStatsUpdate={updateWordSessionStats}
-        targetChars={targetChars}
-        userInput={userInput}
-        isFocused={isFocused}
-        onFocusInput={() => inputRef.current?.focus()}
-        selectedParagraphTitle={effectiveSelectedParagraph?.title}
-        sentenceQueue={sentenceQueue}
-        nextJamo={nextJamo}
-        currentTargetChar={currentTargetChar}
-        hasError={hasError}
-        showHiddenInput={practiceMode !== 'word'}
-        inputRef={inputRef}
-        setIsFocused={setIsFocused}
-      />
-      <TypingResultsModal
-        isOpen={showResultsModal}
-        onClose={handleQuit}
-        onRetry={handleRetry}
-        wpm={sessionStats.wpm}
-        accuracy={sessionStats.accuracy}
-        errorCount={sessionStats.errorCount}
-        duration={sessionStats.duration}
-        targetWpm={targetWpm}
-        highestWpm={userStats?.highestWpm || 0}
-        userAvatar={user?.avatar}
-      />
-    </>
+    <div className="animate-in fade-in duration-500">
+      {gameState === 'lobby' && renderLobby()}
+      {gameState === 'category-selection' && renderCategorySelection()}
+      {gameState === 'practicing' && renderPracticing()}
+      {gameState === 'results' && renderResults()}
+      
+      {/* Global CSS for some effects */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
+    </div>
   );
-};
-
-export default DesktopTypingPage;
-
-
+}

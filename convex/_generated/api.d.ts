@@ -26,6 +26,7 @@ import type * as aiReliability from "../aiReliability.js";
 import type * as aiUsageLogs from "../aiUsageLogs.js";
 import type * as aiWritingEvaluation from "../aiWritingEvaluation.js";
 import type * as analytics from "../analytics.js";
+import type * as android from "../android.js";
 import type * as annotations from "../annotations.js";
 import type * as assetUrlMigration from "../assetUrlMigration.js";
 import type * as auth from "../auth.js";
@@ -161,6 +162,7 @@ declare const fullApi: ApiFromModules<{
   aiUsageLogs: typeof aiUsageLogs;
   aiWritingEvaluation: typeof aiWritingEvaluation;
   analytics: typeof analytics;
+  android: typeof android;
   annotations: typeof annotations;
   assetUrlMigration: typeof assetUrlMigration;
   auth: typeof auth;

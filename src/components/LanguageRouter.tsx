@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Language } from '../types';
+import { useGlobalSettings } from '../hooks/useGlobalSettings';
 import { fetchUserCountry } from '../utils/geo';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 
@@ -129,6 +130,8 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { storedSettings, isLoading: globalSettingsLoading } = useGlobalSettings();
+  const accountLanguage = storedSettings?.displayLanguage;
 
   useEffect(() => {
     const normalizedPathname = normalizeLocalizedPathname(location.pathname);
@@ -137,11 +140,14 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
       return;
     }
 
+    const preferredLanguage = accountLanguage ?? getStoredUserLanguage();
+
     // If no valid language in URL, redirect to detected language
     if (!lang || !isValidLanguage(lang)) {
+      if (globalSettingsLoading) return;
       let cancelled = false;
 
-      detectLanguage().then(detectedLang => {
+      Promise.resolve(accountLanguage ?? detectLanguage()).then(detectedLang => {
         if (cancelled) return;
         const segments = normalizedPathname.split('/').filter(Boolean);
         const hasLanguagePrefix = segments[0] ? isValidLanguage(segments[0]) : false;
@@ -156,10 +162,9 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
       };
     }
 
-    const userLanguage = getStoredUserLanguage();
-    if (userLanguage && userLanguage !== lang) {
+    if (preferredLanguage && preferredLanguage !== lang) {
       navigate(
-        buildLocalizedPath(location.pathname, userLanguage, location.search, location.hash),
+        buildLocalizedPath(location.pathname, preferredLanguage, location.search, location.hash),
         {
           replace: true,
         }
@@ -175,12 +180,18 @@ export const LanguageRouter: React.FC<LanguageRouterProps> = ({ children }) => {
     // Update HTML lang attribute
     document.documentElement.lang = lang;
 
+    if (accountLanguage) {
+      safeSetLocalStorageItem('preferredLanguage', accountLanguage);
+      safeSetLocalStorageItem('preferredLanguageSource', 'user');
+      return;
+    }
+
     const storedSource = safeGetLocalStorageItem('preferredLanguageSource');
     if (storedSource !== 'user') {
       safeSetLocalStorageItem('preferredLanguage', lang);
       safeSetLocalStorageItem('preferredLanguageSource', 'auto');
     }
-  }, [lang, i18n, navigate, location]);
+  }, [accountLanguage, globalSettingsLoading, lang, i18n, navigate, location]);
 
   // Don't render children until we have a valid language
   if (!lang || !isValidLanguage(lang)) {

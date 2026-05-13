@@ -11,7 +11,7 @@ import {
 } from './_generated/server';
 import { Doc, Id } from './_generated/dataModel';
 import { getAuthUserId, getOptionalAuthUserId } from './utils';
-import { getSpacesPublicConfig, getSpacesHost, getSpacesCdnBaseUrl } from './spacesConfig';
+import { resolveStoragePublicUrl } from './spacesConfig';
 
 type ReadingLibraryBook = Doc<'reading_library_books'>;
 const readingLibraryStatusValidator = v.union(
@@ -155,13 +155,6 @@ async function assertBookReadable(
   return { isOwner, isAdmin, isSharedAccess };
 }
 
-function getPublicObjectUrl(key: string): string {
-  const spaces = getSpacesPublicConfig();
-  if (!spaces) return '';
-  const host = getSpacesHost(spaces.endpoint);
-  const cdnBase = getSpacesCdnBaseUrl(spaces.bucket, host);
-  return `${cdnBase}/${key.split('/').map(encodeURIComponent).join('/')}`;
-}
 
 export const getPublicShelf = query({
   args: {
@@ -328,7 +321,7 @@ export const getBookDetail = query({
       userProgress,
       accessState,
       epubUrl:
-        isOwner || isAdmin || isSharedAccess ? getPublicObjectUrl(book.epubObjectKey) : undefined,
+        isOwner || isAdmin || isSharedAccess ? resolveStoragePublicUrl(book.epubObjectKey) : undefined,
     };
   },
 });
@@ -356,7 +349,7 @@ export const getEpubFile = query({
       throw new ConvexError({ code: 'ACCESS_DENIED', message: 'No access to this book' });
     }
 
-    const publicUrl = getPublicObjectUrl(book.epubObjectKey);
+    const publicUrl = resolveStoragePublicUrl(book.epubObjectKey);
     return { epubUrl: publicUrl };
   },
 });

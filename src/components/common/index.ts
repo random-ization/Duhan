@@ -10,8 +10,5 @@ export {
   AdminDashboardSkeleton,
   VocabModuleSkeleton,
   ListeningModuleSkeleton,
-  VocabBookImmersiveSkeleton,
-  VocabBookListenSkeleton,
-  VocabBookDictationSkeleton,
-  VocabBookSpellingSkeleton,
 } from './Skeleton';
+export { UserAvatar } from './UserAvatar';

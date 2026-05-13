@@ -26,7 +26,7 @@ export const Loading: React.FC<LoadingProps> = ({ fullScreen = false, size = 'md
   if (fullScreen) {
     return (
       <DialogPortal>
-        <div className="fixed inset-0 bg-card/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-card/80 backdrop-blur-sm z-[80] flex items-center justify-center">
           {content}
         </div>
       </DialogPortal>

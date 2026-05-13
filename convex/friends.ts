@@ -220,6 +220,27 @@ function pickName(user: Doc<'users'>): string {
   return name || 'Learner';
 }
 
+type ProfileVisibility = 'public' | 'friends' | 'private';
+
+async function loadProfileVisibility(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<'users'>
+): Promise<ProfileVisibility> {
+  const settings = await ctx.db
+    .query('user_settings')
+    .withIndex('by_user', q => q.eq('userId', userId))
+    .first();
+  const visibility = settings?.privacy?.profileVisibility;
+  if (visibility === 'friends' || visibility === 'private') return visibility;
+  return 'public';
+}
+
+function canExposeByVisibility(visibility: ProfileVisibility, relation: FriendshipRelation): boolean {
+  if (visibility === 'private') return false;
+  if (visibility === 'friends') return relation === 'already_friends';
+  return true;
+}
+
 export const searchUsers = query({
   args: {
     query: v.string(),
@@ -246,7 +267,7 @@ export const searchUsers = query({
     const outgoingSet = new Set(outgoing.map(item => String(item.followingId)));
     const incomingSet = new Set(incoming.map(item => String(item.followerId)));
 
-    const toDto = (user: Doc<'users'>): FriendSearchItemDto | null => {
+    const toDto = async (user: Doc<'users'>): Promise<FriendSearchItemDto | null> => {
       if (user._id === viewerId) return null;
       const friendCode =
         typeof user.friendCode === 'string' ? normalizeFriendCode(user.friendCode) : '';
@@ -259,6 +280,8 @@ export const searchUsers = query({
           : outgoingSet.has(userKey)
             ? 'already_requested'
             : 'none';
+      const visibility = await loadProfileVisibility(ctx, user._id);
+      if (!canExposeByVisibility(visibility, relation)) return null;
 
       return {
         userId: user._id,
@@ -275,7 +298,7 @@ export const searchUsers = query({
         .withIndex('by_friendCode', q => q.eq('friendCode', normalizedCode))
         .first();
       if (!target) return [];
-      const dto = toDto(target);
+      const dto = await toDto(target);
       return dto ? [dto] : [];
     }
 
@@ -337,7 +360,7 @@ export const searchUsers = query({
 
     const results: FriendSearchItemDto[] = [];
     for (const { user } of scoredUsers) {
-      const dto = toDto(user);
+      const dto = await toDto(user);
       if (!dto) continue;
       results.push(dto);
       if (results.length >= limit) break;

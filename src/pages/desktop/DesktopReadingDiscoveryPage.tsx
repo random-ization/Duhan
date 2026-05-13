@@ -1,548 +1,572 @@
-import React from 'react';
-import { ChevronRight, Clock3, RefreshCcw } from 'lucide-react';
-import { Button } from '../../components/ui';
-import { PictureBookShelf } from '../../components/reading/PictureBookShelf';
-import { ReadingDiscoverySection } from '../../components/reading/ReadingDiscoverySection';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { READING_BOOKS, NEWS, READING_LIBRARY } from '../../utils/convexRefs';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
+import { 
+  BookOpen, 
+  Newspaper, 
+  BookMarked, 
+  ChevronLeft,
+  ChevronRight,
+  Upload, 
+  Clock, 
+  Layers,
+  ArrowRight,
+  X,
+  Search
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { PictureBook } from '../../types';
-import { buildPictureBookPath, buildReadingArticlePath, buildEpubLibraryPath } from '../../utils/readingRoutes';
-import { formatReadingRelativeTime, getReadingSourceLabel } from '../../utils/readingMetadata';
+import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet';
 
-type DifficultyFilter = 'ALL' | 'L1' | 'L2' | 'L3';
+type ReadingTab = 'all' | 'picture_books' | 'news' | 'epubs';
 
-type NewsItem = {
-  _id: string;
-  sourceKey: string;
-  sourceUrl: string;
-  title: string;
-  summary?: string;
-  bodyText: string;
-  section?: string;
-  publishedAt: number;
-  difficultyLevel: 'L1' | 'L2' | 'L3';
-  difficultyScore: number;
-};
+export default function DesktopReadingDiscoveryPage() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const navigate = useLocalizedNavigate();
+  const [activeTab, setActiveTab] = useState<ReadingTab>('all');
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const [showAllBooks, setShowAllBooks] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-type UserFeedData = {
-  news: NewsItem[];
-  articles: NewsItem[];
-  refresh: {
-    needsInitialization: boolean;
-    hasReadSinceRefresh: boolean;
-    autoRefreshEligible: boolean;
-    nextAutoRefreshAt: number | null;
-    manualRefreshLimit: number;
-    manualRefreshUsed: number;
-    manualRefreshRemaining: number;
-    lastRefreshedAt: number | null;
-    userScoped: boolean;
-  };
-};
+  // --- DATA FETCHING ---
+  const books = useQuery(READING_BOOKS.listPublishedBooks, {});
+  const newsFeed = useQuery(NEWS.getUserFeed, {
+    newsLimit: 6,
+    articleLimit: 12,
+  });
+  const myUploads = useQuery(READING_LIBRARY.getMyUploads, user?.id ? {} : 'skip');
 
-type DifficultyTranslator = (key: string, options?: Record<string, unknown>) => string;
+  const isLoadingBooks = books === undefined;
+  const isLoadingNews = newsFeed === undefined;
+  const isLoadingEpubs = user?.id ? myUploads === undefined : false;
 
-interface DesktopReadingDiscoveryPageProps {
-  t: DifficultyTranslator;
-  language: string;
-  weeklyReadCount: number;
-  estimatedWords: number;
-  pictureBooks: PictureBook[] | undefined;
-  pictureBookLevelOptions: Array<{ value: string; count: number; label: string }>;
-  pictureBookLevelFilter: string;
-  filteredPictureBooks: PictureBook[] | undefined;
-  feedReady: boolean;
-  feed: UserFeedData | undefined;
-  topNews: NewsItem[];
-  featuredNews: NewsItem | undefined;
-  secondaryNews: NewsItem[];
-  wikiArticles: Array<{
-    id: string;
-    title: string;
-    excerpt: string;
-    publishedAt: number;
-    sourceLabel: string;
-  }>;
-  userId: string | undefined;
-  manualRefreshing: boolean;
-  refreshMessage: string;
-  difficultyFilter: DifficultyFilter;
-  currentPath: string;
-  updateFilterParams: (updates: Partial<{ difficulty: DifficultyFilter; level: string }>) => void;
-  onManualRefresh: () => Promise<void>;
-  navigate: (path: string) => void;
-}
+  const featuredList = useMemo(() => books?.slice(0, 3) || [], [books]);
+  const featured = featuredList[featuredIndex] || null;
+  const catalog = books && books.length > 0 ? books : [];
+  const news = newsFeed?.news || [];
+  const epubs = myUploads || [];
 
-function getDifficultyChip(
-  level: 'L1' | 'L2' | 'L3',
-  t: DifficultyTranslator
-) {
-  if (level === 'L1') {
-    return {
-      text: t('readingDiscovery.difficulty.l1', { defaultValue: 'A2 Beginner' }),
-      className:
-        'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300',
-    };
-  }
-  if (level === 'L2') {
-    return {
-      text: t('readingDiscovery.difficulty.l2', { defaultValue: 'B2 Intermediate' }),
-      className:
-        'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300',
-    };
-  }
-  return {
-    text: t('readingDiscovery.difficulty.l3', { defaultValue: 'C1 Advanced' }),
-    className:
-      'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300',
-  };
-}
+  const categorizedBooks = useMemo(() => {
+    if (!books) return {};
+    const filtered = searchQuery
+      ? books.filter(
+          b =>
+            b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (b.levelLabel || '').toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : books;
 
-function formatRelativeTime(
-  publishedAt: number,
-  language: string,
-  t: DifficultyTranslator
-) {
-  const locale =
-    language === 'zh'
-      ? 'zh-CN'
-      : language === 'vi'
-        ? 'vi-VN'
-        : language === 'mn'
-          ? 'mn-MN'
-          : 'en-US';
-  return formatReadingRelativeTime(
-    publishedAt,
-    locale,
-    t('readingDiscovery.news.recentlyUpdated', {
-      defaultValue: 'Recently updated',
-    })
-  );
-}
+    const groups: Record<string, any[]> = {};
+    filtered.forEach(book => {
+      const level = book.levelLabel || '未分级';
+      if (!groups[level]) groups[level] = [];
+      groups[level].push(book);
+    });
+    return groups;
+  }, [books, searchQuery]);
 
-function estimateReadingMinutes(bodyText: string) {
-  const length = bodyText?.length ?? 0;
-  return Math.max(1, Math.round(length / 450));
-}
+  const nextFeatured = () => setFeaturedIndex((i) => (i + 1) % featuredList.length);
+  const prevFeatured = () => setFeaturedIndex((i) => (i - 1 + featuredList.length) % featuredList.length);
 
-function getDifficultyFilterLabel(item: DifficultyFilter, t: DifficultyTranslator): string {
-  if (item === 'ALL') return t('readingDiscovery.filters.all', { defaultValue: 'All' });
-  if (item === 'L1') return t('readingDiscovery.filters.l1', { defaultValue: 'Beginner' });
-  if (item === 'L2') return t('readingDiscovery.filters.l2', { defaultValue: 'Intermediate' });
-  return t('readingDiscovery.filters.l3', { defaultValue: 'Advanced' });
-}
+  // Auto slide
+  React.useEffect(() => {
+    if (featuredList.length <= 1) return;
+    const timer = setInterval(nextFeatured, 5000);
+    return () => clearInterval(timer);
+  }, [featuredList.length]);
 
-const DifficultyFilterButtons: React.FC<{
-  difficultyFilter: DifficultyFilter;
-  onSelect: (item: DifficultyFilter) => void;
-  t: DifficultyTranslator;
-}> = ({ difficultyFilter, onSelect, t }) => (
-  <>
-    {(['ALL', 'L1', 'L2', 'L3'] as DifficultyFilter[]).map(item => {
-      const selected = difficultyFilter === item;
-      return (
-        <Button
-          key={item}
-          type="button"
-          variant="ghost"
-          size="auto"
-          onClick={() => onSelect(item)}
-          className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-            selected
-              ? 'border-foreground bg-primary text-primary-foreground'
-              : 'border-border bg-card text-muted-foreground hover:border-border'
-          }`}
-        >
-          {getDifficultyFilterLabel(item, t)}
-        </Button>
-      );
-    })}
-  </>
-);
+  const tabs: { id: ReadingTab; label: string; icon: any }[] = [
+    { id: 'all', label: '全部', icon: Layers },
+    { id: 'picture_books', label: '绘本', icon: BookOpen },
+    { id: 'news', label: '新闻', icon: Newspaper },
+    { id: 'epubs', label: '电子书', icon: BookMarked },
+  ];
 
-const FeaturedNewsCard: React.FC<{
-  featuredNews: NewsItem;
-  language: string;
-  t: DifficultyTranslator;
-  onOpen: (id: string) => void;
-}> = ({ featuredNews, language, t, onOpen }) => {
-  const chip = getDifficultyChip(featuredNews.difficultyLevel, t);
-  const preview = (featuredNews.summary || featuredNews.bodyText || '').trim().slice(0, 150);
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => onOpen(featuredNews._id)}
-      className="group !flex !items-stretch !justify-start relative overflow-hidden rounded-3xl border-2 border-border bg-gradient-to-br from-card via-card to-accent/35 p-7 text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop"
-    >
-      <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-primary/10 blur-2xl" />
-      <div className="absolute bottom-0 right-0 h-28 w-28 rounded-tl-[2.5rem] bg-accent/35" />
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
-            {getReadingSourceLabel(
-              featuredNews.sourceKey,
-              t('readingDiscovery.sourceFallback', { defaultValue: 'Unknown source' })
-            )}
-          </span>
-          <span className="text-xs font-semibold text-muted-foreground">
-            {formatRelativeTime(featuredNews.publishedAt, language, t)}
-          </span>
-        </div>
-        <span
-          className={`mb-4 inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-bold ${chip.className}`}
-        >
-          {chip.text}
-        </span>
-        <h3 className="mb-3 text-3xl font-black leading-tight text-foreground">
-          {featuredNews.title}
-        </h3>
-        <p className="mb-8 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-          {preview || featuredNews.title}
-        </p>
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <span>
-              {t('readingDiscovery.news.aiExtracted', {
-                defaultValue: 'AI extracted {{count}} words',
-                count: Math.max(5, Math.round(featuredNews.bodyText.length / 95)),
-              })}
-            </span>
-            <span>•</span>
-            <span>
-              {t('readingDiscovery.news.readingMinutes', {
-                defaultValue: '~{{minutes}} min read',
-                minutes: estimateReadingMinutes(featuredNews.bodyText),
-              })}
-            </span>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-xs font-bold text-foreground">
-            {t('readingDiscovery.articles.readNow', { defaultValue: 'Read now' })}
-            <ChevronRight className="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </div>
-    </Button>
-  );
-};
-
-const SecondaryNewsCard: React.FC<{
-  item: NewsItem;
-  language: string;
-  t: DifficultyTranslator;
-  onOpen: (id: string) => void;
-}> = ({ item, language, t, onOpen }) => {
-  const chip = getDifficultyChip(item.difficultyLevel, t);
-  const preview = (item.summary || item.bodyText || '').trim().slice(0, 100);
-  return (
-    <Button
-      key={item._id}
-      type="button"
-      variant="ghost"
-      size="auto"
-      onClick={() => onOpen(item._id)}
-      className="group !flex !items-stretch !justify-between relative flex-col rounded-3xl border-2 border-border bg-card p-6 text-left transition hover:-translate-y-1 hover:border-foreground/20 hover:shadow-pop-sm"
-    >
-      <div className="absolute right-4 top-4 rounded-full border border-border bg-muted p-1.5 text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-foreground">
-        <ChevronRight className="h-3.5 w-3.5" />
-      </div>
-      <div className="mb-5 flex items-start justify-between gap-2 pr-7">
-        <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-foreground">
-          {getReadingSourceLabel(
-            item.sourceKey,
-            t('readingDiscovery.sourceFallback', { defaultValue: 'Unknown source' })
-          )}
-        </span>
-        <span className="text-xs font-semibold text-muted-foreground">
-          {formatRelativeTime(item.publishedAt, language, t)}
-        </span>
-      </div>
-      <div>
-        <span className="mb-3 inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-          {chip.text}
-        </span>
-        <h3 className="mb-3 text-xl font-black leading-snug text-foreground">{item.title}</h3>
-        <p className="mb-6 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-          {preview || item.title}
-        </p>
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <span>
-            {t('readingDiscovery.news.aiExtracted', {
-              defaultValue: 'AI extracted {{count}} words',
-              count: Math.max(5, Math.round(item.bodyText.length / 95)),
-            })}
-          </span>
-          <span>•</span>
-          <span>
-            {t('readingDiscovery.news.readingMinutes', {
-              defaultValue: '~{{minutes}} min read',
-              minutes: estimateReadingMinutes(item.bodyText),
-            })}
-          </span>
-        </div>
-      </div>
-    </Button>
-  );
-};
-
-const LiveNewsContent: React.FC<{
-  feedReady: boolean;
-  feed: UserFeedData | undefined;
-  topNews: NewsItem[];
-  featuredNews: NewsItem | undefined;
-  secondaryNews: NewsItem[];
-  language: string;
-  t: DifficultyTranslator;
-  onOpen: (id: string) => void;
-}> = ({ feedReady, feed, topNews, featuredNews, secondaryNews, language, t, onOpen }) => {
-  if (!feedReady || feed === undefined) {
+  const renderPictureBooks = (limit?: number) => {
+    const displayCatalog = limit ? catalog.slice(0, limit) : catalog;
+    
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
-        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-        <div className="h-[280px] animate-pulse rounded-3xl bg-muted" />
-      </div>
-    );
-  }
-
-  if (topNews.length === 0) {
-    return (
-      <div className="rounded-3xl border border-border bg-card px-6 py-16 text-center text-sm font-semibold text-muted-foreground">
-        {t('readingDiscovery.news.empty', {
-          defaultValue: 'No news available yet. Please run ingestion from admin.',
-        })}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr,1fr,1fr]">
-      {featuredNews ? (
-        <FeaturedNewsCard featuredNews={featuredNews} language={language} t={t} onOpen={onOpen} />
-      ) : null}
-      {secondaryNews.map(item => (
-        <SecondaryNewsCard key={item._id} item={item} language={language} t={t} onOpen={onOpen} />
-      ))}
-    </div>
-  );
-};
-
-export const DesktopReadingDiscoveryPage: React.FC<DesktopReadingDiscoveryPageProps> = ({
-  t,
-  language,
-  weeklyReadCount,
-  estimatedWords,
-  pictureBooks,
-  pictureBookLevelOptions,
-  pictureBookLevelFilter,
-  filteredPictureBooks,
-  feedReady,
-  feed,
-  topNews,
-  featuredNews,
-  secondaryNews,
-  wikiArticles,
-  userId,
-  manualRefreshing,
-  refreshMessage,
-  difficultyFilter,
-  currentPath,
-  updateFilterParams,
-  onManualRefresh,
-  navigate,
-}) => {
-  return (
-    <div className="mx-auto w-full max-w-[1400px] px-2 pb-16 pt-4 sm:px-4 lg:px-6">
-      <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
-            {t('readingDiscovery.title', { defaultValue: 'Reading Discovery' })}
-          </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground md:text-base">
-            {t('readingDiscovery.subtitle', {
-              defaultValue: 'Sync real Korean news and build a long-term reading library',
-            })}
-          </p>
-        </div>
-        <div className="flex items-center gap-6 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm">
-          <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              {t('readingDiscovery.stats.weeklyRead', { defaultValue: 'Fresh this week' })}
-            </span>
-            <span className="text-xl font-black text-muted-foreground">
-              {weeklyReadCount}{' '}
-              <span className="text-sm font-medium text-muted-foreground">
-                {t('readingDiscovery.stats.articles', { defaultValue: 'articles' })}
-              </span>
-            </span>
+      <section className="space-y-6">
+        <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline">
+            <span className="mr-2 font-k-serif text-[20px] font-medium text-k-crimson">冊</span>
+            <span className="text-[16px] font-extrabold text-k-ink">精选绘本</span>
           </div>
-          <div className="h-8 w-px bg-muted" />
-          <div className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              {t('readingDiscovery.stats.estimatedWords', { defaultValue: 'Estimated new words' })}
-            </span>
-            <span className="text-xl font-black text-primary">
-              {estimatedWords}{' '}
-              <span className="text-sm font-medium text-muted-foreground">
-                {t('readingDiscovery.stats.words', { defaultValue: 'words' })}
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <section className="mb-14">
-        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-2xl font-black text-foreground">
-              🎨 {t('readingDiscovery.pictureBooks.title', { defaultValue: 'Picture Books' })}
-            </h2>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {t('readingDiscovery.pictureBooks.subtitle', {
-                defaultValue:
-                  'Open a storybook, listen line by line, and follow sentence-level highlighting.',
-              })}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground">
-            {pictureBooks?.length ?? 0}/{pictureBooks?.length ?? 0}{' '}
-            {t('readingDiscovery.pictureBooks.count', { defaultValue: 'books ready' })}
-          </div>
-        </div>
-
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {pictureBookLevelOptions.map(option => (
-            <Button
-              key={option.value}
-              type="button"
-              variant="ghost"
-              onClick={() => updateFilterParams({ level: option.value })}
-              className={cn(
-                'shrink-0 rounded-full border px-4 py-2 text-left transition',
-                pictureBookLevelFilter === option.value
-                  ? 'border-foreground/20 bg-foreground text-background shadow-sm'
-                  : 'border-border bg-card/80 text-foreground hover:border-foreground/15'
-              )}
+          {activeTab === 'all' && (
+            <button 
+              onClick={() => setShowAllBooks(true)}
+              className="text-[12px] font-bold text-k-sub hover:text-k-crimson transition-colors flex items-center gap-1"
             >
-              <div className="flex min-w-[128px] items-center justify-between gap-3">
-                <div className="text-sm font-black">{option.label}</div>
-                <div
-                  className={cn(
-                    'inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm font-black',
-                    pictureBookLevelFilter === option.value
-                      ? 'bg-background/15 text-background'
-                      : 'bg-muted text-foreground'
-                  )}
-                >
-                  {option.count}
+              查看全部绘本 <ChevronRight size={14} />
+            </button>
+          )}
+        </div>
+
+      {featured && (
+        <div className="relative group/carousel">
+          <DesktopCard pad={0} className="overflow-hidden border border-k-line/10 shadow-k-sh-sm hover:shadow-k-sh-lg transition-all">
+            <div className="flex h-[280px]">
+              <div className="relative w-[380px] shrink-0 overflow-hidden">
+                {featured.coverImageUrl ? (
+                  <img 
+                    key={featured._id}
+                    src={featured.coverImageUrl} 
+                    className="h-full w-full object-cover transition-all duration-700 animate-in fade-in zoom-in-95" 
+                    alt="" 
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-k-crimson/20 to-k-indigo/20 flex items-center justify-center">
+                    <BookOpen size={64} className="text-k-ink/10" />
+                  </div>
+                )}
+                <div className="absolute left-6 top-6">
+                  <DesignChip tone="ink" size="sm" className="backdrop-blur-md bg-k-ink/80">本周精选</DesignChip>
                 </div>
               </div>
-            </Button>
+              <div className="flex-1 p-10 flex flex-col justify-center animate-in slide-in-from-right-4 duration-500">
+                <div className="flex items-center gap-3 mb-4">
+                  <DesignChip tone="butter" size="sm">
+                    {featured.levelLabel || '中级'}
+                  </DesignChip>
+                  <span className="text-[12px] font-bold text-k-sub flex items-center gap-1.5">
+                    <Clock size={14} /> {featured.readingMinutes || 5} 分钟阅读
+                  </span>
+                </div>
+                <h2 className="font-k-serif text-[36px] font-medium tracking-tight text-k-ink leading-tight mb-4 line-clamp-1">
+                  {featured.title}
+                </h2>
+                <p className="text-k-sub text-[15px] font-medium mb-8 line-clamp-2 max-w-[500px]">
+                  探索精彩的韩语故事，提升阅读理解能力。
+                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => navigate(`/reading/books/${featured.slug}`)}
+                    className="w-fit flex items-center gap-2 px-8 py-3 bg-k-ink text-k-bg rounded-xl font-bold hover:bg-k-crimson transition-all transform hover:-translate-y-1 active:scale-95"
+                  >
+                    开始阅读 <ArrowRight size={18} />
+                  </button>
+                  
+                  {/* Indicators */}
+                  <div className="flex gap-1.5 ml-4">
+                    {featuredList.map((_, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => setFeaturedIndex(idx)}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all",
+                          idx === featuredIndex ? "w-6 bg-k-crimson" : "w-1.5 bg-k-line"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DesktopCard>
+
+          {/* Navigation Arrows */}
+          <button 
+            onClick={(e) => { e.stopPropagation(); prevFeatured(); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md border border-k-line shadow-k-sh-sm flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white"
+          >
+            <ChevronLeft size={20} className="text-k-ink" />
+          </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); nextFeatured(); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md border border-k-line shadow-k-sh-sm flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-all hover:bg-white"
+          >
+            <ChevronRight size={20} className="text-k-ink" />
+          </button>
+        </div>
+      )}
+
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {displayCatalog.map((p) => (
+            <DesktopCard 
+              key={p._id} 
+              pad={0} 
+              className="overflow-hidden cursor-pointer group border border-k-line/10 hover:shadow-k-sh transition-all"
+              onClick={() => navigate(`/reading/books/${p.slug}`)}
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-k-bg2">
+                {p.coverImageUrl ? (
+                  <img src={p.coverImageUrl} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" alt="" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <BookOpen size={40} className="text-k-ink/5" />
+                  </div>
+                )}
+                <div className="absolute right-3 top-3">
+                  <DesignChip tone="ink" size="sm" className="backdrop-blur-md bg-k-ink/70">
+                    {p.levelLabel || '阅读'}
+                  </DesignChip>
+                </div>
+              </div>
+              <div className="p-5">
+                <h4 className="font-k-serif text-[18px] font-medium leading-tight text-k-ink group-hover:text-k-crimson transition-colors mb-2">
+                  {p.title}
+                </h4>
+                <div className="flex items-center gap-3 text-[11px] font-bold text-k-sub">
+                   <span>{p.readingMinutes || 5} 分钟</span>
+                   <span className="w-1 h-1 rounded-full bg-k-line" />
+                   <span>{p.pageCount || 0} 页</span>
+                </div>
+              </div>
+            </DesktopCard>
           ))}
         </div>
-
-        <PictureBookShelf
-          books={filteredPictureBooks}
-          loading={pictureBooks === undefined}
-          onOpen={slug => navigate(buildPictureBookPath(slug, currentPath))}
-          emptyStateText={t('readingDiscovery.pictureBooks.emptyFiltered', {
-            defaultValue:
-              'No picture books are available in this level yet. Swipe to another level.',
-          })}
-        />
       </section>
+    );
+  };
 
-      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+  const renderNews = () => {
+    const getSourceInfo = (key: string) => {
+      const sources: Record<string, { label: string; color: string; initial: string }> = {
+        mk: { label: '매일경제', color: '#B59461', initial: '매' },
+        khan: { label: '경향신문', color: '#D32F2F', initial: '京' },
+        donga: { label: '동아일보', color: '#0054A6', initial: '東' },
+        hankyung: { label: '한국경제', color: '#1E40AF', initial: '韓' },
+        voa_ko: { label: 'VOA', color: '#E65100', initial: 'V' },
+        itdonga: { label: 'IT동아', color: '#00BFA5', initial: 'IT' },
+      };
+      return sources[key.toLowerCase()] || { label: key, color: 'var(--color-k-ink)', initial: key.charAt(0).toUpperCase() };
+    };
 
-      <section className="mb-14">
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="flex items-center gap-2 text-2xl font-black text-foreground">
-              <span>📰 {t('readingDiscovery.news.title', { defaultValue: 'Live News' })}</span>
-              <span className="animate-pulse rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/50 dark:text-red-300">
-                LIVE
-              </span>
-            </h2>
-            <p className="mt-1 text-sm font-medium text-muted-foreground">
-              {t('readingDiscovery.news.subtitle', {
-                defaultValue:
-                  'Auto-ingested by RSS, great for extensive reading and current affairs',
-              })}
-            </p>
-            {refreshMessage && (
-              <p className="mt-2 text-xs font-semibold text-primary">{refreshMessage}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {userId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="auto"
-                onClick={() => {
-                  void onManualRefresh();
-                }}
-                disabled={manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0}
-                loading={manualRefreshing}
-                loadingText={
-                  <>
-                    {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
-                    <span className="text-[11px]">
-                      {feed?.refresh.manualRefreshRemaining ?? 0}/3
-                    </span>
-                  </>
-                }
-                loadingIconClassName="w-[13px] h-[13px]"
-                className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
-                  manualRefreshing || (feed?.refresh.manualRefreshRemaining ?? 0) <= 0
-                    ? 'cursor-not-allowed border-border bg-muted text-muted-foreground'
-                    : 'border-primary/35 bg-primary/10 text-primary hover:border-primary/50 dark:border-primary/50 dark:bg-primary/20 dark:text-primary-foreground'
-                }`}
-              >
-                <RefreshCcw size={13} className={manualRefreshing ? 'animate-spin' : ''} />
-                {t('readingDiscovery.news.manualRefresh', { defaultValue: 'Refresh' })}
-                <span className="text-[11px]">{feed?.refresh.manualRefreshRemaining ?? 0}/3</span>
-              </Button>
-            )}
-            <DifficultyFilterButtons
-              difficultyFilter={difficultyFilter}
-              onSelect={item => updateFilterParams({ difficulty: item })}
-              t={t}
-            />
+    return (
+      <section className="space-y-8">
+        <div className="flex items-baseline justify-between border-b border-k-line pb-4">
+          <div className="flex items-baseline gap-3">
+            <span className="font-k-serif text-[24px] font-medium text-k-crimson">新</span>
+            <span className="text-[20px] font-extrabold text-k-ink">实时新闻</span>
+            <span className="ml-2 text-[12px] font-bold text-k-sub bg-k-bg2 px-2 py-0.5 rounded-full">
+              {news.length} 篇最新资讯
+            </span>
           </div>
         </div>
-        <LiveNewsContent
-          feedReady={feedReady}
-          feed={feed}
-          topNews={topNews}
-          featuredNews={featuredNews}
-          secondaryNews={secondaryNews}
-          language={language}
-          t={t}
-          onOpen={id => navigate(buildReadingArticlePath(id, currentPath))}
-        />
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-10">
+          {news.length > 0 ? (
+            news.map((item) => {
+              const source = getSourceInfo(item.sourceKey || '');
+              return (
+                <div 
+                  key={item._id} 
+                  className="group cursor-pointer flex gap-6 items-start pb-10 border-b border-k-line/5 last:border-0 last:pb-0"
+                  onClick={() => navigate(`/reading/${item._id}`)}
+                >
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest"
+                        style={{ backgroundColor: `${source.color}15`, color: source.color }}
+                      >
+                        {item.sourceKey || 'Global'}
+                      </div>
+                      <span className="text-[11px] font-bold text-k-sub/60 flex items-center gap-1.5">
+                        <Clock size={12} />
+                        {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : '刚刚'}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-[19px] font-black text-k-ink group-hover:text-k-crimson transition-colors line-clamp-2 leading-[1.4] tracking-tight">
+                      {item.title}
+                    </h3>
+                    
+                    <p className="text-[13px] font-medium text-k-sub line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                      {item.summary || item.bodyText || '点击阅读全文，获取更多精彩内容和韩语学习要点。'}
+                    </p>
+
+                    <div className="flex items-center gap-4 pt-1">
+                      <span className="text-[11px] font-bold text-k-crimson opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
+                        阅读更多 →
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 w-36 h-36 rounded-2xl overflow-hidden bg-k-bg2 border border-k-line/5 shadow-k-sh-sm group-hover:shadow-k-sh-lg transition-all transform group-hover:scale-[1.02] relative">
+                    <div
+                      className="h-full w-full flex flex-col items-center justify-center p-4 text-center transition-colors group-hover:bg-opacity-10"
+                      style={{ background: `linear-gradient(135deg, ${source.color}08 0%, ${source.color}15 100%)` }}
+                    >
+                      <div
+                        className="w-16 h-16 rounded-full flex items-center justify-center font-k-serif text-[28px] font-medium border-2 mb-2 shadow-sm"
+                        style={{ borderColor: `${source.color}30`, color: source.color, backgroundColor: 'var(--color-k-bg)' }}
+                      >
+                        {source.initial}
+                      </div>
+                      <div
+                        className="text-[10px] font-black tracking-tighter opacity-60"
+                        style={{ color: source.color }}
+                      >
+                        {source.label}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-k-sub opacity-50 bg-k-bg2/30 rounded-3xl border border-dashed border-k-line">
+               <Newspaper size={48} className="mb-4 opacity-20" />
+               <p className="text-[14px] font-bold">
+                 {isLoadingNews ? '正在更新新闻...' : '暂无新闻资讯'}
+               </p>
+            </div>
+          )}
+        </div>
       </section>
+    );
+  };
 
-      <div className="mb-14 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
-
-      <section>
-        <ReadingDiscoverySection
-          wikiArticles={wikiArticles}
-          wikiLoading={feedReady && feed?.articles === undefined}
-          onViewWiki={id => navigate(buildReadingArticlePath(id, currentPath))}
-          onViewBook={slug => navigate(buildEpubLibraryPath(slug, currentPath))}
-        />
-      </section>
-
-      <div className="mt-10 flex items-center justify-end gap-2 text-xs font-semibold text-muted-foreground">
-        <Clock3 size={14} />
-        {t('readingDiscovery.footer', {
-          defaultValue:
-            'Powered by Convex `newsIngestion:getUserFeed` (auto refresh after 24h post-read, manual refresh up to 3/day)',
-        })}
+  const renderEpubs = () => (
+    <section className="space-y-6">
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline">
+          <span className="mr-2 font-k-serif text-[20px] font-medium text-k-crimson">庫</span>
+          <span className="text-[16px] font-extrabold text-k-ink">我的电子书柜</span>
+        </div>
+        <button 
+          onClick={() => navigate('/reading/upload')}
+          className="flex items-center gap-2 px-4 py-2 bg-k-bg2 rounded-xl text-[13px] font-bold text-k-ink hover:bg-k-line transition-all"
+        >
+          <Upload size={16} /> 上传 EPUB
+        </button>
       </div>
+
+      {!user?.id ? (
+        <div className="py-20 flex flex-col items-center text-center bg-k-bg2/30 rounded-3xl border border-dashed border-k-line">
+          <div className="w-16 h-16 rounded-full bg-k-card flex items-center justify-center mb-4 shadow-sm">
+            <BookMarked size={32} className="text-k-sub" />
+          </div>
+          <h3 className="text-[18px] font-bold text-k-ink mb-2">私人书库</h3>
+          <p className="text-k-sub text-sm mb-6 max-w-[300px]">登录以管理您的私人电子书库，支持随时随地继续阅读。</p>
+          <button 
+            onClick={() => navigate('/auth')}
+            className="px-6 py-2 bg-k-crimson text-k-bg rounded-full font-bold shadow-lg shadow-k-crimson/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            立即登录
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+          {epubs.length > 0 ? (
+            epubs.map((book: any) => (
+              <div 
+                key={book._id} 
+                onClick={() => navigate(`/reading/library/${book.slug}`)}
+                className="group cursor-pointer flex flex-col"
+              >
+                {/* Book Cover */}
+                <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-4 shadow-k-sh-sm group-hover:shadow-k-sh-lg transition-all duration-500 group-hover:-translate-y-2 border border-k-line/5 bg-gradient-to-br from-k-bg2 to-k-line/20">
+                   {book.coverImageUrl ? (
+                     <img src={book.coverImageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                   ) : (
+                     <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                        <BookMarked size={40} className="text-k-sub/20 mb-3" />
+                        <span className="text-[10px] font-black text-k-sub/30 uppercase tracking-widest leading-tight">
+                          {book.title}
+                        </span>
+                     </div>
+                   )}
+                   {/* Progress Overlay */}
+                   <div className="absolute inset-x-0 bottom-0 h-1 bg-k-ink/5 overflow-hidden">
+                      <div 
+                        className="h-full bg-k-crimson" 
+                        style={{ width: `${book.progress || 0}%` }}
+                      />
+                   </div>
+                   {/* Hover Overlay */}
+                   <div className="absolute inset-0 bg-k-ink/0 group-hover:bg-k-ink/5 transition-colors" />
+                </div>
+
+                <div className="px-1">
+                   <h4 className="text-[14px] font-black text-k-ink line-clamp-1 mb-0.5 group-hover:text-k-crimson transition-colors">
+                     {book.title}
+                   </h4>
+                   <p className="text-[11px] font-bold text-k-sub opacity-60 flex items-center justify-between">
+                     <span>{book.language || 'EPUB'}</span>
+                     <span className="text-k-crimson/60">{Math.floor(book.progress || 0)}%</span>
+                   </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full py-24 flex flex-col items-center justify-center text-center bg-k-bg2/20 rounded-[40px] border border-dashed border-k-line/40">
+               <div className="w-16 h-16 rounded-full bg-k-card flex items-center justify-center mb-6 shadow-k-sh-sm">
+                 <BookMarked size={32} className="text-k-sub/30" />
+               </div>
+               <h3 className="text-[18px] font-black text-k-ink mb-2">书库还是空的</h3>
+               <p className="text-[13px] font-medium text-k-sub mb-8 opacity-60">导入您的第一本 EPUB 电子书，开始沉浸式学习之旅</p>
+               <button 
+                 onClick={() => navigate('/reading/upload')}
+                 className="px-8 py-3 bg-k-ink text-k-bg rounded-2xl text-[13px] font-black hover:bg-k-crimson transition-all shadow-k-sh-sm"
+               >
+                 立即上传
+               </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <div className="p-8 space-y-10 max-w-[1400px] mx-auto">
+      {/* Header & Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div className="text-[11px] font-black text-k-crimson uppercase tracking-[0.2em] mb-1">
+            Immersive Reading
+          </div>
+          <h1 className="text-[28px] font-black text-k-ink tracking-tighter">沉浸阅读发现</h1>
+        </div>
+        
+        <div className="flex bg-k-bg2/50 p-1 rounded-2xl border border-k-line/10">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black transition-all",
+                activeTab === tab.id 
+                  ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/20" 
+                  : "text-k-sub hover:text-k-ink"
+              )}
+            >
+              <tab.icon size={16} className={activeTab === tab.id ? "text-k-crimson" : ""} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content Areas */}
+      <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {activeTab === 'all' && renderPictureBooks(4)}
+        {activeTab === 'picture_books' && renderPictureBooks()}
+        {(activeTab === 'all' || activeTab === 'news') && renderNews()}
+        {(activeTab === 'all' || activeTab === 'epubs') && renderEpubs()}
+      </div>
+
+      {/* Loading Footer (if applicable) */}
+      {(isLoadingBooks || isLoadingNews || isLoadingEpubs) && activeTab === 'all' && (
+        <div className="pt-10 pb-20 text-center">
+          <div className="inline-flex items-center gap-3 px-6 py-3 bg-k-bg2 rounded-full text-k-sub font-bold animate-pulse">
+            <RefreshCw className="w-5 h-5 animate-spin" /> 正在加载更多精彩内容...
+          </div>
+        </div>
+      )}
+      {renderAllBooksModal()}
     </div>
   );
-};
 
-export default DesktopReadingDiscoveryPage;
+  function renderAllBooksModal() {
+    return (
+      <Sheet open={showAllBooks} onOpenChange={setShowAllBooks}>
+        <SheetContent className="fixed inset-y-0 right-0 w-[85vw] max-w-[1200px] p-0 bg-k-bg border-l border-k-line overflow-hidden flex flex-col">
+          <SheetTitle className="sr-only">全部绘本</SheetTitle>
+          
+          <div className="shrink-0 h-20 px-8 flex items-center justify-between border-b border-k-line bg-k-card/50 backdrop-blur-md">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setShowAllBooks(false)}
+                className="h-10 w-10 rounded-full hover:bg-k-line flex items-center justify-center transition-colors"
+              >
+                <X size={20} />
+              </button>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">
+                   圖 · CATALOG
+                </div>
+                <div className="text-[18px] font-black text-k-ink">
+                   全部绘本资源
+                </div>
+              </div>
+            </div>
+
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-k-sub" size={16} />
+              <input 
+                type="text" 
+                placeholder="搜索绘本..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-k-bg2/50 border border-k-line rounded-xl py-2 pl-10 pr-4 text-[13px] focus:outline-none focus:ring-1 focus:ring-k-crimson/30 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-8 scrollbar-fine">
+            {Object.entries(categorizedBooks).sort().map(([level, groupBooks]) => (
+              <div key={level} className="mb-12 last:mb-0">
+                <div className="flex items-center gap-3 mb-6">
+                  <DesignChip tone="crimson" size="md">{level}</DesignChip>
+                  <div className="h-px flex-1 bg-gradient-to-r from-k-line to-transparent" />
+                  <span className="text-[12px] font-bold text-k-sub">{groupBooks.length} 本书</span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {groupBooks.map(book => (
+                    <div 
+                      key={book._id}
+                      onClick={() => {
+                        setShowAllBooks(false);
+                        navigate(`/reading/books/${book.slug}`);
+                      }}
+                      className="group cursor-pointer"
+                    >
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-k-bg2 border border-k-line/10 shadow-k-sh-sm group-hover:shadow-k-sh-lg transition-all transform group-hover:-translate-y-1">
+                        {book.coverImageUrl ? (
+                          <img src={book.coverImageUrl} className="h-full w-full object-cover" alt="" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <BookOpen size={32} className="text-k-ink/10" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                           <span className="text-white text-[11px] font-bold">开始阅读 →</span>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                         <div className="text-[14px] font-black text-k-ink truncate group-hover:text-k-crimson transition-colors">
+                           {book.title}
+                         </div>
+                         <div className="text-[11px] font-bold text-k-sub mt-0.5">
+                           Duhan Reading
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+}
+
+// Minimal RefreshCw icon if not imported
+const RefreshCw = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+  </svg>
+);

@@ -77,9 +77,9 @@ const EMPTY_LEARNER_STATS: LearnerStatsDto = {
   totalWordsLearned: 0,
   totalGrammarLearned: 0,
   wordsToReview: 0,
-  vocabStats: { total: 0, dueReviews: 0, mastered: 0 },
+  vocabStats: { total: 0, dueReviews: 0, unlearned: 0, mastered: 0 },
   grammarStats: { total: 0, mastered: 0 },
-  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0 },
+  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0, unlearned: 0, mastered: 0, total: 0, recommendedToday: 0 },
   moduleBreakdown: [],
   recentSessions: [],
   totalMinutes: 0,
@@ -103,9 +103,6 @@ type Copy = {
   communityTitle: string;
   communityAction: string;
   challengeBadge: string;
-  challengeTitle: string;
-  challengeSub: string;
-  challengeCta: string;
   reviewKind: string;
   reviewEn: string;
   reviewTitle: (n: number) => string;
@@ -143,9 +140,6 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       communityTitle: '学习伙伴',
       communityAction: '全部',
       challengeBadge: '今日挑战',
-      challengeTitle: '背完 10 个春天单词',
-      challengeSub: '127 人参与中 · 你排名 24',
-      challengeCta: '参加 →',
       reviewKind: '复习',
       reviewEn: 'Review',
       reviewTitle: n => `到期单词 ${n} 张`,
@@ -181,9 +175,6 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       communityTitle: 'Bạn học',
       communityAction: 'Tất cả',
       challengeBadge: 'Thử thách hôm nay',
-      challengeTitle: 'Nhớ 10 từ mùa xuân',
-      challengeSub: '127 người đang tham gia · Bạn xếp 24',
-      challengeCta: 'Tham gia →',
       reviewKind: 'Ôn',
       reviewEn: 'Review',
       reviewTitle: n => `${n} thẻ ôn tập`,
@@ -219,9 +210,6 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
       communityTitle: 'Сургалтын найзууд',
       communityAction: 'Бүгд',
       challengeBadge: 'Өнөөдрийн сорилт',
-      challengeTitle: '10 хаврын үг цээжлэх',
-      challengeSub: '127 хүн оролцож байна · чиний зэрэг 24',
-      challengeCta: 'Нэгдэх →',
       reviewKind: 'Давтлага',
       reviewEn: 'Review',
       reviewTitle: n => `${n} карт хугацаатай`,
@@ -256,9 +244,6 @@ const getDashboardCopy = (language: string, userName: string): Copy => {
     communityTitle: 'Study friends',
     communityAction: 'All',
     challengeBadge: "Today's challenge",
-    challengeTitle: 'Memorize 10 spring words',
-    challengeSub: '127 joined · You rank #24',
-    challengeCta: 'Join →',
     reviewKind: 'Review',
     reviewEn: 'Review',
     reviewTitle: n => `${n} cards due`,
@@ -914,7 +899,7 @@ export const MobileDashboard: React.FC<{
     goTyping();
   };
 
-  const handleToggleLike = async (activityId: Id<'learning_events'>) => {
+  const handleToggleLike = async (activityId: string) => {
     const key = String(activityId);
     if (likePending[key]) return;
 
@@ -934,8 +919,8 @@ export const MobileDashboard: React.FC<{
 
     try {
       const result = nextLiked
-        ? await likeCommunityActivity({ activityId })
-        : await unlikeCommunityActivity({ activityId });
+        ? await likeCommunityActivity({ activityId, kind: 'event' })
+        : await unlikeCommunityActivity({ activityId, kind: 'event' });
       setLikeOverrides(prev => ({
         ...prev,
         [key]: { liked: result.liked, likeCount: result.likeCount },

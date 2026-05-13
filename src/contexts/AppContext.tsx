@@ -30,21 +30,22 @@ function isPublicPathname(pathname: string): boolean {
     return true;
   }
 
-  if (
-    routeRoot === 'terms' ||
-    routeRoot === 'privacy' ||
-    routeRoot === 'refund' ||
-    routeRoot === 'pricing' ||
-    routeRoot === 'learn'
-  ) {
+  const PUBLIC_ROOTS = new Set([
+    'landing',
+    'terms',
+    'privacy',
+    'refund',
+    'pricing',
+    'subscription',
+    'learn',
+    'preview',
+  ]);
+
+  if (PUBLIC_ROOTS.has(routeRoot)) {
     return true;
   }
 
   if (routeRoot === 'payment' && routeChild === 'success') {
-    return true;
-  }
-
-  if (routeRoot === 'preview' && routeChild === 'mobile') {
     return true;
   }
 

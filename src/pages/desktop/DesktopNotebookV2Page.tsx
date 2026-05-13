@@ -1,719 +1,244 @@
-import React, { Suspense } from 'react';
-import {
-  CheckCircle2,
-  Grid3X3,
-  List,
-  Loader2,
-  Maximize2,
-  Minimize2,
-  Pin,
-  PinOff,
-  Plus,
-  Search,
-  Table,
-  Trash2,
-  ArrowUpRight,
-  Filter,
-  X,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { useTranslation } from 'react-i18next';
+import { NOTE_PAGES, ANNOTATIONS, type RecentAnnotation } from '../../utils/convexRefs';
+import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
+import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
+import { Button } from '../../components/ui';
+import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import type { Id } from '../../../convex/_generated/dataModel';
+import type { SearchItem } from '../NotebookV2Page';
 
-import {
-  Button,
-  Input,
-  Select,
-} from '../../components/ui';
-import {
-  toCardType,
-  toStatusBadge,
-  toSourcePath,
-  formatTime,
-  toPreviewHtml,
-  toPlainText,
-  RICH_TEXT_CLASS,
-  QUOTE_CARD_RICH_CLASS,
-} from '../NotebookV2Page';
+type NotebookCardTone = 'butter' | 'pink' | 'crimson' | 'lilac' | 'sky';
 
-interface DesktopNotebookV2PageProps {
-  t: any;
-  navigate: any;
-  dateLocale: string;
-  activeNotebookId: any;
-  setActiveNotebookId: (id: any) => void;
-  selectedPageId: any;
-  setSelectedPageId: (id: any) => void;
-  query: string;
-  setQuery: (q: string) => void;
-  sourceFilter: string;
-  setSourceFilter: (sf: string) => void;
-  viewMode: 'gallery' | 'list' | 'table';
-  setViewMode: (v: 'gallery' | 'list' | 'table') => void;
-  editorOpen: boolean;
-  setEditorOpen: (o: boolean) => void;
-  handleEditorOpenChange: (open: boolean) => void;
-  editorExpanded: boolean;
-  setEditorExpanded: (e: boolean) => void;
-  title: string;
-  setTitle: (t: string) => void;
-  noteKind: 'quote_card' | 'longform_page';
-  setNoteKind: (k: 'quote_card' | 'longform_page') => void;
-  quoteText: string;
-  setQuoteText: (t: string) => void;
-  editorDoc: any;
-  setEditorDoc: (d: any) => void;
-  saveState: string;
-  lastSavedAt: number | null;
-  notebooksResult: any;
-  sourceSummary: any[];
-  searchResult: any;
-  pendingReviewCount: number;
-  selectedSearchItem: any;
-  selectedIsQuoteCard: boolean;
-  selectedPagePayload: any;
-  handleCreateNote: () => Promise<void>;
-  handleDeletePage: (id: any) => Promise<void>;
-  handleOpenSource: () => void;
-  handleRetrySave: () => Promise<void>;
-  editorFallback: React.ReactNode;
-  togglePin: any;
-  OfficialTiptapEditor: any;
-}
+export default function DesktopNotebookV2Page() {
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
 
-export default function DesktopNotebookV2Page({
-  t,
-  navigate,
-  dateLocale,
-  activeNotebookId,
-  setActiveNotebookId,
-  selectedPageId,
-  setSelectedPageId,
-  query,
-  setQuery,
-  sourceFilter,
-  setSourceFilter,
-  viewMode,
-  setViewMode,
-  editorOpen,
-  setEditorOpen,
-  handleEditorOpenChange,
-  editorExpanded,
-  setEditorExpanded,
-  title,
-  setTitle,
-  noteKind,
-  setNoteKind,
-  quoteText,
-  setQuoteText,
-  editorDoc,
-  setEditorDoc,
-  saveState,
-  lastSavedAt,
-  notebooksResult,
-  sourceSummary,
-  searchResult,
-  pendingReviewCount,
-  selectedSearchItem,
-  selectedIsQuoteCard,
-  selectedPagePayload,
-  handleCreateNote,
-  handleDeletePage,
-  handleOpenSource,
-  handleRetrySave,
-  editorFallback,
-  togglePin,
-  OfficialTiptapEditor,
-}: DesktopNotebookV2PageProps) {
+  const [renderTime] = useState(() => Date.now());
+
+  const formatAnnotationTime = (ts: number) => {
+    const diff = renderTime - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t('relativeTime.justNow', { defaultValue: 'just now' });
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(ts).toLocaleDateString();
+  };
+
+  const KANJI_MAP: Record<string, string> = {
+    [t('coursesOverview.desktop.notebook.types.grammar')]: '若',
+    [t('coursesOverview.desktop.notebook.types.vocab')]: '春',
+    [t('coursesOverview.desktop.notebook.types.mistakes')]: '誤',
+    [t('coursesOverview.desktop.notebook.types.reflections')]: '想',
+    'default': '記'
+  };
+
+  const toneMap: Record<string, string> = {
+    [t('coursesOverview.desktop.notebook.types.grammar')]: 'var(--color-k-butter)',
+    [t('coursesOverview.desktop.notebook.types.vocab')]: 'var(--color-k-pink)',
+    [t('coursesOverview.desktop.notebook.types.mistakes')]: 'var(--color-k-mint)',
+    [t('coursesOverview.desktop.notebook.types.reflections')]: 'var(--color-k-lilac)',
+    'default': 'var(--color-k-sky)',
+  };
+
+  const tagToneMap: Record<string, NotebookCardTone> = {
+    [t('coursesOverview.desktop.notebook.types.grammar')]: 'butter',
+    [t('coursesOverview.desktop.notebook.types.vocab')]: 'pink',
+    [t('coursesOverview.desktop.notebook.types.mistakes')]: 'crimson',
+    [t('coursesOverview.desktop.notebook.types.reflections')]: 'lilac',
+    'default': 'sky',
+  };
+
+  const formatDate = (timestamp: number): string => {
+    const diff = renderTime - timestamp;
+    if (diff < 86400000) return t('coursesOverview.desktop.notebook.today');
+    if (diff < 172800000) return t('coursesOverview.desktop.notebook.yesterday');
+    const date = new Date(timestamp);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  const [activeFilter, setActiveFilter] = useState<string>(t('coursesOverview.desktop.notebook.all'));
+  const [searchQuery] = useState<string>(''); // Placeholder for search if needed later
+  
+  // 获取用户笔记统计和分类
+  const facets = useQuery(NOTE_PAGES.listFacets, {});
+  
+  // 获取用户笔记列表
+  const notesResult = useQuery(NOTE_PAGES.search, {
+    query: searchQuery,
+    noteTypes: activeFilter === t('coursesOverview.desktop.notebook.all') ? undefined : [activeFilter],
+    limit: 50
+  });
+  
+  const notes = (notesResult?.items || []) as SearchItem[];
+  const isLoading = facets === undefined || notesResult === undefined;
+
+  const recentAnnotations = useQuery(ANNOTATIONS.getRecent, { limit: 6 });
+  const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
+
+  const scopeToneMap: Record<string, string> = {
+    'READING_ARTICLE': 'var(--color-k-pink)',
+    'TOPIK_REVIEW': 'var(--color-k-lilac)',
+    'READING_BOOK': 'var(--color-k-mint)',
+    'PODCAST': 'var(--color-k-butter)',
+  };
+  
+  // 创建新笔记
+  const createNote = useMutation(NOTE_PAGES.createPage);
+
+  const handleCreateNote = async () => {
+    try {
+      const result = await createNote({
+        title: t('coursesOverview.desktop.notebook.newNote'),
+        tags: activeFilter !== t('coursesOverview.desktop.notebook.all') ? [activeFilter] : [],
+        metadata: { status: 'Inbox', pinned: false },
+        icon: '📝',
+      });
+      if (result?.id) {
+        navigate(`/notebook-v2?page=${result.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to create note:', error);
+    }
+  };
+
+  const filters = [t('coursesOverview.desktop.notebook.all'), ...(facets?.noteTypes.map(ft => ft.key) || [])];
+  
+  const displayNotes = notes;
 
   return (
-    <div className="w-full min-h-full bg-background text-foreground font-sans rounded-3xl border border-border overflow-hidden">
-      <main className="p-6 lg:p-8 bg-card min-h-full">
-        <div className="mb-8 relative">
-          <h1 className="text-4xl font-extrabold text-foreground">
-            {t('notes.v2.page.titleAllNotes', { defaultValue: 'All Notes' })}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {t('notes.v2.page.subtitleAllNotes', {
-              defaultValue: 'Manage all your learning assets here and launch smart review.',
-            })}
-          </p>
-        </div>
+    <div className="p-6">
+      <div className="mb-4 text-[12px] font-bold text-k-sub uppercase tracking-widest">
+        {t('coursesOverview.desktop.notebook.title').toUpperCase()} · {t('coursesOverview.desktop.notebook.noteCount', { count: facets?.total || 0 })}
+      </div>
 
-        <div className="bg-accent border border-border p-5 rounded-xl mb-10 flex items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <CheckCircle2 className="h-7 w-7 text-primary" />
-            <div>
-              <p className="font-semibold text-foreground">
-                {t('notes.v2.page.todayReviewTitle', { defaultValue: 'Today’s Review Queue' })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t('notes.v2.page.todayReviewSummary', {
-                  count: pendingReviewCount,
-                  defaultValue: 'You have {{count}} item(s) to review today.',
-                })}
-              </p>
+      <div className="mb-[18px] flex gap-2">
+        {filters.map((f, i) => {
+          const isActive = f === activeFilter;
+          const count = f === t('coursesOverview.desktop.notebook.all') 
+            ? (facets?.total || 0) 
+            : facets?.noteTypes.find(nt => nt.key === f)?.count || 0;
+          
+          return (
+            <div
+              key={i}
+              onClick={() => setActiveFilter(f)}
+              className="cursor-pointer rounded-[11px] px-[14px] py-[8px] text-[12px] font-extrabold transition-transform hover:-translate-y-0.5"
+              style={{
+                background: isActive ? 'var(--color-k-ink)' : 'var(--color-k-card)',
+                color: isActive ? 'var(--color-k-bg)' : 'var(--color-k-ink)',
+                boxShadow: isActive ? 'none' : 'var(--shadow-k-sh-sm)',
+              }}
+            >
+              {f} {count}
             </div>
-          </div>
-          <Button
-            type="button"
-            variant="default"
-            size="auto"
-            onClick={() => navigate('/review')}
-            className="px-5 py-2.5 rounded-lg font-bold shadow-sm transition-all"
-          >
-            {t('notes.v2.context.startSmartReview', { defaultValue: 'Start Smart Review' })}
-          </Button>
+          );
+        })}
+        <div className="flex-1" />
+        <button
+          onClick={handleCreateNote}
+          className="cursor-pointer rounded-[11px] border-none px-[14px] py-[8px] text-[12px] font-extrabold transition-transform hover:-translate-y-0.5"
+          style={{ background: 'var(--color-k-crimson)', color: 'var(--color-k-card)' }}
+        >
+          + {t('coursesOverview.desktop.notebook.newNote')}
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex h-64 items-center justify-center text-k-sub font-bold animate-pulse">
+          {t('coursesOverview.desktop.notebook.loadingNotes')}
         </div>
+      ) : displayNotes.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]">
+          {displayNotes.map((n) => {
+            const tone = toneMap[n.noteType || 'default'] || toneMap.default;
+            const tagTone = tagToneMap[n.noteType || 'default'] || tagToneMap.default;
+            const kanji = n.icon || KANJI_MAP[n.noteType || ''] || KANJI_MAP.default;
+            const dateStr = formatDate(n.updatedAt);
 
-        <div className="flex items-center justify-between mb-8 border-b border-border pb-3 gap-3 flex-wrap">
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('gallery')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'gallery'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Grid3X3 className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewGallery', { defaultValue: 'Gallery View' })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'list'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <List className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewList', { defaultValue: 'Detailed List' })}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="auto"
-              onClick={() => setViewMode('table')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm flex items-center gap-2 ${
-                viewMode === 'table'
-                  ? 'bg-muted text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Table className="w-4 h-4 text-muted-foreground" />{' '}
-              {t('notes.v2.page.viewTable', { defaultValue: 'Spreadsheet' })}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-3 ml-auto flex-wrap sm:flex-nowrap">
-            <div className="relative w-full sm:w-60">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
-              <Input
-                type="text"
-                placeholder={t('notes.v2.page.searchPlaceholder', { defaultValue: 'Search notes...' })}
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 h-9 rounded-lg border-border text-sm"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 min-w-[140px]">
-              <Filter className="w-4 h-4 text-muted-foreground/70 shrink-0" />
-              <select
-                value={sourceFilter}
-                onChange={e => setSourceFilter(e.target.value)}
-                className="h-9 text-sm rounded-lg border border-border bg-background px-3 py-1 flex-1 focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-
-                <option value="">
-                  {t('notes.v2.page.allSources', { defaultValue: 'All Sources' })}
-                </option>
-                {sourceSummary.map(item => (
-                  <option key={item.key} value={item.key}>
-                    {item.label} ({item.count})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-
-            <Button
-              type="button"
-              variant="default"
-              size="auto"
-              onClick={handleCreateNote}
-              className="px-4 py-1.5 h-9 rounded-lg font-bold flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />{' '}
-              {t('notes.v2.page.newNote', { defaultValue: 'New Note' })}
-            </Button>
-          </div>
-        </div>
-
-        {searchResult.items.length === 0 ? (
-          <div className="py-24 text-center rounded-2xl border-2 border-dashed border-border bg-muted/20">
-            <p className="text-xl font-bold text-foreground/80 mb-1">
-              {t('notes.v2.page.emptyNotesTitle', { defaultValue: 'No notes found' })}
-            </p>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-              {t('notes.v2.page.emptyNotesSummary', {
-                defaultValue: 'Adjust your search queries or create a fresh learning snippet.',
-              })}
-            </p>
-          </div>
-        ) : (
-          <>
-            {viewMode === 'gallery' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                {searchResult.items.map((item: any) => {
-                  const cardType = toCardType(item, t);
-                  const statusBadge = toStatusBadge(item.status, t);
-                  const isSelected = selectedPageId === item.id;
-                  const isPinned = item.pinned;
-
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedPageId(item.id);
-                        handleEditorOpenChange(true);
-                      }}
-                      className={`group relative rounded-2xl border-2 p-5 flex flex-col justify-between min-h-[180px] cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-primary bg-background shadow-md'
-                          : 'border-border bg-background hover:border-primary/40 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={e => {
-                            e.stopPropagation();
-                            void togglePin({ pageId: item.id });
-                          }}
-                          className="w-7 h-7 rounded-full hover:bg-muted p-0 shrink-0"
-                        >
-                          {isPinned ? (
-                            <PinOff className="w-3.5 h-3.5 text-primary" />
-                          ) : (
-                            <Pin className="w-3.5 h-3.5 text-muted-foreground" />
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={e => {
-                            e.stopPropagation();
-                            void handleDeletePage(item.id);
-                          }}
-                          className="w-7 h-7 rounded-full hover:bg-muted p-0 shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </div>
-
-                      <div className="pr-12">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-xl" role="img" aria-label="note-icon">
-                            {item.icon || cardType.icon}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cardType.badgeClass}`}
-                          >
-                            {cardType.label}
-                          </span>
-                        </div>
-                        <h3 className="font-extrabold text-foreground line-clamp-2 text-lg mb-2 group-hover:text-primary transition-colors">
-                          {toPlainText(item.title) || 'Untitled'}
-                        </h3>
-                        {item.snippet && (
-                          <div
-                            className={`text-sm text-muted-foreground line-clamp-3 mb-4 break-words ${RICH_TEXT_CLASS}`}
-                            dangerouslySetInnerHTML={{ __html: toPreviewHtml(item.snippet) }}
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/60">
-                        <span className="text-xs text-muted-foreground/80">
-                          {formatTime(item.updatedAt, dateLocale)}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${statusBadge.className}`}>
-                          {statusBadge.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {viewMode === 'list' && (
-              <div className="space-y-4">
-                {searchResult.items.map((item: any) => {
-                  const cardType = toCardType(item, t);
-                  const statusBadge = toStatusBadge(item.status, t);
-                  const isSelected = selectedPageId === item.id;
-                  const isPinned = item.pinned;
-
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedPageId(item.id);
-                        handleEditorOpenChange(true);
-                      }}
-                      className={`group flex gap-5 p-5 rounded-xl border-2 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-primary bg-background shadow-md'
-                          : 'border-border bg-background hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-2 shrink-0">
-                        <span className="text-3xl" role="img" aria-label="note-icon">
-                          {item.icon || cardType.icon}
-                        </span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${cardType.badgeClass}`}>
-                          {cardType.label}
-                        </span>
-                      </div>
-
-                      <div className="flex-1 min-w-0 pr-16 relative">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <h3 className="font-extrabold text-xl text-foreground group-hover:text-primary transition-colors truncate">
-                            {toPlainText(item.title) || 'Untitled'}
-                          </h3>
-                          {isPinned && <Pin className="w-4 h-4 text-primary shrink-0" />}
-                        </div>
-
-                        {item.snippet && (
-                          <div
-                            className={`text-sm text-muted-foreground line-clamp-2 break-words mb-3 ${RICH_TEXT_CLASS}`}
-                            dangerouslySetInnerHTML={{ __html: toPreviewHtml(item.snippet) }}
-                          />
-                        )}
-
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>
-                            {t('notes.v2.page.updated', { defaultValue: 'Updated:' })}{' '}
-                            {formatTime(item.updatedAt, dateLocale)}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${statusBadge.className}`}>
-                            {statusBadge.label}
-                          </span>
-                        </div>
-
-                        <div className="absolute top-0 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={e => {
-                              e.stopPropagation();
-                              void togglePin({ pageId: item.id });
-                            }}
-                            className="w-8 h-8 rounded-full hover:bg-muted p-0 shrink-0"
-                          >
-                            {isPinned ? (
-                              <PinOff className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Pin className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={e => {
-                              e.stopPropagation();
-                              void handleDeletePage(item.id);
-                            }}
-                            className="w-8 h-8 rounded-full hover:bg-muted p-0 shrink-0"
-                          >
-                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {viewMode === 'table' && (
-              <div className="overflow-x-auto border border-border rounded-xl bg-background shadow-sm">
-                <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-5 w-12">{/* Icon */}</th>
-                      <th className="py-3.5 px-4">{t('notes.v2.page.tableTitle', { defaultValue: 'Title' })}</th>
-                      <th className="py-3.5 px-4 w-32">{t('notes.v2.page.tableType', { defaultValue: 'Type' })}</th>
-                      <th className="py-3.5 px-4 w-32">{t('notes.v2.page.tableStatus', { defaultValue: 'Status' })}</th>
-                      <th className="py-3.5 px-4 w-40">{t('notes.v2.page.tableUpdated', { defaultValue: 'Last Updated' })}</th>
-                      <th className="py-3.5 px-5 w-24 text-right">{t('notes.v2.page.tableActions', { defaultValue: 'Actions' })}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60 text-sm">
-                    {searchResult.items.map((item: any) => {
-                      const cardType = toCardType(item, t);
-                      const statusBadge = toStatusBadge(item.status, t);
-                      const isSelected = selectedPageId === item.id;
-
-                      return (
-                        <tr
-                          key={item.id}
-                          onClick={() => {
-                            setSelectedPageId(item.id);
-                            handleEditorOpenChange(true);
-                          }}
-                          className={`group cursor-pointer hover:bg-muted/30 transition-colors ${
-                            isSelected ? 'bg-primary/5 font-semibold' : ''
-                          }`}
-                        >
-                          <td className="py-4 px-5 text-center text-xl">
-                            {item.icon || cardType.icon}
-                          </td>
-                          <td className="py-4 px-4 text-foreground font-extrabold pr-10">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate max-w-sm block">
-                                {toPlainText(item.title) || 'Untitled'}
-                              </span>
-                              {item.pinned && <Pin className="w-3.5 h-3.5 text-primary shrink-0" />}
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${cardType.badgeClass}`}>
-                              {cardType.label}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${statusBadge.className}`}>
-                              {statusBadge.label}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-muted-foreground/80 text-xs">
-                            {formatTime(item.updatedAt, dateLocale)}
-                          </td>
-                          <td className="py-4 px-5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="flex justify-end items-center gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  void togglePin({ pageId: item.id });
-                                }}
-                                className="w-7 h-7 rounded-full hover:bg-muted p-0 shrink-0"
-                              >
-                                {item.pinned ? (
-                                  <PinOff className="w-3.5 h-3.5 text-primary" />
-                                ) : (
-                                  <Pin className="w-3.5 h-3.5 text-muted-foreground" />
-                                )}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  void handleDeletePage(item.id);
-                                }}
-                                className="w-7 h-7 rounded-full hover:bg-muted p-0 shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Editor Sidebar Drawer */}
-      <div
-        className={`fixed top-0 right-0 h-screen border-l-2 border-border bg-background shadow-2xl z-40 transition-all duration-300 ease-out flex flex-col ${
-          editorOpen ? 'translate-x-0' : 'translate-x-full'
-        } ${editorExpanded ? 'w-[80vw]' : 'w-[45vw] min-w-[500px]'}`}
-      >
-        {selectedSearchItem ? (
-          <>
-            {/* Drawer Header */}
-            <div className="p-5 border-b border-border bg-card flex items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-muted font-bold text-muted-foreground border border-border/50">
-                  <span className="text-sm">
-                    {toCardType(selectedSearchItem, t).icon}
-                  </span>
-                  {toCardType(selectedSearchItem, t).label}
-                </div>
-
-                {saveState === 'saving' && (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
-                    <Loader2 className="w-3 h-3 animate-spin" />{' '}
-                    {t('notes.v2.page.saving', { defaultValue: 'Saving...' })}
-                  </span>
-                )}
-                {saveState === 'dirty' && (
-                  <span className="text-xs text-amber-600 font-bold">
-                    ●{' '}
-                    {t('notes.v2.page.unsaved', { defaultValue: 'Unsaved changes' })}
-                  </span>
-                )}
-                {saveState === 'saved' && (
-                  <span className="text-xs text-muted-foreground/60 flex items-center gap-1">
-                    ✓{' '}
-                    {lastSavedAt
-                      ? `${t('notes.v2.page.savedAt', { defaultValue: 'Saved at' })} ${formatTime(lastSavedAt, dateLocale)}`
-                      : t('notes.v2.page.saved', { defaultValue: 'Saved' })}
-                  </span>
-                )}
-                {saveState === 'error' && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="auto"
-                    onClick={() => {
-                      void handleRetrySave();
+            return (
+              <DesktopCard key={n.id} pad={0} className="overflow-hidden transition-transform hover:-translate-y-1 cursor-pointer">
+                <div className="relative h-[56px] overflow-hidden" style={{ background: tone }}>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'repeating-linear-gradient(135deg, transparent 0, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 7px)',
                     }}
-                    className="text-xs text-destructive hover:underline p-0 font-bold"
-                  >
-                    ⚠{' '}
-                    {t('notes.v2.page.saveError', { defaultValue: 'Save failed. Retry?' })}
-                  </Button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setEditorExpanded(!editorExpanded)}
-                  className="w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted p-0"
-                >
-                  {editorExpanded ? (
-                    <Minimize2 className="w-4 h-4" />
-                  ) : (
-                    <Maximize2 className="w-4 h-4" />
-                  )}
-                </Button>
-
-                {toSourcePath(selectedSearchItem.sourceRef) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleOpenSource}
-                    className="w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted p-0"
-                  >
-                    <ArrowUpRight className="w-4 h-4" />
-                  </Button>
-                )}
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEditorOpenChange(false)}
-                  className="w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground p-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
-              {/* Title Section */}
-              <div className="space-y-2">
-                <Input
-                  type="text"
-                  placeholder={t('notes.v2.page.noteTitlePlaceholder', { defaultValue: 'Note Title' })}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full text-3xl font-extrabold tracking-tight border-none shadow-none focus-visible:ring-0 p-0 h-auto bg-transparent text-foreground placeholder:text-muted-foreground/50"
-                />
-                <div className="flex items-center gap-4 text-xs text-muted-foreground/80">
-                  <span>
-                    {t('notes.v2.page.created', { defaultValue: 'Created:' })}{' '}
-                    {formatTime(selectedSearchItem.createdAt, dateLocale)}
-                  </span>
-                  <span>
-                    {t('notes.v2.page.updated', { defaultValue: 'Updated:' })}{' '}
-                    {formatTime(selectedSearchItem.updatedAt, dateLocale)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Note Content Section */}
-              {selectedIsQuoteCard ? (
-                <div className="space-y-6 animate-in fade-in-50 duration-300">
-                  {quoteText && (
-                    <div className={`p-5 rounded-2xl ${QUOTE_CARD_RICH_CLASS}`}>
-                      <div className="absolute top-3 left-3 text-primary/10 text-6xl font-serif select-none pointer-events-none">
-                        “
-                      </div>
-                      <div
-                        className={`relative z-10 text-lg font-bold text-foreground break-words leading-relaxed ${RICH_TEXT_CLASS}`}
-                        dangerouslySetInnerHTML={{ __html: toPreviewHtml(quoteText) }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground/80 tracking-wider uppercase block">
-                      {t('notes.v2.page.noteField', { defaultValue: 'Your Thoughts' })}
-                    </label>
-                    <Suspense fallback={editorFallback}>
-                      <OfficialTiptapEditor
-                        doc={editorDoc}
-                        onChange={setEditorDoc}
-                        placeholder={t('notes.v2.page.notePlaceholder', { defaultValue: 'Type your insights here...' })}
-                        editable
-                        minHeight="180px"
-                      />
-                    </Suspense>
+                  />
+                  <div className="absolute left-[14px] top-[12px]">
+                    <DesignChip tone={tagTone} size="sm">{n.noteType || t('coursesOverview.desktop.notebook.types.default')}</DesignChip>
+                  </div>
+                  <div className="absolute right-[12px] top-[8px] font-k-serif text-[36px] font-medium text-[rgba(31,27,23,0.18)]">
+                    {kanji}
                   </div>
                 </div>
-              ) : (
-                <div className="animate-in fade-in-50 duration-300 pt-2">
-                  <Suspense fallback={editorFallback}>
-                    <OfficialTiptapEditor
-                      doc={editorDoc}
-                      onChange={setEditorDoc}
-                      placeholder={t('notes.v2.page.startWriting', { defaultValue: 'Start writing your learning notes...' })}
-                      editable
-                      minHeight="400px"
-                    />
-                  </Suspense>
+
+                <div className="p-4">
+                  <div className="font-k-serif text-[14px] font-extrabold leading-[1.3] tracking-[-0.2px] text-k-ink">
+                    {n.title}
+                  </div>
+                  <div className="mt-2 line-clamp-3 text-[12px] font-medium leading-[1.5] text-k-ink2">
+                    {n.snippet || t('coursesOverview.desktop.notebook.noContent')}
+                  </div>
+                  <div className="mt-2.5 text-[10px] font-bold text-k-sub">
+                    {dateStr}
+                  </div>
                 </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {t('notes.v2.page.loadingNote', { defaultValue: 'Retrieving note content...' })}
-            </p>
+              </DesktopCard>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex h-64 flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-k-line bg-k-card/30 p-12 text-center">
+          <div className="mb-4 text-[48px]">empty</div>
+          <div className="text-[14px] font-bold text-k-ink">{t('coursesOverview.desktop.notebook.noNotes')}</div>
+          <div className="mt-2 text-[12px] text-k-sub">{t('coursesOverview.desktop.notebook.startJourney')}</div>
+          <Button onClick={handleCreateNote} className="mt-6 rounded-xl bg-k-ink text-k-bg px-6 py-2">
+            {t('coursesOverview.desktop.notebook.createFirstNote')}
+          </Button>
+        </div>
+      )}
+
+      {hasRecentHighlights && (
+        <div style={{ marginTop: 24 }}>
+          <div className="mb-3 flex items-baseline gap-2">
+            <HanjaSeal c="標" size={28} bg="var(--color-k-crimson)" round={7} />
+            <span className="text-[14px] font-extrabold text-k-ink">
+              {t('notes.v2.recentHighlights', { defaultValue: 'Recent Highlights' })}
+            </span>
           </div>
-        )}
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]">
+            {recentAnnotations!.map((ann: RecentAnnotation) => {
+              const scopeLabel = ann.scopeType === 'READING_ARTICLE' ? t('notes.v2.scope.reading', { defaultValue: 'Reading' })
+                : ann.scopeType === 'TOPIK_REVIEW' ? t('notes.v2.scope.topik', { defaultValue: 'TOPIK' })
+                : ann.scopeType === 'READING_BOOK' ? t('notes.v2.scope.book', { defaultValue: 'Book' })
+                : ann.scopeType === 'PODCAST' ? t('notes.v2.scope.podcast', { defaultValue: 'Podcast' })
+                : ann.scopeType || '';
+              return (
+                <DesktopCard key={ann.id} pad={16} className="cursor-pointer transition-transform hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <DesignChip tone="muted" size="sm">{scopeLabel}</DesignChip>
+                    <span className="text-[10px] font-bold text-k-sub">{formatAnnotationTime(ann.createdAt)}</span>
+                  </div>
+                  <div className="text-[12px] font-semibold text-k-ink leading-[1.5] line-clamp-3">
+                    {ann.text}
+                  </div>
+                  {ann.note && (
+                    <div className="mt-2 pt-2 border-t border-k-line text-[11px] text-k-sub italic line-clamp-2">
+                      {ann.note}
+                    </div>
+                  )}
+                </DesktopCard>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

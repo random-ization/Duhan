@@ -34,8 +34,17 @@ jobs:
       - name: Color guard
         run: npm run color:guard
 
-      - name: Unit tests
-        run: npm run test:run
+      - name: Unit tests (JSON report)
+        run: npm run test:run:json
+
+      - name: Regression gate (>=80, 100%)
+        run: npm run regression:gate
+
+      - name: Mobile E2E coverage report (>=80)
+        run: npm run test:mobile:e2e:report
+
+      - name: Delivery overview report
+        run: npm run report:delivery
 
       - name: Build
         run: npm run build
@@ -61,8 +70,8 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Run smoke suite
-        run: npx playwright test tests/e2e/smoke.spec.ts --project=chromium
+      - name: Run mobile smoke suite
+        run: npx playwright test tests/e2e/smoke.spec.ts tests/e2e/auth.spec.ts --project="Mobile Chrome"
 
       - name: Upload Playwright report
         if: always()

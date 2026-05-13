@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { KT } from './ksoft/ksoft';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface MobileImmersiveHeaderProps {
   title: string;
@@ -30,6 +31,7 @@ export function MobileImmersiveHeader({
   tone = 'default',
 }: Readonly<MobileImmersiveHeaderProps>) {
   const isInverse = tone === 'inverse';
+  const isMobileViewport = useIsMobile();
 
   return (
     <header
@@ -39,7 +41,7 @@ export function MobileImmersiveHeader({
         borderBottom: isInverse ? '1px solid rgba(255,255,255,0.1)' : `1px solid ${KT.line}`,
         background: isInverse ? 'rgba(31,27,23,0.88)' : `${KT.bg}ee`,
         padding: '0 18px 12px',
-        paddingTop: 'calc(var(--mobile-safe-top, env(safe-area-inset-top)) + 10px)',
+        paddingTop: isMobileViewport ? 'calc(var(--mobile-safe-top, env(safe-area-inset-top)) + 10px)' : '18px',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         fontFamily: KT.font,
