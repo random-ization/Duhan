@@ -8,6 +8,7 @@ type UpdateLearningProgressArgs = {
   lastLevel?: number;
   lastUnit?: number;
   lastModule?: string;
+  lastGrammarId?: string;
 };
 
 type UpdateLearningProgressResult = {

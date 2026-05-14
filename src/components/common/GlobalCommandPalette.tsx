@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Command, ArrowRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +18,11 @@ type CommandItem = {
   keywords: string[];
 };
 
-export function GlobalCommandPalette() {
+type GlobalCommandPaletteProps = {
+  openRequestKey?: number;
+};
+
+export function GlobalCommandPalette({ openRequestKey = 0 }: Readonly<GlobalCommandPaletteProps>) {
   const navigate = useLocalizedNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -134,6 +138,13 @@ export function GlobalCommandPalette() {
   const highlightedIndex =
     filteredItems.length > 0 ? Math.min(activeIndex, filteredItems.length - 1) : -1;
 
+  const requestOpen = useCallback(() => {
+    setOpenPath(currentPath);
+    setQuery('');
+    setActiveIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [currentPath]);
+
   const navigateToItem = (item: CommandItem) => {
     setOpenPath(null);
     const currentPathWithSearch = `${location.pathname}${location.search}`;
@@ -146,23 +157,31 @@ export function GlobalCommandPalette() {
       const isOpenShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
       if (!isOpenShortcut) return;
       event.preventDefault();
-      setOpenPath(prev => (prev === currentPath ? null : currentPath));
-      setQuery('');
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setOpenPath(prev => {
+        if (prev === currentPath) {
+          return null;
+        }
+        setQuery('');
+        setActiveIndex(0);
+        setTimeout(() => inputRef.current?.focus(), 0);
+        return currentPath;
+      });
     };
     globalThis.addEventListener('keydown', onKeyDown);
     return () => globalThis.removeEventListener('keydown', onKeyDown);
   }, [currentPath, user]);
 
+  useEffect(() => {
+    if (!user || openRequestKey === 0) return;
+    const timeoutId = globalThis.setTimeout(requestOpen, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [openRequestKey, requestOpen, user]);
+
   if (!user) return null;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      setQuery('');
-      setActiveIndex(0);
-      setOpenPath(currentPath);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      requestOpen();
       return;
     }
     setOpenPath(null);

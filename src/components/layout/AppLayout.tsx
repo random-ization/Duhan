@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
@@ -11,12 +11,17 @@ import { canRouteHideChrome, getRouteUiConfig } from '../../config/routes.config
 import { getPathWithoutLang } from '../../utils/pathname';
 import { GlobalModalContainer } from '../modals/GlobalModalContainer';
 import { ProfileSetupModalTrigger } from '../modals/ProfileSetupModalTrigger';
-import { GlobalCommandPalette } from '../common/GlobalCommandPalette';
 import { ContentSkeleton } from '../common';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
 import { DesktopHeader } from './DesktopHeader';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getAuthedDocumentTitle } from '../../utils/appTitle';
+
+const LazyGlobalCommandPalette = lazy(() =>
+  import('../common/GlobalCommandPalette').then(module => ({
+    default: module.GlobalCommandPalette,
+  }))
+);
 
 const shouldAnimateRoutes = () => {
   if (typeof globalThis.window === 'undefined') return true;
@@ -38,6 +43,8 @@ export default function AppLayout() {
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const routeUiConfig = getRouteUiConfig(pathWithoutLang);
   const isMobileViewport = useIsMobile();
+  const [shouldMountCommandPalette, setShouldMountCommandPalette] = useState(false);
+  const [commandPaletteOpenRequestKey, setCommandPaletteOpenRequestKey] = useState(0);
 
   // Safety net: some fullscreen flows toggle sidebarHidden to hide mobile chrome.
   // If that state ever gets stuck (e.g. a component crashes/unmounts unexpectedly),
@@ -53,6 +60,49 @@ export default function AppLayout() {
     document.title = getAuthedDocumentTitle(pathWithoutLang, t);
   }, [pathWithoutLang, t]);
 
+  useEffect(() => {
+    if (isMobileViewport || shouldMountCommandPalette || typeof globalThis.window === 'undefined') {
+      return;
+    }
+
+    type IdleWindow = Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const idleWindow = globalThis.window as IdleWindow;
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+
+    const mountPalette = () => setShouldMountCommandPalette(true);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isOpenShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
+      if (!isOpenShortcut) return;
+      event.preventDefault();
+      setShouldMountCommandPalette(true);
+      setCommandPaletteOpenRequestKey(prev => prev + 1);
+    };
+
+    globalThis.window.addEventListener('keydown', onKeyDown);
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(mountPalette, { timeout: 2500 });
+    } else {
+      timeoutId = globalThis.window.setTimeout(mountPalette, 1500);
+    }
+
+    return () => {
+      globalThis.window.removeEventListener('keydown', onKeyDown);
+      if (idleId !== null) {
+        idleWindow.cancelIdleCallback?.(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.window.clearTimeout(timeoutId);
+      }
+    };
+  }, [isMobileViewport, shouldMountCommandPalette]);
+
   const shouldShowMobileHeader = !sidebarHidden && routeUiConfig.hasHeader;
   const shouldShowMobileNav = !sidebarHidden && routeUiConfig.hasBottomNav;
   const shouldShowFooter = !isMobileViewport && !footerHidden && routeUiConfig.hasFooter;
@@ -64,9 +114,7 @@ export default function AppLayout() {
     routeUiConfig.hasDesktopSidebar &&
     routeUiConfig.useDesktopContainerPadding;
   const shouldUseDesktopMaxWidth =
-    !isMobileViewport &&
-    routeUiConfig.hasDesktopSidebar &&
-    routeUiConfig.useDesktopMaxWidth;
+    !isMobileViewport && routeUiConfig.hasDesktopSidebar && routeUiConfig.useDesktopMaxWidth;
   const mainOverflowClass = routeUiConfig.lockMainScroll
     ? 'overflow-y-auto lg:overflow-hidden'
     : 'overflow-y-auto';
@@ -107,13 +155,15 @@ export default function AppLayout() {
       >
         <ProfileSetupModalTrigger pathWithoutLang={pathWithoutLang} />
         <GlobalModalContainer />
-        <GlobalCommandPalette />
+        {!isMobileViewport && shouldMountCommandPalette ? (
+          <Suspense fallback={null}>
+            <LazyGlobalCommandPalette openRequestKey={commandPaletteOpenRequestKey} />
+          </Suspense>
+        ) : null}
         {shouldShowMobileHeader && (
           <MobileHeader routeUiConfig={routeUiConfig} pathWithoutLang={pathWithoutLang} />
         )}
-        {routeUiConfig.hasDesktopSidebar && !isMobileViewport && (
-          <DesktopHeader />
-        )}
+        {routeUiConfig.hasDesktopSidebar && !isMobileViewport && <DesktopHeader />}
 
         <div
           data-mobile-page-mode={routeUiConfig.mobilePageMode}

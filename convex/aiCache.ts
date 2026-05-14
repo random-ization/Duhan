@@ -23,6 +23,46 @@ const ReadingTranslationPayloadValidator = v.object({
   translations: v.array(v.string()),
 });
 
+const SentenceTokenValidator = v.object({
+  surface: v.string(),
+  lemma: v.optional(v.string()),
+  partOfSpeech: v.optional(v.string()),
+  start: v.optional(v.number()),
+  end: v.optional(v.number()),
+  length: v.optional(v.number()),
+  wordPosition: v.optional(v.number()),
+  sentencePosition: v.optional(v.number()),
+});
+
+const SentenceVocabularyItemValidator = v.object({
+  surface: v.string(),
+  lemma: v.optional(v.string()),
+  partOfSpeech: v.optional(v.string()),
+  meaning: v.optional(v.string()),
+  difficultyLevel: v.optional(v.string()),
+  difficultyScore: v.optional(v.number()),
+});
+
+const SentenceGrammarItemValidator = v.object({
+  pattern: v.string(),
+  explanation: v.optional(v.string()),
+  reason: v.optional(v.string()),
+  start: v.optional(v.number()),
+  end: v.optional(v.number()),
+});
+
+const SentenceExplanationPayloadValidator = v.object({
+  sentence: v.string(),
+  normalizedText: v.optional(v.string()),
+  summary: v.optional(v.string()),
+  overallMeaning: v.optional(v.string()),
+  naturalTranslation: v.optional(v.string()),
+  tokens: v.optional(v.array(SentenceTokenValidator)),
+  vocabulary: v.optional(v.array(SentenceVocabularyItemValidator)),
+  grammar: v.optional(v.array(SentenceGrammarItemValidator)),
+  notes: v.optional(v.array(v.string())),
+});
+
 export const getByKey = internalQuery({
   args: {
     key: v.string(),
@@ -41,7 +81,11 @@ export const upsert = internalMutation({
     kind: v.string(),
     language: v.string(),
     contentHash: v.string(),
-    payload: v.union(ReadingAnalysisPayloadValidator, ReadingTranslationPayloadValidator),
+    payload: v.union(
+      ReadingAnalysisPayloadValidator,
+      ReadingTranslationPayloadValidator,
+      SentenceExplanationPayloadValidator
+    ),
   },
   handler: async (ctx, args) => {
     const now = Date.now();

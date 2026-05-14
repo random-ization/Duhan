@@ -569,6 +569,300 @@
       "focusInput": "Tap trung nhap",
       "wpm": "WPM",
       "acc": "Do chinh xac"
+    },
+    "v2": {
+      "nav": {
+        "features": "Features",
+        "loop": "Daily Path",
+        "modules": "Modules",
+        "community": "Community",
+        "pricing": "Pricing",
+        "faq": "FAQ",
+        "login": "Log In",
+        "register": "Register"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "Morning Review",
+            "s": "18 cards due · Done"
+          },
+          "s2": {
+            "t": "New Lesson · L24 Alleyway",
+            "s": "In progress · 8 min"
+          },
+          "s3": {
+            "t": "Podcast Clip",
+            "s": "Seoul Alley Walk · 6 min"
+          },
+          "s4": {
+            "t": "Bedtime Reading",
+            "s": "Article · Memories of the Alleyway"
+          },
+          "date": "May 11th",
+          "greet": "Hello, Hae-eun",
+          "sub": "Daily path ready · 4 steps, ~22 mins"
+        },
+        "eyebrow": "v3.0 Released · New learning path & community",
+        "titleKo": "DuHan",
+        "titlePre": "Make Korean ",
+        "titleUnderlined": "part of your routine",
+        "ctaPrimary": "Start Learning for Free →",
+        "ctaSecondary": "Watch 90s Demo",
+        "meta1": "Active Learners",
+        "meta2": "Cards Reviewed Daily",
+        "meta3": "App Store Rating",
+        "chip1": {
+          "t": "Streak",
+          "v": "47 Days"
+        },
+        "chip2": {
+          "t": "New Words Today",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "Level 5 · 87%"
+        }
+      },
+      "logos": {
+        "v1": "Immersive Reading in Real Context",
+        "v2": "Listen to Real Audio from Movies & Podcasts",
+        "v3": "Smart Review with FSRS Algorithm",
+        "v4": "Community Translations & Mutual Help",
+        "v5": "Sync Progress Across All Platforms"
+      },
+      "features": {
+        "t1": {
+          "title": "Daily Learning Path",
+          "pill": "/ Generated at 7:00 AM · Avg 22 mins"
+        },
+        "t2": {
+          "title": "Vocab Book + 4 Modes",
+          "desc": "Flashcards, Learn, Test, and Match — four ways to master one word.",
+          "pill": "/ TOPIK I + II · 9,300 words"
+        },
+        "t3": {
+          "title": "Grammar & Sentence Library",
+          "desc": "Each grammar point comes with real examples + past papers. Errors are automatically added to review.",
+          "pill": "/ 480 core grammar points"
+        },
+        "t4": {
+          "title": "TOPIK Preparation",
+          "desc": "Past papers / Mock exams / AI writing evaluation + Speed listening",
+          "pill": "/ Avg TOPIK II improvement: 1.4 levels"
+        },
+        "t6": {
+          "title": "Native Community · Translation",
+          "desc": "Unsure about a translation? Post a bounty and get help from native speakers.",
+          "pill": "/ 1.2k+ active help groups"
+        },
+        "t5": {
+          "title": "Movies · Podcasts · Reading Immersive",
+          "pill": "/ 4,800+ learning materials · Weekly updates"
+        },
+        "title": "The All-in-One Korean Learning Toolkit"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · Morning",
+          "title": "Review Due Cards",
+          "desc": "FSRS algorithm decides what to review today · Done in 7 mins on average.",
+          "preview": "18 cards · 7 mins"
+        },
+        "s2": {
+          "label": "STEP 2 · Course",
+          "title": "New Lesson Content",
+          "desc": "Textbook + Listening + Instant Test · Capture any clip as a card.",
+          "preview": "L24 · 8 mins"
+        },
+        "s3": {
+          "label": "STEP 3 · Commute",
+          "title": "Listening Immersion",
+          "desc": "Real podcast or K-Drama clips · Bilingual subtitles · Save words instantly.",
+          "preview": "Podcast 6 mins"
+        },
+        "s4": {
+          "label": "STEP 4 · Bedtime",
+          "title": "Read a Passage",
+          "desc": "Auto-matched difficulty · Reading one article consolidates today's learning.",
+          "preview": "Short story 4 mins"
+        },
+        "title": "Four steps, your daily Korean is set.",
+        "sub": "No willpower needed · Open the app to see your checklist · Resume anytime"
+      },
+      "modules": {
+        "title": "Modules Built for Long-term Learning",
+        "sub": "Polished hundreds of times · No feature bloat · It just works.",
+        "m1": {
+          "title": "Vocab · 4 Practice Modes",
+          "desc": "One word, four ways — Flashcards for familiarity, Learning for depth, Test for time limits, and Match for fun. Each word has an FSRS memory strength bar.",
+          "tag1": "FSRS Algorithm",
+          "tag2": "4 Practice Modes",
+          "tag3": "Context Examples",
+          "tag4": "Vocab Filter",
+          "link": "Explore Vocab Module →"
+        },
+        "m2": {
+          "title": "TOPIK · Papers + AI Scoring",
+          "desc": "Deep archive of past reading and listening papers, 1:1 real exam environment. AI writing evaluation provides 4D feedback, plus mock listening with speed control.",
+          "tag1": "10 Years of Papers",
+          "tag2": "1:1 Exam Environment",
+          "tag3": "AI Writing Feedback",
+          "tag4": "All-around Score Prediction",
+          "link": "Explore TOPIK Module →"
+        },
+        "m3": {
+          "title": "Media · Speed Listening",
+          "desc": "Goodbye boring listening drills. Huge library of real podcasts and videos, supporting 0.5x–1.5x speed, synced scripts, and one-tap word saving.",
+          "tag1": "4,800+ Clips",
+          "tag2": "Bilingual Subs",
+          "tag3": "Tap to Save",
+          "tag4": "Graded Difficulty",
+          "link": "Explore Immersion Module →"
+        },
+        "m4": {
+          "title": "Reading · AI Assistance",
+          "desc": "From news to picture books, all content is precisely graded L1–L6. AI automatically extracts core vocab and provides one-tap translation for complex sentences.",
+          "tag1": "Grades 1–6",
+          "tag2": "Picture Book Library",
+          "tag3": "One-tap Lookup",
+          "tag4": "Notes to Cards",
+          "link": "Explore Reading Module →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "Study Mates",
+          "s": "Grow Together"
+        },
+        "s2": {
+          "l": "Public Vocab Books",
+          "s": "Resource Sharing"
+        },
+        "s3": {
+          "l": "Study Tips",
+          "s": "Experience Sharing"
+        },
+        "s4": {
+          "l": "Daily Streak",
+          "s": "Keep Going"
+        },
+        "title": "Don't study alone, go further together.",
+        "sub": "Share vocab cards, exchange prep tips, and witness each other's growth · K-Soft community makes Korean learning less lonely."
+      },
+      "pricing": {
+        "perMonth": "/ mo",
+        "perQuarter": "/ quarter",
+        "perYear": "/ year",
+        "lifetime": {
+          "title": "Lifetime Access",
+          "desc": "Pay once, own it forever.",
+          "cta": "Get Lifetime"
+        },
+        "tabMonthly": "Monthly",
+        "tabQuarterly": "Quarterly",
+        "tabAnnual": "Annual",
+        "pro": {
+          "f1": "<b>Unlimited</b> new words + FSRS review",
+          "f2": "All courses + <b>All TOPIK 1-6</b> papers",
+          "f3": "Full media library + <b>Smart scripts</b>",
+          "f4": "<b>AI writing evaluation</b> + speed listening",
+          "f5": "Unlimited community resources",
+          "f6": "Real-time progress sync",
+          "title": "Plus Plan",
+          "desc": "Unlock all AI features and advanced content.",
+          "cta": "Unlock Plus Now"
+        },
+        "title": "Pick a Plan, Start Learning",
+        "sub": "Join the global community and unlock the full AI Korean experience.",
+        "free": {
+          "title": "Free Tier",
+          "desc": "Start your journey for free.",
+          "unit": "/ forever",
+          "f1": "<b>5 new words</b> per day",
+          "f2": "<b>30 review cards</b> daily limit",
+          "f3": "<b>Basic courses</b> (L1–L2) access",
+          "f4": "Media <b>preview mode</b>",
+          "f5": "Selected TOPIK papers",
+          "f6": "Limited AI feedback",
+          "cta": "Get Started for Free"
+        },
+        "popular": "Popular",
+        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods."
+      },
+      "testimonials": {
+        "title": "What DuHan Learners Say",
+        "t1": {
+          "tag1": "11 months used",
+          "tag2": "Level 5 achieved",
+          "name": "Hae-eun · @hae_eun",
+          "meta": "Designer · Hangzhou",
+          "quote": "I used to use Anki but got stressed. DuHan packaged it into 'just these 4 steps,' and I've stuck with it for a year. Passed TOPIK II Level 5!"
+        },
+        "t2": {
+          "tag1": "Learn with K-Drama",
+          "tag2": "3 months",
+          "name": "Xiao Ke",
+          "meta": "University Student",
+          "quote": "No more relying on fansubs. I tap a word, it goes to my cards, I review it the next day — making drama watching the best way to learn."
+        },
+        "t3": {
+          "tag1": "Native TA",
+          "name": "Minji · TA",
+          "meta": "Seoul · Native Speaker",
+          "quote": "The UI is so healing. It's like flipping through a beautiful magazine. Most importantly, it works — I actually remember the words."
+        }
+      },
+      "faq": {
+        "title": "FAQ",
+        "q1": "Can beginners use it?",
+        "q2": "What is FSRS algorithm?",
+        "q3": "Difference between Plus and Elite?",
+        "q4": "Can I study offline?",
+        "q5": "Is there a student discount?",
+        "q6": "Can I get a refund?"
+      },
+      "finalCta": {
+        "titlePre": "Make Korean part",
+        "titleMid": "of your daily life",
+        "titlePost": "starting today",
+        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
+        "ctaPrimary": "Start for Free →",
+        "ctaSecondary": "Download App"
+      },
+      "footer": {
+        "col1": {
+          "head": "Product",
+          "l1": "Features",
+          "l3": "TOPIK Prep",
+          "l4": "Media & Listening",
+          "l5": "Graded Reading",
+          "l6": "Community"
+        },
+        "col2": {
+          "head": "Learn",
+          "l1": "Study Guides",
+          "l2": "Grammar Wiki",
+          "l3": "Prep Blog",
+          "l4": "Daily Korean"
+        },
+        "col3": {
+          "head": "Company",
+          "l1": "About DuHan",
+          "l5": "Contact Us"
+        },
+        "col4": {
+          "head": "Support",
+          "l1": "Help Center",
+          "l2": "Refund Policy",
+          "l3": "Privacy Policy",
+          "l4": "Terms of Service"
+        },
+        "tag1": "DuHan · Make Korean a daily habit.",
+        "tag2": "From Hangul to TOPIK Level 6, all in one place.",
+        "copy": "© 2026 DuHan Inc. All rights reserved."
+      }
     }
   },
   "pricing": {
@@ -892,7 +1186,31 @@
     "verifyEmailDescription": "Nhấn nút bên dưới để gửi email xác minh.",
     "loginRequired": "Vui lòng đăng nhập trước.",
     "networkError": "Lỗi mạng. Vui lòng kiểm tra kết nối và thử lại.",
-    "passwordMismatch": "Hai trường mật khẩu không khớp."
+    "passwordMismatch": "Hai trường mật khẩu không khớp.",
+    "desktop": {
+      "subtitle": "Duhan · Rediscover Korean",
+      "heroLine1": "One character",
+      "heroLine2": "Changes your day",
+      "heroDesc1": "Every character brings you closer to the language.",
+      "heroDesc2": "Immersive learning, join ",
+      "heroDesc3": "30,000",
+      "heroDesc4": " learners.",
+      "welcomeBack": "Welcome Back",
+      "startLearning": "Start Learning",
+      "welcomeBackKo": "Nice to see you again",
+      "welcomeKo": "Welcome",
+      "continueJourney": "Continue your Korean journey",
+      "joinLearners": "Join 30,000 Korean learners",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "Enter your nickname",
+      "forgotPassword": "Forgot Password?",
+      "processing": "Processing...",
+      "loginAction": "Login →",
+      "joinAction": "Join Now →",
+      "orUse": "Or use",
+      "agreement": "By continuing, you agree to our",
+      "and": "and"
+    }
   },
   "common": {
     "appName": "Duhan",
@@ -945,19 +1263,24 @@
     "switchTab": "Chuyển tab",
     "loading": "Đang tải...",
     "error": "Đã xảy ra lỗi.",
-    "allRightsReserved": "Bảo lưu mọi quyền."
+    "allRightsReserved": "Bảo lưu mọi quyền.",
+    "levelSuffix": "",
+    "level": "Level",
+    "daysShort": {
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S",
+      "sun": "S"
+    },
+    "units": "Units",
+    "words": "Words",
+    "cards": "Cards",
+    "book": "Book"
   },
-  "search": {
-    "placeholder": "Tìm ngữ pháp, sách, ghi chú...",
-    "startTyping": "Bắt đầu gõ để tìm",
-    "empty": "Không có kết quả.",
-    "bucket": {
-      "grammar": "Ngữ pháp",
-      "book": "Sách",
-      "podcast": "Podcast",
-      "note": "Ghi chú"
-    }
-  },
+  "search": "Tìm kiếm",
   "notifications": {
     "open": "Thông báo",
     "title": "Thông báo",
@@ -1003,7 +1326,6 @@
   },
   "notebook": "Sổ tay của tôi",
   "loading": "Đang tải...",
-  "search": "Tìm kiếm",
   "error": "Lỗi",
   "pwa": {
     "install": {
@@ -2525,6 +2847,8 @@
   "achievements": {
     "aiTutorTagline": "Gia sư AI tiếng Hàn cá nhân của bạn",
     "saveReportImage": "Lưu ảnh thành tích",
+    "shareReportImage": "Chia sẻ ảnh thành tích",
+    "reportImageActionFailed": "Hiện không thể chia sẻ hoặc lưu ảnh thành tích này.",
     "galleryEmpty": "Hoàn thành luyện gõ hoặc từ vựng để mở khóa huy hiệu đầu tiên!",
     "achievementUnlocked": "Đã mở khóa thành tích",
     "defaultLearner": "Người học DuHan",
@@ -2550,28 +2874,94 @@
       "social": "Xã hội"
     },
     "badges": {
-      "streak7": { "title": "7 ngày liên tục", "description": "Học 7 ngày liên tiếp." },
-      "streak14": { "title": "14 ngày liên tục", "description": "Học 14 ngày liên tiếp." },
-      "streak30": { "title": "30 ngày liên tục", "description": "Học 30 ngày liên tiếp." },
-      "streak60": { "title": "60 ngày liên tục", "description": "Học 60 ngày liên tiếp." },
-      "streak100": { "title": "100 ngày liên tục", "description": "Học 100 ngày liên tiếp." },
-      "streak365": { "title": "365 ngày liên tục", "description": "Học trọn một năm." },
-      "vocab100": { "title": "Từ vựng 100", "description": "Nắm vững 100 từ." },
-      "vocab500": { "title": "Từ vựng 500", "description": "Nắm vững 500 từ." },
-      "vocab1000": { "title": "Từ vựng 1000", "description": "Nắm vững 1000 từ." },
-      "grammar20": { "title": "Ngữ pháp 20", "description": "Nắm vững 20 điểm ngữ pháp." },
-      "grammar100": { "title": "Ngữ pháp 100", "description": "Nắm vững 100 điểm ngữ pháp." },
-      "listening20h": { "title": "Nghe 20 giờ", "description": "Tích lũy 20 giờ nghe." },
-      "listening100h": { "title": "Nghe 100 giờ", "description": "Tích lũy 100 giờ nghe." },
-      "typing40": { "title": "WPM 40", "description": "Đạt WPM 40 khi luyện gõ." },
-      "typing80": { "title": "WPM 80", "description": "Đạt WPM 80 khi luyện gõ." },
-      "typing100": { "title": "WPM 100", "description": "Đạt WPM 100 khi luyện gõ." },
-      "topikPass": { "title": "Đạt TOPIK", "description": "Đạt một bài thi thử TOPIK." },
-      "topikHighScore": { "title": "TOPIK điểm cao", "description": "Đạt điểm cao trong một bài thi thử TOPIK." },
-      "friends1": { "title": "Người bạn đầu tiên", "description": "Thêm người bạn hai chiều đầu tiên." },
-      "friends10": { "title": "10 người bạn", "description": "Có 10 người bạn hai chiều." },
-      "groupJoin": { "title": "Tham gia nhóm", "description": "Tham gia một nhóm học tập." },
-      "groupCreate": { "title": "Tạo nhóm", "description": "Tạo một nhóm học tập." }
+      "streak7": {
+        "title": "7 ngày liên tục",
+        "description": "Học 7 ngày liên tiếp."
+      },
+      "streak14": {
+        "title": "14 ngày liên tục",
+        "description": "Học 14 ngày liên tiếp."
+      },
+      "streak30": {
+        "title": "30 ngày liên tục",
+        "description": "Học 30 ngày liên tiếp."
+      },
+      "streak60": {
+        "title": "60 ngày liên tục",
+        "description": "Học 60 ngày liên tiếp."
+      },
+      "streak100": {
+        "title": "100 ngày liên tục",
+        "description": "Học 100 ngày liên tiếp."
+      },
+      "streak365": {
+        "title": "365 ngày liên tục",
+        "description": "Học trọn một năm."
+      },
+      "vocab100": {
+        "title": "Từ vựng 100",
+        "description": "Nắm vững 100 từ."
+      },
+      "vocab500": {
+        "title": "Từ vựng 500",
+        "description": "Nắm vững 500 từ."
+      },
+      "vocab1000": {
+        "title": "Từ vựng 1000",
+        "description": "Nắm vững 1000 từ."
+      },
+      "grammar20": {
+        "title": "Ngữ pháp 20",
+        "description": "Nắm vững 20 điểm ngữ pháp."
+      },
+      "grammar100": {
+        "title": "Ngữ pháp 100",
+        "description": "Nắm vững 100 điểm ngữ pháp."
+      },
+      "listening20h": {
+        "title": "Nghe 20 giờ",
+        "description": "Tích lũy 20 giờ nghe."
+      },
+      "listening100h": {
+        "title": "Nghe 100 giờ",
+        "description": "Tích lũy 100 giờ nghe."
+      },
+      "typing40": {
+        "title": "WPM 40",
+        "description": "Đạt WPM 40 khi luyện gõ."
+      },
+      "typing80": {
+        "title": "WPM 80",
+        "description": "Đạt WPM 80 khi luyện gõ."
+      },
+      "typing100": {
+        "title": "WPM 100",
+        "description": "Đạt WPM 100 khi luyện gõ."
+      },
+      "topikPass": {
+        "title": "Đạt TOPIK",
+        "description": "Đạt một bài thi thử TOPIK."
+      },
+      "topikHighScore": {
+        "title": "TOPIK điểm cao",
+        "description": "Đạt điểm cao trong một bài thi thử TOPIK."
+      },
+      "friends1": {
+        "title": "Người bạn đầu tiên",
+        "description": "Thêm người bạn hai chiều đầu tiên."
+      },
+      "friends10": {
+        "title": "10 người bạn",
+        "description": "Có 10 người bạn hai chiều."
+      },
+      "groupJoin": {
+        "title": "Tham gia nhóm",
+        "description": "Tham gia một nhóm học tập."
+      },
+      "groupCreate": {
+        "title": "Tạo nhóm",
+        "description": "Tạo một nhóm học tập."
+      }
     }
   },
   "weeklyActivity": {
@@ -3405,81 +3795,6 @@
       "empty_mastered": "Danh sách các từ đã thuộc sẽ hiện ở đây."
     }
   },
-  "topikWriting": {
-    "title": "TOPIK II Viết",
-    "session": {
-      "fillBlank": "Điền vào chỗ trống",
-      "graphEssay": "Viết biểu đồ",
-      "opinionEssay": "Nghị luận",
-      "exampleBox": "Ví dụ / Context",
-      "questionX": "Câu {{num}}",
-      "points": "điểm",
-      "answerPlaceholder": "Nhập câu trả lời của bạn...",
-      "characterCount": "{{count}} ký tự",
-      "remainingChars": "Còn {{count}}",
-      "submitConfirmTitle": "Nộp bài?",
-      "submitConfirmDesc": "Đã trả lời {{ans}}/{{total}} câu. Không thể sửa sau khi nộp.",
-      "exitConfirmTitle": "Thoát bài thi?",
-      "exitConfirmDesc": "Câu trả lời hiện tại sẽ được lưu dưới dạng bản nháp. Bạn có thể quay lại để tiếp tục sau.",
-      "continueForm": "Tiếp tục",
-      "confirmSubmit": "Xác nhận nộp",
-      "exiting": "Đang thoát...",
-      "submitting": "Đang nộp...",
-      "saveIdle": "Tự động lưu",
-      "saving": "Đang lưu...",
-      "saved": "✓ Đã lưu",
-      "saveError": "Lỗi lưu",
-      "submitButton": "Nộp bài",
-      "wongojiAnswer": "Giấy kẻ ô Answer",
-      "answerArea": "Khu vực trả lời",
-      "maxLength": "Tối đa {{count}} ký tự",
-      "submittedTitle": "Nộp bài thành công!",
-      "submittedDesc": "Đã trả lời {{ans}}/{{total}} câu. Đang chờ AI đánh giá...",
-      "loadingExam": "Đang chuẩn bị bài thi viết...",
-      "q51Instruction": "Điền vào chỗ trống dựa vào ngữ cảnh để đoạn văn hoàn chỉnh và tự nhiên.",
-      "q52Instruction": "Điền vào chỗ trống theo yêu cầu của đề bài.",
-      "q53Instruction": "Dựa vào biểu đồ dưới đây, viết một bài văn thuyết minh (200-300 chữ).",
-      "q54Instruction": "Viết một bài văn nghị luận về chủ đề dưới đây (400-600 chữ).",
-      "fillBlankPaperTitle": "Điền chỗ trống (㉠ / ㉡)",
-      "fillBlankOneSentence": "Mỗi chỗ trống nên viết 1 câu",
-      "fillBlankHint": "Vui lòng điền cả ㉠ và ㉡ bằng câu hoàn chỉnh.",
-      "fillBlankA": "Điền ㉠ tại đây",
-      "fillBlankB": "Điền ㉡ tại đây"
-    },
-    "report": {
-      "title": "Báo cáo Đánh giá Viết",
-      "subtitle": "TOPIK II Viết · AI Đánh giá",
-      "evaluatingTitle": "AI đang chấm điểm...",
-      "evaluatingDesc": "Phân tích theo tiêu chuẩn TOPIK chính thức. Thường mất 30-60 giây.",
-      "dimTask": "Mức độ hoàn thành",
-      "dimStructure": "Cấu trúc & Phát triển",
-      "dimLanguage": "Sử dụng ngôn ngữ",
-      "dimWongoji": "Quy tắc giấy kẻ ô",
-      "maxScore": "Tối đa {{score}}",
-      "scoreLabel": "Điểm:",
-      "dimScores": "Điểm từng phần",
-      "originalText": "Bài làm của bạn",
-      "notAnswered": "(Chưa trả lời)",
-      "aiCorrected": "Bản sửa gợi ý (AI)",
-      "noCorrection": "(Không có chỉnh sửa)",
-      "feedback": "Nhận xét chung",
-      "loadingError": "Không thể tải báo cáo, vui lòng tải lại trang.",
-      "back": "Quay lại",
-      "timeElapsed": "Thời gian làm bài:",
-      "timeFormat": "{{min}}p {{sec}}s",
-      "totalScore": "Tổng điểm:",
-      "aiDone": "AI chấm xong",
-      "passExcellent": "Xuất sắc 🎉",
-      "passGood": "Đạt ✅",
-      "passNeedsWork": "Cần cố gắng 📚",
-      "overallAnalysis": "Phân tích tổng thể",
-      "questionFeedback": "Nhận xét chi tiết từng câu",
-      "loadingOriginal": "Đang tải đề thi gốc...",
-      "retrigger": "Kích hoạt chấm lại",
-      "retriggering": "Đang thử lại...",
-      "retryFailed": "Thử lại thất bại. Vui lòng thử lại sau."
-    }
-  },
   "footer": {
     "contactSupport": "Liên hệ hỗ trợ",
     "joinDiscord": "Tham gia Discord",
@@ -3533,6 +3848,9 @@
   "relativeTime": {
     "daysAgo": "{{count}} ngày trước",
     "hoursAgo": "{{count}} giờ trước",
-    "justNow": "Vừa xong"
+    "justNow": "Vừa xong",
+    "minutesShort": "m",
+    "hoursShort": "h",
+    "daysShort": "d"
   }
 }

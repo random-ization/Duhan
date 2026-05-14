@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { AlertCircle, Eye, EyeOff, Sparkles, Trophy, Type, X } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Sparkles, Trophy, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -160,6 +160,16 @@ const READER_FONT_SCALE_VARS: Record<ReaderFontScale, ReaderStyleVars> = {
   },
 };
 
+type PracticeComposerProps = {
+  readonly localizedTitle: string;
+  readonly statusLabel: string;
+  readonly tone: GrammarTone;
+  readonly aiFeedback: AiFeedbackState | null;
+  readonly isChecking: boolean;
+  readonly onCheck: (sentence: string) => Promise<void>;
+  readonly t: TFunction;
+};
+
 const getFeedbackText = (nuance: unknown): string =>
   typeof nuance === 'string' ? nuance : 'Analysis complete';
 
@@ -172,6 +182,140 @@ const triggerConfetti = (setShowConfetti: (value: boolean) => void) => {
   setShowConfetti(true);
   setTimeout(() => setShowConfetti(false), 2000);
 };
+
+function MobileGrammarPracticeComposer({
+  localizedTitle,
+  statusLabel,
+  tone,
+  aiFeedback,
+  isChecking,
+  onCheck,
+  t,
+}: Readonly<PracticeComposerProps>) {
+  const [draftSentence, setDraftSentence] = useState('');
+
+  const trimmedDraft = draftSentence.trim();
+  const isCheckDisabled = isChecking || isEmptySentence(trimmedDraft);
+
+  const submitDraft = () => {
+    if (!trimmedDraft) return;
+    void onCheck(trimmedDraft);
+  };
+
+  return (
+    <Card pad={16} style={{ boxShadow: KT.shSm }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div
+            style={{
+              fontFamily: KT.serif,
+              fontSize: 12,
+              color: KT.crimson,
+              letterSpacing: 3,
+              fontWeight: 500,
+            }}
+          >
+            問 · AI
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 16,
+              fontWeight: 800,
+              color: KT.ink,
+              letterSpacing: -0.2,
+            }}
+          >
+            {t('grammarDetail.practiceTitle', { defaultValue: 'Practice sentence' })}
+          </div>
+        </div>
+        <Chip tone={tone.chipTone} size="sm">
+          {statusLabel}
+        </Chip>
+      </div>
+
+      {aiFeedback ? (
+        <div
+          style={{
+            marginTop: 12,
+            marginBottom: 12,
+            padding: 14,
+            borderRadius: 18,
+            background: aiFeedback.isCorrect ? `${KT.mint}78` : `${KT.pink}78`,
+            border: `1px solid ${aiFeedback.isCorrect ? `${KT.mintDeep}33` : `${KT.pinkDeep}33`}`,
+            color: aiFeedback.isCorrect ? KT.mintDeep : KT.pinkDeep,
+          }}
+        >
+          <div className="flex items-start gap-3">
+            {aiFeedback.isCorrect ? (
+              <Trophy size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+            ) : (
+              <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+            )}
+            <div className="min-w-0 flex-1">
+              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.6 }}>
+                {aiFeedback.feedback}
+              </div>
+              {aiFeedback.correctedSentence ? (
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: `1px solid ${
+                      aiFeedback.isCorrect ? `${KT.mintDeep}22` : `${KT.pinkDeep}22`
+                    }`,
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {aiFeedback.correctedSentence}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex gap-3">
+        <Input
+          value={draftSentence}
+          onChange={event => setDraftSentence(event.target.value)}
+          placeholder={t('grammarDetail.practicePlaceholder', {
+            defaultValue: `Use ${localizedTitle} in a sentence`,
+            title: localizedTitle,
+          })}
+          className="h-12 flex-1 rounded-[1.15rem] px-5 text-sm font-bold shadow-none"
+          style={{
+            border: `1px solid ${KT.line}`,
+            background: KT.bg,
+            color: KT.ink,
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              submitDraft();
+            }
+          }}
+        />
+        <Button
+          onClick={submitDraft}
+          disabled={isCheckDisabled}
+          loading={isChecking}
+          loadingText={t('grammarDetail.checking', { defaultValue: 'Checking…' })}
+          loadingIconClassName="h-4 w-4"
+          className="h-12 rounded-[1.15rem] px-6 font-black"
+          style={{
+            background: KT.ink,
+            color: KT.card,
+            boxShadow: KT.shSm,
+          }}
+        >
+          {t('grammarDetail.check', { defaultValue: 'Check' })}
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -228,28 +372,11 @@ const getGrammarTone = (type: string): GrammarTone => {
   }
 };
 
-const clampPercentage = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
-
 const getLocalizedTitle = (grammar: GrammarPointData, language: SupportedLanguage): string => {
   if (language === 'en') return sanitizeGrammarDisplayText(grammar.titleEn || grammar.title);
   if (language === 'vi') return sanitizeGrammarDisplayText(grammar.titleVi || grammar.title);
   if (language === 'mn') return sanitizeGrammarDisplayText(grammar.titleMn || grammar.title);
   return sanitizeGrammarDisplayText(grammar.titleZh || grammar.title);
-};
-
-const getLocalizedSummary = (grammar: GrammarPointData, language: SupportedLanguage): string => {
-  const candidates =
-    language === 'en'
-      ? [grammar.summaryEn, grammar.summary, grammar.summaryVi, grammar.summaryMn]
-      : language === 'vi'
-        ? [grammar.summaryVi, grammar.summaryEn, grammar.summary, grammar.summaryMn]
-        : language === 'mn'
-          ? [grammar.summaryMn, grammar.summaryEn, grammar.summary, grammar.summaryVi]
-          : [grammar.summary, grammar.summaryEn, grammar.summaryVi, grammar.summaryMn];
-
-  return sanitizeGrammarDisplayText(
-    candidates.find(text => typeof text === 'string' && text.trim().length > 0) || ''
-  );
 };
 
 const getLocalizedExplanation = (
@@ -464,9 +591,7 @@ function isInteractiveElementTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
 
   return Boolean(
-    target.closest(
-      'input, textarea, select, button, a, [role="button"], [contenteditable="true"]'
-    )
+    target.closest('input, textarea, select, button, a, [role="button"], [contenteditable="true"]')
   );
 }
 
@@ -1046,7 +1171,6 @@ export default function MobileGrammarDetailSheet({
   instituteId: _instituteId,
 }: MobileGrammarDetailSheetProps) {
   const { i18n, t } = useTranslation();
-  const [practiceSentence, setPracticeSentence] = useState('');
   const [aiFeedback, setAiFeedback] = useState<AiFeedbackState | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -1104,7 +1228,6 @@ export default function MobileGrammarDetailSheet({
 
   useEffect(() => {
     if (!grammar?.id) return;
-    setPracticeSentence('');
     setAiFeedback(null);
     setShowConfetti(false);
     setIsExpanded(true);
@@ -1115,7 +1238,6 @@ export default function MobileGrammarDetailSheet({
   const language = resolveSupportedLanguage(i18n.language);
   const readerVars = READER_FONT_SCALE_VARS[fontScale];
   const localizedTitle = getLocalizedTitle(grammar, language);
-  const localizedSummary = getLocalizedSummary(grammar, language);
   const localizedExplanation = getLocalizedExplanation(grammar, language);
   const markdownDocument = stripLeadingDuplicateHeading(
     sanitizeGrammarMarkdown(
@@ -1134,9 +1256,7 @@ export default function MobileGrammarDetailSheet({
       answer: getLocalizedQuizText(item.answer, language),
     }))
     .filter(item => item.prompt.trim().length > 0 || item.answer.trim().length > 0);
-  const proficiency = aiFeedback?.progress?.proficiency ?? grammar.proficiency ?? 0;
   const status = aiFeedback?.progress?.status ?? grammar.status ?? 'NEW';
-  const proficiencyValue = clampPercentage(proficiency);
   const tone = getGrammarTone(grammar.type);
   const statusLabel =
     status === 'MASTERED'
@@ -1144,18 +1264,18 @@ export default function MobileGrammarDetailSheet({
       : status === 'LEARNING'
         ? t('grammar.status.learning', { defaultValue: 'Learning' })
         : t('grammar.status.new', { defaultValue: 'New' });
-  const isCheckDisabled = isChecking || isEmptySentence(practiceSentence);
   const importedAtLabel = formatImportedAt(grammar.sourceMeta?.importedAt, i18n.language || 'en');
 
-  const handleCheck = async () => {
-    if (!practiceSentence.trim()) return;
+  const handleCheck = async (sentence: string) => {
+    const trimmedSentence = sentence.trim();
+    if (!trimmedSentence) return;
 
     setIsChecking(true);
     setAiFeedback(null);
 
     try {
       const response = await checkAction({
-        sentence: practiceSentence.trim(),
+        sentence: trimmedSentence,
         context: localizedTitle,
         language: i18n.language,
       });
@@ -1478,15 +1598,15 @@ export default function MobileGrammarDetailSheet({
               ) : null}
 
               {grammar.sourceMeta ? (
-                <div 
-                  style={{ 
-                    marginTop: 24, 
+                <div
+                  style={{
+                    marginTop: 24,
                     padding: '0 4px 40px',
                     fontSize: 10,
                     fontWeight: 800,
                     color: KT.sub,
                     opacity: 0.6,
-                    letterSpacing: 0.5
+                    letterSpacing: 0.5,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -1497,11 +1617,7 @@ export default function MobileGrammarDetailSheet({
                     <span style={{ color: KT.ink }}>SOURCE PATH:</span>
                     <span className="truncate">{grammar.sourceMeta.sourcePath}</span>
                   </div>
-                  {importedAtLabel && (
-                    <div className="mt-1">
-                      IMPORTED: {importedAtLabel}
-                    </div>
-                  )}
+                  {importedAtLabel && <div className="mt-1">IMPORTED: {importedAtLabel}</div>}
                 </div>
               ) : null}
 
@@ -1713,7 +1829,6 @@ export default function MobileGrammarDetailSheet({
                 </Card>
               ) : null}
 
-
               <div style={{ height: 18 }} />
             </article>
           </div>
@@ -1727,116 +1842,16 @@ export default function MobileGrammarDetailSheet({
               background: `linear-gradient(180deg, rgba(245,239,229,0) 0%, ${KT.bg2} 28%, ${KT.bg2} 100%)`,
             }}
           >
-            <Card pad={16} style={{ boxShadow: KT.shSm }}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div
-                    style={{
-                      fontFamily: KT.serif,
-                      fontSize: 12,
-                      color: KT.crimson,
-                      letterSpacing: 3,
-                      fontWeight: 500,
-                    }}
-                  >
-                    問 · AI
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: KT.ink,
-                      letterSpacing: -0.2,
-                    }}
-                  >
-                    {t('grammarDetail.practiceTitle', { defaultValue: 'Practice sentence' })}
-                  </div>
-                </div>
-                <Chip tone={tone.chipTone} size="sm">
-                  {statusLabel}
-                </Chip>
-              </div>
-
-              {aiFeedback ? (
-                <div
-                  style={{
-                    marginTop: 12,
-                    marginBottom: 12,
-                    padding: 14,
-                    borderRadius: 18,
-                    background: aiFeedback.isCorrect ? `${KT.mint}78` : `${KT.pink}78`,
-                    border: `1px solid ${aiFeedback.isCorrect ? `${KT.mintDeep}33` : `${KT.pinkDeep}33`}`,
-                    color: aiFeedback.isCorrect ? KT.mintDeep : KT.pinkDeep,
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    {aiFeedback.isCorrect ? (
-                      <Trophy size={18} style={{ flexShrink: 0, marginTop: 1 }} />
-                    ) : (
-                      <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.6 }}>
-                        {aiFeedback.feedback}
-                      </div>
-                      {aiFeedback.correctedSentence ? (
-                        <div
-                          style={{
-                            marginTop: 8,
-                            paddingTop: 8,
-                            borderTop: `1px solid ${
-                              aiFeedback.isCorrect ? `${KT.mintDeep}22` : `${KT.pinkDeep}22`
-                            }`,
-                            fontSize: 12,
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          {aiFeedback.correctedSentence}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="mt-3 flex gap-3">
-                <Input
-                  value={practiceSentence}
-                  onChange={event => setPracticeSentence(event.target.value)}
-                  placeholder={t('grammarDetail.practicePlaceholder', {
-                    defaultValue: `Use ${localizedTitle} in a sentence`,
-                    title: localizedTitle,
-                  })}
-                  className="h-12 flex-1 rounded-[1.15rem] px-5 text-sm font-bold shadow-none"
-                  style={{
-                    border: `1px solid ${KT.line}`,
-                    background: KT.bg,
-                    color: KT.ink,
-                  }}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') {
-                      void handleCheck();
-                    }
-                  }}
-                />
-                <Button
-                  onClick={() => void handleCheck()}
-                  disabled={isCheckDisabled}
-                  loading={isChecking}
-                  loadingText={t('grammarDetail.checking', { defaultValue: 'Checking…' })}
-                  loadingIconClassName="h-4 w-4"
-                  className="h-12 rounded-[1.15rem] px-6 font-black"
-                  style={{
-                    background: KT.ink,
-                    color: KT.card,
-                    boxShadow: KT.shSm,
-                  }}
-                >
-                  {t('grammarDetail.check', { defaultValue: 'Check' })}
-                </Button>
-              </div>
-            </Card>
+            <MobileGrammarPracticeComposer
+              key={grammar.id}
+              localizedTitle={localizedTitle}
+              statusLabel={statusLabel}
+              tone={tone}
+              aiFeedback={aiFeedback}
+              isChecking={isChecking}
+              onCheck={handleCheck}
+              t={t}
+            />
           </div>
 
           {showConfetti ? (

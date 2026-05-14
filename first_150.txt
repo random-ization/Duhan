@@ -1,0 +1,125 @@
+/**
+ * WritingExamSession.tsx
+ *
+ * Full exam engine for TOPIK II Writing section.
+ *
+ * Responsibilities:
+ *  - Countdown timer (from backend endTime), auto-submit on expiry
+ *  - Debounced auto-save via `saveDraft` mutation (2 s delay)
+ *  - Early-exit with confirmation (save draft, leave exam without submit)
+ *  - Question navigator (Q51–54, with completion indicators)
+ *  - Split-pane layout: prompt (left) + answer editor (right)
+ *  - Q53/54 use <WongojiEditor>; Q51/52 use dual fill inputs (㉠ / ㉡)
+ *  - Manual submit button with confirmation dialog
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation } from 'convex/react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  FileText,
+  LogOut,
+  Send,
+  ShieldCheck,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
+import WongojiEditor from './WongojiEditor';
+import { Button, Input, Textarea } from '../ui';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { MobileImmersiveHeader } from '../mobile/MobileImmersiveHeader';
+import { DesignChip } from '../desktop/ui/DesignChip';
+import { KT } from '../../theme/ksoftTokens';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface WritingQuestion {
+  _id: string;
+  number: number;
+  questionType: 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY';
+  instruction?: string;
+  contextBox?: string;
+  image?: string;
+  score: number;
+  modelAnswer?: string;
+}
+
+export interface WritingExamSessionProps {
+  sessionId: Id<'topik_writing_sessions'>;
+  examId: string;
+  endTime: number;
+  questions: WritingQuestion[];
+  /** Pre-loaded draft answers from the session doc */
+  initialAnswers?: Record<string, string>;
+  onSubmitted?: (answers: Record<string, string>) => void;
+  onSubmitError?: (error: unknown) => void;
+  onExit?: (answers: Record<string, string>) => void | Promise<void>;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const WONGOJI_QUESTIONS = new Set([53, 54]); // Q53/54 use 원고지
+const DUAL_FILL_QUESTIONS = new Set([51, 52]); // Q51/52 use ㉠ / ㉡ inputs
+const MAX_LENGTH: Record<number, number> = {
+  51: 200,
+  52: 200,
+  53: 300,
+  54: 700,
+};
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatTime(ms: number): string {
+  if (ms <= 0) return '00:00';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+interface DualFillAnswer {
+  slotA: string;
+  slotB: string;
+}
+
+function parseDualFillAnswer(raw: string): DualFillAnswer {
+  const text = (raw ?? '').trim();
+  if (!text) return { slotA: '', slotB: '' };
+
+  const normalized = text.replace(/\r\n/g, '\n');
+  const markerPattern = /(?:^|\n)\s*㉠\s*([^\n]*)(?:\n\s*㉡\s*([^\n]*))?/;
+  const markerMatch = normalized.match(markerPattern);
+  if (markerMatch) {
+    return {
+      slotA: (markerMatch[1] ?? '').trim(),
+      slotB: (markerMatch[2] ?? '').trim(),
+    };
+  }
+
+  const lines = normalized
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+  return {
+    slotA: lines[0] ?? '',
+    slotB: lines[1] ?? '',
+  };
+}
+
+function serializeDualFillAnswer(answer: DualFillAnswer): string {
+  const slotA = answer.slotA.trim();
+  const slotB = answer.slotB.trim();
+  if (!slotA && !slotB) return '';
+  return `㉠ ${slotA}\n㉡ ${slotB}`;
+}
+
+function hasMeaningfulContent(questionNumber: number, rawAnswer: string): boolean {
+  if (DUAL_FILL_QUESTIONS.has(questionNumber)) {
+    const parsed = parseDualFillAnswer(rawAnswer ?? '');
+    return parsed.slotA.length > 0 && parsed.slotB.length > 0;
+  }

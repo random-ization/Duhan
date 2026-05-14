@@ -32,6 +32,7 @@
     "notes:migrate:dry": "node scripts/migrate-annotation-notes-to-pages.mjs --dry-run",
     "backfill:android-mobile-data": "node scripts/backfillAndroidMobileData.mjs",
     "import:topik:grammar:bilingual": "node scripts/importTopikGrammarBilingual.mjs",
+    "import:topik:writing:sqlite": "node scripts/importTopikWritingFromSqlite.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:run:json": "mkdir -p docs/reports/testing && vitest run --reporter=json --outputFile=docs/reports/testing/vitest-report.json",
@@ -50,6 +51,8 @@
     "ui:parity": "npm run ui:parity:web && npm run ui:parity:app && npm run ui:parity:diff",
     "ui:parity:ci": "npm run ui:parity:web && npm run ui:parity:diff",
     "check:release": "npm run lint && npm run typecheck && npm run i18n:guard && npm run color:guard && npm run test:run:json && npm run regression:gate && npm run build && npm run seo:audit:strict",
+    "convex:dev": "npx convex dev",
+    "convex:deploy": "npx convex deploy --prod",
     "prepare": "husky"
   },
   "dependencies": {

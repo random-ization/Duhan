@@ -1,7 +1,8 @@
-import { mutation, query } from './_generated/server';
+import { internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId, requireAdmin } from './utils';
 import type { Id } from './_generated/dataModel';
+import type { MutationCtx } from './_generated/server';
 import { api } from './_generated/api';
 import {
   consumeDailyFeatureUsage,
@@ -20,138 +21,375 @@ import {
 
 const EXAM_DURATION_MS = 50 * 60 * 1000; // 50 minutes in milliseconds
 
+const WRITING_EXAM_UPSERT_ARGS = {
+  id: v.string(),
+  title: v.string(),
+  round: v.number(),
+  timeLimit: v.number(),
+  description: v.optional(v.string()),
+  isPaid: v.optional(v.boolean()),
+  accessLevel: v.optional(v.string()),
+  questions: v.array(
+    v.object({
+      number: v.number(),
+      questionType: WRITING_QUESTION_TYPE_VALIDATOR,
+      instruction: v.optional(v.string()),
+      contextBox: v.optional(v.string()),
+      image: v.optional(v.string()),
+      score: v.number(),
+      modelAnswer: v.optional(v.string()),
+      gradingCriteria: v.optional(WRITING_GRADING_CRITERIA_VALIDATOR),
+    })
+  ),
+} as const;
+
+type WritingExamUpsertArgs = {
+  id: string;
+  title: string;
+  round: number;
+  timeLimit: number;
+  description?: string;
+  isPaid?: boolean;
+  accessLevel?: string;
+  questions: Array<{
+    number: number;
+    questionType: 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY';
+    instruction?: string;
+    contextBox?: string;
+    image?: string;
+    score: number;
+    modelAnswer?: string;
+    gradingCriteria?: {
+      taskAccomplishment?: string;
+      developmentStructure?: string;
+      languageUse?: string;
+      wongojiRules?: string;
+    };
+  }>;
+};
+
+type WritingExamUpsertResult = {
+  success: boolean;
+  examId: string;
+  questionCount: number;
+};
+
 // ─── Admin: writing exam upload ──────────────────────────────────────────────
 
 export const saveWritingExam = mutation({
-  args: {
-    id: v.string(), // legacy exam id (route id)
-    title: v.string(),
-    round: v.number(),
-    timeLimit: v.number(),
-    description: v.optional(v.string()),
-    isPaid: v.optional(v.boolean()),
-    accessLevel: v.optional(v.string()),
-    questions: v.array(
-      v.object({
-        number: v.number(),
-        questionType: WRITING_QUESTION_TYPE_VALIDATOR,
-        instruction: v.optional(v.string()),
-        contextBox: v.optional(v.string()),
-        image: v.optional(v.string()),
-        score: v.number(),
-        modelAnswer: v.optional(v.string()),
-        gradingCriteria: v.optional(WRITING_GRADING_CRITERIA_VALIDATOR),
-      })
-    ),
-  },
-  handler: async (ctx, args) => {
+  args: WRITING_EXAM_UPSERT_ARGS,
+  handler: async (ctx, args): Promise<WritingExamUpsertResult> => {
     await requireAdmin(ctx);
 
-    const { id, questions, ...examData } = args;
-    const accessLevel = (examData.accessLevel || '').trim().toUpperCase();
-    const normalizedAccessLevel =
-      accessLevel === 'FREE_SAMPLE' || accessLevel === 'PRO'
-        ? accessLevel
-        : examData.isPaid
-          ? 'PRO'
-          : 'FREE_SAMPLE';
+    return await upsertWritingExam(ctx, args);
+  },
+});
 
-    const existingExam = await ctx.db
-      .query('topik_exams')
-      .withIndex('by_legacy_id', q => q.eq('legacyId', id))
-      .first();
+export const importWritingExam = internalMutation({
+  args: WRITING_EXAM_UPSERT_ARGS,
+  handler: async (ctx, args): Promise<WritingExamUpsertResult> => {
+    return await upsertWritingExam(ctx, args);
+  },
+});
 
-    let examId: Id<'topik_exams'>;
-    if (existingExam) {
-      await ctx.db.patch(existingExam._id, {
-        ...examData,
-        type: 'WRITING',
-        isPaid: normalizedAccessLevel === 'PRO',
-        accessLevel: normalizedAccessLevel,
-      });
-      examId = existingExam._id;
+export const purgeWritingExams = internalMutation({
+  args: {
+    legacyIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const summaries: Array<{
+      legacyId: string;
+      deletedExam: boolean;
+      deletedWritingQuestions: number;
+      deletedObjectiveQuestions: number;
+      deletedSessions: number;
+      deletedEvaluations: number;
+      deletedAttempts: number;
+    }> = [];
 
-      const existingWritingQuestions = await ctx.db
+    for (const legacyId of args.legacyIds) {
+      const exam = await ctx.db
+        .query('topik_exams')
+        .withIndex('by_legacy_id', q => q.eq('legacyId', legacyId))
+        .first();
+
+      if (!exam) {
+        summaries.push({
+          legacyId,
+          deletedExam: false,
+          deletedWritingQuestions: 0,
+          deletedObjectiveQuestions: 0,
+          deletedSessions: 0,
+          deletedEvaluations: 0,
+          deletedAttempts: 0,
+        });
+        continue;
+      }
+
+      const writingQuestions = await ctx.db
         .query('topik_writing_questions')
-        .withIndex('by_exam', q => q.eq('examId', examId))
+        .withIndex('by_exam', q => q.eq('examId', exam._id))
         .collect();
-      await Promise.all(existingWritingQuestions.map(q => ctx.db.delete(q._id)));
+      await Promise.all(writingQuestions.map(question => ctx.db.delete(question._id)));
 
-      // Safety cleanup when an exam was previously created as objective type.
-      const existingObjectiveQuestions = await ctx.db
+      const objectiveQuestions = await ctx.db
         .query('topik_questions')
-        .withIndex('by_exam', q => q.eq('examId', examId))
+        .withIndex('by_exam', q => q.eq('examId', exam._id))
         .collect();
-      await Promise.all(existingObjectiveQuestions.map(q => ctx.db.delete(q._id)));
-    } else {
-      examId = await ctx.db.insert('topik_exams', {
-        legacyId: id,
-        ...examData,
-        type: 'WRITING',
-        isPaid: normalizedAccessLevel === 'PRO',
-        accessLevel: normalizedAccessLevel,
-        createdAt: Date.now(),
-      });
-    }
+      await Promise.all(objectiveQuestions.map(question => ctx.db.delete(question._id)));
 
-    const orderedQuestions = [...questions].sort((a, b) => a.number - b.number);
-    const question51 = orderedQuestions.find(q => q.number === 51);
-    if (!question51) {
-      throw new ConvexError({
-        code: 'WRITING_Q51_REQUIRED',
-        message: '第51题是必填题，并且必须包含图片。',
-      });
-    }
-    if (!question51.image || !question51.image.trim()) {
-      throw new ConvexError({
-        code: 'WRITING_Q51_IMAGE_REQUIRED',
-        message: '第51题必须上传图片。',
-      });
-    }
+      const attempts = await ctx.db
+        .query('exam_attempts')
+        .filter(q => q.eq(q.field('examId'), exam._id))
+        .collect();
+      await Promise.all(attempts.map(attempt => ctx.db.delete(attempt._id)));
 
-    const question53 = orderedQuestions.find(q => q.number === 53);
-    if (!question53) {
-      throw new ConvexError({
-        code: 'WRITING_Q53_REQUIRED',
-        message: '第53题是必填题，并且必须包含图表图片。',
-      });
-    }
-    if (question53.questionType !== 'GRAPH_ESSAY') {
-      throw new ConvexError({
-        code: 'WRITING_Q53_TYPE_INVALID',
-        message: '第53题题型必须是 GRAPH_ESSAY。',
-      });
-    }
-    if (!question53.image || !question53.image.trim()) {
-      throw new ConvexError({
-        code: 'WRITING_Q53_IMAGE_REQUIRED',
-        message: '第53题必须上传图片。',
-      });
-    }
+      const sessions = await ctx.db
+        .query('topik_writing_sessions')
+        .filter(q => q.eq(q.field('examId'), exam._id))
+        .collect();
 
-    await Promise.all(
-      orderedQuestions.map(q =>
-        ctx.db.insert('topik_writing_questions', {
-          examId,
-          number: q.number,
-          questionType: q.questionType,
-          instruction: q.instruction,
-          contextBox: q.contextBox,
-          image: q.image,
-          score: q.score,
-          modelAnswer: q.modelAnswer,
-          gradingCriteria: q.gradingCriteria,
-        })
-      )
-    );
+      let deletedEvaluations = 0;
+      for (const session of sessions) {
+        const evaluations = await ctx.db
+          .query('topik_writing_evaluations')
+          .withIndex('by_session', q => q.eq('sessionId', session._id))
+          .collect();
+        deletedEvaluations += evaluations.length;
+        await Promise.all(evaluations.map(evaluation => ctx.db.delete(evaluation._id)));
+      }
+
+      await Promise.all(sessions.map(session => ctx.db.delete(session._id)));
+      await ctx.db.delete(exam._id);
+
+      summaries.push({
+        legacyId,
+        deletedExam: true,
+        deletedWritingQuestions: writingQuestions.length,
+        deletedObjectiveQuestions: objectiveQuestions.length,
+        deletedSessions: sessions.length,
+        deletedEvaluations,
+        deletedAttempts: attempts.length,
+      });
+    }
 
     return {
       success: true,
-      examId: id,
-      questionCount: orderedQuestions.length,
+      count: summaries.length,
+      summaries,
     };
   },
 });
+
+export const auditWritingExams = internalQuery({
+  args: {
+    legacyIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const audits = [];
+
+    for (const legacyId of args.legacyIds) {
+      const exam = await ctx.db
+        .query('topik_exams')
+        .withIndex('by_legacy_id', q => q.eq('legacyId', legacyId))
+        .first();
+
+      if (!exam) {
+        audits.push({
+          legacyId,
+          found: false,
+          round: null,
+          title: null,
+          questionCount: 0,
+          sessionCount: 0,
+          evaluationCount: 0,
+        });
+        continue;
+      }
+
+      const questions = await ctx.db
+        .query('topik_writing_questions')
+        .withIndex('by_exam', q => q.eq('examId', exam._id))
+        .collect();
+      const sessions = await ctx.db
+        .query('topik_writing_sessions')
+        .filter(q => q.eq(q.field('examId'), exam._id))
+        .collect();
+
+      let evaluationCount = 0;
+      for (const session of sessions) {
+        const evaluations = await ctx.db
+          .query('topik_writing_evaluations')
+          .withIndex('by_session', q => q.eq('sessionId', session._id))
+          .collect();
+        evaluationCount += evaluations.length;
+      }
+
+      audits.push({
+        legacyId,
+        found: true,
+        round: exam.round,
+        title: exam.title,
+        questionCount: questions.length,
+        sessionCount: sessions.length,
+        evaluationCount,
+      });
+    }
+
+    return {
+      success: true,
+      count: audits.length,
+      audits,
+    };
+  },
+});
+
+export const inspectImportedWritingExam = internalQuery({
+  args: {
+    legacyId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const exam = await ctx.db
+      .query('topik_exams')
+      .withIndex('by_legacy_id', q => q.eq('legacyId', args.legacyId))
+      .first();
+
+    if (!exam) {
+      return {
+        found: false,
+        legacyId: args.legacyId,
+        questions: [],
+      };
+    }
+
+    const questions = await ctx.db
+      .query('topik_writing_questions')
+      .withIndex('by_exam', q => q.eq('examId', exam._id))
+      .collect();
+
+    return {
+      found: true,
+      legacyId: exam.legacyId,
+      round: exam.round,
+      questions: questions
+        .sort((left, right) => left.number - right.number)
+        .map(question => ({
+          number: question.number,
+          image: question.image ?? null,
+          instruction: question.instruction ?? null,
+          contextBox: question.contextBox ?? null,
+        })),
+    };
+  },
+});
+
+async function upsertWritingExam(
+  ctx: MutationCtx,
+  args: WritingExamUpsertArgs
+): Promise<WritingExamUpsertResult> {
+  const { id, questions, ...examData } = args;
+  const accessLevel = (examData.accessLevel || '').trim().toUpperCase();
+  const normalizedAccessLevel =
+    accessLevel === 'FREE_SAMPLE' || accessLevel === 'PRO'
+      ? accessLevel
+      : examData.isPaid
+        ? 'PRO'
+        : 'FREE_SAMPLE';
+
+  const existingExam = await ctx.db
+    .query('topik_exams')
+    .withIndex('by_legacy_id', q => q.eq('legacyId', id))
+    .first();
+
+  let examId: Id<'topik_exams'>;
+  if (existingExam) {
+    await ctx.db.patch(existingExam._id, {
+      ...examData,
+      type: 'WRITING',
+      isPaid: normalizedAccessLevel === 'PRO',
+      accessLevel: normalizedAccessLevel,
+    });
+    examId = existingExam._id;
+
+    const existingWritingQuestions = await ctx.db
+      .query('topik_writing_questions')
+      .withIndex('by_exam', q => q.eq('examId', examId))
+      .collect();
+    await Promise.all(existingWritingQuestions.map(q => ctx.db.delete(q._id)));
+
+    const existingObjectiveQuestions = await ctx.db
+      .query('topik_questions')
+      .withIndex('by_exam', q => q.eq('examId', examId))
+      .collect();
+    await Promise.all(existingObjectiveQuestions.map(q => ctx.db.delete(q._id)));
+  } else {
+    examId = await ctx.db.insert('topik_exams', {
+      legacyId: id,
+      ...examData,
+      type: 'WRITING',
+      isPaid: normalizedAccessLevel === 'PRO',
+      accessLevel: normalizedAccessLevel,
+      createdAt: Date.now(),
+    });
+  }
+
+  const orderedQuestions = [...questions].sort((a, b) => a.number - b.number);
+  const question51 = orderedQuestions.find(q => q.number === 51);
+  if (!question51) {
+    throw new ConvexError({
+      code: 'WRITING_Q51_REQUIRED',
+      message: '第51题是必填题，并且必须包含图片。',
+    });
+  }
+  if (!question51.image || !question51.image.trim()) {
+    throw new ConvexError({
+      code: 'WRITING_Q51_IMAGE_REQUIRED',
+      message: '第51题必须上传图片。',
+    });
+  }
+
+  const question53 = orderedQuestions.find(q => q.number === 53);
+  if (!question53) {
+    throw new ConvexError({
+      code: 'WRITING_Q53_REQUIRED',
+      message: '第53题是必填题，并且必须包含图表图片。',
+    });
+  }
+  if (question53.questionType !== 'GRAPH_ESSAY') {
+    throw new ConvexError({
+      code: 'WRITING_Q53_TYPE_INVALID',
+      message: '第53题题型必须是 GRAPH_ESSAY。',
+    });
+  }
+  if (!question53.image || !question53.image.trim()) {
+    throw new ConvexError({
+      code: 'WRITING_Q53_IMAGE_REQUIRED',
+      message: '第53题必须上传图片。',
+    });
+  }
+
+  await Promise.all(
+    orderedQuestions.map(q =>
+      ctx.db.insert('topik_writing_questions', {
+        examId,
+        number: q.number,
+        questionType: q.questionType,
+        instruction: q.instruction,
+        contextBox: q.contextBox,
+        image: q.image,
+        score: q.score,
+        modelAnswer: q.modelAnswer,
+        gradingCriteria: q.gradingCriteria,
+      })
+    )
+  );
+
+  return {
+    success: true,
+    examId: id,
+    questionCount: orderedQuestions.length,
+  };
+}
 
 // ─── mutations ────────────────────────────────────────────────────────────────
 

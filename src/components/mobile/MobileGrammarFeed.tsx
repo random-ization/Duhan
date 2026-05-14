@@ -63,6 +63,7 @@ export default function MobileGrammarFeed({
 }: MobileGrammarFeedProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language || 'zh';
+  const completedBadgeLabel = t('grammar.status.completedBadge', { defaultValue: '已完成' });
 
   if (isLoading) {
     return (
@@ -216,6 +217,11 @@ export default function MobileGrammarFeed({
                             {point.type}
                           </Chip>
                           {point.level ? <Chip size="sm">{point.level}</Chip> : null}
+                          {isMastered ? (
+                            <Chip tone="mint" size="sm">
+                              {completedBadgeLabel}
+                            </Chip>
+                          ) : null}
                           <span
                             style={{
                               fontSize: 10,

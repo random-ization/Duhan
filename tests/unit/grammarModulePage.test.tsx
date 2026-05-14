@@ -11,6 +11,10 @@ const tMock = (key: string, options?: { defaultValue?: string }) => options?.def
 
 const clearContextualSidebarMock = vi.fn();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 vi.mock('convex/react', () => ({
   useQuery: (ref: unknown, args: unknown) => useQueryMock(ref, args),
   useMutation: (ref: unknown) => useMutationMock(ref),
@@ -119,10 +123,19 @@ describe('GrammarModulePage AI panel persistence', () => {
       return updateLearningProgressMock;
     });
 
-    useQueryMock.mockImplementation((ref: unknown, _args: unknown) => {
-      if (ref === INSTITUTES.get) return { id: 'course-1', name: 'Course 1' };
-      if (ref === GRAMMARS.getByCourse) return grammarList;
-      if (ref === GRAMMARS.getUnitGrammar) return unitGrammar;
+    useQueryMock.mockImplementation((ref: unknown, args: unknown) => {
+      if (ref === INSTITUTES.get || (isRecord(args) && args.id === 'course-1')) {
+        return { id: 'course-1', name: 'Course 1' };
+      }
+      if (
+        ref === GRAMMARS.getByCourse ||
+        (isRecord(args) && args.courseId === 'course-1' && !('unitId' in args))
+      ) {
+        return grammarList;
+      }
+      if (ref === GRAMMARS.getUnitGrammar || (isRecord(args) && args.unitId === 1)) {
+        return unitGrammar;
+      }
       return undefined;
     });
   });
@@ -130,15 +143,15 @@ describe('GrammarModulePage AI panel persistence', () => {
   it('renders the AI Sentence Check section', async () => {
     renderPage();
 
-    expect(screen.getByText('AI Sentence Check')).toBeInTheDocument();
+    expect(await screen.findByText('AI Sentence Check')).toBeInTheDocument();
   });
 
-  it('routes desktop switch textbook to the course library', () => {
+  it('routes desktop switch textbook to the course library', async () => {
     renderPage();
 
     // In DesktopGrammarModulePage, the back button is the first one with a ChevronLeft
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[0]); 
+    const buttons = await screen.findAllByRole('button');
+    fireEvent.click(buttons[0]);
 
     expect(screen.getByTestId('current-location')).toHaveTextContent('/en/courses');
   });

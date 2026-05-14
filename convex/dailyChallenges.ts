@@ -9,9 +9,9 @@ import { getAuthUserId, getOptionalAuthUserId } from './utils';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export type DailyChallengeKind = 'vocab_20' | 'grammar_drill' | 'listening_10min' | 'typing_wpm';
-type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
+export type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
 
-type DailyChallengeTemplate = {
+export type DailyChallengeTemplate = {
   kind: DailyChallengeKind;
   titleZh: string;
   titleEn: string;
@@ -45,7 +45,7 @@ export type DailyChallengeClaimResult = {
   totalXp?: number;
 };
 
-const DEFAULT_CHALLENGE_ROTATION: readonly DailyChallengeTemplate[] = [
+export const DEFAULT_CHALLENGE_ROTATION: readonly DailyChallengeTemplate[] = [
   {
     kind: 'vocab_20',
     titleZh: '复习 20 个到期单词',
@@ -100,14 +100,14 @@ const DEFAULT_CHALLENGE_ROTATION: readonly DailyChallengeTemplate[] = [
   },
 ] as const;
 
-function normalizeLanguage(language?: string): SupportedLanguage {
+export function normalizeDailyChallengeLanguage(language?: string): SupportedLanguage {
   if (language?.startsWith('zh')) return 'zh';
   if (language?.startsWith('vi')) return 'vi';
   if (language?.startsWith('mn')) return 'mn';
   return 'en';
 }
 
-function formatDateKey(timestamp: number): string {
+export function formatDailyChallengeDateKey(timestamp: number): string {
   const date = new Date(timestamp);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -115,7 +115,7 @@ function formatDateKey(timestamp: number): string {
   return `${year}-${month}-${day}`;
 }
 
-function getTemplateForDate(dateKey: string): DailyChallengeTemplate {
+export function getDailyChallengeTemplateForDate(dateKey: string): DailyChallengeTemplate {
   const [yearRaw, monthRaw, dayRaw] = dateKey.split('-').map(Number);
   const year = Number.isFinite(yearRaw) ? yearRaw : 1970;
   const month = Number.isFinite(monthRaw) ? monthRaw : 1;
@@ -167,7 +167,7 @@ async function ensurePersistedChallenge(
     return existing;
   }
 
-  const template = getTemplateForDate(date);
+  const template = getDailyChallengeTemplateForDate(date);
   const challengeId = await ctx.db.insert('daily_challenges', {
     date,
     kind: template.kind,
@@ -240,7 +240,7 @@ async function getTodayTypingPeakWpm(
   return records.reduce((best, record) => Math.max(best, record.wpm), 0);
 }
 
-async function deriveCurrentCount(
+export async function deriveDailyChallengeCurrentCount(
   ctx: QueryCtx | MutationCtx,
   userId: Id<'users'>,
   kind: DailyChallengeKind,
@@ -303,12 +303,12 @@ export const getTodayChallenge = query({
   handler: async (ctx, args): Promise<DailyChallengeDto> => {
     const now = Date.now();
     const todayStart = startOfDay(now);
-    const date = formatDateKey(todayStart);
-    const language = normalizeLanguage(args.language);
+    const date = formatDailyChallengeDateKey(todayStart);
+    const language = normalizeDailyChallengeLanguage(args.language);
     const persistedChallenge = await getPersistedChallengeByDate(ctx, date);
     const challenge = persistedChallenge ?? {
       date,
-      ...getTemplateForDate(date),
+      ...getDailyChallengeTemplateForDate(date),
     };
 
     const userId = await getOptionalAuthUserId(ctx);
@@ -325,7 +325,35 @@ export const getTodayChallenge = query({
       .withIndex('by_user_date', q => q.eq('userId', userId).eq('date', date))
       .first();
 
-    const currentCount = await deriveCurrentCount(ctx, userId, challenge.kind, todayStart);
+    const dailyTaskPlan = await ctx.runQuery(api.dailyTask.getTodayPlan, {
+      language: args.language,
+    });
+    const compatibleTask = dailyTaskPlan.tasks.find(task => task.kind === challenge.kind);
+    if (compatibleTask) {
+      const rewardXp =
+        typeof compatibleTask.metadata?.rewardXp === 'number'
+          ? compatibleTask.metadata.rewardXp
+          : challenge.rewardXp;
+      return {
+        date,
+        kind: challenge.kind,
+        title: compatibleTask.title,
+        subtitle: compatibleTask.description ?? resolveLocalizedField(challenge, 'sub', language),
+        targetCount: compatibleTask.targetCount ?? challenge.targetCount,
+        currentCount: Math.max(0, compatibleTask.currentCount ?? 0),
+        rewardXp,
+        isCompleted: compatibleTask.completed,
+        isClaimed: typeof progress?.claimedAt === 'number',
+        claimedAt: progress?.claimedAt ?? null,
+      };
+    }
+
+    const currentCount = await deriveDailyChallengeCurrentCount(
+      ctx,
+      userId,
+      challenge.kind,
+      todayStart
+    );
     return toDailyChallengeDto({
       challenge,
       currentCount,
@@ -341,9 +369,14 @@ export const claimReward = mutation({
     const userId = await getAuthUserId(ctx);
     const now = Date.now();
     const todayStart = startOfDay(now);
-    const date = formatDateKey(todayStart);
+    const date = formatDailyChallengeDateKey(todayStart);
     const challenge = await ensurePersistedChallenge(ctx, date, now);
-    const currentCount = await deriveCurrentCount(ctx, userId, challenge.kind, todayStart);
+    const currentCount = await deriveDailyChallengeCurrentCount(
+      ctx,
+      userId,
+      challenge.kind,
+      todayStart
+    );
 
     if (currentCount < challenge.targetCount) {
       throw new ConvexError({

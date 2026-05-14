@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Pause,
   Play,
-  RotateCcw,
   Languages,
   Loader2,
   X,
@@ -121,6 +120,8 @@ function getPageImageRegionClass(layout: 'stacked' | 'split', layoutClass?: stri
   }
   return 'absolute left-0 top-0 flex h-full w-1/2 items-center justify-center overflow-hidden';
 }
+
+const PAGE_IMAGE_PRELOAD_TIMEOUT_MS = 1600;
 
 function getPageTextRegionClass(layout: 'stacked' | 'split', layoutClass?: string) {
   if (layout === 'stacked') {
@@ -464,8 +465,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       return;
     }
 
+    if (!visiblePageData) {
+      commitAnimationFrame = requestAnimationFrame(commitVisiblePage);
+    }
+
     const preloadedImage = new Image();
+    let preloadTimeout = 0;
     const commitWhenReady = async () => {
+      if (cancelled) return;
       const nextOrientation: ReaderLayout =
         preloadedImage.naturalWidth >= preloadedImage.naturalHeight ? 'stacked' : 'split';
       setPageOrientations(current => {
@@ -482,6 +489,9 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       } catch {
         // Fall back to onload/error completion.
       }
+      if (!visiblePageData) {
+        return;
+      }
       startOverlaySwap();
     };
 
@@ -489,6 +499,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       void commitWhenReady();
     };
     preloadedImage.onerror = startOverlaySwap;
+    preloadTimeout = window.setTimeout(() => {
+      if (!cancelled) {
+        startOverlaySwap();
+      }
+    }, PAGE_IMAGE_PRELOAD_TIMEOUT_MS);
     preloadedImage.src = nextImageUrl;
 
     return () => {
@@ -496,6 +511,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       if (overlayAnimationFrame) cancelAnimationFrame(overlayAnimationFrame);
       if (commitAnimationFrame) cancelAnimationFrame(commitAnimationFrame);
       if (swapTimeout) window.clearTimeout(swapTimeout);
+      if (preloadTimeout) window.clearTimeout(preloadTimeout);
     };
   }, [currentVisiblePageId, incomingPageData, visiblePageData]);
 
@@ -805,7 +821,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         </div>
 
         <div className="absolute bottom-6 right-8 rounded-full border border-k-line bg-k-card/80 backdrop-blur-md px-5 py-1.5 text-xs font-black text-k-sub shadow-k-sh-sm">
-          {layerPageData.pageIndex + 1} <span className="mx-1.5 opacity-30">/</span> {layerPageData.pageCount}
+          {layerPageData.pageIndex + 1} <span className="mx-1.5 opacity-30">/</span>{' '}
+          {layerPageData.pageCount}
         </div>
       </div>
     );
@@ -817,9 +834,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       style={{ fontFamily: KT.font }}
     >
       {/* ─── SHARED HEADER ─── */}
-      <header 
-        className="shrink-0 z-[100] flex items-center justify-between gap-4 px-6 h-20 border-b border-k-line backdrop-blur-xl bg-k-bg/80"
-      >
+      <header className="shrink-0 z-[100] flex items-center justify-between gap-4 px-6 h-20 border-b border-k-line backdrop-blur-xl bg-k-bg/80">
         <div className="flex items-center gap-4">
           <Button
             type="button"
@@ -835,7 +850,9 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-k-crimson font-k-serif">
                 讀 · READING
               </span>
-              <DesignChip tone="butter" size="sm">Level {levelNumber || '?'}</DesignChip>
+              <DesignChip tone="butter" size="sm">
+                Level {levelNumber || '?'}
+              </DesignChip>
             </div>
             <h1 className="text-[16px] font-black text-k-ink tracking-tight truncate max-w-[300px]">
               {displayBook.title}
@@ -866,8 +883,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             size="sm"
             onClick={() => setAutoFlip(current => !current)}
             className={cn(
-              "h-9 rounded-xl px-4 text-[11px] font-black transition-all",
-              autoFlip ? "bg-k-card text-k-crimson shadow-k-sh-sm" : "text-k-sub hover:bg-k-card"
+              'h-9 rounded-xl px-4 text-[11px] font-black transition-all',
+              autoFlip ? 'bg-k-card text-k-crimson shadow-k-sh-sm' : 'text-k-sub hover:bg-k-card'
             )}
           >
             自动翻页: {autoFlip ? '开启' : '关闭'}
@@ -882,8 +899,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             onClick={handleToggleTranslation}
             className={cn(
               'h-11 w-11 rounded-2xl transition-all border',
-              showTranslations 
-                ? 'bg-k-ink border-k-ink text-k-bg shadow-k-sh-sm' 
+              showTranslations
+                ? 'bg-k-ink border-k-ink text-k-bg shadow-k-sh-sm'
                 : 'border-k-line text-k-sub hover:border-k-ink hover:text-k-ink'
             )}
           >
@@ -957,8 +974,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 onClick={() => void handleTogglePlay()}
                 disabled={currentSentences.length === 0}
                 className={cn(
-                  "h-14 w-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-k-sh",
-                  isPlaying ? "bg-k-crimson text-k-bg" : "bg-k-ink text-k-bg hover:bg-k-crimson"
+                  'h-14 w-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-k-sh',
+                  isPlaying ? 'bg-k-crimson text-k-bg' : 'bg-k-ink text-k-bg hover:bg-k-crimson'
                 )}
               >
                 {isPlaying ? <Pause size={28} /> : <Play size={28} fill="currentColor" />}
@@ -973,24 +990,26 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               >
                 <ChevronRight size={24} />
               </Button>
-              
+
               <div className="w-px h-6 bg-k-line mx-2" />
-              
+
               <div className="flex-1 max-w-2xl px-4 py-2 bg-k-bg2/40 rounded-2xl border border-k-line/5 flex items-center justify-center">
-                 <span className="font-k-serif text-[18px] font-medium text-k-ink text-center truncate px-4">
-                   {activeSentence?.text || '...'}
-                 </span>
+                <span className="font-k-serif text-[18px] font-medium text-k-ink text-center truncate px-4">
+                  {activeSentence?.text || '...'}
+                </span>
               </div>
-              
+
               <div className="flex items-center gap-4 text-k-sub font-black text-[12px]">
-                 <span className="text-k-ink">{renderedPageData.pageIndex + 1}</span>
-                 <div className="w-32 h-1 bg-k-line rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-k-ink transition-all duration-300" 
-                      style={{ width: `${((renderedPageData.pageIndex + 1) / renderedPageData.pageCount) * 100}%` }} 
-                    />
-                 </div>
-                 <span>{renderedPageData.pageCount}</span>
+                <span className="text-k-ink">{renderedPageData.pageIndex + 1}</span>
+                <div className="w-32 h-1 bg-k-line rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-k-ink transition-all duration-300"
+                    style={{
+                      width: `${((renderedPageData.pageIndex + 1) / renderedPageData.pageCount) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span>{renderedPageData.pageCount}</span>
               </div>
             </div>
           </div>
@@ -1001,12 +1020,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           <div className="p-6 border-b border-k-line">
             <div className="flex items-baseline gap-2 mb-1">
               <span className="font-k-serif text-k-crimson text-lg font-medium">文</span>
-              <span className="text-[13px] font-black text-k-ink tracking-widest uppercase">Subtitles</span>
+              <span className="text-[13px] font-black text-k-ink tracking-widest uppercase">
+                Subtitles
+              </span>
             </div>
             <p className="text-[11px] font-bold text-k-sub">逐句跟读与翻译对照</p>
           </div>
-          
-          <div 
+
+          <div
             ref={subtitleScrollRef}
             className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-fine"
           >
@@ -1017,16 +1038,18 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                   key={sentence._id ?? idx}
                   onClick={() => void playSentence(sentence.sentenceIndex, true)}
                   className={cn(
-                    "w-full text-left p-4 rounded-2xl transition-all group",
-                    isActive 
-                      ? "bg-k-butter/40 border border-k-butter shadow-k-sh-sm" 
-                      : "hover:bg-k-bg2/50 border border-transparent"
+                    'w-full text-left p-4 rounded-2xl transition-all group',
+                    isActive
+                      ? 'bg-k-butter/40 border border-k-butter shadow-k-sh-sm'
+                      : 'hover:bg-k-bg2/50 border border-transparent'
                   )}
                 >
-                  <div className={cn(
-                    "text-[16px] font-medium leading-relaxed font-k-serif mb-1",
-                    isActive ? "text-k-ink" : "text-k-ink2"
-                  )}>
+                  <div
+                    className={cn(
+                      'text-[16px] font-medium leading-relaxed font-k-serif mb-1',
+                      isActive ? 'text-k-ink' : 'text-k-ink2'
+                    )}
+                  >
                     {sentence.text}
                   </div>
                   {showTranslations && translatedPages[renderedPageData.pageIndex]?.[idx] && (
@@ -1036,8 +1059,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                   )}
                   {isActive && (
                     <div className="mt-3 flex items-center gap-2">
-                       <div className="w-1.5 h-1.5 rounded-full bg-k-crimson animate-pulse" />
-                       <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">Listening</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-k-crimson animate-pulse" />
+                      <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">
+                        Listening
+                      </span>
                     </div>
                   )}
                 </button>
@@ -1058,23 +1083,26 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
       {translationError && (
         <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[110] w-[400px] animate-in slide-in-from-bottom-4">
-           <div className="bg-k-ink text-k-bg p-4 rounded-2xl shadow-k-sh-lg border border-white/10 flex gap-3">
-              <AlertCircle className="shrink-0 text-k-butter" size={20} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold leading-tight mb-2">{translationError}</p>
-                {showTranslationUpgradeCta && (
-                  <Button
-                    onClick={() => startUpgradeFlow({ source: 'picture_book_translation' })}
-                    className="w-full bg-k-crimson hover:bg-k-crimson/90 text-[11px] font-black h-8 rounded-xl"
-                  >
-                    升级以获取翻译
-                  </Button>
-                )}
-              </div>
-              <button onClick={() => setTranslationError(null)} className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
-                <X size={18} />
-              </button>
-           </div>
+          <div className="bg-k-ink text-k-bg p-4 rounded-2xl shadow-k-sh-lg border border-white/10 flex gap-3">
+            <AlertCircle className="shrink-0 text-k-butter" size={20} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold leading-tight mb-2">{translationError}</p>
+              {showTranslationUpgradeCta && (
+                <Button
+                  onClick={() => startUpgradeFlow({ source: 'picture_book_translation' })}
+                  className="w-full bg-k-crimson hover:bg-k-crimson/90 text-[11px] font-black h-8 rounded-xl"
+                >
+                  升级以获取翻译
+                </Button>
+              )}
+            </div>
+            <button
+              onClick={() => setTranslationError(null)}
+              className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
       )}
     </div>

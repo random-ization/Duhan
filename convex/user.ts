@@ -434,23 +434,26 @@ export const updateLearningProgress = mutation({
     lastLevel: v.optional(v.number()),
     lastUnit: v.optional(v.number()),
     lastModule: v.optional(v.string()),
+    lastGrammarId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     const user = await ctx.db.get(userId);
     if (!user) throw new ConvexError({ code: 'USER_NOT_FOUND' });
 
-    const { lastInstitute, lastLevel, lastUnit, lastModule } = args;
+    const { lastInstitute, lastLevel, lastUnit, lastModule, lastGrammarId } = args;
 
     const updates: {
       lastInstitute?: string;
       lastLevel?: number;
       lastUnit?: number;
       lastModule?: string;
+      lastGrammarId?: string;
     } = {};
     if (lastInstitute !== undefined) updates.lastInstitute = lastInstitute;
     if (lastLevel !== undefined) updates.lastLevel = lastLevel;
     if (lastUnit !== undefined) updates.lastUnit = lastUnit;
+    if (lastGrammarId !== undefined) updates.lastGrammarId = lastGrammarId;
     if (lastModule !== undefined) {
       updates.lastModule =
         normalizeLastModuleValue(lastModule) || normalizeLearningModule(lastModule);

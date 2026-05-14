@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import type { Language } from '../types';
-import { MobileProfilePage } from '../components/mobile/MobileProfilePage';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { Loading } from '../components/common';
 
-import { DesktopProfilePage } from './desktop/DesktopProfilePage';
+const LazyMobileProfilePage = lazy(() =>
+  import('../components/mobile/MobileProfilePage').then(module => ({
+    default: module.MobileProfilePage,
+  }))
+);
+
+const LazyDesktopProfilePage = lazy(() =>
+  import('./desktop/DesktopProfilePage').then(module => ({
+    default: module.DesktopProfilePage,
+  }))
+);
 
 interface ProfileProps {
   language: Language;
@@ -11,12 +21,12 @@ interface ProfileProps {
 
 const ProfilePage: React.FC<ProfileProps> = () => {
   const isMobile = useIsMobile();
-  
-  if (!isMobile) {
-    return <DesktopProfilePage />;
-  }
-  
-  return <MobileProfilePage />;
+
+  return (
+    <Suspense fallback={<Loading fullScreen />}>
+      {isMobile ? <LazyMobileProfilePage /> : <LazyDesktopProfilePage />}
+    </Suspense>
+  );
 };
 
 export default ProfilePage;

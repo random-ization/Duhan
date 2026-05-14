@@ -110,28 +110,6 @@
         "answer": "答案",
         "selectGrammar": "请从左侧目录选择一个语法点"
       },
-      "topikWriting": {
-        "roundLabel": "第 {{count}} 届",
-        "defaultDescription": "请根据题目要求完成写作。",
-        "fetchingExam": "获取题目中...",
-        "noChallenge": "暂无今日挑战",
-        "answerArea": "作答区",
-        "wordCount": "已写 {{count}} 字",
-        "placeholder": "在此开始你的韩语写作...",
-        "template": "段落模板",
-        "save": "暂存",
-        "submit": "提交 AI 评分",
-        "aiFeedback": "AI 实时反馈",
-        "contentScore": "内容",
-        "grammarScore": "语法",
-        "vocabScore": "词汇",
-        "structureScore": "结构",
-        "aiFeedbackNote": "完成写作并提交后，AI 将为您提供详细的评分反馈、语法修正以及表达建议。",
-        "gradingCriteria": "评分标准",
-        "criteria1": "内容是否符合题目要求且丰富？",
-        "criteria2": "是否使用了多样的词汇和语法？",
-        "criteria3": "文章结构是否逻辑清晰且连贯？"
-      },
       "errors": {
         "invalidExtension": "请选择 EPUB 文件（.epub）。",
         "unsupportedType": "目前仅支持 EPUB 文件。",
@@ -334,7 +312,12 @@
       "choose": "今日启航：挑选一个学习板块"
     },
     "dictionary": {
-      "placeholder": "搜索词典内容..."
+      "label": "词典",
+      "placeholder": "搜索韩语单词...",
+      "searching": "搜索中...",
+      "noResults": "未找到相关结果",
+      "error": "出了点问题",
+      "sense": "义项"
     },
     "textbook": {
       "default": "教材"
@@ -429,6 +412,12 @@
       "language": "语言设置",
       "help": "帮助与反馈",
       "logout": "退出登录"
+    },
+    "topik": {
+      "writing": "TOPIK 写作",
+      "controller": {
+        "exit": "退出"
+      }
     }
   },
   "community": {
@@ -495,6 +484,101 @@
   },
   "coursesOverview": {
     "desktop": {
+      "currentJourney": "当前进度",
+      "learningJourney": "学习历程",
+      "learningTools": {
+        "title": "学习工具",
+        "flashcards": "单词闪卡",
+        "reviewStatus": "{{count}} 张到期",
+        "grammar": "语法百科",
+        "masteryStatus": "已掌握 {{count}} 条",
+        "typing": "打字训练",
+        "notebook": "笔记本"
+      },
+      "tabs": {
+        "mine": "我的课程",
+        "grammar": "语法",
+        "vocabulary": "词汇",
+        "typing": "打字",
+        "topik": "TOPIK"
+      },
+      "grammar": {
+        "categories": "分类",
+        "myProgress": "我的进度",
+        "masteryRate": "掌握率",
+        "redEyeMode": "背诵模式",
+        "redEyeOff": "普通模式",
+        "introduction": "简介",
+        "coreUsage": "核心用法",
+        "comparative": "对比辨析",
+        "culturalNotes": "文化小贴士",
+        "commonMistakes": "常见错误",
+        "review": "复习归纳",
+        "explanation": "详细说明",
+        "conjugationRules": "活用规则",
+        "examples": "例句"
+      },
+      "vocabulary": {
+        "dueToday": "今日到期",
+        "availableToLearn": "待学习",
+        "studiedToday": "今日已学",
+        "mastered": "已掌握",
+        "toLearn": "未学",
+        "myWordbooks": "我的生词本",
+        "modes": {
+          "title": "练习模式",
+          "flashcard": "闪卡",
+          "learn": "学习",
+          "test": "考试",
+          "match": "连连看"
+        },
+        "forecast": "复习预报",
+        "totalProgress": "总进度",
+        "startReview": "开始复习",
+        "startLearning": "开始学习"
+      },
+      "typing": {
+        "avgSpeed": "平均速度",
+        "accuracy": "准确率",
+        "totalTests": "总测试",
+        "highestSpeed": "最高速度",
+        "practicePrompt": "开始输入上方文字...",
+        "fullMode": "进入全屏模式"
+      },
+      "topik": {
+        "mockExam": "模拟考试",
+        "predictedScore": "预测分数",
+        "targetLevel": "目标等级",
+        "startExam": "开始考试",
+        "recentAttempts": "最近记录",
+        "questions": "题"
+      },
+      "notebook": {
+        "title": "笔记本",
+        "noteCount": "{{count}} 条笔记",
+        "all": "全部",
+        "newNote": "新建笔记",
+        "loadingNotes": "加载笔记中...",
+        "today": "今天",
+        "yesterday": "昨天",
+        "noContent": "暂无内容",
+        "noNotes": "你的笔记本还是空的",
+        "startJourney": "在阅读或学习中划线标注，即可创建笔记。",
+        "createFirstNote": "创建第一条笔记",
+        "types": {
+          "grammar": "语法",
+          "vocab": "词汇",
+          "mistakes": "错题",
+          "reflections": "随笔",
+          "default": "通用"
+        }
+      }
+    },
+    "mobile": {
+      "hanjaTag": "學",
+      "latin": "LEARN",
+      "title": "배우다",
+      "subtitle": "系统地掌握韩语",
       "tabs": {
         "mine": "我的课程",
         "grammar": "语法",
@@ -502,249 +586,40 @@
         "typing": "写作",
         "topik": "TOPIK"
       },
-      "currentJourney": "学习进度",
-      "learningJourney": "学习旅程",
-      "learningTools": {
-        "title": "学习工具",
+      "progressLabel": "进行中 · {{pct}}%",
+      "unitsLabel": "{{done}} / {{total}} 单元",
+      "estimate": "约 {{days}} 天",
+      "journeyTitle": "学习旅程",
+      "journeyAction": "全部",
+      "completed": "完成 ✓",
+      "toolsTitle": "学习工具",
+      "tools": {
         "flashcards": "单词闪卡",
-        "grammar": "语法库",
+        "flashcardsSub": "翻卡与记忆强化",
+        "dictation": "听写训练",
+        "dictationSub": "边听边写",
         "typing": "打字练习",
-        "notebook": "学习笔记",
-        "reviewStatus": "{{count}} 张待复习",
-        "masteredStatus": "掌握 {{count}} 条"
+        "typingSub": "提升输入速度",
+        "pronunciation": "发音练习",
+        "pronunciationSub": "跟读与辨音"
       },
-      "typing": {
-        "title": "打字练习",
-        "speed": "速度",
-        "accuracy": "准确率",
-        "practiced": "已练习",
-        "totalTime": "总时长",
-        "wpm": "WPM",
-        "sentences": "句",
-        "hours": "小时",
-        "minutes": "分钟",
-        "yourInput": "你的输入",
-        "clickToStart": "点击开始练习...",
-        "startPractice": "开始练习",
-        "learningJourney": "学习路径",
-        "currentJourney": "当前进度",
-        "streakMessage": "你已经连续学习了 {{count}} 天，超越了 {{percent}}% 的学习者！",
-        "searchCourses": "搜索课程...",
-        "vocabulary": {
-          "center": "词汇中心",
-          "description": "使用 FSRS 算法高效复习，打造属于你的个性化词库。",
-          "startReview": "开始复习",
-          "newWords": "新词数",
-          "mastered": "已掌握",
-          "saved": "收藏中",
-          "modes": {
-            "flashcard": "闪卡复习"
-          }
-        },
-        "nextSentence": "下一句"
+      "vocabModesTitle": "单词学习模式",
+      "vocabModes": {
+        "flashcard": "闪卡",
+        "flashcardSub": "翻卡记忆与 FSRS 复习",
+        "test": "考试",
+        "testSub": "限时测验与错题反馈",
+        "learn": "学习",
+        "learnSub": "选择、拼写和分批掌握",
+        "match": "拼图",
+        "matchSub": "配对游戏强化反应"
       },
-      "vocabulary": {
-        "myWordbooks": "我的词册",
-        "create": "创建词册",
-        "dueToday": "今日到期",
-        "dueSoon": "即将到期",
-        "startReview": "开始复习",
-        "newWords": "今日新词",
-        "mastered": "已掌握",
-        "saved": "收藏词汇",
-        "forecast": "未来 7 日复习预测",
-        "dueReviews": "今日到期",
-        "minuteEstimate": "预计 {{count}} 分钟",
-        "accuracy": "准确率",
-        "totalVocab": "总词汇",
-        "toLearn": "待学习",
-        "forecastTitle": "未来 7 日复习预测",
-        "forecastTotal": "共 {{count}} 张",
-        "vocabBookTitle": "词汇本",
-        "emptyVocab": "暂无词汇 · 开始学习后自动添加",
-        "current": "当前",
-        "learningHeat": "学习热力",
-        "weakWords": "薄弱词",
-        "viewAll": "查看全部",
-        "noWeakWords": "暂无薄弱词",
-        "modes": {
-          "flashcard": "闪卡复习",
-          "dictation": "听写练习",
-          "quiz": "拼写测试",
-          "game": "配对游戏",
-          "listen": "听力练习"
-        },
-        "forecastDays": {
-          "today": "今日",
-          "tomorrow": "明日",
-          "after": "后日",
-          "plus2": "+2",
-          "plus3": "+3",
-          "plus4": "+4",
-          "plus5": "+5"
-        },
-        "categories": {
-          "topik1": "TOPIK I",
-          "topik2": "TOPIK II",
-          "course": "教材课文",
-          "reading": "课外阅读",
-          "other": "其他来源"
-        },
-        "masteredStatus": "掌握 {{count}} 条"
-      },
-      "grammar": {
-        "quickFilter": "快速筛选...",
-        "grammarPoints": "个语法点",
-        "noMatching": "暂无匹配项",
-        "myProgress": "学习进度",
-        "masteryRate": "掌握率",
-        "redEyeMode": "红眼模式",
-        "redEyeOff": "关闭红眼",
-        "conjugationRules": "构造规则",
-        "examples": "例句",
-        "quiz": "练习题",
-        "questions": "题",
-        "learningStatus": "学习状态",
-        "proficiency": "熟练度",
-        "markMastered": "标记掌握",
-        "unmarkMastered": "取消掌握",
-        "unitGrammarPoints": "本单元语法点",
-        "learningNote": "学习要点",
-        "introduction": "简介",
-        "coreUsage": "核心要点",
-        "comparative": "对比分析",
-        "culturalNotes": "文化注释",
-        "commonMistakes": "常见错误",
-        "review": "复习要点",
-        "explanation": "详细解释",
-        "customNote": "补充说明",
-        "answer": "答案",
-        "question": "题目",
-        "categories": {
-          "1": "基础助词",
-          "2": "时态变化",
-          "3": "条件假设",
-          "4": "间接引语",
-          "5": "使役被动",
-          "6": "高级连接",
-          "7": "推测与推断",
-          "8": "假设与前提",
-          "9": "让步与包含",
-          "10": "机会与变化",
-          "11": "引述与传闻",
-          "12": "必要与经验",
-          "13": "列举与顺序",
-          "14": "标准与范围",
-          "15": "助词与语气"
-        }
-      },
-      "podcast": {
-        "player": "播放器",
-        "notSelected": "未选择播客节目",
-        "loading": "正在加载播客节目...",
-        "notFound": "未找到该节目",
-        "backToMedia": "返回媒体中心",
-        "channel": "频道",
-        "category": "分类",
-        "transcript": "稿",
-        "bilingual": "双语字幕",
-        "favorites": "收藏",
-        "share": "分享",
-        "search": "搜索"
-      },
-      "mediaHub": {
-        "podcasts": "播客",
-        "videos": "视频",
-        "reading": "阅读",
-        "pictureBooks": "绘本",
-        "difficulty": "难度",
-        "all": "全部",
-        "beginner": "初级",
-        "intermediate": "中级",
-        "advanced": "高级",
-        "continueListening": "继续收听",
-        "continueWatching": "继续观看",
-        "noHistory": "暂无历史记录",
-        "startListeningMessage": "开始收听后会自动记录进度",
-        "startWatchingMessage": "开始观看后会自动记录进度",
-        "trendingPodcasts": "热门播客",
-        "trendingVideos": "热门视频",
-        "weeklyPicks": "本周精选",
-        "noContent": "暂无内容",
-        "mySubscriptions": "我的订阅",
-        "episodes": "集",
-        "noSubscriptions": "暂无订阅",
-        "contentUpdates": "内容动态",
-        "exploreMessage": "探索发现 {{channelCount}} 个热门频道和 {{videoCount}} 个精品视频。"
-      },
-      "video": {
-        "title": "视频",
-        "notSelected": "未选择视频",
-        "loading": "正在加载视频...",
-        "notFound": "未找到该视频",
-        "views": "观看",
-        "fullTranscript": "全文字稿",
-        "vocabCount": "{{count}} 个生词",
-        "slowPlayback": "慢速播放",
-        "videoVocab": "本视频生词",
-        "relatedVideos": "相关推荐",
-        "noRecommendations": "暂无推荐视频"
-      },
-      "review": {
-        "title": "复习中心",
-        "totalMistakes": "错题总数",
-        "retryMistakes": "错题重做",
-        "pendingReview": "待复习 · 错题本",
-        "mainSource": "主要来源 · TOPIK 模考",
-        "clearMistakes": "清空错题",
-        "clearConfirm": "确定要清空所有错题吗？",
-        "mistakeList": "错题列表",
-        "totalCount": "共 {{count}} 题",
-        "greatJob": "太棒了！",
-        "noMistakes": "暂无错题，继续保持",
-        "reviewCount": "复习 {{count}} 次",
-        "remove": "移除"
-      },
-      "quiz": {
-        "reviewing": "复习中",
-        "fsrsReview": "FSRS 复习",
-        "reviewNum": "第 {{count}} 次复习",
-        "again": "忘记",
-        "hard": "困难",
-        "good": "良好",
-        "easy": "简单",
-        "keyboard": "键盘 {{key}}",
-        "revealed": "已揭晓 · 释义",
-        "relatedVocab": "相关词汇",
-        "reviewHistory": "复习历史",
-        "accuracyRate": "近 7 次复习准确率",
-        "timeUnit": {
-          "minute": "< 1 分钟",
-          "minutes": "{{count}} 分钟",
-          "day": "1 天",
-          "days": "{{count}} 天"
-        }
-      },
-      "notebook": {
-        "title": "笔记本",
-        "noteCount": "{{count}} 个笔记",
-        "all": "全部",
-        "newNote": "新笔记",
-        "createFirstNote": "立即创建第一篇笔记",
-        "loadingNotes": "加载笔记中...",
-        "noNotes": "暂无笔记",
-        "startJourney": "开始你的韩语学习之旅，记录下重要的语法和单词吧。",
-        "noContent": "暂无内容",
-        "today": "今日",
-        "yesterday": "昨日",
-        "types": {
-          "grammar": "语法",
-          "vocab": "生词",
-          "mistakes": "错题",
-          "reflections": "心得",
-          "default": "笔记"
-        }
-      }
+      "vocabNoWords": "该单元暂无词汇",
+      "unitLabel": "单元",
+      "levelBadge": "级",
+      "defaultCourseTitle": "TOPIK II 综合课程",
+      "defaultCourseMeta": "中级",
+      "tapToStart": "开始学习"
     }
   },
   "qa": {
@@ -822,5 +697,491 @@
       "resources": "资源分享",
       "general": "综合"
     }
+  },
+  "notes": {
+    "v2": {
+      "source": {
+        "manual": "手动创建",
+        "topik": "TOPIK",
+        "reading": "阅读",
+        "vocab": "词汇",
+        "grammar": "语法",
+        "dictionary": "字典",
+        "practice": "练习"
+      },
+      "cardType": {
+        "vocab": "词汇卡",
+        "grammar": "语法卡",
+        "mistake": "错题卡",
+        "quoteCard": "摘录",
+        "note": "普通笔记"
+      },
+      "status": {
+        "reviewed": "已复习",
+        "queued": "待复习"
+      },
+      "page": {
+        "newNoteTitle": "新笔记"
+      },
+      "confirm": {
+        "deletePage": "确定删除这条笔记吗？"
+      },
+      "recentHighlights": "最近划线",
+      "scope": {
+        "reading": "阅读",
+        "topik": "TOPIK",
+        "book": "课本",
+        "podcast": "播客"
+      }
+    }
+  },
+  "epub": {
+    "upload": {
+      "title": "导入您的私人书库",
+      "description": "上传 EPUB 格式的电子书，我们将为您自动解析章节，并提供沉浸式的阅读体验。所有书籍仅存放在您的私人书库中。",
+      "features": {
+        "parsing": {
+          "title": "章节智能解析",
+          "desc": "上传后系统将自动识别书籍目录与结构"
+        },
+        "reader": {
+          "title": "个性化阅读器",
+          "desc": "支持多种配色方案、字号与排版调节"
+        },
+        "sync": {
+          "title": "多端进度同步",
+          "desc": "在手机与电脑间无缝切换阅读进度"
+        }
+      }
+    }
+  },
+  "landing": {
+    "v2": {
+      "nav": {
+        "features": "功能",
+        "loop": "每日路径",
+        "modules": "学习模块",
+        "community": "社区",
+        "pricing": "会员",
+        "faq": "常见问题",
+        "login": "登录",
+        "register": "注册"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "早间复习",
+            "s": "18 张到期卡 · 已完成"
+          },
+          "s2": {
+            "t": "新课 · L24 골목길",
+            "s": "现在进行中 · 8 分钟"
+          },
+          "s3": {
+            "t": "播客片段",
+            "s": "한국 골목 산책 · 6 分钟"
+          },
+          "s4": {
+            "t": "睡前阅读",
+            "s": "短文 · 골목길의 추억"
+          },
+          "date": "五月 十一日",
+          "greet": "你好，河恩",
+          "sub": "今日学习已就绪 · 4 步约 22 分钟"
+        },
+        "eyebrow": "v3.0 已发布 · 全新学习路径与社区",
+        "titleKo": "讀韓",
+        "titlePre": "让韩语 ",
+        "titleUnderlined": "变成日常",
+        "ctaPrimary": "免费开始学习 →",
+        "ctaSecondary": "观看 90s 演示",
+        "meta1": "活跃学习者",
+        "meta2": "每日复习卡",
+        "meta3": "App Store 评分",
+        "chip1": {
+          "t": "连续学习",
+          "v": "47 天"
+        },
+        "chip2": {
+          "t": "今日新词",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "5 级 · 87%"
+        }
+      },
+      "logos": {
+        "v1": "真实语境沉浸阅读",
+        "v2": "影视播客原声精听",
+        "v3": "FSRS 算法智能复习",
+        "v4": "母语社区互译共建",
+        "v5": "全平台学习进度同步"
+      },
+      "features": {
+        "t1": {
+          "title": "每日学习路径",
+          "pill": "/ 早 7:00 自动生成 · 平均 22 分钟"
+        },
+        "t2": {
+          "title": "词汇本 + 四种模式",
+          "desc": "闪卡、学习、考试、连连看 — 一个词四种练法。",
+          "pill": "/ TOPIK I + II · 9,300 词"
+        },
+        "t3": {
+          "title": "语法句型库",
+          "desc": "每条语法配场景例句 + 真题。错误自动入复习队列。",
+          "pill": "/ 480 条核心语法"
+        },
+        "t4": {
+          "title": "TOPIK 备考",
+          "desc": "真题 / 模考 / 写作 AI 评分 + 听力倍速精听",
+          "pill": "/ TOPIK II 平均提升 1.4 级"
+        },
+        "t6": {
+          "title": "母语社区 · 互译",
+          "desc": "遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。",
+          "pill": "/ 1.2k+ 活跃互助组"
+        },
+        "t5": {
+          "title": "影视 · 播客 · 阅读 三栖沉浸",
+          "pill": "/ 4,800+ 学习素材 · 每周更新"
+        },
+        "title": "一站式的韩语学习工具箱"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · 早间",
+          "title": "复习到期卡",
+          "desc": "FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。",
+          "preview": "18 卡 · 7 分钟"
+        },
+        "s2": {
+          "label": "STEP 2 · 课程",
+          "title": "新一课内容",
+          "desc": "课本 + 听力 + 即学即考 · 任何片段都能截图入卡。",
+          "preview": "L24 · 8 分钟"
+        },
+        "s3": {
+          "label": "STEP 3 · 通勤",
+          "title": "听力沉浸",
+          "desc": "真实播客或韩剧片段 · 双语字幕 · 生词秒收。",
+          "preview": "播客 6 分钟"
+        },
+        "s4": {
+          "label": "STEP 4 · 睡前",
+          "title": "阅读一段",
+          "desc": "段落难度自动匹配 · 看完一篇 = 巩固今天的所学。",
+          "preview": "短文 4 分钟"
+        },
+        "title": "四步，一天的韩语就稳了"
+      },
+      "modules": {
+        "title": "专为长期学习而生的模块",
+        "m1": {
+          "title": "词汇本 · 四模式练习",
+          "tag1": "FSRS 算法",
+          "tag2": "4 种练习模式",
+          "tag3": "例句联想",
+          "tag4": "词册筛选",
+          "link": "了解词汇模块 →"
+        },
+        "m2": {
+          "title": "TOPIK · 真题 + AI 考评",
+          "tag1": "10 年历年真题",
+          "tag2": "1:1 模考环境",
+          "tag3": "AI 写作实时批改",
+          "tag4": "全维成绩预测",
+          "link": "了解 TOPIK 模块 →"
+        },
+        "m3": {
+          "title": "媒体库 · 精听变速",
+          "tag1": "4,800+ 片段",
+          "tag2": "双语字幕",
+          "tag3": "点词入卡",
+          "tag4": "难度匹配",
+          "link": "了解沉浸模块 →"
+        },
+        "m4": {
+          "title": "分级阅读 · AI 提词",
+          "tag1": "分级 1–6",
+          "tag2": "绘本库",
+          "tag3": "点词查询",
+          "tag4": "笔记入卡",
+          "link": "了解阅读模块 →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "学习伙伴",
+          "s": "共同进阶"
+        },
+        "s2": {
+          "l": "公开词汇本",
+          "s": "资源共享"
+        },
+        "s3": {
+          "l": "学习心得",
+          "s": "经验沉淀"
+        },
+        "s4": {
+          "l": "坚持天数",
+          "s": "续写里程"
+        },
+        "title": "不一个人学，更走得远"
+      },
+      "pricing": {
+        "perMonth": "/ 月",
+        "perQuarter": "/ 季付",
+        "perYear": "/ 年付",
+        "lifetime": "/ 终身一次",
+        "tabMonthly": "月付",
+        "tabQuarterly": "季付",
+        "tabAnnual": "年付",
+        "pro": {
+          "f1": "<b>无限</b>新词 + 科学复习 (FSRS)",
+          "f2": "全库课程 + TOPIK <b>1-6 级</b>真题",
+          "f3": "影视 / 播客<b>全库 + 智能脚本</b>",
+          "f4": "<b>AI 写作诊断</b> + 变速精听",
+          "f5": "社区<b>公开资源</b>无限获取",
+          "f6": "全端学习进度<b>实时同步</b>",
+          "title": "正式版 · Plus",
+          "desc": "进阶首选 · 全方位解锁 AI 学习黑科技",
+          "cta": "立即开启全能模式"
+        },
+        "title": "选一个，开始学",
+        "free": {
+          "title": "免费版 · Free",
+          "desc": "入门之选 · 开启你的韩语进阶之旅",
+          "unit": "/ 永久",
+          "f1": "<b>每日 5 个</b>新学单词",
+          "f2": "<b>每日 30 张</b>复习上限",
+          "f3": "<b>基础课程</b> (L1–L2) 体验",
+          "f4": "影视 / 播客<b>预览模式</b>",
+          "f5": "TOPIK 历年真题",
+          "f6": "AI 写作诊断",
+          "cta": "免费开始"
+        },
+        "popular": "Popular"
+      },
+      "testimonials": {
+        "title": "用过 Duhan 的人都在说",
+        "t1": {
+          "tag1": "用了 11 个月",
+          "tag2": "TOPIK 5 级达成",
+          "name": "河恩 · @hae_eun",
+          "meta": "设计师 · 杭州"
+        },
+        "t2": {
+          "tag1": "追剧学韩语",
+          "tag2": "3 个月",
+          "name": "小柯",
+          "meta": "大三学生"
+        },
+        "t3": {
+          "tag1": "母语者助教",
+          "name": "민지 · 助教",
+          "meta": "首尔 · 母语者"
+        }
+      },
+      "faq": {
+        "title": "常见问题",
+        "q1": "零基础也能用吗？",
+        "q2": "FSRS 算法是什么？",
+        "q3": "Plus 和 Elite 的核心差别？",
+        "q4": "能离线学吗？",
+        "q5": "有学生折扣吗？",
+        "q6": "不满意可以退款吗？"
+      },
+      "finalCta": {
+        "titlePre": "今天就让韩语",
+        "titleMid": "成为你日常的",
+        "titlePost": "一部分",
+        "sub": "注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱",
+        "ctaPrimary": "免费开始 →",
+        "ctaSecondary": "下载 iOS / Android"
+      },
+      "footer": {
+        "col1": {
+          "head": "产品",
+          "l1": "功能总览",
+          "l3": "TOPIK 备考",
+          "l4": "影视听力",
+          "l5": "分级阅读",
+          "l6": "社区"
+        },
+        "col2": {
+          "head": "学习",
+          "l1": "学习指南",
+          "l2": "语法百科",
+          "l3": "备考博客",
+          "l4": "每日韩语"
+        },
+        "col3": {
+          "head": "公司",
+          "l1": "关于 Duhan",
+          "l5": "联系我们"
+        },
+        "col4": {
+          "head": "支持",
+          "l1": "帮助中心",
+          "l2": "退款政策",
+          "l3": "隐私协议",
+          "l4": "用户协议"
+        },
+        "tag1": "讀韓 · 让韩语变成日常。",
+        "tag2": "从单词到 TOPIK 6 级，一站搞定。",
+        "copy": "讀韓 · 沪 ICP 备 2026000000 号"
+      }
+    }
+  },
+  "topikWriting": {
+    "roundLabel": "第 {{count}} 届",
+    "defaultDescription": "请根据题目要求完成写作。",
+    "fetchingExam": "获取题目中...",
+    "noChallenge": "暂无今日挑战",
+    "answerArea": "作答区",
+    "wordCount": "已写 {{count}} 字",
+    "placeholder": "在此开始你的韩语写作...",
+    "template": "段落模板",
+    "save": "暂存",
+    "submit": "提交 AI 评分",
+    "aiFeedback": "AI 实时反馈",
+    "contentScore": "内容",
+    "grammarScore": "语法",
+    "vocabScore": "词汇",
+    "structureScore": "结构",
+    "aiFeedbackNote": "完成写作并提交后，AI 将为您提供详细的评分反馈、语法修正以及表达建议。",
+    "gradingCriteria": "评分标准",
+    "criteria1": "内容是否符合题目要求且丰富？",
+    "criteria2": "是否使用了多样的词汇和语法？",
+    "criteria3": "文章结构是否逻辑清晰且连贯？",
+    "session": {
+      "fillBlank": "补全短文",
+      "graphEssay": "图表作文",
+      "opinionEssay": "观点作文",
+      "answerPlaceholder": "请在此输入作答内容…",
+      "characterCount": "{{count}} 字",
+      "remainingChars": "还剩 {{count}} 字",
+      "fillBlankPaperTitle": "填写作答（㉠ / ㉡）",
+      "fillBlankOneSentence": "每空建议 1 句",
+      "fillBlankHint": "请分别填写 ㉠ 和 ㉡，每空建议一句完整表达。",
+      "fillBlankA": "在此填写 ㉠",
+      "fillBlankB": "在此填写 ㉡",
+      "charsUnit": "字",
+      "mobileHeaderSubtitle": "第 {{active}} 题 · 已完成 {{answered}} / {{total}} 题",
+      "progress": "进度",
+      "points": "分",
+      "submitButton": "交卷",
+      "desktopEyebrow": "写作考场",
+      "questionX": "第 {{num}} 题",
+      "desktopQuestionMeta": "第 {{num}} 题 · {{type}} · {{score}} 分",
+      "expandImage": "放大图片",
+      "collapseImage": "收起图片",
+      "desktopHeaderSummary": "以更紧凑的桌面考场布局完成写作，随时查看时间、保存状态与答题进度。",
+      "desktopWorkspaceTitle": "写作工作台",
+      "desktopWorkspaceSummaryLong": "左侧看材料，右侧直接起草。",
+      "desktopWorkspaceSummaryShort": "左侧看题面，右侧直接作答。",
+      "currentPrompt": "当前题目",
+      "saveState": "保存状态",
+      "submitConfirmTitle": "确认交卷？",
+      "submitConfirmDesc": "已完成 {{ans}} / {{total}} 题。交卷后将无法继续修改答案。",
+      "continueForm": "继续作答",
+      "submitting": "提交中…",
+      "confirmSubmit": "确认交卷",
+      "exitConfirmTitle": "确认退出？",
+      "exitConfirmDesc": "当前答案会先保存为草稿，稍后可以继续作答。",
+      "exiting": "退出中…",
+      "wongojiAnswer": "原稿纸作答",
+      "maxLength": "最多 {{count}} 字",
+      "time": "时间",
+      "questionPrompt": "题目区",
+      "promptBoard": "题面板",
+      "desktopPromptSummary": "先快速确认题干和材料，再直接进入下方作答区。",
+      "desktopPromptBoardLong": "写作时保持材料可见。",
+      "desktopPromptBoardShort": "读一遍题面后，直接补全两个空。",
+      "promptStatus": "作答进度",
+      "shortFormMode": "短题模式",
+      "answerArea": "作答区",
+      "answerSheet": "答题纸",
+      "desktopAnswerSummaryWongoji": "较长写作请直接在原稿纸中完成，控制段落与字数即可。",
+      "desktopAnswerSummaryFill": "短题尽量直接、完整，让句子读起来通顺自然。",
+      "desktopAnswerSummaryFillCompact": "一次完成两个空，保持句子顺畅自然。",
+      "writingSheet": "写作纸",
+      "responseSlots": "作答栏",
+      "answerProgress": "作答进度",
+      "pointsSummary": "共 {{total}} 分",
+      "examStatus": "考试状态",
+      "desktopStatusHint": "这里只显示时间、进度与控制项，不会打断你的作答。",
+      "questionNavigator": "题目导航",
+      "desktopNavigatorHint": "随时切换题目，不会丢失当前草稿。",
+      "completed": "已完成",
+      "current": "当前",
+      "pending": "待完成",
+      "readOnlyReminders": "只读提醒",
+      "desktopReminderAutosave": "作答过程中会自动保存，顶部和右栏的状态仅用于提示。",
+      "desktopReminderFlow": "51-52 题重在准确补全，53-54 题更看重结构、逻辑与展开。",
+      "desktopReminderFocus": "右侧栏不提供改写建议，只负责把时间、状态和导航固定展示出来。",
+      "quickChecks": "快速检查",
+      "submittedTitle": "已成功交卷",
+      "submittedDesc": "已完成 {{ans}} / {{total}} 题，正在等待 AI 评分结果…",
+      "saving": "保存中…",
+      "saved": "✓ 已保存",
+      "saveError": "保存失败",
+      "saveIdle": "自动保存",
+      "exampleBox": "보기",
+      "examNotFound": "无法找到此写作考试。",
+      "startFailed": "目前无法开始此写作考试。",
+      "loadingExam": "正在准备写作考试...",
+      "q51Instruction": "根据上下文填空，使短文完整且自然。",
+      "q52Instruction": "根据题目要求在空白处填写适当的内容。",
+      "q53Instruction": "根据下面的图表，写一篇说明性短文（200-300字）。",
+      "q54Instruction": "根据下面的题目，写一篇议论文（400-700字）。",
+      "submitFailed": "目前无法提交此写作考试。"
+    },
+    "title": "TOPIK II 写作",
+    "report": {
+      "title": "写作评分报告",
+      "subtitle": "TOPIK II 写作 AI 评分结果",
+      "evaluatingTitle": "AI 正在批改中…",
+      "evaluatingDesc": "正在按 TOPIK 官方评分标准逐题分析，通常需要 30-60 秒。",
+      "dimTask": "内容及课题完成度",
+      "dimStructure": "文章展开与结构",
+      "dimLanguage": "语言使用（词汇/语法）",
+      "dimWongoji": "原稿纸使用规范",
+      "retriggering": "重新触发中...",
+      "retriggerCooldown": "{{count}}秒后可重试",
+      "retrigger": "重新评估",
+      "retryFailed": "重新触发评估失败，请稍后再试。",
+      "maxScore": "满分 {{score}}",
+      "scoreLabel": "得分：",
+      "dimScores": "维度得分",
+      "originalText": "考生原文",
+      "notAnswered": "（未作答）",
+      "aiCorrected": "AI 高分润色版",
+      "noCorrection": "（无校正内容）",
+      "feedback": "综合评语",
+      "loading": "正在加载评估结果...",
+      "loadingError": "无法加载评估结果，请刷新页面。",
+      "back": "返回",
+      "status": "状态",
+      "evaluatingShort": "AI 批改中",
+      "timeElapsed": "作答用时：",
+      "timeFormat": "{{min}} 分 {{sec}} 秒",
+      "totalScore": "总分：",
+      "passExcellent": "优秀 🎉",
+      "passGood": "合格 ✅",
+      "passNeedsWork": "需加强 📚",
+      "overallAnalysis": "总体维度分析",
+      "questionFeedback": "逐题详细反馈",
+      "aiDone": "AI 批改完成"
+    }
+  },
+  "wongojiEditor": {
+    "lineStatus": "第 {{row}} 行 · 第 {{column}} 列",
+    "row": "行",
+    "column": "列",
+    "mobileHint": "如有需要可左右滚动",
+    "perLine": "每行 {{count}} 字 · 原稿纸"
   }
 }

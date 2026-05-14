@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m as motion } from 'framer-motion';
 import { useMutation, useQuery } from 'convex/react';
 import { Download, Trophy, X } from 'lucide-react';
@@ -6,8 +6,88 @@ import { useTranslation } from 'react-i18next';
 import type { Doc } from '../../../convex/_generated/dataModel';
 import { api } from '../../../convex/_generated/api';
 import { Badge, Button, Card, Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
+import { logger } from '../../utils/logger';
+import { notify } from '../../utils/notify';
 
 type PendingBadge = Doc<'user_badges'>;
+type SharePayload = {
+  files?: File[];
+  text?: string;
+  title?: string;
+  url?: string;
+};
+type ShareCapableNavigator = Navigator & {
+  canShare?: (data?: SharePayload) => boolean;
+};
+
+function supportsNativeShare(): boolean {
+  return (
+    typeof globalThis.navigator !== 'undefined' && typeof globalThis.navigator.share === 'function'
+  );
+}
+
+const REPORT_EXPORT_TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+async function renderBadgeCanvas(element: HTMLElement): Promise<HTMLCanvasElement> {
+  const { default: html2canvas } = await import('html2canvas');
+  return await html2canvas(element, {
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: null,
+    scale: 2,
+  });
+}
+
+async function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  if (typeof canvas.toBlob === 'function') {
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error('Canvas export returned an empty blob.'));
+      }, 'image/png');
+    });
+  }
+
+  const dataUrl = canvas.toDataURL('image/png');
+  const response = await fetch(dataUrl);
+  return await response.blob();
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function isAbortError(error: unknown): boolean {
+  return (error instanceof DOMException || error instanceof Error) && error.name === 'AbortError';
+}
 
 function getTierClass(tier: PendingBadge['tier']): string {
   switch (tier) {
@@ -41,13 +121,12 @@ type AchievementModalDialogProps = {
   readonly badge: PendingBadge;
 };
 
-export function AchievementModalDialog({
-  badge,
-}: Readonly<AchievementModalDialogProps>) {
+export function AchievementModalDialog({ badge }: Readonly<AchievementModalDialogProps>) {
   const { t } = useTranslation();
   const viewer = useQuery(api.users.viewer);
   const acknowledgeBadge = useMutation(api.achievements.acknowledgeBadge);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(true);
   const [closing, setClosing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -59,21 +138,32 @@ export function AchievementModalDialog({
   const displayName =
     viewer?.name ?? t('achievements.defaultLearner', { defaultValue: 'DuHan Learner' });
   const avatarUrl = viewer?.image ?? viewer?.avatar ?? null;
+  const shareSupported = useMemo(() => supportsNativeShare(), []);
+  const primaryActionLabel = shareSupported
+    ? t('achievements.shareReportImage', { defaultValue: 'Share report image' })
+    : t('achievements.saveReportImage', { defaultValue: 'Save report image' });
 
-  const handleClose = async () => {
-    if (closing || saving) {
+  const dismissBadge = () => {
+    if (closing) {
       return;
     }
 
+    setIsOpen(false);
     setClosing(true);
-    try {
-      await acknowledgeBadge({ badgeId: badge._id });
-    } finally {
-      setClosing(false);
-    }
+    void acknowledgeBadge({ badgeId: badge._id })
+      .catch(error => {
+        logger.error('Failed to acknowledge achievement badge', error);
+      })
+      .finally(() => {
+        setClosing(false);
+      });
   };
 
-  const handleSaveImage = async () => {
+  const handleClose = () => {
+    dismissBadge();
+  };
+
+  const handlePrimaryAction = async () => {
     if (!cardRef.current || saving || closing) {
       return;
     }
@@ -81,32 +171,61 @@ export function AchievementModalDialog({
     setSaving(true);
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(cardRef.current, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: null,
-        scale: 2,
-      });
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `duhan-achievement-${badge.category.toLowerCase()}-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      await handleClose();
+      const canvas = await withTimeout(
+        renderBadgeCanvas(cardRef.current),
+        REPORT_EXPORT_TIMEOUT_MS,
+        'Achievement report export timed out.'
+      );
+      const blob = await withTimeout(
+        canvasToPngBlob(canvas),
+        REPORT_EXPORT_TIMEOUT_MS,
+        'Achievement report image conversion timed out.'
+      );
+      const filename = `duhan-achievement-${badge.category.toLowerCase()}-${Date.now()}.png`;
+      const navigatorWithShare = globalThis.navigator as ShareCapableNavigator;
+      const shareData: SharePayload = {
+        title: t('achievements.achievementUnlocked', {
+          defaultValue: 'Achievement Unlocked',
+        }),
+        text: `${displayName} · ${categoryLabel} ${badge.milestoneValue}`,
+        files: [new File([blob], filename, { type: 'image/png' })],
+      };
+
+      if (
+        typeof navigatorWithShare.share === 'function' &&
+        (typeof navigatorWithShare.canShare !== 'function' ||
+          navigatorWithShare.canShare(shareData))
+      ) {
+        try {
+          await navigatorWithShare.share(shareData);
+          dismissBadge();
+          return;
+        } catch (error) {
+          if (isAbortError(error)) {
+            return;
+          }
+          logger.error('Native achievement share failed, falling back to download', error);
+        }
+      }
+
+      downloadBlob(blob, filename);
+      dismissBadge();
+    } catch (error) {
+      logger.error('Failed to export achievement report image', error);
+      notify.error(
+        t('achievements.reportImageActionFailed', {
+          defaultValue: 'Unable to share or save this report image right now.',
+        })
+      );
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open onOpenChange={open => !open && handleClose()}>
+    <Dialog open={isOpen} onOpenChange={open => !open && handleClose()}>
       <DialogPortal>
-        <DialogOverlay
-          unstyled
-          className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-md"
-        />
+        <DialogOverlay unstyled className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-md" />
         <DialogContent
           unstyled
           className="fixed inset-0 z-[61] flex items-center justify-center p-4 pointer-events-none"
@@ -208,7 +327,7 @@ export function AchievementModalDialog({
                   type="button"
                   variant="outline"
                   onClick={handleClose}
-                  disabled={closing || saving}
+                  disabled={closing}
                   className="flex-1 h-12 border-4 border-black bg-card text-slate-900 shadow-[5px_5px_0px_0px_#0F172A] font-heading font-black hover:translate-y-1 hover:shadow-none"
                 >
                   <X className="mr-2 h-4 w-4" />
@@ -216,12 +335,12 @@ export function AchievementModalDialog({
                 </Button>
                 <Button
                   type="button"
-                  onClick={handleSaveImage}
+                  onClick={() => void handlePrimaryAction()}
                   disabled={closing || saving}
                   className="flex-1 h-12 border-4 border-black bg-brand-yellow bg-[#FFDE59] text-slate-900 shadow-[5px_5px_0px_0px_#0F172A] font-heading font-black hover:translate-y-1 hover:shadow-none"
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  {t('achievements.saveReportImage', { defaultValue: 'Save report image' })}
+                  {primaryActionLabel}
                 </Button>
               </div>
             </div>

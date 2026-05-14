@@ -35,7 +35,25 @@ if (typeof globalThis.window !== 'undefined') {
   });
 }
 
-initSentry();
+if (import.meta.env.PROD && typeof globalThis.window !== 'undefined') {
+  const idleWindow = globalThis.window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  };
+
+  if (idleWindow.requestIdleCallback) {
+    idleWindow.requestIdleCallback(
+      () => {
+        void initSentry();
+      },
+      { timeout: 4000 }
+    );
+  } else {
+    globalThis.window.setTimeout(() => {
+      void initSentry();
+    }, 1800);
+  }
+}
+
 registerServiceWorker();
 
 const rootElement = document.getElementById('root');

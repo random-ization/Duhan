@@ -22,6 +22,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { KT } from '../../theme/ksoftTokens';
 
 const COLS = 20; // fixed columns per row
 
@@ -32,6 +33,8 @@ export interface WongojiEditorProps {
   maxLength?: number;
   className?: string;
   readOnly?: boolean;
+  surfaceTone?: 'default' | 'paper';
+  fullWidth?: boolean;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -82,52 +85,90 @@ interface CellProps {
   /** 0-indexed row */
   row: number;
   compact?: boolean;
+  paperTone?: boolean;
+  fullWidth?: boolean;
 }
 
-const Cell = React.memo(({ char, isCursor, col, row, compact = false }: CellProps) => {
-  // First column of each row gets a slightly thicker left border (classic
-  // 원고지 style) and every 5th column has a mid-weight separator.
-  const isRowStart = col === 0;
-  const isFifthCol = (col + 1) % 5 === 0 && col !== COLS - 1;
+const Cell = React.memo(
+  ({
+    char,
+    isCursor,
+    col,
+    row,
+    compact = false,
+    paperTone = false,
+    fullWidth = false,
+  }: CellProps) => {
+    // First column of each row gets a slightly thicker left border (classic
+    // 원고지 style) and every 5th column has a mid-weight separator.
+    const isRowStart = col === 0;
+    const isFifthCol = (col + 1) % 5 === 0 && col !== COLS - 1;
 
-  // Top border is thicker at row 0 and every 10 rows (traditional 원고지).
-  const isTenthRow = (row + 1) % 10 === 0;
+    // Top border is thicker at row 0 and every 10 rows (traditional 원고지).
+    const isTenthRow = (row + 1) % 10 === 0;
 
-  return (
-    <div
-      className={cn(
-        'relative flex items-center justify-center',
-        compact ? 'h-[1.3rem] w-[1.3rem] text-[11px]' : 'w-8 h-8 text-sm',
-        'font-medium leading-none select-none',
-        // Base borders – black/white styling (dark gray in light mode, white in dark mode)
-        'border-b border-r border-neutral-400 dark:border-white/20',
-        isRowStart && 'border-l border-neutral-400 dark:border-white/20',
-        row === 0 && 'border-t border-neutral-400 dark:border-white/20',
-        // Keep the same opacity for the "thick" borders to make it uniform but slightly thicker if needed, or just uniform.
-        // The user complained it looks uneven, so let's use the exactly same color/opacity
-        isFifthCol && 'border-r border-neutral-400 dark:border-white/20',
-        isTenthRow && 'border-b border-neutral-400 dark:border-white/20',
-        // Cursor cell background highlight
-        isCursor && 'bg-primary/5 z-10'
-      )}
-    >
-      {isCursor && (
-        <div className="absolute left-1 top-1.5 bottom-1.5 w-[2px] bg-primary animate-pulse" />
-      )}
-      {char !== null ? <span className="text-foreground">{char}</span> : null}
-    </div>
-  );
-});
+    return (
+      <div
+        className={cn(
+          'relative flex items-center justify-center',
+          fullWidth
+            ? 'min-w-0 text-[13px] md:text-sm'
+            : compact
+              ? 'h-[1.3rem] w-[1.3rem] text-[11px]'
+              : 'w-8 h-8 text-sm',
+          'font-medium leading-none select-none',
+          'border-b border-r',
+          isRowStart && 'border-l',
+          row === 0 && 'border-t',
+          isFifthCol && 'border-r',
+          isTenthRow && 'border-b',
+          isCursor && 'bg-primary/5 z-10'
+        )}
+        style={
+          paperTone
+            ? {
+                background: KT.bg,
+                borderColor: KT.line2,
+                height: fullWidth ? '2.15rem' : undefined,
+              }
+            : {
+                borderColor: 'rgba(31,27,23,0.22)',
+                height: fullWidth ? '2.15rem' : undefined,
+              }
+        }
+      >
+        {isCursor && (
+          <div className="absolute left-1 top-1.5 bottom-1.5 w-[2px] bg-primary animate-pulse" />
+        )}
+        {char !== null ? (
+          <span style={paperTone ? { color: KT.ink } : undefined}>{char}</span>
+        ) : null}
+      </div>
+    );
+  }
+);
 Cell.displayName = 'WongojiCell';
 
 // ─── main component ───────────────────────────────────────────────────────────
 
 export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditorProps>(
-  ({ value, onChange, maxLength = 700, className, readOnly = false }, forwardedRef) => {
+  (
+    {
+      value,
+      onChange,
+      maxLength = 700,
+      className,
+      readOnly = false,
+      surfaceTone = 'default',
+      fullWidth = false,
+    },
+    forwardedRef
+  ) => {
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const textareaRef = (forwardedRef as React.RefObject<HTMLTextAreaElement>) ?? internalRef;
     const { t } = useTranslation();
     const isMobile = useIsMobile();
+    const isPaperTone = surfaceTone === 'paper';
 
     // Track cursor position so we can highlight the active cell.
     const [cursorPos, setCursorPos] = React.useState<number>(value.length);
@@ -194,34 +235,53 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
     const charCount = value.replace(/\n/g, '').length;
     const percentage = Math.round((charCount / maxLength) * 100);
     const remaining = maxLength - charCount;
-    const cellRem = isMobile ? 1.3 : 2;
+    const cellRem = isMobile ? 1.3 : isPaperTone ? 1.62 : 1.8;
+    const fullWidthCellRem = 2.15;
     const visualRow = Math.floor(visualCursorIndex / COLS) + 1;
     const visualColumn = (visualCursorIndex % COLS) + 1;
     const charsUnit = t('topikWriting.session.charsUnit', { defaultValue: 'chars' });
 
     return (
-      <div className={cn('flex flex-col gap-3', className)}>
+      <div className={cn('flex h-full min-h-0 flex-col gap-2', className)}>
         {/* ── Header stats ── */}
         <div
           className={cn(
-            'px-1 text-xs font-medium text-muted-foreground',
+            'px-1 text-[11px] font-medium',
             isMobile ? 'space-y-3' : 'flex items-center justify-between'
           )}
+          style={isPaperTone ? { color: KT.sub } : undefined}
         >
           <div className="flex items-center justify-between gap-3">
             <span>
               <span
-                className={cn(
-                  'font-black',
-                  charCount > maxLength * 0.95 ? 'text-destructive' : 'text-foreground'
-                )}
+                className={cn('font-black', charCount > maxLength * 0.95 ? 'text-destructive' : '')}
+                style={
+                  charCount <= maxLength * 0.95
+                    ? { color: isPaperTone ? KT.ink : KT.ink }
+                    : undefined
+                }
               >
                 {charCount}
               </span>
               {' / '}
               {maxLength} {charsUnit}
             </span>
-            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em]">
+            <span
+              className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+              style={
+                isPaperTone
+                  ? {
+                      borderColor: KT.line2,
+                      background: KT.card,
+                      color: KT.sub,
+                    }
+                  : {
+                      borderColor: KT.line2,
+                      background: KT.card,
+                      color: KT.sub,
+                    }
+              }
+            >
               {t('wongojiEditor.lineStatus', {
                 defaultValue: 'Row {{row}} · Col {{column}}',
                 row: visualRow,
@@ -232,21 +292,18 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
 
           <div className="flex items-center gap-3">
             <div
-              className={cn(
-                'h-1.5 rounded-full overflow-hidden bg-muted',
-                isMobile ? 'flex-1' : 'w-32'
-              )}
+              className={cn('h-1.5 overflow-hidden rounded-full', isMobile ? 'flex-1' : 'w-32')}
+              style={{ background: KT.line }}
             >
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-300',
-                  percentage >= 95
-                    ? 'bg-destructive'
-                    : percentage >= 70
-                      ? 'bg-amber-500'
-                      : 'bg-primary'
+                  percentage >= 95 ? 'bg-destructive' : percentage >= 70 ? 'bg-amber-500' : ''
                 )}
-                style={{ width: `${Math.min(100, percentage)}%` }}
+                style={{
+                  width: `${Math.min(100, percentage)}%`,
+                  backgroundColor: percentage < 70 ? KT.mintDeep : undefined,
+                }}
               />
             </div>
             <span className="shrink-0">
@@ -261,27 +318,52 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
         {/* ── Paper + transparent textarea (layered) ── */}
         <div
           className={cn(
-            'bg-background',
+            isPaperTone ? '' : 'bg-background',
             isMobile
               ? 'rounded-3xl border border-border/80 px-3 py-3'
-              : 'border-y border-border py-4'
+              : 'min-h-0 flex-1 rounded-[22px] border border-border px-2.5 py-2.5'
           )}
+          style={
+            isPaperTone
+              ? {
+                  background: KT.bg,
+                  borderColor: KT.line2,
+                }
+              : {
+                  background: KT.bg,
+                  borderColor: KT.line2,
+                }
+          }
         >
           <div
             className={cn(
-              'relative overflow-auto bg-background',
+              'relative overflow-auto',
+              isPaperTone ? '' : 'bg-background',
               isMobile
                 ? 'rounded-2xl border border-border shadow-inner'
-                : 'rounded-lg border-2 border-border shadow-inner'
+                : 'h-full min-h-0 rounded-[18px] border-2 border-border shadow-inner'
             )}
+            style={
+              isPaperTone
+                ? {
+                    background: KT.bg,
+                    borderColor: KT.line2,
+                  }
+                : {
+                    background: KT.bg,
+                    borderColor: KT.line2,
+                  }
+            }
           >
             {/* Visual grid — pointer-events-none so all input reaches the textarea */}
             <div
               className="pointer-events-none"
               style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${COLS}, ${cellRem}rem)`,
-                width: `${COLS * cellRem}rem`,
+                gridTemplateColumns: fullWidth
+                  ? `repeat(${COLS}, minmax(0, 1fr))`
+                  : `repeat(${COLS}, ${cellRem}rem)`,
+                width: fullWidth ? '100%' : `${COLS * cellRem}rem`,
               }}
               aria-hidden
             >
@@ -296,6 +378,8 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
                     col={col}
                     row={row}
                     compact={isMobile}
+                    paperTone={isPaperTone}
+                    fullWidth={fullWidth}
                   />
                 );
               })}
@@ -328,7 +412,7 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
                 )}
                 style={{
                   // Match grid dimensions so scrolling stays in sync
-                  minHeight: `${totalRows * cellRem}rem`,
+                  minHeight: `${totalRows * (fullWidth ? fullWidthCellRem : cellRem)}rem`,
                   fontFamily: 'monospace',
                 }}
               />
@@ -337,7 +421,10 @@ export const WongojiEditor = React.forwardRef<HTMLTextAreaElement, WongojiEditor
         </div>
 
         {/* ── Row / line info ── */}
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1">
+        <div
+          className="flex items-center gap-3 px-1 text-[10px] text-muted-foreground"
+          style={isPaperTone ? { color: KT.sub } : undefined}
+        >
           <span>
             {t('wongojiEditor.row', { defaultValue: 'Row' })} {visualRow} / {totalRows}
           </span>

@@ -5,7 +5,8 @@
  *
  *  • saveEvaluation  — internalMutation: persists per-question AI scores and
  *                      updates the session status to EVALUATED with a totalScore.
- *  • evaluateSubmission — action: fetches session + questions, calls OpenAI,
+ *  • evaluateSubmission — action: fetches session + questions, calls the
+ *                         configured AI provider chain,
  *                         and calls saveEvaluation via ctx.runMutation.
  *  • getEvaluations  — query: returns all evaluation records for a session
  *                      (used by the frontend report component).
@@ -17,8 +18,9 @@ import { aiLogger } from './logger';
 import { v } from 'convex/values';
 import { getAuthUserId } from './utils';
 import type { Id } from './_generated/dataModel';
-import OpenAI from 'openai';
 import { parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
+import { runChatCompletionWithFallback } from './ai/chatClient';
+import { resolveChatProviderConfigs } from './aiProviders';
 
 // ─── Shared dimension schema ──────────────────────────────────────────────────
 
@@ -192,7 +194,7 @@ export const evaluateSubmission = action({
     }>;
 
     const answers: Record<string, string> = (session.answers as Record<string, string>) ?? {};
-    const apiKey = process.env.OPENAI_API_KEY;
+    const hasConfiguredProvider = resolveChatProviderConfigs(process.env).length > 0;
     const responseLanguage = normalizeAiResponseLanguage(language);
 
     // 3. Evaluate each question independently.
@@ -202,17 +204,18 @@ export const evaluateSubmission = action({
       questionsSorted.map(async q => {
         const answerText = answers[String(q.number)] ?? '';
 
-        if (!apiKey) {
-          // ── MOCK fallback when no API key is set ──
+        if (!hasConfiguredProvider) {
+          // ── MOCK fallback when no AI provider is configured ──
           return { question: q, result: mockEvaluation(q, answerText, responseLanguage) };
         }
 
         try {
-          // ── Real OpenAI call ──
-          const result = await callOpenAI(apiKey, q, answerText, responseLanguage);
+          const result = await callAiProvider(q, answerText, responseLanguage);
           return { question: q, result };
         } catch (error) {
-          aiLogger.warn(`OpenAI evaluation failed for Q${q.number}, fallback to mock`, { error: error instanceof Error ? error.message : String(error) });
+          aiLogger.warn(`AI evaluation failed for Q${q.number}, fallback to mock`, {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return { question: q, result: mockEvaluation(q, answerText, responseLanguage) };
         }
       })
@@ -280,7 +283,7 @@ export const getEvaluations = query({
   },
 });
 
-// ─── OpenAI call helper ───────────────────────────────────────────────────────
+// ─── AI provider call helper ──────────────────────────────────────────────────
 
 interface RubricConfig {
   taskMax: number;
@@ -371,8 +374,7 @@ function getRubricConfig(question: {
   };
 }
 
-async function callOpenAI(
-  apiKey: string,
+async function callAiProvider(
   question: {
     number: number;
     questionType: string;
@@ -402,23 +404,30 @@ async function callOpenAI(
     });
   }
 
-  const client = new OpenAI({ apiKey, timeout: 20000 });
-  const completion = await retryAsync(
-    () =>
-      client.chat.completions.create({
-        model: 'mimo-v2-flash',
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: userContent,
-          },
-        ],
-      }),
-    { retries: 2, label: `writing_eval_q${question.number}` }
+  const { completion, provider } = await runChatCompletionWithFallback(
+    ({ client, provider: activeProvider }) =>
+      retryAsync(
+        () =>
+          client.chat.completions.create({
+            model: activeProvider.model,
+            temperature: 0.3,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              {
+                role: 'user',
+                content: userContent,
+              },
+            ],
+          }),
+        { retries: 2, label: `writing_eval_q${question.number}` }
+      ),
+    { label: `writing_eval_q${question.number}`, timeoutMs: 20000 }
   );
+  aiLogger.info(`Writing evaluation completed for Q${question.number}`, {
+    provider: provider.provider,
+    model: provider.model,
+  });
 
   const raw = completion.choices[0]?.message?.content ?? '{}';
   const parsed = (parseJsonObjectFromModelContent(raw) || {}) as {
@@ -535,7 +544,7 @@ function buildUserPrompt(
   return parts.join('\n\n');
 }
 
-// ─── Mock evaluation (no API key) ─────────────────────────────────────────────
+// ─── Mock evaluation (no provider configured) ────────────────────────────────
 
 function getStyleFactorForFillBlank(questionNumber: number, answerText: string): number {
   const text = answerText.replace(/\s+/g, ' ');
@@ -580,12 +589,12 @@ function mockEvaluation(
     },
     feedbackText:
       language === 'en'
-        ? `(Mock scoring: OPENAI_API_KEY is not configured.) Approx. ${len} chars. Scored with Q${question.number} rubric.`
+        ? `(Mock scoring: no AI provider is configured.) Approx. ${len} chars. Scored with Q${question.number} rubric.`
         : language === 'vi'
-          ? `(Chấm điểm mô phỏng: chưa cấu hình OPENAI_API_KEY.) Bài làm khoảng ${len} ký tự. Đã chấm theo thang điểm Câu ${question.number}.`
+          ? `(Chấm điểm mô phỏng: chưa cấu hình nhà cung cấp AI.) Bài làm khoảng ${len} ký tự. Đã chấm theo thang điểm Câu ${question.number}.`
           : language === 'mn'
-            ? `(Загвар үнэлгээ: OPENAI_API_KEY тохируулаагүй.) Ойролцоогоор ${len} тэмдэгт. ${question.number}-р даалгаврын рубрикаар үнэллээ.`
-            : `（当前为模拟评分，未配置 OPENAI_API_KEY。）答案约 ${len} 字。评分已按第${question.number}题分项标准执行。`,
+            ? `(Загвар үнэлгээ: AI үйлчилгээний тохиргоо алга.) Ойролцоогоор ${len} тэмдэгт. ${question.number}-р даалгаврын рубрикаар үнэллээ.`
+            : `（当前为模拟评分，未配置 AI 服务商。）答案约 ${len} 字。评分已按第${question.number}题分项标准执行。`,
     correctedText:
       answerText ||
       (language === 'en'

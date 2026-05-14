@@ -7,13 +7,12 @@
  * Route: /topik/writing/:examId
  */
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { useCurrentLanguage, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { useTopikExams } from '../hooks/useTopikExams';
 import { WritingExamSession } from '../components/topik/WritingExamSession';
 import { WritingEvaluationReport } from '../components/topik/WritingEvaluationReport';
 import type { Id } from '../../convex/_generated/dataModel';
@@ -24,10 +23,9 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileImmersiveHeader } from '../components/mobile/MobileImmersiveHeader';
 import { appendReturnToPath } from '../utils/navigation';
 import { localizeInternalPath } from '../utils/localizedRouting';
+import { TOPIK } from '../utils/convexRefs';
 
 import { api } from '../../convex/_generated/api';
-
-const DesktopTopikWritingPage = React.lazy(() => import('./desktop/DesktopTopikWritingPage'));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +59,6 @@ function normalizeQuestionType(questionType: string, number: number): WritingQue
 const TopikWritingPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { user } = useAuth();
-  const topikExams = useTopikExams();
   const navigate = useLocalizedNavigate();
   const currentLanguage = useCurrentLanguage();
   const location = useLocation();
@@ -71,8 +68,7 @@ const TopikWritingPage: React.FC = () => {
   const isMobile = useIsMobile();
 
   const startSession = useMutation(api.topikWriting.startSession);
-  // Find the exam in context
-  const exam = topikExams.find(e => e.id === examId);
+  const exam = useQuery(TOPIK.getExamById, examId ? { examId } : 'skip');
   const writingQuestions = useQuery(
     api.topikWriting.getWritingQuestions,
     exam?._id ? { examId: exam._id as Id<'topik_exams'> } : 'skip'
@@ -81,10 +77,28 @@ const TopikWritingPage: React.FC = () => {
   const writingReturnPath = `${location.pathname}${location.search}`;
 
   const [state, setPageState] = useState<PageState>({ phase: 'loading' });
+  const invalidExamHandledRef = useRef<string | null>(null);
 
   // On mount: start or resume session
   useEffect(() => {
-    if (!examId || !user || !exam || !exam._id) return;
+    if (!examId || !user) return;
+    if (exam === undefined) return;
+
+    if (!exam || exam.type !== 'WRITING' || !exam._id) {
+      if (invalidExamHandledRef.current === examId) {
+        return;
+      }
+      invalidExamHandledRef.current = examId;
+      notify.error(
+        t('topikWriting.session.examNotFound', {
+          defaultValue: 'Unable to find this writing exam.',
+        })
+      );
+      navigate(topikLobbyPath);
+      return;
+    }
+
+    invalidExamHandledRef.current = null;
 
     startSession({ examId: exam._id as Id<'topik_exams'> })
       .then(session => {
@@ -118,6 +132,7 @@ const TopikWritingPage: React.FC = () => {
 
   if (!user) return <Navigate to={localizeInternalPath('/', currentLanguage)} replace />;
   if (!examId) return <Navigate to={topikLobbyPath} replace />;
+  if (exam === null) return null;
 
   // ── Render loading ──────────────────────────────────────────────────────────
   if (state.phase === 'loading') {
@@ -266,19 +281,55 @@ const TopikWritingPage: React.FC = () => {
     );
   }
 
-  const loadingContent = (
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-      <p className="font-bold text-muted-foreground text-sm">
-        {t('topikWriting.session.loadingExam', { defaultValue: 'Preparing writing exam...' })}
-      </p>
-    </div>
-  );
+  if (state.phase === 'report') {
+    const reportState = state as Extract<typeof state, { phase: 'report' }>;
+    return (
+      <div className="min-h-screen bg-background">
+        <WritingEvaluationReport
+          sessionId={reportState.sessionId}
+          originalAnswers={reportState.answers}
+          onBack={() => navigate(topikLobbyPath)}
+        />
+      </div>
+    );
+  }
+
+  const examState = state as Extract<typeof state, { phase: 'exam' }>;
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <DesktopTopikWritingPage />
-    </Suspense>
+    <WritingExamSession
+      sessionId={examState.sessionId}
+      examId={examId}
+      endTime={examState.endTime}
+      questions={resolvedQuestions}
+      initialAnswers={examState.initialAnswers}
+      onSubmitError={error => {
+        const entitlementError = getEntitlementErrorData(error);
+        if (entitlementError?.upgradeSource) {
+          startUpgradeFlow({
+            plan: 'ANNUAL',
+            source: entitlementError.upgradeSource,
+            returnTo: writingReturnPath,
+          });
+          return;
+        }
+        notify.error(
+          t('topikWriting.session.submitFailed', {
+            defaultValue: 'Unable to submit this writing exam right now.',
+          })
+        );
+      }}
+      onSubmitted={submittedAnswers => {
+        setPageState({
+          phase: 'report',
+          sessionId: examState.sessionId,
+          answers: submittedAnswers,
+        });
+      }}
+      onExit={() => {
+        navigate(topikLobbyPath);
+      }}
+    />
   );
 };
 

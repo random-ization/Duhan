@@ -38,6 +38,19 @@ vi.mock('../../src/hooks/useLocalizedNavigate', () => ({
   useLocalizedNavigate: () => navigateMock,
 }));
 
+vi.mock('../../src/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { _id: 'user-1' },
+    language: 'zh',
+  }),
+}));
+
+vi.mock('../../src/hooks/useUpgradeFlow', () => ({
+  useUpgradeFlow: () => ({
+    startUpgradeFlow: vi.fn(),
+  }),
+}));
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
@@ -278,5 +291,24 @@ describe('PictureBookReaderPage session restore', () => {
       ) as HTMLImageElement | null;
       expect(splitLayoutImage).not.toBeNull();
     });
+  });
+
+  it('renders the first page content even when image preload never resolves', async () => {
+    class HangingImage extends MockImage {
+      set src(_value: string) {}
+
+      async decode() {}
+    }
+
+    vi.stubGlobal('Image', HangingImage);
+
+    renderPage('/reading/books/storybook');
+
+    await waitFor(
+      () => {
+        expect(screen.getAllByText('Sentence 1').length).toBeGreaterThan(0);
+      },
+      { timeout: 500 }
+    );
   });
 });

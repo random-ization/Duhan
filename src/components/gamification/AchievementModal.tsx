@@ -60,7 +60,7 @@ export function AchievementModal() {
 
   return (
     <Suspense fallback={null}>
-      <LazyAchievementModalDialog badge={badge} />
+      <LazyAchievementModalDialog key={badge._id} badge={badge} />
     </Suspense>
   );
 }

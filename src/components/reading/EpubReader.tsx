@@ -25,6 +25,10 @@ export const EpubReader: React.FC = () => {
   // epub.js refs
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<any>(null);
+  const generatedLocationsRef = useRef<string | null>(null);
+  const saveProgressTimeoutRef = useRef<number | null>(null);
+  const pendingProgressRef = useRef<{ cfi: string; percent: number } | null>(null);
+  const lastSavedProgressRef = useRef<{ cfi: string; percent: number } | null>(null);
   const [rendition, setRendition] = useState<any>(null);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -76,13 +80,38 @@ export const EpubReader: React.FC = () => {
   const handleProgressSave = useCallback(
     (cfi: string, percent: number) => {
       if (!user?.id || !bookId || !cfi) return;
-      saveProgress({
-        bookId,
-        chapterIndex: currentChapter,
-        shareToken,
-        blockId: cfi, // Use blockId to store CFI for epub.js
-        completionPercent: percent * 100,
-      }).catch(error => logError('Failed to save EPUB progress', error));
+      const normalizedPercent = Math.max(0, Math.min(1, percent));
+      const lastSaved = lastSavedProgressRef.current;
+      if (
+        lastSaved &&
+        lastSaved.cfi === cfi &&
+        Math.abs(lastSaved.percent - normalizedPercent) < 0.002
+      ) {
+        return;
+      }
+
+      pendingProgressRef.current = { cfi, percent: normalizedPercent };
+
+      if (saveProgressTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(saveProgressTimeoutRef.current);
+      }
+
+      saveProgressTimeoutRef.current = globalThis.window.setTimeout(() => {
+        const pending = pendingProgressRef.current;
+        if (!pending) return;
+
+        saveProgress({
+          bookId,
+          chapterIndex: currentChapter,
+          shareToken,
+          blockId: pending.cfi, // Use blockId to store CFI for epub.js
+          completionPercent: pending.percent * 100,
+        })
+          .then(() => {
+            lastSavedProgressRef.current = pending;
+          })
+          .catch(error => logError('Failed to save EPUB progress', error));
+      }, 700);
     },
     [user?.id, bookId, currentChapter, shareToken, saveProgress]
   );
@@ -124,7 +153,9 @@ export const EpubReader: React.FC = () => {
             if (!isMounted) return;
             setIsBooting(false);
 
-            setTimeout(() => {
+            const scheduleGenerateLocations = () => {
+              if (!isMounted || generatedLocationsRef.current === epubUrl) return;
+              generatedLocationsRef.current = epubUrl;
               book.locations
                 .generate(1600)
                 .then(() => {
@@ -132,9 +163,20 @@ export const EpubReader: React.FC = () => {
                   logInfo('EPUB locations generated', { length: book.locations.length() });
                 })
                 .catch((_err: any) => {
+                  generatedLocationsRef.current = null;
                   logError('EPUB locations generation error', _err);
                 });
-            }, 0);
+            };
+
+            const idleWindow = globalThis.window as Window & {
+              requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+            };
+
+            if (idleWindow.requestIdleCallback) {
+              idleWindow.requestIdleCallback(scheduleGenerateLocations, { timeout: 1500 });
+            } else {
+              globalThis.window.setTimeout(scheduleGenerateLocations, 300);
+            }
           })
           .catch((_err: any) => {
             logError('Failed to initialize EPUB reader', _err);
@@ -165,6 +207,10 @@ export const EpubReader: React.FC = () => {
       });
     return () => {
       isMounted = false;
+      if (saveProgressTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(saveProgressTimeoutRef.current);
+        saveProgressTimeoutRef.current = null;
+      }
       if (bookRef.current) {
         bookRef.current.destroy();
         bookRef.current = null;
@@ -177,7 +223,10 @@ export const EpubReader: React.FC = () => {
   useEffect(() => {
     if (!rendition) return;
 
-    logInfo('Applying EPUB styles', { theme: readerSettings.theme, fontSize: readerSettings.fontSize });
+    logInfo('Applying EPUB styles', {
+      theme: readerSettings.theme,
+      fontSize: readerSettings.fontSize,
+    });
 
     // Register themes if not already
     rendition.themes.register('light', {
@@ -192,7 +241,7 @@ export const EpubReader: React.FC = () => {
       body: { background: '#f8f1df', color: '#4b3521' },
       a: { color: '#92400e' },
     });
-    
+
     rendition.themes.select(readerSettings.theme);
 
     let fontSizePx = '18px';
@@ -260,7 +309,9 @@ export const EpubReader: React.FC = () => {
       <div className="flex min-h-screen items-center justify-center bg-k-bg">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-k-crimson" />
-          <p className="text-[14px] font-black text-k-sub uppercase tracking-widest">同步书籍数据...</p>
+          <p className="text-[14px] font-black text-k-sub uppercase tracking-widest">
+            同步书籍数据...
+          </p>
         </div>
       </div>
     );
@@ -296,9 +347,14 @@ export const EpubReader: React.FC = () => {
   const { book } = bookDetail;
 
   return (
-    <div className={cn("min-h-screen flex flex-col transition-all duration-500", theme.page)}>
+    <div className={cn('min-h-screen flex flex-col transition-all duration-500', theme.page)}>
       {/* Editorial Header */}
-      <header className={cn("sticky top-0 z-40 shrink-0 border-b backdrop-blur-xl transition-colors duration-500", theme.panel)}>
+      <header
+        className={cn(
+          'sticky top-0 z-40 shrink-0 border-b backdrop-blur-xl transition-colors duration-500',
+          theme.panel
+        )}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-8 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <button
@@ -311,37 +367,41 @@ export const EpubReader: React.FC = () => {
               </div>
               <span className="hidden sm:inline">退出</span>
             </button>
-            
+
             <div className="h-4 w-px bg-k-line/10" />
 
             <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-black text-k-ink tracking-tight mb-0.5">{book.title}</h1>
+              <h1 className="truncate text-[15px] font-black text-k-ink tracking-tight mb-0.5">
+                {book.title}
+              </h1>
               <div className="flex items-center gap-2 opacity-60">
-                 <span className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">EPUB</span>
-                 <span className="text-[12px] font-bold text-k-sub truncate">{book.author}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">
+                  EPUB
+                </span>
+                <span className="text-[12px] font-bold text-k-sub truncate">{book.author}</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-             <div className="hidden md:flex items-center gap-4 px-4 py-1.5 rounded-full bg-k-ink/5 border border-k-line/5">
-                <span className="text-[11px] font-black text-k-sub uppercase tracking-wider">
-                   进度 {Math.round(completionPercent * 100)}%
-                </span>
-                <div className="w-24 h-1 rounded-full bg-k-ink/10 overflow-hidden">
-                   <div 
-                     className="h-full bg-k-crimson transition-all duration-500" 
-                     style={{ width: `${Math.round(completionPercent * 100)}%` }}
-                   />
-                </div>
-             </div>
+            <div className="hidden md:flex items-center gap-4 px-4 py-1.5 rounded-full bg-k-ink/5 border border-k-line/5">
+              <span className="text-[11px] font-black text-k-sub uppercase tracking-wider">
+                进度 {Math.round(completionPercent * 100)}%
+              </span>
+              <div className="w-24 h-1 rounded-full bg-k-ink/10 overflow-hidden">
+                <div
+                  className="h-full bg-k-crimson transition-all duration-500"
+                  style={{ width: `${Math.round(completionPercent * 100)}%` }}
+                />
+              </div>
+            </div>
 
             <button
               type="button"
               onClick={() => setShowSettings(current => !current)}
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                showSettings ? "bg-k-ink text-k-bg" : "hover:bg-k-line/10 text-k-ink"
+                'w-10 h-10 rounded-full flex items-center justify-center transition-all',
+                showSettings ? 'bg-k-ink text-k-bg' : 'hover:bg-k-line/10 text-k-ink'
               )}
             >
               <Settings className="h-5 w-5" />
@@ -352,16 +412,25 @@ export const EpubReader: React.FC = () => {
 
       <main className="relative flex-1 min-h-0 mx-auto w-full max-w-[1200px] px-8 py-8 flex flex-col gap-8">
         {showSettings && (
-          <div className="fixed inset-0 z-[60] bg-k-ink/5 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
-            <div 
-              className={cn("absolute top-24 right-8 w-80 rounded-[32px] border shadow-k-sh-lg p-6 animate-in slide-in-from-top-4 duration-300", theme.panel)}
+          <div
+            className="fixed inset-0 z-[60] bg-k-ink/5 backdrop-blur-sm"
+            onClick={() => setShowSettings(false)}
+          >
+            <div
+              className={cn(
+                'absolute top-24 right-8 w-80 rounded-[32px] border shadow-k-sh-lg p-6 animate-in slide-in-from-top-4 duration-300',
+                theme.panel
+              )}
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-k-crimson">
                   {t('readingDiscovery.reader.settings.title', { defaultValue: 'Reader Settings' })}
                 </h2>
-                <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-k-line/10 rounded-full">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="p-1 hover:bg-k-line/10 rounded-full"
+                >
                   <X size={16} />
                 </button>
               </div>
@@ -378,13 +447,19 @@ export const EpubReader: React.FC = () => {
                         type="button"
                         onClick={() => setReaderSettings(prev => ({ ...prev, fontSize: size }))}
                         className={cn(
-                          "flex-1 rounded-xl border py-2.5 text-[11px] font-black transition-all",
+                          'flex-1 rounded-xl border py-2.5 text-[11px] font-black transition-all',
                           readerSettings.fontSize === size
                             ? 'border-k-ink bg-k-ink text-k-bg'
                             : 'border-k-line/10 hover:border-k-ink/40'
                         )}
                       >
-                        {size === 'small' ? 'A-' : size === 'medium' ? '标准' : size === 'large' ? 'A+' : 'A++'}
+                        {size === 'small'
+                          ? 'A-'
+                          : size === 'medium'
+                            ? '标准'
+                            : size === 'large'
+                              ? 'A+'
+                              : 'A++'}
                       </button>
                     ))}
                   </div>
@@ -401,17 +476,23 @@ export const EpubReader: React.FC = () => {
                         type="button"
                         onClick={() => setReaderSettings(prev => ({ ...prev, theme: themeValue }))}
                         className={cn(
-                          "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1.5",
-                          themeValue === 'light' ? "bg-white text-zinc-900 border-zinc-100" :
-                          themeValue === 'sepia' ? "bg-[#f8f1df] text-[#4b3521] border-[#e8dfc8]" :
-                          "bg-zinc-950 text-zinc-100 border-zinc-800",
-                          readerSettings.theme === themeValue && "border-k-crimson scale-105"
+                          'aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1.5',
+                          themeValue === 'light'
+                            ? 'bg-white text-zinc-900 border-zinc-100'
+                            : themeValue === 'sepia'
+                              ? 'bg-[#f8f1df] text-[#4b3521] border-[#e8dfc8]'
+                              : 'bg-zinc-950 text-zinc-100 border-zinc-800',
+                          readerSettings.theme === themeValue && 'border-k-crimson scale-105'
                         )}
                       >
-                         <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
-                            {readerSettings.theme === themeValue && <div className="w-2 h-2 rounded-full bg-current" />}
-                         </div>
-                         <span className="text-[10px] font-black uppercase tracking-widest">{themeValue}</span>
+                        <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
+                          {readerSettings.theme === themeValue && (
+                            <div className="w-2 h-2 rounded-full bg-current" />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                          {themeValue}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -425,39 +506,47 @@ export const EpubReader: React.FC = () => {
           <div className="absolute inset-0 flex items-center justify-center bg-k-bg/40 backdrop-blur-md z-10 rounded-[40px]">
             <div className="text-center">
               <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-k-crimson" />
-              <p className="text-[13px] font-black text-k-sub uppercase tracking-[0.2em]">正在排版书籍...</p>
+              <p className="text-[13px] font-black text-k-sub uppercase tracking-[0.2em]">
+                正在排版书籍...
+              </p>
             </div>
           </div>
         )}
 
         <div className="flex-1 w-full h-full relative group">
-           {/* Main Viewer */}
-           <div className="absolute inset-0 rounded-[40px] overflow-hidden shadow-k-sh-lg border border-k-line/5 bg-k-card">
-              <div ref={viewerRef} className="absolute inset-0 transition-opacity duration-700" style={{ opacity: isBooting ? 0 : 1 }} />
-              
-              {/* Navigation overlays */}
-              <div
-                onClick={handlePrevPage}
-                className="absolute left-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
-              >
-                 <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all -translate-x-4 group-hover/nav:translate-x-0">
-                    <ChevronLeft size={24} />
-                 </div>
-              </div>
-              <div
-                onClick={handleNextPage}
-                className="absolute right-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
-              >
-                 <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all translate-x-4 group-hover/nav:translate-x-0">
-                    <ChevronRight size={24} />
-                 </div>
-              </div>
-           </div>
+          {/* Main Viewer */}
+          <div className="absolute inset-0 rounded-[40px] overflow-hidden shadow-k-sh-lg border border-k-line/5 bg-k-card">
+            <div
+              ref={viewerRef}
+              className="absolute inset-0 transition-opacity duration-700"
+              style={{ opacity: isBooting ? 0 : 1 }}
+            />
 
-           {/* Mobile indicator */}
-           <div className="absolute -bottom-10 inset-x-0 flex justify-center lg:hidden">
-              <span className="text-[10px] font-bold text-k-sub/40 uppercase tracking-widest">点击屏幕左右两侧翻页</span>
-           </div>
+            {/* Navigation overlays */}
+            <div
+              onClick={handlePrevPage}
+              className="absolute left-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
+            >
+              <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all -translate-x-4 group-hover/nav:translate-x-0">
+                <ChevronLeft size={24} />
+              </div>
+            </div>
+            <div
+              onClick={handleNextPage}
+              className="absolute right-0 top-0 bottom-0 w-[15%] z-20 cursor-pointer flex items-center justify-center group/nav"
+            >
+              <div className="w-12 h-12 rounded-full bg-k-ink/5 flex items-center justify-center opacity-0 group-hover/nav:opacity-100 transition-all translate-x-4 group-hover/nav:translate-x-0">
+                <ChevronRight size={24} />
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile indicator */}
+          <div className="absolute -bottom-10 inset-x-0 flex justify-center lg:hidden">
+            <span className="text-[10px] font-bold text-k-sub/40 uppercase tracking-widest">
+              点击屏幕左右两侧翻页
+            </span>
+          </div>
         </div>
       </main>
     </div>

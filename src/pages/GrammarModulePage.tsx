@@ -1,4 +1,12 @@
-import React, { Suspense, lazy, useState, useMemo, useEffect, useCallback } from 'react';
+import React, {
+  Suspense,
+  lazy,
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useDeferredValue,
+} from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
@@ -10,21 +18,17 @@ import { useOptionalLearningActions } from '../contexts/LearningContext';
 import { GrammarPointData } from '../types';
 import type { Id } from '../../convex/_generated/dataModel';
 import { toErrorMessage } from '../utils/errors';
-import MobileGrammarView from '../components/mobile/MobileGrammarView';
-import DesktopGrammarModulePage from './desktop/DesktopGrammarModulePage';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useLayoutActions } from '../contexts/LayoutContext';
 import { sanitizeGrammarDisplayText } from '../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../utils/languageUtils';
 import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
+import { getNextGrammarSelection, normalizeGrammarProgressStatus } from '../utils/grammarProgress';
 
 const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
-
-function normalizeStatus(value: unknown): GrammarPointData['status'] {
-  if (value === 'MASTERED' || value === 'LEARNING' || value === 'NEW') return value;
-  return 'NEW';
-}
+const MobileGrammarView = lazy(() => import('../components/mobile/MobileGrammarView'));
+const DesktopGrammarModulePage = lazy(() => import('./desktop/DesktopGrammarModulePage'));
 
 const GrammarModulePage: React.FC = () => {
   const { instituteId } = useParams<{ instituteId: string }>();
@@ -41,15 +45,22 @@ const GrammarModulePage: React.FC = () => {
   const [selectedUnit, setSelectedUnit] = useState<number>(initialSelectedUnit);
   const [hasManualUnitSelection, setHasManualUnitSelection] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(() => {
     const raw = safeGetLocalStorageItem(AI_PANEL_STORAGE_KEY);
     return raw == null ? true : raw !== '0';
   });
+  const [dismissedRecommendedSelectionKey, setDismissedRecommendedSelectionKey] = useState<
+    string | null
+  >(null);
 
   const { user, language } = useAuth();
 
-  const instituteQuery = useQuery(INSTITUTES.get, instituteId ? { id: instituteId as any } : 'skip');
+  const instituteQuery = useQuery(
+    INSTITUTES.get,
+    instituteId ? { id: instituteId as any } : 'skip'
+  );
   const allCourseGrammar = useQuery(
     GRAMMARS.getByCourse,
     instituteId ? { courseId: instituteId, language } : 'skip'
@@ -83,12 +94,28 @@ const GrammarModulePage: React.FC = () => {
         type: 'GRAMMAR',
         explanation: item.summary,
         examples: [],
-        status: normalizeStatus(item.status),
+        status: normalizeGrammarProgressStatus(item.status),
       })),
     [allCourseGrammar]
   );
 
   const focusGrammarId = searchParams.get('focusGrammarId')?.trim() || null;
+  const recommendedSelectionKey = `${instituteId || ''}:${focusGrammarId || 'recommended'}`;
+  const hasDismissedRecommendedSelection =
+    dismissedRecommendedSelectionKey === recommendedSelectionKey;
+  const savedGrammarId =
+    user?.lastModule === 'GRAMMAR' && user.lastInstitute === instituteId
+      ? user.lastGrammarId
+      : null;
+  const recommendedGrammar = useMemo(
+    () =>
+      getNextGrammarSelection({
+        grammarPoints: normalizedAllCourseGrammar,
+        lastGrammarId: savedGrammarId,
+      }),
+    [normalizedAllCourseGrammar, savedGrammarId]
+  );
+
   const focusedUnitFromQuery = useMemo(() => {
     if (!focusGrammarId || !allCourseGrammar || allCourseGrammar.length === 0) {
       return null;
@@ -103,7 +130,11 @@ const GrammarModulePage: React.FC = () => {
   const activeSelectedUnit = Math.max(
     1,
     Math.min(
-      !hasManualUnitSelection && focusedUnitFromQuery != null ? focusedUnitFromQuery : selectedUnit,
+      !hasManualUnitSelection && focusedUnitFromQuery != null
+        ? focusedUnitFromQuery
+        : !hasManualUnitSelection && !focusGrammarId && !hasDismissedRecommendedSelection
+          ? (recommendedGrammar?.unitId ?? selectedUnit)
+          : selectedUnit,
       totalUnits
     )
   );
@@ -121,19 +152,16 @@ const GrammarModulePage: React.FC = () => {
   const updateStatusMutation = useMutation(GRAMMARS.updateStatus);
   const updateLearningProgressMutation = useMutation(
     mRef<
-      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      {
+        lastInstitute?: string;
+        lastLevel?: number;
+        lastUnit?: number;
+        lastModule?: string;
+        lastGrammarId?: string;
+      },
       unknown
     >('user:updateLearningProgress')
   );
-
-  useEffect(() => {
-    if (!instituteId) return;
-    void updateLearningProgressMutation({
-      lastInstitute: instituteId,
-      lastUnit: activeSelectedUnit,
-      lastModule: 'GRAMMAR',
-    });
-  }, [updateLearningProgressMutation, instituteId, activeSelectedUnit]);
 
   useEffect(() => {
     if (!instituteId) return;
@@ -152,7 +180,7 @@ const GrammarModulePage: React.FC = () => {
 
   const grammarList = useMemo<GrammarPointData[]>(() => {
     if (!grammarListQuery) return [];
-    return grammarListQuery.map(g => ({ ...g, status: normalizeStatus(g.status) }));
+    return grammarListQuery.map(g => ({ ...g, status: normalizeGrammarProgressStatus(g.status) }));
   }, [grammarListQuery]);
 
   const [localUpdates, setLocalUpdates] = useState<
@@ -169,8 +197,34 @@ const GrammarModulePage: React.FC = () => {
     });
   }, [grammarList, localUpdates]);
 
+  useEffect(() => {
+    if (!instituteId) return;
+    const progressGrammarId =
+      selectedGrammarId ??
+      focusGrammarId ??
+      (!hasDismissedRecommendedSelection ? recommendedGrammar?.id : null);
+    void updateLearningProgressMutation({
+      lastInstitute: instituteId,
+      lastUnit: activeSelectedUnit,
+      lastModule: 'GRAMMAR',
+      ...(progressGrammarId ? { lastGrammarId: progressGrammarId } : {}),
+    });
+  }, [
+    activeSelectedUnit,
+    focusGrammarId,
+    hasDismissedRecommendedSelection,
+    instituteId,
+    recommendedGrammar?.id,
+    selectedGrammarId,
+    updateLearningProgressMutation,
+  ]);
+
   const resolvedSelectedGrammarId =
-    selectedGrammarId || (!hasManualUnitSelection ? focusGrammarId : null);
+    selectedGrammarId ||
+    (!hasManualUnitSelection ? focusGrammarId : null) ||
+    (!hasManualUnitSelection && !focusGrammarId && !hasDismissedRecommendedSelection
+      ? recommendedGrammar?.id || null
+      : null);
 
   const selectedGrammar = useMemo<GrammarPointData | null>(() => {
     if (!resolvedSelectedGrammarId) return null;
@@ -228,8 +282,8 @@ const GrammarModulePage: React.FC = () => {
   );
 
   const displayedPoints = useMemo(() => {
-    if (!searchQuery.trim()) return grammarListWithUpdates;
-    const q = searchQuery.toLowerCase();
+    const searchTerm = deferredSearchQuery.trim().toLowerCase();
+    if (!searchTerm) return grammarListWithUpdates;
     return grammarListWithUpdates.filter(point => {
       const title = sanitizeGrammarDisplayText(
         getLocalizedContent(point, 'title', language) || point.title
@@ -237,9 +291,9 @@ const GrammarModulePage: React.FC = () => {
       const summary = sanitizeGrammarDisplayText(
         getLocalizedContent(point, 'summary', language) || point.summary || ''
       ).toLowerCase();
-      return title.includes(q) || summary.includes(q);
+      return title.includes(searchTerm) || summary.includes(searchTerm);
     });
-  }, [grammarListWithUpdates, language, searchQuery]);
+  }, [deferredSearchQuery, grammarListWithUpdates, language]);
 
   const currentIndex = useMemo(() => {
     if (!desktopSelectedGrammarId || !grammarListWithUpdates) return -1;
@@ -274,28 +328,46 @@ const GrammarModulePage: React.FC = () => {
 
   if (isMobile) {
     return (
-      <MobileGrammarView
-        selectedUnit={activeSelectedUnit}
-        totalUnits={totalUnits}
-        onSelectUnit={u => {
-          setHasManualUnitSelection(true);
-          setSelectedUnit(clampUnit(u));
-          setSelectedGrammarId(null);
-        }}
-        grammarPoints={isGrammarLoading ? [] : displayedPoints}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedGrammar={selectedGrammar}
-        onSelectGrammar={grammar => setSelectedGrammarId(grammar?.id ?? null)}
-        onToggleStatus={handleToggleStatus}
-        isLoading={isGrammarLoading}
-        onProficiencyUpdate={handleProficiencyUpdate}
-        instituteId={instituteId || ''}
-      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+            <div className="text-lg font-semibold text-slate-500 animate-pulse dark:text-slate-400">
+              {t('loading', { defaultValue: 'Loading...' })}
+            </div>
+          </div>
+        }
+      >
+        <MobileGrammarView
+          selectedUnit={activeSelectedUnit}
+          totalUnits={totalUnits}
+          onSelectUnit={u => {
+            setHasManualUnitSelection(true);
+            setSelectedUnit(clampUnit(u));
+            setSelectedGrammarId(null);
+          }}
+          grammarPoints={isGrammarLoading ? [] : displayedPoints}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedGrammar={selectedGrammar}
+          onSelectGrammar={grammar => {
+            if (grammar) {
+              setDismissedRecommendedSelectionKey(null);
+              setSelectedGrammarId(grammar.id);
+              return;
+            }
+            setDismissedRecommendedSelectionKey(recommendedSelectionKey);
+            setSelectedGrammarId(null);
+          }}
+          onToggleStatus={handleToggleStatus}
+          isLoading={isGrammarLoading}
+          onProficiencyUpdate={handleProficiencyUpdate}
+          instituteId={instituteId || ''}
+        />
+      </Suspense>
     );
   }
 
-  const selectedStatus = normalizeStatus(desktopSelectedGrammar?.status);
+  const selectedStatus = normalizeGrammarProgressStatus(desktopSelectedGrammar?.status);
   const selectedProficiency =
     desktopSelectedGrammar?.proficiency ?? (selectedStatus === 'MASTERED' ? 100 : 0);
   const selectedTitle =
@@ -319,36 +391,47 @@ const GrammarModulePage: React.FC = () => {
         : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
 
   return (
-    <DesktopGrammarModulePage
-      allCourseGrammar={normalizedAllCourseGrammar}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
-      desktopSelectedGrammarId={desktopSelectedGrammarId}
-      setHasManualUnitSelection={setHasManualUnitSelection}
-      setSelectedUnit={setSelectedUnit}
-      setSelectedGrammarId={setSelectedGrammarId}
-      activeSelectedUnit={activeSelectedUnit}
-      clampUnit={clampUnit}
-      instituteName={instituteName}
-      instituteId={instituteId || ''}
-      language={language}
-      t={t}
-      selectedStatus={selectedStatus ?? 'NEW'}
-      statusLabel={statusLabel}
-      statusClass={statusClass}
-      selectedProficiency={selectedProficiency}
-      selectedTitle={selectedTitle}
-      desktopSelectedGrammar={desktopSelectedGrammar}
-      handleToggleStatus={handleToggleStatus}
-      isGrammarLoading={isGrammarLoading}
-      isAiPanelOpen={isAiPanelOpen}
-      setIsAiPanelOpen={setIsAiPanelOpen}
-      grammarListWithUpdates={grammarListWithUpdates}
-      currentIndex={currentIndex}
-      handleNext={handleNext}
-      handlePrev={handlePrev}
-      navigate={navigate}
-    />
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+          <div className="text-lg font-semibold text-slate-500 animate-pulse dark:text-slate-400">
+            {t('loading', { defaultValue: 'Loading...' })}
+          </div>
+        </div>
+      }
+    >
+      <DesktopGrammarModulePage
+        allCourseGrammar={normalizedAllCourseGrammar}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        desktopSelectedGrammarId={desktopSelectedGrammarId}
+        setHasManualUnitSelection={setHasManualUnitSelection}
+        setSelectedUnit={setSelectedUnit}
+        setSelectedGrammarId={setSelectedGrammarId}
+        clearRecommendedDismissal={() => setDismissedRecommendedSelectionKey(null)}
+        activeSelectedUnit={activeSelectedUnit}
+        clampUnit={clampUnit}
+        instituteName={instituteName}
+        instituteId={instituteId || ''}
+        language={language}
+        t={t}
+        selectedStatus={selectedStatus ?? 'NEW'}
+        statusLabel={statusLabel}
+        statusClass={statusClass}
+        selectedProficiency={selectedProficiency}
+        selectedTitle={selectedTitle}
+        desktopSelectedGrammar={desktopSelectedGrammar}
+        handleToggleStatus={handleToggleStatus}
+        isGrammarLoading={isGrammarLoading}
+        isAiPanelOpen={isAiPanelOpen}
+        setIsAiPanelOpen={setIsAiPanelOpen}
+        grammarListWithUpdates={grammarListWithUpdates}
+        currentIndex={currentIndex}
+        handleNext={handleNext}
+        handlePrev={handlePrev}
+        navigate={navigate}
+      />
+    </Suspense>
   );
 };
 

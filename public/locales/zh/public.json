@@ -1,7 +1,5 @@
 {
-  "status": {
-    "inProgress": "进行中"
-  },
+  "status": "状态",
   "home": "首页",
   "textbookLearning": "教材学习",
   "topik": "TOPIK 备考",
@@ -309,19 +307,24 @@
     "switchTab": "切换标签",
     "loading": "正在加载...",
     "error": "出了点问题。",
-    "allRightsReserved": "保留所有权利。"
+    "allRightsReserved": "保留所有权利。",
+    "levelSuffix": "级",
+    "level": "",
+    "daysShort": {
+      "mon": "一",
+      "tue": "二",
+      "wed": "三",
+      "thu": "四",
+      "fri": "五",
+      "sat": "六",
+      "sun": "日"
+    },
+    "units": "单元",
+    "words": "词",
+    "cards": "张",
+    "book": "册"
   },
-  "search": {
-    "placeholder": "搜索语法、书籍、笔记…",
-    "startTyping": "开始输入关键字",
-    "empty": "没有找到结果。",
-    "bucket": {
-      "grammar": "语法",
-      "book": "书籍",
-      "podcast": "播客",
-      "note": "笔记"
-    }
-  },
+  "search": "搜索",
   "notifications": {
     "open": "通知",
     "title": "通知",
@@ -653,6 +656,300 @@
       "about": "关于我们",
       "learnGuides": "学习指南",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
+    },
+    "v2": {
+      "nav": {
+        "features": "功能",
+        "loop": "每日路径",
+        "modules": "学习模块",
+        "community": "社区",
+        "pricing": "会员",
+        "faq": "常见问题",
+        "login": "登录",
+        "register": "注册"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "早间复习",
+            "s": "18 张到期卡 · 已完成"
+          },
+          "s2": {
+            "t": "新课 · L24 골목길",
+            "s": "现在进行中 · 8 分钟"
+          },
+          "s3": {
+            "t": "播客片段",
+            "s": "한국 골목 산책 · 6 分钟"
+          },
+          "s4": {
+            "t": "睡前阅读",
+            "s": "短文 · 골목길의 추억"
+          },
+          "date": "五月 十一日",
+          "greet": "你好，河恩",
+          "sub": "今日学习已就绪 · 4 步约 22 分钟"
+        },
+        "eyebrow": "v3.0 已发布 · 全新学习路径与社区",
+        "titleKo": "讀韓",
+        "titlePre": "让韩语 ",
+        "titleUnderlined": "变成日常",
+        "ctaPrimary": "免费开始学习 →",
+        "ctaSecondary": "观看 90s 演示",
+        "meta1": "活跃学习者",
+        "meta2": "每日复习卡",
+        "meta3": "App Store 评分",
+        "chip1": {
+          "t": "连续学习",
+          "v": "47 天"
+        },
+        "chip2": {
+          "t": "今日新词",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "5 级 · 87%"
+        }
+      },
+      "logos": {
+        "v1": "真实语境沉浸阅读",
+        "v2": "影视播客原声精听",
+        "v3": "FSRS 算法智能复习",
+        "v4": "母语社区互译共建",
+        "v5": "全平台学习进度同步"
+      },
+      "features": {
+        "t1": {
+          "title": "每日学习路径",
+          "pill": "/ 早 7:00 自动生成 · 平均 22 分钟"
+        },
+        "t2": {
+          "title": "词汇本 + 四种模式",
+          "desc": "闪卡、学习、考试、连连看 — 一个词四种练法。",
+          "pill": "/ TOPIK I + II · 9,300 词"
+        },
+        "t3": {
+          "title": "语法句型库",
+          "desc": "每条语法配场景例句 + 真题。错误自动入复习队列。",
+          "pill": "/ 480 条核心语法"
+        },
+        "t4": {
+          "title": "TOPIK 备考",
+          "desc": "真题 / 模考 / 写作 AI 评分 + 听力倍速精听",
+          "pill": "/ TOPIK II 平均提升 1.4 级"
+        },
+        "t6": {
+          "title": "母语社区 · 互译",
+          "desc": "遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。",
+          "pill": "/ 1.2k+ 活跃互助组"
+        },
+        "t5": {
+          "title": "影视 · 播客 · 阅读 三栖沉浸",
+          "pill": "/ 4,800+ 学习素材 · 每周更新"
+        },
+        "title": "一站式的韩语学习工具箱"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · 早间",
+          "title": "复习到期卡",
+          "desc": "FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。",
+          "preview": "18 卡 · 7 分钟"
+        },
+        "s2": {
+          "label": "STEP 2 · 课程",
+          "title": "新一课内容",
+          "desc": "课本 + 听力 + 即学即考 · 任何片段都能截图入卡。",
+          "preview": "L24 · 8 分钟"
+        },
+        "s3": {
+          "label": "STEP 3 · 通勤",
+          "title": "听力沉浸",
+          "desc": "真实播客或韩剧片段 · 双语字幕 · 生词秒收。",
+          "preview": "播客 6 分钟"
+        },
+        "s4": {
+          "label": "STEP 4 · 睡前",
+          "title": "阅读一段",
+          "desc": "段落难度自动匹配 · 看完一篇 = 巩固今天的所学。",
+          "preview": "短文 4 分钟"
+        },
+        "title": "四步，一天的韩语就稳了",
+        "sub": "不需要意志力 · 早晨打开 App 就是清单 · 任何时候关掉再回来都能续上"
+      },
+      "modules": {
+        "title": "专为长期学习而生的模块",
+        "sub": "每一个都打磨过百次 · 不堆功能 · 用起来都「这就是我要的」",
+        "m1": {
+          "title": "词汇本 · 四模式练习",
+          "desc": "同一个单词，四种练法 — 闪卡看脸熟、学习模式吃透、考试限时检验、连连看放松收尾。每个词都有 FSRS 记忆强度条。",
+          "tag1": "FSRS 算法",
+          "tag2": "4 种练习模式",
+          "tag3": "例句联想",
+          "tag4": "词册筛选",
+          "link": "了解词汇模块 →"
+        },
+        "m2": {
+          "title": "TOPIK · 真题 + AI 考评",
+          "desc": "深度收录历年阅读与听力真题，1:1 还原真实考场。AI 写作实时批改给出 4 维反馈，更有全真模拟听力变速精听，助你攻克 6 级。",
+          "tag1": "10 年历年真题",
+          "tag2": "1:1 模考环境",
+          "tag3": "AI 写作实时批改",
+          "tag4": "全维成绩预测",
+          "link": "了解 TOPIK 模块 →"
+        },
+        "m3": {
+          "title": "媒体库 · 精听变速",
+          "desc": "告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。",
+          "tag1": "4,800+ 片段",
+          "tag2": "双语字幕",
+          "tag3": "点词入卡",
+          "tag4": "难度匹配",
+          "link": "了解沉浸模块 →"
+        },
+        "m4": {
+          "title": "分级阅读 · AI 提词",
+          "desc": "从新闻到精选绘本，所有内容按 L1–L6 难度精准分级。AI 自动提取核心词汇与划词翻译，让长难句解析与背景知识不再是阅读障碍。",
+          "tag1": "分级 1–6",
+          "tag2": "绘本库",
+          "tag3": "点词查询",
+          "tag4": "笔记入卡",
+          "link": "了解阅读模块 →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "学习伙伴",
+          "s": "共同进阶"
+        },
+        "s2": {
+          "l": "公开词汇本",
+          "s": "资源共享"
+        },
+        "s3": {
+          "l": "学习心得",
+          "s": "经验沉淀"
+        },
+        "s4": {
+          "l": "坚持天数",
+          "s": "续写里程"
+        },
+        "title": "不一个人学，更走得远",
+        "sub": "共享词汇卡片、交流备考心得、见证彼此成长 · K-Soft 社区让韩语学习不再孤单"
+      },
+      "pricing": {
+        "perMonth": "/ 月",
+        "perQuarter": "/ 季付",
+        "perYear": "/ 年付",
+        "lifetime": {
+          "title": "终身版 · Lifetime",
+          "desc": "终身无忧 · 一次投资，永久享有所有功能",
+          "cta": "永久买断"
+        },
+        "tabMonthly": "月付",
+        "tabQuarterly": "季付",
+        "tabAnnual": "年付",
+        "pro": {
+          "f1": "<b>无限</b>新词 + 科学复习 (FSRS)",
+          "f2": "全库课程 + TOPIK <b>1-6 级</b>真题",
+          "f3": "影视 / 播客<b>全库 + 智能脚本</b>",
+          "f4": "<b>AI 写作诊断</b> + 变速精听",
+          "f5": "社区<b>公开资源</b>无限获取",
+          "f6": "全端学习进度<b>实时同步</b>",
+          "title": "正式版 · Plus",
+          "desc": "进阶首选 · 全方位解锁 AI 学习黑科技",
+          "cta": "立即开启全能模式"
+        },
+        "title": "选一个，开始学",
+        "sub": "加入全球学习者社区，解锁完整的 AI 韩语进阶体验",
+        "free": {
+          "title": "免费版 · Free",
+          "desc": "入门之选 · 开启你的韩语进阶之旅",
+          "unit": "/ 永久",
+          "f1": "<b>每日 5 个</b>新学单词",
+          "f2": "<b>每日 30 张</b>复习上限",
+          "f3": "<b>基础课程</b> (L1–L2) 体验",
+          "f4": "影视 / 播客<b>预览模式</b>",
+          "f5": "TOPIK 历年真题",
+          "f6": "AI 写作诊断",
+          "cta": "免费开始"
+        },
+        "popular": "Popular",
+        "fine": "系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联"
+      },
+      "testimonials": {
+        "title": "用过 Duhan 的人都在说",
+        "t1": {
+          "tag1": "用了 11 个月",
+          "tag2": "TOPIK 5 级达成",
+          "name": "河恩 · @hae_eun",
+          "meta": "设计师 · 杭州",
+          "quote": "之前用 Anki 自己堆卡，每次复习都焦虑。Duhan 把它包装成「今天就这四步」，神奇地我居然坚持了一年。备考时连续 47 天没断卡，TOPIK II 直接 5 级。"
+        },
+        "t2": {
+          "tag1": "追剧学韩语",
+          "tag2": "3 个月",
+          "name": "小柯",
+          "meta": "大三学生",
+          "quote": "看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。"
+        },
+        "t3": {
+          "tag1": "母语者助教",
+          "name": "민지 · 助教",
+          "meta": "首尔 · 母语者",
+          "quote": "UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。"
+        }
+      },
+      "faq": {
+        "title": "常见问题",
+        "q1": "零基础也能用吗？",
+        "q2": "FSRS 算法是什么？",
+        "q3": "Plus 和 Elite 的核心差别？",
+        "q4": "能离线学吗？",
+        "q5": "有学生折扣吗？",
+        "q6": "不满意可以退款吗？"
+      },
+      "finalCta": {
+        "titlePre": "今天就让韩语",
+        "titleMid": "成为你日常的",
+        "titlePost": "一部分",
+        "sub": "注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱",
+        "ctaPrimary": "免费开始 →",
+        "ctaSecondary": "下载 iOS / Android"
+      },
+      "footer": {
+        "col1": {
+          "head": "产品",
+          "l1": "功能总览",
+          "l3": "TOPIK 备考",
+          "l4": "影视听力",
+          "l5": "分级阅读",
+          "l6": "社区"
+        },
+        "col2": {
+          "head": "学习",
+          "l1": "学习指南",
+          "l2": "语法百科",
+          "l3": "备考博客",
+          "l4": "每日韩语"
+        },
+        "col3": {
+          "head": "公司",
+          "l1": "关于 Duhan",
+          "l5": "联系我们"
+        },
+        "col4": {
+          "head": "支持",
+          "l1": "帮助中心",
+          "l2": "退款政策",
+          "l3": "隐私协议",
+          "l4": "用户协议"
+        },
+        "tag1": "讀韓 · 让韩语变成日常。",
+        "tag2": "从单词到 TOPIK 6 级，一站搞定。",
+        "copy": "讀韓 · 沪 ICP 备 2026000000 号"
+      }
     }
   },
   "pricing": {
@@ -976,7 +1273,31 @@
     "verifyEmailInvalidToken": "该验证链接无效或已过期。",
     "verifyEmailDescription": "点击下方按钮发送验证邮件。",
     "loginRequired": "请先登录。",
-    "networkError": "网络错误。请检查网络后重试。"
+    "networkError": "网络错误。请检查网络后重试。",
+    "desktop": {
+      "subtitle": "讀韓 · 重新认识韩语",
+      "heroLine1": "한 글자가",
+      "heroLine2": "하루를 바꾼다",
+      "heroDesc1": "每个字，都让你离这门语言更近一步。",
+      "heroDesc2": "沉浸学习，与 ",
+      "heroDesc3": "三万",
+      "heroDesc4": " 学韩者同行。",
+      "welcomeBack": "欢迎回来",
+      "startLearning": "开始学习",
+      "welcomeBackKo": "다시 만나서 반갑습니다",
+      "welcomeKo": "환영합니다",
+      "continueJourney": "继续你的韩语之旅",
+      "joinLearners": "加入三万名韩语学习者",
+      "nickname": "昵称",
+      "nicknamePlaceholder": "输入你的昵称",
+      "forgotPassword": "忘记密码?",
+      "processing": "处理中...",
+      "loginAction": "登录 →",
+      "joinAction": "立即加入 →",
+      "orUse": "或者使用",
+      "agreement": "继续即表示同意",
+      "and": "与"
+    }
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "创建播客频道失败。",
@@ -1010,7 +1331,6 @@
     }
   },
   "loading": "正在加载...",
-  "search": "搜索",
   "error": "错误",
   "pwa": {
     "install": {
@@ -1154,7 +1474,6 @@
     "examples": "例句"
   },
   "searchGrammar": "搜索语法点...",
-  "status": "状态",
   "proficiency": "熟练度",
   "explanation": "语法详解",
   "summary": "摘要",
@@ -1299,9 +1618,10 @@
   "footerDescription": "您全面的韩语学习平台",
   "allRightsReserved": "版权所有。",
   "relativeTime": {
-    "justNow": "刚刚更新",
-    "hoursAgo": "{{count}} 小时前",
-    "daysAgo": "{{count}} 天前"
+    "justNow": "刚刚",
+    "minutesShort": "分钟前",
+    "hoursShort": "小时前",
+    "daysShort": "天前"
   },
   "preview": "预览",
   "markdownTip": "格式提示：使用 # 表示标题（# H1，## H2，### H3），- 或 * 表示列表，1. 表示编号列表，空行表示段落",
@@ -2544,6 +2864,8 @@
   "achievements": {
     "aiTutorTagline": "专属韩语 AI 私教",
     "saveReportImage": "保存战报图片",
+    "shareReportImage": "分享战报图片",
+    "reportImageActionFailed": "暂时无法分享或保存这张战报图片。",
     "galleryEmpty": "完成一次打字或背单词，解锁你的第一枚徽章吧！",
     "achievementUnlocked": "成就解锁",
     "defaultLearner": "DuHan 学习者",
@@ -2569,28 +2891,94 @@
       "social": "社交"
     },
     "badges": {
-      "streak7": { "title": "7 日连续", "description": "连续学习 7 天。" },
-      "streak14": { "title": "14 日连续", "description": "连续学习 14 天。" },
-      "streak30": { "title": "30 日连续", "description": "连续学习 30 天。" },
-      "streak60": { "title": "60 日连续", "description": "连续学习 60 天。" },
-      "streak100": { "title": "100 日连续", "description": "连续学习 100 天。" },
-      "streak365": { "title": "365 日连续", "description": "连续学习一整年。" },
-      "vocab100": { "title": "词汇 100", "description": "掌握 100 个单词。" },
-      "vocab500": { "title": "词汇 500", "description": "掌握 500 个单词。" },
-      "vocab1000": { "title": "词汇 1000", "description": "掌握 1000 个单词。" },
-      "grammar20": { "title": "语法 20", "description": "掌握 20 个语法点。" },
-      "grammar100": { "title": "语法 100", "description": "掌握 100 个语法点。" },
-      "listening20h": { "title": "听力 20 小时", "description": "累计听力学习 20 小时。" },
-      "listening100h": { "title": "听力 100 小时", "description": "累计听力学习 100 小时。" },
-      "typing40": { "title": "WPM 40", "description": "打字记录达到 WPM 40。" },
-      "typing80": { "title": "WPM 80", "description": "打字记录达到 WPM 80。" },
-      "typing100": { "title": "WPM 100", "description": "打字记录达到 WPM 100。" },
-      "topikPass": { "title": "TOPIK 合格", "description": "完成一次合格的 TOPIK 模考。" },
-      "topikHighScore": { "title": "TOPIK 高分", "description": "完成一次高分 TOPIK 模考。" },
-      "friends1": { "title": "第一位好友", "description": "添加第一位双向好友。" },
-      "friends10": { "title": "好友 10", "description": "拥有 10 位双向好友。" },
-      "groupJoin": { "title": "加入小组", "description": "加入一个学习小组。" },
-      "groupCreate": { "title": "创建小组", "description": "创建一个学习小组。" }
+      "streak7": {
+        "title": "7 日连续",
+        "description": "连续学习 7 天。"
+      },
+      "streak14": {
+        "title": "14 日连续",
+        "description": "连续学习 14 天。"
+      },
+      "streak30": {
+        "title": "30 日连续",
+        "description": "连续学习 30 天。"
+      },
+      "streak60": {
+        "title": "60 日连续",
+        "description": "连续学习 60 天。"
+      },
+      "streak100": {
+        "title": "100 日连续",
+        "description": "连续学习 100 天。"
+      },
+      "streak365": {
+        "title": "365 日连续",
+        "description": "连续学习一整年。"
+      },
+      "vocab100": {
+        "title": "词汇 100",
+        "description": "掌握 100 个单词。"
+      },
+      "vocab500": {
+        "title": "词汇 500",
+        "description": "掌握 500 个单词。"
+      },
+      "vocab1000": {
+        "title": "词汇 1000",
+        "description": "掌握 1000 个单词。"
+      },
+      "grammar20": {
+        "title": "语法 20",
+        "description": "掌握 20 个语法点。"
+      },
+      "grammar100": {
+        "title": "语法 100",
+        "description": "掌握 100 个语法点。"
+      },
+      "listening20h": {
+        "title": "听力 20 小时",
+        "description": "累计听力学习 20 小时。"
+      },
+      "listening100h": {
+        "title": "听力 100 小时",
+        "description": "累计听力学习 100 小时。"
+      },
+      "typing40": {
+        "title": "WPM 40",
+        "description": "打字记录达到 WPM 40。"
+      },
+      "typing80": {
+        "title": "WPM 80",
+        "description": "打字记录达到 WPM 80。"
+      },
+      "typing100": {
+        "title": "WPM 100",
+        "description": "打字记录达到 WPM 100。"
+      },
+      "topikPass": {
+        "title": "TOPIK 合格",
+        "description": "完成一次合格的 TOPIK 模考。"
+      },
+      "topikHighScore": {
+        "title": "TOPIK 高分",
+        "description": "完成一次高分 TOPIK 模考。"
+      },
+      "friends1": {
+        "title": "第一位好友",
+        "description": "添加第一位双向好友。"
+      },
+      "friends10": {
+        "title": "好友 10",
+        "description": "拥有 10 位双向好友。"
+      },
+      "groupJoin": {
+        "title": "加入小组",
+        "description": "加入一个学习小组。"
+      },
+      "groupCreate": {
+        "title": "创建小组",
+        "description": "创建一个学习小组。"
+      }
     }
   },
   "weeklyActivity": {
@@ -3423,81 +3811,6 @@
       "mastered": "已掌握",
       "empty_due": "没有待复习的单词！做得好。",
       "empty_mastered": "已掌握的单词列表将显示在这里。"
-    }
-  },
-  "topikWriting": {
-    "title": "TOPIK II 写作",
-    "session": {
-      "fillBlank": "补全短文",
-      "graphEssay": "图表作文",
-      "opinionEssay": "论述作文",
-      "exampleBox": "보기",
-      "questionX": "第 {{num}} 题",
-      "points": "分",
-      "answerPlaceholder": "答安을 입력하세요…",
-      "characterCount": "{{count}} 字",
-      "remainingChars": "还剩 {{count}} 字",
-      "submitConfirmTitle": "确认交卷？",
-      "submitConfirmDesc": "已完成 {{ans}}/{{total}} 题，交卷后不可修改。",
-      "exitConfirmTitle": "退出考试？",
-      "exitConfirmDesc": "当前作答会保存为草稿，你可以稍后回来继续作答。",
-      "continueForm": "继续作答",
-      "confirmSubmit": "确认交卷",
-      "exiting": "退出中…",
-      "submitting": "提交中…",
-      "saveIdle": "自动保存",
-      "saving": "保存中…",
-      "saved": "✓ 已保存",
-      "saveError": "保存失败",
-      "submitButton": "交卷",
-      "wongojiAnswer": "원고지 答案",
-      "answerArea": "答案区",
-      "maxLength": "最多 {{count}} 字",
-      "submittedTitle": "已成功提交！",
-      "submittedDesc": "共作答 {{ans}} / {{total}} 题，正在等待 AI 批改…",
-      "loadingExam": "正在准备写作考试…",
-      "q51Instruction": "请根据上下文填写空白处，使文章内容完整、自然。",
-      "q52Instruction": "请根据题目要求，补充完整空白处的内容。",
-      "q53Instruction": "请参考下图，写一篇说明文（最少 200 字，最多 300 字）。",
-      "q54Instruction": "请就下面的题目写一篇议论文（最少 400 字，最多 600 字）。",
-      "fillBlankPaperTitle": "填空作答（㉠ / ㉡）",
-      "fillBlankOneSentence": "每空建议 1 句",
-      "fillBlankHint": "请分别填写 ㉠ 和 ㉡，每空建议一句完整表达。",
-      "fillBlankA": "在此填写 ㉠",
-      "fillBlankB": "在此填写 ㉡"
-    },
-    "report": {
-      "title": "写作评估报告",
-      "subtitle": "TOPIK II 写作 · AI 智能批改",
-      "evaluatingTitle": "AI 正在批改中…",
-      "evaluatingDesc": "正在按 TOPIK 官方评分标准逐题分析，通常需要 30-60 秒",
-      "dimTask": "内容及课题完成度",
-      "dimStructure": "文章展开与结构",
-      "dimLanguage": "语言使用（词汇/语法）",
-      "dimWongoji": "原稿纸使用规范",
-      "maxScore": "满分 {{score}}",
-      "scoreLabel": "得分：",
-      "dimScores": "分项得分",
-      "originalText": "考生原文",
-      "notAnswered": "（未作答）",
-      "aiCorrected": "AI 高分润色版",
-      "noCorrection": "（无校正内容）",
-      "feedback": "综合评语",
-      "loadingError": "无法加载评估结果，请刷新页面。",
-      "back": "返回",
-      "timeElapsed": "作答用时：",
-      "timeFormat": "{{min}} 分 {{sec}} 秒",
-      "totalScore": "总分：",
-      "aiDone": "AI 批改完成",
-      "passExcellent": "优秀 🎉",
-      "passGood": "合格 ✅",
-      "passNeedsWork": "需加强 📚",
-      "overallAnalysis": "总体维度分析",
-      "questionFeedback": "逐题详细反馈",
-      "loadingOriginal": "正在加载原考试试卷...",
-      "retrigger": "重新触发批改",
-      "retriggering": "重新触发中...",
-      "retryFailed": "触发失败，请稍后重试。"
     }
   },
   "footer": {

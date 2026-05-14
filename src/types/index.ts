@@ -127,6 +127,7 @@ export interface User {
   lastLevel?: number;
   lastUnit?: number;
   lastModule?: string;
+  lastGrammarId?: string;
 }
 
 export interface SavedWord {

@@ -74,5 +74,976 @@
       "resources": "Нөөц",
       "general": "Ерөнхий"
     }
+  },
+  "readingDiscovery": {
+    "library": {
+      "title": "Classic Reading",
+      "subtitle": "One rotating Wikipedia spotlight, plus your private EPUB uploads, drafts, and share entry points.",
+      "privateLabel": "Private EPUB Library",
+      "privateTitle": "Visible only to you, with share links for invited readers",
+      "privateLogin": "Sign in to see your private EPUB library and create share links.",
+      "privateEmpty": "No private EPUBs yet. Upload your first book from the button above.",
+      "myUploads": "My Uploads",
+      "uploadCta": "Upload EPUB",
+      "myUploadsSubtitle": "Drafts, processing jobs, rejected submissions, and published EPUBs.",
+      "emptyMyUploads": "You have not uploaded any EPUBs yet.",
+      "chapterCount": "{{count}} chapters",
+      "wordCount": "{{count}} words",
+      "openReader": "Open Reader",
+      "submitForReview": "Submit for Review",
+      "shareLink": "Share Link",
+      "copyShareLink": "Copy Share Link",
+      "stopSharing": "Stop Sharing",
+      "shareShort": "Share",
+      "stopShareShort": "Stop",
+      "shareCopied": "Share link copied",
+      "shareFailed": "Unable to share this book right now.",
+      "shareDisabled": "Share link disabled",
+      "shareDisableFailed": "Unable to disable sharing right now.",
+      "wikipediaSpotlight": "Wikipedia Spotlight",
+      "wikipediaTitle": "Featured archive pick",
+      "wikipediaSourceFallback": "Wikipedia",
+      "featuredToday": "Featured today",
+      "read": "Read",
+      "wikipediaEmpty": "No Wikipedia spotlight is available yet.",
+      "communityLabel": "Community EPUB Library",
+      "communityTitle": "Reader-ready uploads",
+      "communityEmpty": "No community EPUBs are published yet. Upload the first one from the button above.",
+      "communityEmptyMobile": "No EPUBs published yet.",
+      "descriptionFallback": "Open the reader to browse the chapter list and start reading.",
+      "status": {
+        "draftUploaded": "Draft uploaded",
+        "processing": "Processing",
+        "readyForReview": "Ready for review",
+        "inReview": "In review",
+        "published": "Published",
+        "rejected": "Rejected",
+        "processingFailed": "Processing failed"
+      }
+    },
+    "upload": {
+      "title": "Upload EPUB",
+      "subtitle": "Upload an EPUB and we'll parse chapters, build the reader, and queue it for review.",
+      "action": "Upload",
+      "supportedFormat": "Supported format: EPUB. The file will be parsed after upload and saved as a draft.",
+      "fileLabel": "EPUB File",
+      "uploading": "Uploading {{progress}}%",
+      "chooseFile": "Choose an EPUB file",
+      "maxSize": "Up to 100MB",
+      "titleLabel": "Title",
+      "authorLabel": "Author",
+      "descriptionLabel": "Description",
+      "languageLabel": "Language",
+      "tagsLabel": "Tags",
+      "tagsPlaceholder": "Add tags",
+      "submit": "Upload Book",
+      "languages": {
+        "en": "English",
+        "ko": "Korean",
+        "zh": "Chinese",
+        "vi": "Vietnamese",
+        "mn": "Mongolian",
+        "ja": "Japanese"
+      },
+      "errors": {
+        "invalidExtension": "Please select an EPUB file (.epub).",
+        "unsupportedType": "Only EPUB files are supported.",
+        "emptyFile": "The selected file is empty.",
+        "fileTooLarge": "EPUB files must be smaller than 100MB.",
+        "fileRequired": "Please select an EPUB file.",
+        "titleAuthorRequired": "Title and author are required.",
+        "uploadFailed": "Failed to upload EPUB."
+      }
+    },
+    "reader": {
+      "notFoundTitle": "Book not found",
+      "notFoundBody": "This EPUB is unavailable or you do not have access to it.",
+      "backToReading": "Back to Reading",
+      "chapterProgress": "Chapter {{current}} / {{total}}",
+      "completion": "{{percent}}% complete",
+      "contents": "Contents",
+      "previewMode": "Preview mode. You can read {{count}} chapters on the free plan.",
+      "chapterLocked": "Chapter Locked",
+      "chapterLockedBody": "This chapter is outside the free preview. Upgrade to unlock the full book.",
+      "chapterLabel": "Chapter {{number}}",
+      "minRead": "~{{count}} min read",
+      "chapterUnavailable": "This chapter is unavailable.",
+      "settings": {
+        "title": "Reader Settings",
+        "fontSize": "Font size",
+        "theme": "Theme",
+        "lineHeight": "Line height",
+        "fontSizes": {
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large",
+          "extra-large": "Extra Large"
+        },
+        "themes": {
+          "light": "Light",
+          "sepia": "Sepia",
+          "dark": "Dark"
+        },
+        "lineHeights": {
+          "compact": "Compact",
+          "normal": "Normal",
+          "relaxed": "Relaxed"
+        }
+      }
+    },
+    "mobile": {
+      "publishedUploads": "Published uploads",
+      "privateUploads": "Only visible to you"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "add": "Add",
+    "all": "All",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "admin": {
+    "epubReview": {
+      "title": "EPUB Library Review",
+      "subtitle": "Moderate community EPUB uploads and publish them into the reading library.",
+      "filterTitle": "Status Filter",
+      "empty": "No books found for this status.",
+      "unknownOwner": "Unknown",
+      "selectTitle": "Select a book to review",
+      "selectBody": "Pick a submission from the list to inspect metadata, chapter previews, and moderation actions.",
+      "chapterCount": "{{count}} chapters",
+      "noDescription": "No description provided.",
+      "owner": "Owner",
+      "language": "Language",
+      "words": "Words",
+      "reviewNote": "Review Note",
+      "reviewNotePlaceholder": "Optional approval note, or required rejection reason.",
+      "chapterPreview": "Chapter Preview",
+      "noParsedChapters": "No parsed chapters are available yet.",
+      "wordCount": "{{count}} words",
+      "noPreview": "No preview available.",
+      "summary": {
+        "ready": "Ready",
+        "processing": "Processing",
+        "published": "Published",
+        "failed": "Failed"
+      },
+      "status": {
+        "allBooks": "All Books",
+        "processing": "Processing",
+        "readyForReview": "Ready for Review",
+        "inReview": "In Review",
+        "published": "Published",
+        "rejected": "Rejected",
+        "processingFailed": "Processing Failed"
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "retry": "Retry Processing"
+      }
+    }
+  },
+  "courseDashboard": {
+    "modules": {
+      "vocabulary": "Vocabulary",
+      "grammar": "Grammar",
+      "listening": "Listening",
+      "reading": "Reading"
+    }
+  },
+  "dashboard": {
+    "desktop": {
+      "greeting": "Hello, {{name}}",
+      "welcomeBack": "Welcome back, {{name}}",
+      "todayPath": "Today's Path",
+      "todayPathDescription": "TODAY'S PATH · {{minutes}} min",
+      "weeklyGoal": "Weekly Goal",
+      "hours": "hours",
+      "loading": "Loading...",
+      "start": "Start",
+      "items": "items",
+      "vocabChar": "Vocab",
+      "masteredChar": "Mastered",
+      "learnChar": "Learn",
+      "tasksLeft": "{{count}} tasks",
+      "approxTime": "~{{count}} min",
+      "tenThousand": "10k",
+      "weeklyActivity": "Last 7 Days",
+      "viewAll": "View all",
+      "dailyChallenge": "Daily Challenge",
+      "incorrectBook": "Mistake Notebook",
+      "daysActivity": "{{count}} Days Activity",
+      "streak": "Streak",
+      "consecutiveDays": "consecutive days",
+      "friendActivity": "Learning Partners",
+      "communityCta": "Community",
+      "noFriendActivity": "Follow friends to see their activity here",
+      "upcomingReviews": "Upcoming Reviews",
+      "reviewCta": "Review",
+      "noUpcomingReviews": "No upcoming reviews",
+      "tasksLeftSummary": "{{count}} tasks left today",
+      "allDone": "All done today ✓",
+      "modules": {
+        "review": "Review",
+        "grammar": "Grammar",
+        "listening": "Listening",
+        "topik": "TOPIK"
+      },
+      "primaryAction": {
+        "reviewEyebrow": "REVIEW · 复习",
+        "reviewTitle": "{{count}} cards due now",
+        "reviewSubtitle": "About {{minutes}} min · FSRS smart review",
+        "startReview": "Start review →",
+        "challengeEyebrow": "DAILY CHALLENGE · 挑战",
+        "continueChallenge": "Continue challenge →",
+        "weakAreaEyebrow": "WEAK AREA · 弱项",
+        "weakAreaTitle": "{{label}} · {{score}}%",
+        "strengthen": "Strengthen →",
+        "grammarEyebrow": "GRAMMAR · 语法",
+        "grammarTitle": "Unit {{unit}}",
+        "continueLesson": "Continue lesson →",
+        "podcastEyebrow": "LISTEN · 沉浸",
+        "podcastTitle": "Today's podcast pick",
+        "podcastSubtitle": "10 minutes of listening every day",
+        "openPodcast": "Open podcast →"
+      },
+      "insights": {
+        "title": "30-day Insights",
+        "retention": "Retention",
+        "activeDays": "Active days",
+        "reviews": "Reviews"
+      },
+      "topikCountdown": {
+        "title": "TOPIK",
+        "lobby": "Lobby",
+        "daysLeft": "days left",
+        "noUpcoming": "No exam scheduled",
+        "weakAreasLabel": "Weak areas",
+        "noWeakAreas": "Complete a mock exam to see your weak areas"
+      },
+      "dailyPhrase": "Phrase of the Day",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "justNow": "Just now",
+      "dayJoined": "Days joined",
+      "level": "Level",
+      "myResources": "My Resources",
+      "vocabBook": "Vocab Book",
+      "notebook": "Notebook",
+      "achievements": "Achievements",
+      "history": "History",
+      "settings": "Settings",
+      "subscription": "Subscription",
+      "notifications": "Notifications",
+      "language": "Language",
+      "help": "Help & Feedback",
+      "logout": "Logout"
+    },
+    "dictionary": {
+      "label": "Dictionary",
+      "placeholder": "Search Korean word...",
+      "searching": "Searching...",
+      "noResults": "No results found",
+      "error": "Something went wrong",
+      "sense": "Sense"
+    },
+    "topik": {
+      "writing": "TOPIK Writing",
+      "controller": {
+        "exit": "Exit"
+      }
+    }
+  },
+  "community": {
+    "desktop": {
+      "title": "Community Activity",
+      "composerPlaceholder": "Share your learning...",
+      "studyCard": "Study Card",
+      "publish": "Publish",
+      "filters": {
+        "all": "All",
+        "following": "Following",
+        "milestones": "Milestones",
+        "qa": "Q&A",
+        "resources": "Resources"
+      },
+      "noActivity": "No activity yet",
+      "like": "Like",
+      "comment": "Comment",
+      "share": "Share",
+      "linkCopied": "Link copied to clipboard",
+      "shareFailed": "Sharing unavailable",
+      "tags": {
+        "vocab": "Vocab",
+        "questions": "questions",
+        "question": "Question",
+        "answer": "Answer",
+        "selectGrammar": "Please select a grammar point from the left directory"
+      },
+      "mediaHub": {
+        "completedContent": "Completed content",
+        "topikScore": "TOPIK Score {{score}}",
+        "submittedExam": "Submitted exam"
+      }
+    }
+  },
+  "leaderboard": {
+    "desktop": {
+      "title": "Leaderboard",
+      "weeklyOverview": "Weekly Overview",
+      "weekLeft": "{{days}}d {{hours}}h left",
+      "myRank": "My Rank",
+      "promotionCutoff": "Top {{count}} promote",
+      "relegationZone": "Bottom 10 relegate",
+      "leagueNames": {
+        "bronze": "Bronze League",
+        "silver": "Silver League",
+        "gold": "Gold League",
+        "diamond": "Diamond League"
+      },
+      "rankLabel": "Rank",
+      "promote": "Promote",
+      "stay": "Stay",
+      "seasonProgress": "Season Progress",
+      "weekLabel": "Week {{count}}",
+      "rewards": "Weekly Rewards",
+      "fetchingData": "Fetching leaderboard data",
+      "rewardsList": {
+        "firstPlace": "#1 — Diamond Badge + Limited Avatar Frame",
+        "topThree": "#2-3 — Diamond Badge",
+        "promotion": "#4-{{count}} — Promote"
+      }
+    }
+  },
+  "coursesOverview": {
+    "desktop": {
+      "currentJourney": "Current Journey",
+      "learningJourney": "Learning Journey",
+      "learningTools": {
+        "title": "Learning Tools",
+        "flashcards": "Flashcards",
+        "reviewStatus": "{{count}} cards due",
+        "grammar": "Grammar",
+        "masteryStatus": "{{count}} mastered",
+        "typing": "Typing",
+        "notebook": "Notebook"
+      },
+      "tabs": {
+        "mine": "My Courses",
+        "grammar": "Grammar",
+        "vocabulary": "Vocabulary",
+        "typing": "Typing",
+        "topik": "TOPIK"
+      },
+      "grammar": {
+        "categories": "Categories",
+        "myProgress": "My Progress",
+        "masteryRate": "Mastery Rate",
+        "redEyeMode": "Recite Mode",
+        "redEyeOff": "Normal Mode",
+        "introduction": "Introduction",
+        "coreUsage": "Core Usage",
+        "comparative": "Comparison",
+        "culturalNotes": "Cultural Notes",
+        "commonMistakes": "Common Mistakes",
+        "review": "Review",
+        "explanation": "Explanation",
+        "conjugationRules": "Conjugation",
+        "examples": "Examples"
+      },
+      "vocabulary": {
+        "dueToday": "Due Today",
+        "availableToLearn": "Available to Learn",
+        "studiedToday": "Studied Today",
+        "mastered": "Mastered",
+        "toLearn": "New",
+        "myWordbooks": "My Wordbooks",
+        "modes": {
+          "title": "Practice Modes",
+          "flashcard": "Flashcard",
+          "learn": "Learn",
+          "test": "Test",
+          "match": "Match"
+        },
+        "forecast": "Forecast",
+        "totalProgress": "Total Progress",
+        "startReview": "Start Review",
+        "startLearning": "Start Learning"
+      },
+      "typing": {
+        "avgSpeed": "Avg Speed",
+        "accuracy": "Accuracy",
+        "totalTests": "Total Tests",
+        "highestSpeed": "Top Speed",
+        "practicePrompt": "Start typing the text above...",
+        "fullMode": "Full Mode"
+      },
+      "topik": {
+        "mockExam": "Mock Exam",
+        "predictedScore": "Predicted Score",
+        "targetLevel": "Target Level",
+        "startExam": "Start Exam",
+        "recentAttempts": "Recent Records",
+        "questions": "Questions"
+      },
+      "notebook": {
+        "title": "Notebook",
+        "noteCount": "{{count}} notes",
+        "all": "All",
+        "newNote": "New Note",
+        "loadingNotes": "Loading notes...",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "noContent": "No content",
+        "noNotes": "Your notebook is empty",
+        "startJourney": "Highlights from your reading will appear here.",
+        "createFirstNote": "Create First Note",
+        "types": {
+          "grammar": "Grammar",
+          "vocab": "Vocab",
+          "mistakes": "Mistakes",
+          "reflections": "Reflections",
+          "default": "Default"
+        }
+      }
+    },
+    "mobile": {
+      "hanjaTag": "學",
+      "latin": "LEARN",
+      "title": "배우다",
+      "subtitle": "Системээр солонгос хэл сурах",
+      "tabs": {
+        "mine": "Миний хичээл",
+        "grammar": "Дүрэм",
+        "vocabulary": "Үгсийн сан",
+        "typing": "Бичих",
+        "topik": "TOPIK"
+      },
+      "progressLabel": "Үргэлжилж · {{pct}}%",
+      "unitsLabel": "{{done}} / {{total}} хичээл",
+      "estimate": "~{{days}} өдөр",
+      "journeyTitle": "Сургалтын зам",
+      "journeyAction": "Бүгд",
+      "completed": "Дууссан ✓",
+      "toolsTitle": "Сургалтын хэрэгсэл",
+      "tools": {
+        "flashcards": "Үгийн карт",
+        "flashcardsSub": "Карт эргүүлж цээжлэх",
+        "dictation": "Сонсож бичих",
+        "dictationSub": "Сонсоод бичнэ",
+        "typing": "Шивэх дасгал",
+        "typingSub": "Оруулах хурдаа өсгөх",
+        "pronunciation": "Дуудлага",
+        "pronunciationSub": "Сонсоод даган хэлэх"
+      },
+      "vocabModesTitle": "Үгийн сангийн горим",
+      "vocabModes": {
+        "flashcard": "Карт",
+        "flashcardSub": "FSRS давтлага",
+        "test": "Шалгалт",
+        "testSub": "Алдаа шалгах сорил",
+        "learn": "Сурах",
+        "learnSub": "Бага багаар эзэмших",
+        "match": "Тааруулах",
+        "matchSub": "Тоглоомоор бататгах"
+      },
+      "vocabNoWords": "Энэ нэгжид үг алга",
+      "unitLabel": "Хичээл",
+      "levelBadge": "Түв",
+      "defaultCourseTitle": "TOPIK II Нэгтгэл",
+      "defaultCourseMeta": "Дунд",
+      "tapToStart": "Эхлэх"
+    }
+  },
+  "notes": {
+    "v2": {
+      "source": {
+        "manual": "Manual",
+        "topik": "TOPIK",
+        "reading": "Reading",
+        "vocab": "Vocab",
+        "grammar": "Grammar",
+        "dictionary": "Dictionary",
+        "practice": "Practice"
+      },
+      "cardType": {
+        "vocab": "Vocab",
+        "grammar": "Grammar",
+        "mistake": "Mistake",
+        "quoteCard": "Quote Note",
+        "note": "Note"
+      },
+      "status": {
+        "reviewed": "Reviewed",
+        "queued": "Queued"
+      },
+      "page": {
+        "newNoteTitle": "New Note"
+      },
+      "confirm": {
+        "deletePage": "Delete this note? It will be moved out of your active notebook."
+      },
+      "recentHighlights": "Recent Highlights",
+      "scope": {
+        "reading": "Reading",
+        "topik": "TOPIK",
+        "book": "Book",
+        "podcast": "Podcast"
+      }
+    }
+  },
+  "epub": {
+    "upload": {
+      "title": "Import Private Library",
+      "description": "Upload EPUB books to parse chapters automatically for an immersive reading experience. Books stay in your private library.",
+      "features": {
+        "parsing": {
+          "title": "Smart Parsing",
+          "desc": "System automatically identifies book structure and table of contents."
+        },
+        "reader": {
+          "title": "Custom Reader",
+          "desc": "Support multiple themes, font sizes, and layout adjustments."
+        },
+        "sync": {
+          "title": "Cross-device Sync",
+          "desc": "Seamlessly sync reading progress across all devices."
+        }
+      }
+    }
+  },
+  "landing": {
+    "v2": {
+      "nav": {
+        "features": "Features",
+        "loop": "Daily Path",
+        "modules": "Modules",
+        "community": "Community",
+        "pricing": "Pricing",
+        "faq": "FAQ",
+        "login": "Login",
+        "register": "Sign up"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "Morning Review",
+            "s": "18 cards due · Done"
+          },
+          "s2": {
+            "t": "New Lesson · L24 Alleyway",
+            "s": "In progress · 8 min"
+          },
+          "s3": {
+            "t": "Podcast Clip",
+            "s": "Korean Alley Walk · 6 min"
+          },
+          "s4": {
+            "t": "Bedtime Reading",
+            "s": "Short Story · Memories"
+          },
+          "date": "May 11th",
+          "greet": "Hello, Haeun",
+          "sub": "Daily path ready · 4 steps ~22 min"
+        },
+        "eyebrow": "v3.0 released · New learning path and community",
+        "titleKo": "讀韓",
+        "titlePre": "Make Korean ",
+        "titleUnderlined": "your routine",
+        "ctaPrimary": "Start learning for free →",
+        "ctaSecondary": "Watch 90s demo",
+        "meta1": "Active learners",
+        "meta2": "Daily reviews",
+        "meta3": "App Store rating",
+        "chip1": {
+          "t": "Streak",
+          "v": "47 Days"
+        },
+        "chip2": {
+          "t": "Today's New",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "Level 5 · 87%"
+        },
+        "sub": "A daily curated path · Vocab, grammar, TOPIK, media, podcasts, reading, and community interlinked · Powered by FSRS memory model."
+      },
+      "logos": {
+        "v1": "Immersive reading",
+        "v2": "Media listening",
+        "v3": "FSRS smart reviews",
+        "v4": "Native community",
+        "v5": "Cross-platform sync"
+      },
+      "features": {
+        "t1": {
+          "title": "Daily Learning Path",
+          "pill": "/ Auto-generated @ 7:00 AM · ~22 min"
+        },
+        "t2": {
+          "title": "Vocab Book + 4 Modes",
+          "desc": "Flashcards, Learn, Test, Match — 4 ways to master a word.",
+          "pill": "/ TOPIK I + II · 9,300 words"
+        },
+        "t3": {
+          "title": "Grammar Library",
+          "desc": "Every grammar with context sentences + exam questions.",
+          "pill": "/ 480 Core Grammars"
+        },
+        "t4": {
+          "title": "TOPIK Preparation",
+          "desc": "Past exams / Mocks / AI Writing score + Speed control.",
+          "pill": "/ TOPIK II avg improvement +1.4 levels"
+        },
+        "t6": {
+          "title": "Native Community",
+          "desc": "Ask native speakers for the most natural translations and explanations.",
+          "pill": "/ 1.2k+ Active groups"
+        },
+        "t5": {
+          "title": "Immersive Media & Reading",
+          "pill": "/ 4,800+ Study materials · Weekly updates"
+        },
+        "title": "All-in-one Korean Toolkit"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · MORNING",
+          "title": "Review Due Cards",
+          "desc": "FSRS algorithm decides what you review today · ~7 mins.",
+          "preview": "18 Cards · 7 Min"
+        },
+        "s2": {
+          "label": "STEP 2 · LESSON",
+          "title": "New Content",
+          "desc": "Textbook + Listening + Quiz · Capture any segment into cards.",
+          "preview": "L24 · 8 Min"
+        },
+        "s3": {
+          "label": "STEP 3 · COMMUTE",
+          "title": "Listening Immersion",
+          "desc": "Real podcasts or K-drama clips · Bilingual subs.",
+          "preview": "Podcast 6 Min"
+        },
+        "s4": {
+          "label": "STEP 4 · BEDTIME",
+          "title": "Reading Session",
+          "desc": "Auto-matched difficulty · Consolidation through reading.",
+          "preview": "Story 4 Min"
+        },
+        "title": "Four steps to master Korean"
+      },
+      "modules": {
+        "title": "Modules built for long-term learning",
+        "m1": {
+          "title": "Vocab · 4 Modes",
+          "tag1": "FSRS Algorithm",
+          "tag2": "4 Practice Modes",
+          "tag3": "Context Association",
+          "tag4": "Book Filter",
+          "link": "Learn about Vocab →"
+        },
+        "m2": {
+          "title": "TOPIK · Mocks + AI",
+          "tag1": "10 Years of Exams",
+          "tag2": "1:1 Mock Environment",
+          "tag3": "AI Writing Feedback",
+          "tag4": "Score Prediction",
+          "link": "Learn about TOPIK →"
+        },
+        "m3": {
+          "title": "Media Hub · Listening",
+          "tag1": "4,800+ Clips",
+          "tag2": "Bilingual Subs",
+          "tag3": "Tap to Save",
+          "tag4": "Difficulty Match",
+          "link": "Learn about Immersion →"
+        },
+        "m4": {
+          "title": "Graded Reading · AI",
+          "tag1": "Levels 1–6",
+          "tag2": "Picture Books",
+          "tag3": "Quick Lookup",
+          "tag4": "Note Capture",
+          "link": "Learn about Reading →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "Study Partners",
+          "s": "Grow Together"
+        },
+        "s2": {
+          "l": "Shared Wordbooks",
+          "s": "Resource Sharing"
+        },
+        "s3": {
+          "l": "Learning Tips",
+          "s": "Experience Sharing"
+        },
+        "s4": {
+          "l": "Streak Days",
+          "s": "Milestone Tracking"
+        },
+        "title": "Don't study alone, go further together"
+      },
+      "pricing": {
+        "perMonth": "/ mo",
+        "perQuarter": "/ quarter",
+        "perYear": "/ year",
+        "lifetime": "/ lifetime",
+        "tabMonthly": "Monthly",
+        "tabQuarterly": "Quarterly",
+        "tabAnnual": "Annual",
+        "pro": {
+          "f1": "<b>Unlimited</b> new words + FSRS",
+          "f2": "All textbooks + TOPIK <b>Levels 1-6</b>",
+          "f3": "Full media library + <b>Smart scripts</b>",
+          "f4": "<b>AI Writing diagnosis</b> + Speed control",
+          "f5": "Unlimited <b>community resources</b>",
+          "f6": "<b>Real-time sync</b> across all devices",
+          "title": "Full Access · Plus",
+          "desc": "Best for serious learners · Unlock all AI features",
+          "cta": "Start Full Access Now"
+        },
+        "title": "Pick a plan, start learning",
+        "free": {
+          "title": "Starter · Free",
+          "desc": "Entry level · Start your Korean journey",
+          "unit": "/ Forever",
+          "f1": "<b>5 new words</b> per day",
+          "f2": "<b>30 review cards</b> limit/day",
+          "f3": "<b>Basic courses</b> (L1–L2) trial",
+          "f4": "Media library <b>preview mode</b>",
+          "f5": "TOPIK past exams (Sample)",
+          "f6": "Basic AI writing diagnosis",
+          "cta": "Start for Free"
+        },
+        "popular": "Popular"
+      },
+      "testimonials": {
+        "title": "What Duhan learners are saying",
+        "t1": {
+          "tag1": "Used for 11 months",
+          "tag2": "Reached TOPIK 5",
+          "name": "Haeun",
+          "meta": "Designer · Hangzhou"
+        },
+        "t2": {
+          "tag1": "Learning via Drama",
+          "tag2": "3 Months",
+          "name": "Xiao Ke",
+          "meta": "Junior Student"
+        },
+        "t3": {
+          "tag1": "Native Assistant",
+          "name": "Minji",
+          "meta": "Seoul · Native"
+        }
+      },
+      "faq": {
+        "title": "FAQ",
+        "q1": "Is it suitable for beginners?",
+        "q2": "What is the FSRS algorithm?",
+        "q3": "Pro vs Elite differences?",
+        "q4": "Can I study offline?",
+        "q5": "Is there a student discount?",
+        "q6": "Can I get a refund?"
+      },
+      "finalCta": {
+        "titlePre": "Make Korean",
+        "titleMid": "part of your",
+        "titlePost": "daily life today",
+        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
+        "ctaPrimary": "Start for Free →",
+        "ctaSecondary": "Download App"
+      },
+      "footer": {
+        "col1": {
+          "head": "Product",
+          "l1": "Overview",
+          "l3": "TOPIK prep",
+          "l4": "Media hub",
+          "l5": "Graded reading",
+          "l6": "Community"
+        },
+        "col2": {
+          "head": "Learn",
+          "l1": "Guides",
+          "l2": "Grammar wiki",
+          "l3": "Exam blog",
+          "l4": "Daily Korean"
+        },
+        "col3": {
+          "head": "Company",
+          "l1": "About Duhan",
+          "l5": "Contact"
+        },
+        "col4": {
+          "head": "Support",
+          "l1": "Help Center",
+          "l2": "Refund Policy",
+          "l3": "Privacy",
+          "l4": "Terms"
+        },
+        "tag1": "Duhan · Make Korean your routine.",
+        "tag2": "From vocab to TOPIK Level 6, all in one.",
+        "copy": "Duhan · All rights reserved."
+      }
+    }
+  },
+  "topikWriting": {
+    "roundLabel": "Session {{count}}",
+    "defaultDescription": "Please complete the writing based on the prompt.",
+    "fetchingExam": "Fetching prompt...",
+    "noChallenge": "No challenges today",
+    "answerArea": "Answer Area",
+    "wordCount": "{{count}} words written",
+    "placeholder": "Start your Korean writing here...",
+    "template": "Paragraph Templates",
+    "save": "Save Draft",
+    "submit": "Submit for AI Score",
+    "aiFeedback": "AI Real-time Feedback",
+    "contentScore": "Content",
+    "grammarScore": "Grammar",
+    "vocabScore": "Vocab",
+    "structureScore": "Structure",
+    "aiFeedbackNote": "After submission, AI will provide detailed feedback, grammar corrections, and expression suggestions.",
+    "gradingCriteria": "Grading Criteria",
+    "criteria1": "Does the content meet the requirements and is it rich?",
+    "criteria2": "Did you use a variety of vocabulary and grammar?",
+    "criteria3": "Is the article structure logical and coherent?",
+    "session": {
+      "fillBlank": "Fill-in response",
+      "graphEssay": "Graph essay",
+      "opinionEssay": "Opinion essay",
+      "answerPlaceholder": "Type your answer here...",
+      "characterCount": "{{count}} chars",
+      "remainingChars": "{{count}} left",
+      "fillBlankPaperTitle": "Fill in answers (㉠ / ㉡)",
+      "fillBlankOneSentence": "One sentence per blank recommended",
+      "fillBlankHint": "Please complete both ㉠ and ㉡ with natural full sentences.",
+      "fillBlankA": "Fill ㉠ here",
+      "fillBlankB": "Fill ㉡ here",
+      "charsUnit": "chars",
+      "mobileHeaderSubtitle": "Question {{active}} · {{answered}} / {{total}} answered",
+      "progress": "Progress",
+      "points": "pts",
+      "submitButton": "Submit",
+      "desktopEyebrow": "Бичгийн шалгалт",
+      "questionX": "{{num}}-р даалгавар",
+      "desktopQuestionMeta": "{{num}}-р даалгавар · {{type}} · {{score}} оноо",
+      "expandImage": "Зургийг томруулах",
+      "collapseImage": "Зургийг хураах",
+      "desktopHeaderSummary": "Анхаарал сарнихгүйгээр бичих, хадгалах, явцаа харах ширээний шалгалтын нягт орчин.",
+      "desktopWorkspaceTitle": "Бичих талбар",
+      "desktopWorkspaceSummaryLong": "Эх материал зүүн талд, ноорог бичгийн цаасан дээр.",
+      "desktopWorkspaceSummaryShort": "Даалгавар зүүн талд, хариулт баруун талд.",
+      "currentPrompt": "Одоогийн даалгавар",
+      "saveState": "Хадгалалтын төлөв",
+      "submitConfirmTitle": "Шалгалтыг илгээх үү?",
+      "submitConfirmDesc": "{{total}}-оос {{ans}} асуултад хариулсан байна. Илгээсний дараа хариултаа засах боломжгүй.",
+      "continueForm": "Үргэлжлүүлэх",
+      "submitting": "Илгээж байна...",
+      "confirmSubmit": "Илгээхийг батлах",
+      "exitConfirmTitle": "Шалгалтаас гарах уу?",
+      "exitConfirmDesc": "Одоогийн хариултууд ноорог хэлбэрээр хадгалагдаж, дараа нь үргэлжлүүлж болно.",
+      "exiting": "Гарч байна...",
+      "wongojiAnswer": "원고지 дээрх хариулт",
+      "maxLength": "Хамгийн ихдээ {{count}} тэмдэгт",
+      "time": "Хугацаа",
+      "questionPrompt": "Даалгаврын хэсэг",
+      "promptBoard": "Даалгаврын самбар",
+      "desktopPromptSummary": "Асуулт ба материалыг эхлээд хурдан шалгаад, дараа нь шууд хариулах хэсэгт орно.",
+      "desktopPromptBoardLong": "Бичих үед эх материалыг нүдэнд байлга.",
+      "desktopPromptBoardShort": "Нэг уншаад хоёр хоосон зайг шууд бөглөөрэй.",
+      "promptStatus": "Хариултын явц",
+      "shortFormMode": "Богино хариултын горим",
+      "answerArea": "Хариулах хэсэг",
+      "answerSheet": "Хариултын хуудас",
+      "desktopAnswerSummaryWongoji": "Урт бичвэрээ шууд 원고지 дээр бичиж, бүтэц ба мөрийн зохион байгуулалтаа харагдацтай байлга.",
+      "desktopAnswerSummaryFill": "Өгүүлбэрийг байгалийн болгохын тулд хоосон хэсгийг товч бөгөөд бүрэн бөглө.",
+      "desktopAnswerSummaryFillCompact": "Хоёр хоосон зайг нэг дор бөглө.",
+      "writingSheet": "Бичгийн хуудас",
+      "responseSlots": "Хариултын мөрүүд",
+      "answerProgress": "Хариултын явц",
+      "pointsSummary": "Нийт {{total}} оноо",
+      "examStatus": "Шалгалтын төлөв",
+      "desktopStatusHint": "Энэ хэсэг зөвхөн хугацаа, явц, удирдлагыг харуулна. Бичихийг тань тасалдуулахгүй.",
+      "questionNavigator": "Даалгаврын навигаци",
+      "desktopNavigatorHint": "Одоогийн ноорог алдагдахгүйгээр даалгавруудын хооронд шилжинэ.",
+      "completed": "Дууссан",
+      "current": "Одоогийн",
+      "pending": "Хүлээгдэж буй",
+      "readOnlyReminders": "Зөвхөн харах сануулга",
+      "desktopReminderAutosave": "Бичих явцад автоматаар хадгална. Дээд хэсэг ба хажуугийн төлөв нь зөвхөн мэдээлэл өгнө.",
+      "desktopReminderFlow": "51-52-р даалгаварт зөв бөглөлт чухал, 53-54-р даалгаварт бүтэц, логик, дэлгэрүүлэлт чухал.",
+      "desktopReminderFocus": "Баруун талын хэсэг хариултыг дахин бичиж өгөхгүй. Зөвхөн хугацаа, төлөв, навигацийг тогтмол харуулна.",
+      "quickChecks": "Товч шалгалт",
+      "submittedTitle": "Амжилттай илгээлээ",
+      "submittedDesc": "{{total}}-оос {{ans}} асуултад хариулсан. AI үнэлгээг хүлээж байна...",
+      "saving": "Хадгалж байна...",
+      "saved": "✓ Хадгалсан",
+      "saveError": "Хадгалж чадсангүй",
+      "saveIdle": "Автоматаар хадгална",
+      "exampleBox": "Жишээ / Нөхцөл",
+      "examNotFound": "Энэ бичгийн шалгалтыг олсонгүй.",
+      "startFailed": "Одоогоор энэ бичгийн шалгалтыг эхлүүлэх боломжгүй байна.",
+      "loadingExam": "Бичгийн шалгалтыг бэлдэж байна...",
+      "q51Instruction": "Нөхцөлд тулгуурлан хоосон зайг бөглөж, өгүүлбэрийг бүрэн бөгөөд байгалийн болгоно уу.",
+      "q52Instruction": "Даалгаврын шаардлагад тохирсон агуулгыг хоосон хэсэгт бичнэ үү.",
+      "q53Instruction": "Доорх графикт тулгуурлан тайлбар бичвэр (200-300 тэмдэгт) бичнэ үү.",
+      "q54Instruction": "Доорх сэдвээр мэтгэлцээний эсээ (400-700 тэмдэгт) бичнэ үү.",
+      "submitFailed": "Одоогоор энэ бичгийн шалгалтыг илгээх боломжгүй байна."
+    },
+    "title": "TOPIK II Writing",
+    "report": {
+      "title": "Бичгийн үнэлгээний тайлан",
+      "subtitle": "TOPIK II бичгийн AI үнэлгээний үр дүн",
+      "evaluatingTitle": "AI үнэлж байна...",
+      "evaluatingDesc": "TOPIK-ийн албан ёсны шалгуураар даалгавар бүрийг шинжилж байна. Ихэвчлэн 30-60 секунд шаардлагатай.",
+      "dimTask": "Даалгавар биелүүлэлт",
+      "dimStructure": "Өрнөл ба бүтэц",
+      "dimLanguage": "Хэлний хэрэглээ",
+      "dimWongoji": "원고지 бичлэгийн дүрэм",
+      "retriggering": "Дахин үнэлж байна...",
+      "retriggerCooldown": "{{count}} секундын дараа дахин оролдоно",
+      "retrigger": "Дахин үнэлэх",
+      "retryFailed": "Дахин үнэлж чадсангүй. Дараа дахин оролдоно уу.",
+      "maxScore": "Дээд оноо {{score}}",
+      "scoreLabel": "Оноо:",
+      "dimScores": "Шалгуурын оноо",
+      "originalText": "Таны эх хариулт",
+      "notAnswered": "(Хариулаагүй)",
+      "aiCorrected": "AI сайжруулсан хувилбар",
+      "noCorrection": "(Засварын агуулга алга)",
+      "feedback": "Нэгдсэн санал",
+      "loading": "Үнэлгээний үр дүнг ачаалж байна...",
+      "loadingError": "Үнэлгээний үр дүнг ачаалж чадсангүй. Хуудсаа сэргээнэ үү.",
+      "back": "Буцах",
+      "status": "Төлөв",
+      "evaluatingShort": "AI үнэлгээ",
+      "timeElapsed": "Зарцуулсан хугацаа:",
+      "timeFormat": "{{min}} мин {{sec}} сек",
+      "totalScore": "Нийт оноо:",
+      "passExcellent": "Маш сайн 🎉",
+      "passGood": "Тэнцсэн ✅",
+      "passNeedsWork": "Сайжруулах хэрэгтэй 📚",
+      "overallAnalysis": "Ерөнхий шалгуурын дүн шинжилгээ",
+      "questionFeedback": "Даалгавар тус бүрийн дэлгэрэнгүй санал",
+      "aiDone": "AI үнэлгээ дууссан"
+    }
+  },
+  "wongojiEditor": {
+    "lineStatus": "{{row}}-р мөр · {{column}}-р багана",
+    "row": "Мөр",
+    "column": "Багана",
+    "mobileHint": "Шаардлагатай бол хажуу тийш гүйлгэнэ үү",
+    "perLine": "Нэг мөрт {{count}} тэмдэгт · 원고지"
   }
 }

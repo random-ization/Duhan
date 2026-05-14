@@ -216,11 +216,9 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     ],
     readAudioFailed: '读取音频失败',
     missingAudioLink: '缺少音频链接',
-    audioLinkTooLong:
-      '音频链接过长，无法提交转写请求',
+    audioLinkTooLong: '音频链接过长，无法提交转写请求',
     transcriptTimeout: '字幕生成超时，请稍后重试',
-    audioLinkTooLarge:
-      '音频链接过大，转写请求被拦截，请先上传音频后再试',
+    audioLinkTooLarge: '音频链接过大，转写请求被拦截，请先上传音频后再试',
     failedPrefix: '失败',
     transcriptUnavailable: '字幕不可用',
     resetFailed: '重置失败，请稍后重试',
@@ -229,8 +227,7 @@ const UI_COPY: Record<UiLang, UiCopy> = {
     showTranslationTemplate: '显示{{language}}翻译',
     translationPending: '翻译正在后台生成',
     translationReady: '翻译已就绪',
-    translationFailed:
-      '翻译暂未完成，请刷新或重试生成',
+    translationFailed: '翻译暂未完成，请刷新或重试生成',
     generating: '生成中...',
     regenerateSubtitle: '重新生成字幕',
     regenerateTitle: '重新生成字幕？',
@@ -518,9 +515,10 @@ const TranscriptLineRow: React.FC<{
       id={`line-${index}`}
       className={`
         group relative p-3 md:p-6 rounded-xl md:rounded-2xl transition-all duration-300 border-l-4
-        ${isActive
-          ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
-          : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
+        ${
+          isActive
+            ? 'bg-card shadow-lg border-indigo-500 dark:border-indigo-300/50 scale-[1.01] z-10'
+            : 'bg-transparent border-transparent hover:bg-card/60 hover:border-border'
         }
       `}
     >
@@ -532,9 +530,10 @@ const TranscriptLineRow: React.FC<{
           onClick={() => onSeek(line.start)}
           className={`
             flex-none text-[10px] md:text-[11px] font-bold px-2 py-1 rounded-md transition-colors
-            ${isActive
-              ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
-              : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
+            ${
+              isActive
+                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200'
+                : 'bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-muted-foreground'
             }
           `}
         >
@@ -562,9 +561,10 @@ const TranscriptLineRow: React.FC<{
                       key={`${word.start}-${word.word}-${wordIndex}`}
                       className={`
                         rounded px-0.5 transition-all duration-75
-                        ${isWordActive
-                          ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
-                          : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
+                        ${
+                          isWordActive
+                            ? 'bg-indigo-600 dark:bg-indigo-500 text-white dark:text-primary-foreground shadow-sm scale-105'
+                            : 'hover:bg-indigo-50 dark:hover:bg-indigo-500/15'
                         }
                       `}
                     >
@@ -581,9 +581,10 @@ const TranscriptLineRow: React.FC<{
               <p
                 className={`
                   text-sm md:text-base leading-relaxed transition-colors border-l-2 pl-2.5 md:pl-3 whitespace-normal break-words [overflow-wrap:anywhere]
-                  ${isActive
-                    ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
-                    : 'text-muted-foreground border-border'
+                  ${
+                    isActive
+                      ? 'text-indigo-600/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-400/40'
+                      : 'text-muted-foreground border-border'
                   }
                 `}
               >
@@ -608,9 +609,10 @@ const TranscriptLineRow: React.FC<{
               aria-label={analyzeLabel}
               className={`
                 p-1.5 md:p-2 rounded-full transition-all flex-none
-                ${isActive
-                  ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
-                  : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
+                ${
+                  isActive
+                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200 opacity-100'
+                    : 'bg-card text-muted-foreground opacity-0 group-hover:opacity-100 shadow-sm border border-border'
                 }
                 hover:scale-110 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white dark:hover:text-primary-foreground
               `}
@@ -843,9 +845,10 @@ const PlaylistSheetBody: React.FC<{
             size="auto"
             className={`
               w-full text-left p-3 rounded-xl transition-all border justify-start items-start
-              ${isCurrent
-                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-100 dark:border-indigo-400/30 ring-1 ring-indigo-200 dark:ring-indigo-400/30'
-                : 'bg-card border-transparent hover:bg-muted hover:border-border'
+              ${
+                isCurrent
+                  ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-100 dark:border-indigo-400/30 ring-1 ring-indigo-200 dark:ring-indigo-400/30'
+                  : 'bg-card border-transparent hover:bg-muted hover:border-border'
               }
               font-normal
             `}
@@ -979,11 +982,36 @@ type PodcastChannel = {
 
 function buildMockTranscript(copy: UiCopy): TranscriptLine[] {
   return [
-    { start: 0, end: 4.5, text: '안녕하세요, 여러분. 오늘도 한국어 공부 시작해볼까요?', translation: copy.mockTranslations[0] },
-    { start: 4.5, end: 8.2, text: '꾸준히 하는 것이 가장 중요합니다.', translation: copy.mockTranslations[1] },
-    { start: 8.2, end: 12, text: '이 문장은 조금 빠르니까 다시 들어보세요.', translation: copy.mockTranslations[2] },
-    { start: 12, end: 16.5, text: '오늘은 일상 대화에서 많이 쓰는 표현을 배워볼 거예요.', translation: copy.mockTranslations[3] },
-    { start: 16.5, end: 21, text: "예를 들어, '어떻게 지내세요?'라는 표현이 있어요.", translation: copy.mockTranslations[4] },
+    {
+      start: 0,
+      end: 4.5,
+      text: '안녕하세요, 여러분. 오늘도 한국어 공부 시작해볼까요?',
+      translation: copy.mockTranslations[0],
+    },
+    {
+      start: 4.5,
+      end: 8.2,
+      text: '꾸준히 하는 것이 가장 중요합니다.',
+      translation: copy.mockTranslations[1],
+    },
+    {
+      start: 8.2,
+      end: 12,
+      text: '이 문장은 조금 빠르니까 다시 들어보세요.',
+      translation: copy.mockTranslations[2],
+    },
+    {
+      start: 12,
+      end: 16.5,
+      text: '오늘은 일상 대화에서 많이 쓰는 표현을 배워볼 거예요.',
+      translation: copy.mockTranslations[3],
+    },
+    {
+      start: 16.5,
+      end: 21,
+      text: "예를 들어, '어떻게 지내세요?'라는 표현이 있어요.",
+      translation: copy.mockTranslations[4],
+    },
   ];
 }
 
@@ -1048,6 +1076,24 @@ function parseDurationToSeconds(value: any): number {
   return parseInt(value, 10) || 0;
 }
 
+function scrollPodcastLineIntoView(element: HTMLElement | null, isMobile: boolean) {
+  if (!element || typeof globalThis.window === 'undefined') return;
+
+  const rect = element.getBoundingClientRect();
+  const viewportHeight = globalThis.window.innerHeight;
+  const topThreshold = isMobile ? 96 : 120;
+  const bottomThreshold = isMobile ? 180 : 220;
+  const isVisibleEnough =
+    rect.top >= topThreshold && rect.bottom <= viewportHeight - bottomThreshold;
+
+  if (isVisibleEnough) return;
+
+  element.scrollIntoView({
+    behavior: isMobile ? 'auto' : 'smooth',
+    block: 'center',
+  });
+}
+
 export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   initialEpisode,
   initialChannel,
@@ -1064,10 +1110,19 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   const uiLang: UiLang = language;
   const copy = UI_COPY[uiLang];
   const isMobile = useIsMobile();
-  const backPath = useMemo(() => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast')), [searchParams]);
+  const backPath = useMemo(
+    () => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast')),
+    [searchParams]
+  );
 
-  const episode = useMemo(() => initialEpisode || resolveEpisodeFromState(state, searchParams), [initialEpisode, state, searchParams]);
-  const channel = useMemo(() => initialChannel || resolvePodcastChannel(state), [initialChannel, state]);
+  const episode = useMemo(
+    () => initialEpisode || resolveEpisodeFromState(state, searchParams),
+    [initialEpisode, state, searchParams]
+  );
+  const channel = useMemo(
+    () => initialChannel || resolvePodcastChannel(state),
+    [initialChannel, state]
+  );
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1083,55 +1138,101 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   const [autoScroll, setAutoScroll] = useState(true);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
+  const [playlistLoading, setPlaylistLoading] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analyzingLine, setAnalyzingLine] = useState<TranscriptLine | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const transcriptLoadKeyRef = useRef<string | null>(null);
   const transcriptLoadedKeyRef = useRef<string | null>(null);
+  const playlistLoadedFeedRef = useRef<string | null>(null);
 
   const generateTranscript = useAction(aRef<any, any>('ai:generateTranscript'));
   const getTranscript = useAction(aRef<any, any>('ai:getTranscript'));
   const getEpisodesAction = useAction(aRef<any, any>('podcastActions:getEpisodes'));
   const toggleSubscription = useMutation(mRef<any, any>('podcasts:toggleSubscription'));
-  const subscriptions = useQuery(qRef<any, any>('podcasts:getSubscriptions')) ?? [];
+  const subscriptions =
+    useQuery(qRef<any, any>('podcasts:getSubscriptions'), isAuthenticated ? {} : 'skip') ?? [];
   const analyzeSentenceAction = useAction(aRef<any, any>('ai:analyzeSentence'));
 
   const getEpisodeId = useCallback(() => getEpisodeIdForTranscript(episode), [episode]);
-  const episodeArtwork = useMemo(() => episode.image || episode.itunes?.image || channel.artworkUrl || channel.image || 'https://placehold.co/400x400', [channel.artworkUrl, channel.image, episode.image, episode.itunes?.image]);
-  const effectiveDuration = useMemo(() => Math.max(duration, parseDurationToSeconds(episode.duration || episode.itunes?.duration)), [duration, episode.duration, episode.itunes?.duration]);
-  const progressPercent = useMemo(() => effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0, [currentTime, effectiveDuration]);
-  const isSubscribed = useMemo(() => subscriptions.some((s: any) => s.feedUrl === channel.feedUrl), [subscriptions, channel.feedUrl]);
+  const episodeArtwork = useMemo(
+    () =>
+      episode.image ||
+      episode.itunes?.image ||
+      channel.artworkUrl ||
+      channel.image ||
+      'https://placehold.co/400x400',
+    [channel.artworkUrl, channel.image, episode.image, episode.itunes?.image]
+  );
+  const effectiveDuration = useMemo(
+    () => Math.max(duration, parseDurationToSeconds(episode.duration || episode.itunes?.duration)),
+    [duration, episode.duration, episode.itunes?.duration]
+  );
+  const progressPercent = useMemo(
+    () => (effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0),
+    [currentTime, effectiveDuration]
+  );
+  const isSubscribed = useMemo(
+    () => subscriptions.some((s: any) => s.feedUrl === channel.feedUrl),
+    [subscriptions, channel.feedUrl]
+  );
 
   useEffect(() => {
     setShowTranslation(globalSettings.mediaSubtitleMode === 'BILINGUAL');
     setAutoScroll(globalSettings.mediaAutoScroll);
   }, [globalSettings.mediaAutoScroll, globalSettings.mediaSubtitleMode]);
 
-  const loadTranscript = useCallback(async (force = false) => {
-    if (convexAuthLoading || !isAuthenticated || !episode.audioUrl) return;
-    const epId = getEpisodeId();
-    const loadKey = `${epId}:${language}`;
-    if (!force && (transcriptLoadKeyRef.current === loadKey || transcriptLoadedKeyRef.current === loadKey)) return;
-    transcriptLoadKeyRef.current = loadKey;
-    setTranscriptLoading(true);
-    setTranscriptError(null);
-    try {
-      const db = await getTranscript({ episodeId: epId, language });
-      if (db?.segments?.length > 0) {
-        setTranscript(db.segments);
-        transcriptLoadedKeyRef.current = loadKey;
-      } else {
-        setIsGeneratingTranscript(true);
-        const res = await generateTranscript({ audioUrl: episode.audioUrl, episodeId: epId, language });
-        if (res.success && res.data?.segments) {
-          setTranscript(res.data.segments);
+  const loadTranscript = useCallback(
+    async (force = false) => {
+      if (convexAuthLoading || !isAuthenticated || !episode.audioUrl) return;
+      const epId = getEpisodeId();
+      const loadKey = `${epId}:${language}`;
+      if (
+        !force &&
+        (transcriptLoadKeyRef.current === loadKey || transcriptLoadedKeyRef.current === loadKey)
+      )
+        return;
+      transcriptLoadKeyRef.current = loadKey;
+      setTranscriptLoading(true);
+      setTranscriptError(null);
+      try {
+        const db = await getTranscript({ episodeId: epId, language });
+        if (db?.segments?.length > 0) {
+          setTranscript(db.segments);
           transcriptLoadedKeyRef.current = loadKey;
-        } else { setTranscriptError(res.error || 'Failed to generate transcript'); }
-        setIsGeneratingTranscript(false);
+        } else {
+          setIsGeneratingTranscript(true);
+          const res = await generateTranscript({
+            audioUrl: episode.audioUrl,
+            episodeId: epId,
+            language,
+          });
+          if (res.success && res.data?.segments) {
+            setTranscript(res.data.segments);
+            transcriptLoadedKeyRef.current = loadKey;
+          } else {
+            setTranscriptError(res.error || 'Failed to generate transcript');
+          }
+          setIsGeneratingTranscript(false);
+        }
+      } catch (e) {
+        setTranscriptError('Error loading transcript');
+      } finally {
+        setTranscriptLoading(false);
+        transcriptLoadKeyRef.current = null;
       }
-    } catch (e) { setTranscriptError('Error loading transcript'); } finally { setTranscriptLoading(false); transcriptLoadKeyRef.current = null; }
-  }, [convexAuthLoading, isAuthenticated, episode.audioUrl, getEpisodeId, language, getTranscript, generateTranscript]);
+    },
+    [
+      convexAuthLoading,
+      isAuthenticated,
+      episode.audioUrl,
+      getEpisodeId,
+      language,
+      getTranscript,
+      generateTranscript,
+    ]
+  );
 
   useEffect(() => {
     if (!convexAuthLoading && isAuthenticated && episode.audioUrl) {
@@ -1140,23 +1241,63 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   }, [convexAuthLoading, isAuthenticated, episode.audioUrl, language, loadTranscript]);
 
   useEffect(() => {
-    if (channel.feedUrl) {
-      getEpisodesAction({ feedUrl: channel.feedUrl }).then(res => {
-        if (res?.episodes) setPlaylist(res.episodes.filter((e: any) => e.audioUrl));
-      }).catch(() => {});
-    }
-  }, [channel.feedUrl, getEpisodesAction]);
+    if (!showPlaylist || !channel.feedUrl) return;
+    if (playlistLoadedFeedRef.current === channel.feedUrl) return;
+
+    let cancelled = false;
+    setPlaylistLoading(true);
+
+    getEpisodesAction({ feedUrl: channel.feedUrl })
+      .then(res => {
+        if (cancelled) return;
+        if (res?.episodes) {
+          setPlaylist(res.episodes.filter((e: any) => e.audioUrl));
+        }
+        playlistLoadedFeedRef.current = channel.feedUrl ?? null;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlaylist([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPlaylistLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showPlaylist, channel.feedUrl, getEpisodesAction]);
 
   const togglePlay = async () => {
     if (!audioRef.current) return;
-    if (isPlaying) { audioRef.current.pause(); }
-    else { try { await audioRef.current.play(); } catch (e) { notify.error('Playback failed'); } }
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      try {
+        await audioRef.current.play();
+      } catch (e) {
+        notify.error('Playback failed');
+      }
+    }
   };
 
-  const seekTo = (t: number) => { if (audioRef.current) audioRef.current.currentTime = t; };
+  const seekTo = (t: number) => {
+    if (audioRef.current) audioRef.current.currentTime = t;
+  };
   const skip = (s: number) => seekTo(currentTime + s);
-  const changeSpeed = () => { const speeds = [1, 1.25, 1.5, 2]; const n = speeds[(speeds.indexOf(speed) + 1) % speeds.length]; setSpeed(n); if (audioRef.current) audioRef.current.playbackRate = n; };
-  const handleShare = () => { navigator.clipboard.writeText(window.location.href); notify.success('Link copied'); };
+  const changeSpeed = () => {
+    const speeds = [1, 1.25, 1.5, 2];
+    const n = speeds[(speeds.indexOf(speed) + 1) % speeds.length];
+    setSpeed(n);
+    if (audioRef.current) audioRef.current.playbackRate = n;
+  };
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    notify.success('Link copied');
+  };
   const handleToggleSub = async () => {
     try {
       await toggleSubscription({
@@ -1172,20 +1313,28 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
       console.error('Failed to toggle podcast subscription', e);
     }
   };
-  const analyzeSentence = async (line: TranscriptLine) => { 
-    setAnalyzingLine(line); setShowAnalysis(true); setAnalysisLoading(true); 
-    try { 
-      const res = await analyzeSentenceAction({ sentence: line.text, language }); 
-      if (res.success) setAnalysisData(res.data); 
+  const analyzeSentence = async (line: TranscriptLine) => {
+    setAnalyzingLine(line);
+    setShowAnalysis(true);
+    setAnalysisLoading(true);
+    try {
+      const res = await analyzeSentenceAction({ sentence: line.text, language });
+      if (res.success) setAnalysisData(res.data);
     } catch (e) {
       console.error('Failed to analyze transcript sentence', e);
     } finally {
       setAnalysisLoading(false);
-    } 
+    }
   };
 
-  const activeLineIndex = useMemo(() => transcript.findIndex(l => currentTime >= l.start && currentTime < l.end), [currentTime, transcript]);
-  useEffect(() => { if (autoScroll && activeLineIndex !== -1) document.getElementById(`line-${activeLineIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, [activeLineIndex, autoScroll]);
+  const activeLineIndex = useMemo(
+    () => transcript.findIndex(l => currentTime >= l.start && currentTime < l.end),
+    [currentTime, transcript]
+  );
+  useEffect(() => {
+    if (!autoScroll || activeLineIndex === -1) return;
+    scrollPodcastLineIntoView(document.getElementById(`line-${activeLineIndex}`), isMobile);
+  }, [activeLineIndex, autoScroll, isMobile]);
 
   return (
     <div className="w-full h-full">
@@ -1224,7 +1373,11 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
             showPlaylist={showPlaylist}
             setShowPlaylist={setShowPlaylist}
             playlist={playlist}
-            playEpisode={(e) => navigate(`/podcasts/player?audioUrl=${encodeURIComponent(e.audioUrl)}&title=${e.title}`)}
+            playEpisode={e =>
+              navigate(
+                `/podcasts/player?audioUrl=${encodeURIComponent(e.audioUrl)}&title=${e.title}`
+              )
+            }
             scrollRef={scrollRef}
             showTranscriptLoader={transcriptLoading}
             transcriptError={transcriptError}
@@ -1232,16 +1385,36 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
           />
         </Suspense>
       ) : (
-        <div className="flex flex-col h-[100dvh] bg-k-bg overflow-hidden" style={{ background: KT.bg }}>
+        <div
+          className="flex flex-col h-[100dvh] bg-k-bg overflow-hidden"
+          style={{ background: KT.bg }}
+        >
           {/* Header */}
-          <div className="px-5 pb-3 flex-none" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}>
+          <div
+            className="px-5 pb-3 flex-none"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
+          >
             <div className="flex items-center justify-between">
-              <button onClick={() => navigate(-1)} className="p-2 bg-card rounded-xl border border-k-line shadow-sm"><ArrowLeft className="w-5 h-5" /></button>
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 bg-card rounded-xl border border-k-line shadow-sm"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <div className="text-center">
-                <div className="text-[10px] font-bold text-k-crimson uppercase tracking-widest">Podcast</div>
-                <div className="text-sm font-bold text-k-ink line-clamp-1 max-w-[200px]">{channel.title || episode.channelTitle}</div>
+                <div className="text-[10px] font-bold text-k-crimson uppercase tracking-widest">
+                  Podcast
+                </div>
+                <div className="text-sm font-bold text-k-ink line-clamp-1 max-w-[200px]">
+                  {channel.title || episode.channelTitle}
+                </div>
               </div>
-              <button onClick={() => setShowPlaylist(true)} className="p-2 bg-card rounded-xl border border-k-line shadow-sm">⋯</button>
+              <button
+                onClick={() => setShowPlaylist(true)}
+                className="p-2 bg-card rounded-xl border border-k-line shadow-sm"
+              >
+                ⋯
+              </button>
             </div>
           </div>
 
@@ -1264,20 +1437,24 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
                   </div>
                   <div>
                     <div className="text-[14px] font-bold text-k-ink leading-tight">雙語對照</div>
-                    <div className="text-[11px] font-medium text-k-sub">{getLanguageLabel(language)}</div>
+                    <div className="text-[11px] font-medium text-k-sub">
+                      {getLanguageLabel(language)}
+                    </div>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowTranslation(!showTranslation)}
                   className={cn(
-                    "w-10 h-5 rounded-full transition-all relative",
-                    showTranslation ? "bg-k-crimson" : "bg-k-sub/20"
+                    'w-10 h-5 rounded-full transition-all relative',
+                    showTranslation ? 'bg-k-crimson' : 'bg-k-sub/20'
                   )}
                 >
-                  <div className={cn(
-                    "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                    showTranslation ? "left-6" : "left-1"
-                  )} />
+                  <div
+                    className={cn(
+                      'absolute top-1 w-3 h-3 rounded-full bg-white transition-all',
+                      showTranslation ? 'left-6' : 'left-1'
+                    )}
+                  />
                 </button>
               </div>
 
@@ -1289,15 +1466,30 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
                   </div>
                 ) : transcript.length > 0 ? (
                   transcript.map((line, idx) => (
-                    <div key={idx} id={`line-${idx}`} className={cn("transition-all", idx === activeLineIndex ? "opacity-100" : "opacity-40")}>
+                    <div
+                      key={idx}
+                      id={`line-${idx}`}
+                      className={cn(
+                        'transition-all',
+                        idx === activeLineIndex ? 'opacity-100' : 'opacity-40'
+                      )}
+                    >
                       <button onClick={() => seekTo(line.start)} className="text-left w-full group">
-                        <p className="text-[16px] font-bold text-k-ink leading-relaxed group-hover:text-k-crimson transition-colors">{line.text}</p>
-                        {showTranslation && <p className="mt-1 text-sm text-k-sub leading-relaxed">{line.translation}</p>}
+                        <p className="text-[16px] font-bold text-k-ink leading-relaxed group-hover:text-k-crimson transition-colors">
+                          {line.text}
+                        </p>
+                        {showTranslation && (
+                          <p className="mt-1 text-sm text-k-sub leading-relaxed">
+                            {line.translation}
+                          </p>
+                        )}
                       </button>
                     </div>
                   ))
                 ) : (
-                  <p className="text-k-sub text-center py-10 italic">{transcriptError || copy.noSubtitleContent}</p>
+                  <p className="text-k-sub text-center py-10 italic">
+                    {transcriptError || copy.noSubtitleContent}
+                  </p>
                 )}
               </div>
             </div>
@@ -1310,7 +1502,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
                 value={progressPercent}
                 max={100}
                 step={0.1}
-                onChange={(event) =>
+                onChange={event =>
                   seekTo((Number(event.currentTarget.value) / 100) * effectiveDuration)
                 }
                 className="h-1"
@@ -1321,13 +1513,31 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <button onClick={changeSpeed} className="w-10 h-10 rounded-full border border-k-line flex items-center justify-center text-xs font-bold">{speed}x</button>
-              <button onClick={() => skip(-10)}><RotateCcw className="w-6 h-6 text-k-ink" /></button>
-              <button onClick={togglePlay} className="w-16 h-16 rounded-full bg-k-ink text-white flex items-center justify-center shadow-xl">
-                {isPlaying ? <Pause className="w-8 h-8" fill="white" /> : <Play className="w-8 h-8 ml-1" fill="white" />}
+              <button
+                onClick={changeSpeed}
+                className="w-10 h-10 rounded-full border border-k-line flex items-center justify-center text-xs font-bold"
+              >
+                {speed}x
               </button>
-              <button onClick={() => skip(10)}><RotateCw className="w-6 h-6 text-k-ink" /></button>
-              <button onClick={handleShare}><Share2 className="w-6 h-6 text-k-sub" /></button>
+              <button onClick={() => skip(-10)}>
+                <RotateCcw className="w-6 h-6 text-k-ink" />
+              </button>
+              <button
+                onClick={togglePlay}
+                className="w-16 h-16 rounded-full bg-k-ink text-white flex items-center justify-center shadow-xl"
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8" fill="white" />
+                ) : (
+                  <Play className="w-8 h-8 ml-1" fill="white" />
+                )}
+              </button>
+              <button onClick={() => skip(10)}>
+                <RotateCw className="w-6 h-6 text-k-ink" />
+              </button>
+              <button onClick={handleShare}>
+                <Share2 className="w-6 h-6 text-k-sub" />
+              </button>
             </div>
           </div>
         </div>
@@ -1349,12 +1559,37 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
           <SheetOverlay className="fixed inset-0 bg-black/20 z-50" />
           <SheetContent className="fixed inset-y-0 right-0 w-[300px] bg-card shadow-2xl z-50 border-l border-k-line p-6">
             <h3 className="font-bold text-k-ink mb-4">Playlist</h3>
-            <PlaylistSheetBody playlist={playlist} copy={copy} episode={episode} channel={channel} onPlayEpisode={(e) => { navigate(`/podcasts/player?audioUrl=${encodeURIComponent(e.audioUrl)}&title=${e.title}`); setShowPlaylist(false); }} formatTime={formatPlaybackTime} />
+            {playlistLoading ? (
+              <div className="flex items-center justify-center py-10 text-sm font-semibold text-muted-foreground">
+                {copy.generating}
+              </div>
+            ) : (
+              <PlaylistSheetBody
+                playlist={playlist}
+                copy={copy}
+                episode={episode}
+                channel={channel}
+                onPlayEpisode={e => {
+                  navigate(
+                    `/podcasts/player?audioUrl=${encodeURIComponent(e.audioUrl)}&title=${e.title}`
+                  );
+                  setShowPlaylist(false);
+                }}
+                formatTime={formatPlaybackTime}
+              />
+            )}
           </SheetContent>
         </SheetPortal>
       </Sheet>
 
-      <AnalysisDialog analyzingLine={analyzingLine} showAnalysis={showAnalysis} analysisLoading={analysisLoading} analysisData={analysisData} copy={copy} setShowAnalysis={setShowAnalysis} />
+      <AnalysisDialog
+        analyzingLine={analyzingLine}
+        showAnalysis={showAnalysis}
+        analysisLoading={analysisLoading}
+        analysisData={analysisData}
+        copy={copy}
+        setShowAnalysis={setShowAnalysis}
+      />
     </div>
   );
 };

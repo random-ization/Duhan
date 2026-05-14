@@ -796,6 +796,36 @@ const MobileSession = ({
 
   const progressPct = targetText.length ? (completedIndex / targetText.length) * 100 : 0;
   const meta = MODE_META[mode];
+  const targetCharacters = useMemo(() => Array.from(targetText), [targetText]);
+  const characterStates = useMemo(
+    () =>
+      targetCharacters.map((char, index) => {
+        const inputChar = userInput[index];
+        const isTyped = index < userInput.length;
+        const isCurrent = index === userInput.length;
+        const status = isTyped
+          ? checkInput(char, inputChar, targetCharacters[index + 1])
+          : 'pending';
+        let color: string = KT.subLight;
+        let textDecoration: string = 'none';
+
+        if (isTyped) {
+          color = status === 'correct' ? KT.ink : KT.pinkDeep;
+          if (status !== 'correct') {
+            textDecoration = 'underline';
+          }
+        }
+
+        return {
+          char,
+          index,
+          isCurrent,
+          color,
+          textDecoration,
+        };
+      }),
+    [checkInput, targetCharacters, userInput]
+  );
 
   return (
     <div
@@ -937,31 +967,21 @@ const MobileSession = ({
               fontFamily: KT.font,
             }}
           >
-            {targetText.split('').map((char, i) => {
-              const inputChar = userInput[i];
-              const status = checkInput(char, inputChar, targetText[i + 1]);
-              const done = i < userInput.length;
-              const isCursor = i === userInput.length;
-              let color: string = KT.subLight;
-              if (done) {
-                color = status === 'correct' ? KT.ink : KT.pinkDeep;
-              }
-              return (
-                <span
-                  key={i}
-                  style={{
-                    color,
-                    background: isCursor ? KT.butter : 'transparent',
-                    borderRadius: isCursor ? 3 : 0,
-                    padding: isCursor ? '0 2px' : 0,
-                    textDecoration: done && status !== 'correct' ? 'underline' : 'none',
-                    transition: 'color 0.08s',
-                  }}
-                >
-                  {char === ' ' ? '\u00A0' : char}
-                </span>
-              );
-            })}
+            {characterStates.map(({ char, index, isCurrent, color, textDecoration }) => (
+              <span
+                key={index}
+                style={{
+                  color,
+                  background: isCurrent ? KT.butter : 'transparent',
+                  borderRadius: isCurrent ? 3 : 0,
+                  padding: isCurrent ? '0 2px' : 0,
+                  textDecoration,
+                  transition: 'color 0.08s',
+                }}
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </span>
+            ))}
           </div>
         </div>
 

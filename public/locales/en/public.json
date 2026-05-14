@@ -304,19 +304,24 @@
     "switchTab": "Switch tab",
     "loading": "Loading...",
     "error": "Something went wrong.",
-    "allRightsReserved": "All rights reserved."
+    "allRightsReserved": "All rights reserved.",
+    "levelSuffix": "",
+    "level": "Level",
+    "daysShort": {
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S",
+      "sun": "S"
+    },
+    "units": "Units",
+    "words": "Words",
+    "cards": "Cards",
+    "book": "Book"
   },
-  "search": {
-    "placeholder": "Search grammar, books, notes...",
-    "startTyping": "Start typing to search",
-    "empty": "No results found.",
-    "bucket": {
-      "grammar": "Grammar",
-      "book": "Books",
-      "podcast": "Podcasts",
-      "note": "Notes"
-    }
-  },
+  "search": "Search",
   "notifications": {
     "open": "Notifications",
     "title": "Notifications",
@@ -646,6 +651,300 @@
       "about": "About",
       "learnGuides": "Learn Guides",
       "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
+    },
+    "v2": {
+      "nav": {
+        "features": "Features",
+        "loop": "Daily Path",
+        "modules": "Modules",
+        "community": "Community",
+        "pricing": "Pricing",
+        "faq": "FAQ",
+        "login": "Log In",
+        "register": "Register"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "Morning Review",
+            "s": "18 cards due · Done"
+          },
+          "s2": {
+            "t": "New Lesson · L24 Alleyway",
+            "s": "In progress · 8 min"
+          },
+          "s3": {
+            "t": "Podcast Clip",
+            "s": "Seoul Alley Walk · 6 min"
+          },
+          "s4": {
+            "t": "Bedtime Reading",
+            "s": "Article · Memories of the Alleyway"
+          },
+          "date": "May 11th",
+          "greet": "Hello, Hae-eun",
+          "sub": "Daily path ready · 4 steps, ~22 mins"
+        },
+        "eyebrow": "v3.0 Released · New learning path & community",
+        "titleKo": "DuHan",
+        "titlePre": "Make Korean ",
+        "titleUnderlined": "part of your routine",
+        "ctaPrimary": "Start Learning for Free →",
+        "ctaSecondary": "Watch 90s Demo",
+        "meta1": "Active Learners",
+        "meta2": "Cards Reviewed Daily",
+        "meta3": "App Store Rating",
+        "chip1": {
+          "t": "Streak",
+          "v": "47 Days"
+        },
+        "chip2": {
+          "t": "New Words Today",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "Level 5 · 87%"
+        }
+      },
+      "logos": {
+        "v1": "Immersive Reading in Real Context",
+        "v2": "Listen to Real Audio from Movies & Podcasts",
+        "v3": "Smart Review with FSRS Algorithm",
+        "v4": "Community Translations & Mutual Help",
+        "v5": "Sync Progress Across All Platforms"
+      },
+      "features": {
+        "t1": {
+          "title": "Daily Learning Path",
+          "pill": "/ Generated at 7:00 AM · Avg 22 mins"
+        },
+        "t2": {
+          "title": "Vocab Book + 4 Modes",
+          "desc": "Flashcards, Learn, Test, and Match — four ways to master one word.",
+          "pill": "/ TOPIK I + II · 9,300 words"
+        },
+        "t3": {
+          "title": "Grammar & Sentence Library",
+          "desc": "Each grammar point comes with real examples + past papers. Errors are automatically added to review.",
+          "pill": "/ 480 core grammar points"
+        },
+        "t4": {
+          "title": "TOPIK Preparation",
+          "desc": "Past papers / Mock exams / AI writing evaluation + Speed listening",
+          "pill": "/ Avg TOPIK II improvement: 1.4 levels"
+        },
+        "t6": {
+          "title": "Native Community · Translation",
+          "desc": "Unsure about a translation? Post a bounty and get help from native speakers.",
+          "pill": "/ 1.2k+ active help groups"
+        },
+        "t5": {
+          "title": "Movies · Podcasts · Reading Immersive",
+          "pill": "/ 4,800+ learning materials · Weekly updates"
+        },
+        "title": "The All-in-One Korean Learning Toolkit"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · Morning",
+          "title": "Review Due Cards",
+          "desc": "FSRS algorithm decides what to review today · Done in 7 mins on average.",
+          "preview": "18 cards · 7 mins"
+        },
+        "s2": {
+          "label": "STEP 2 · Course",
+          "title": "New Lesson Content",
+          "desc": "Textbook + Listening + Instant Test · Capture any clip as a card.",
+          "preview": "L24 · 8 mins"
+        },
+        "s3": {
+          "label": "STEP 3 · Commute",
+          "title": "Listening Immersion",
+          "desc": "Real podcast or K-Drama clips · Bilingual subtitles · Save words instantly.",
+          "preview": "Podcast 6 mins"
+        },
+        "s4": {
+          "label": "STEP 4 · Bedtime",
+          "title": "Read a Passage",
+          "desc": "Auto-matched difficulty · Reading one article consolidates today's learning.",
+          "preview": "Short story 4 mins"
+        },
+        "title": "Four steps, your daily Korean is set.",
+        "sub": "No willpower needed · Open the app to see your checklist · Resume anytime"
+      },
+      "modules": {
+        "title": "Modules Built for Long-term Learning",
+        "sub": "Polished hundreds of times · No feature bloat · It just works.",
+        "m1": {
+          "title": "Vocab · 4 Practice Modes",
+          "desc": "One word, four ways — Flashcards for familiarity, Learning for depth, Test for time limits, and Match for fun. Each word has an FSRS memory strength bar.",
+          "tag1": "FSRS Algorithm",
+          "tag2": "4 Practice Modes",
+          "tag3": "Context Examples",
+          "tag4": "Vocab Filter",
+          "link": "Explore Vocab Module →"
+        },
+        "m2": {
+          "title": "TOPIK · Papers + AI Scoring",
+          "desc": "Deep archive of past reading and listening papers, 1:1 real exam environment. AI writing evaluation provides 4D feedback, plus mock listening with speed control.",
+          "tag1": "10 Years of Papers",
+          "tag2": "1:1 Exam Environment",
+          "tag3": "AI Writing Feedback",
+          "tag4": "All-around Score Prediction",
+          "link": "Explore TOPIK Module →"
+        },
+        "m3": {
+          "title": "Media · Speed Listening",
+          "desc": "Goodbye boring listening drills. Huge library of real podcasts and videos, supporting 0.5x–1.5x speed, synced scripts, and one-tap word saving.",
+          "tag1": "4,800+ Clips",
+          "tag2": "Bilingual Subs",
+          "tag3": "Tap to Save",
+          "tag4": "Graded Difficulty",
+          "link": "Explore Immersion Module →"
+        },
+        "m4": {
+          "title": "Reading · AI Assistance",
+          "desc": "From news to picture books, all content is precisely graded L1–L6. AI automatically extracts core vocab and provides one-tap translation for complex sentences.",
+          "tag1": "Grades 1–6",
+          "tag2": "Picture Book Library",
+          "tag3": "One-tap Lookup",
+          "tag4": "Notes to Cards",
+          "link": "Explore Reading Module →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "Study Mates",
+          "s": "Grow Together"
+        },
+        "s2": {
+          "l": "Public Vocab Books",
+          "s": "Resource Sharing"
+        },
+        "s3": {
+          "l": "Study Tips",
+          "s": "Experience Sharing"
+        },
+        "s4": {
+          "l": "Daily Streak",
+          "s": "Keep Going"
+        },
+        "title": "Don't study alone, go further together.",
+        "sub": "Share vocab cards, exchange prep tips, and witness each other's growth · K-Soft community makes Korean learning less lonely."
+      },
+      "pricing": {
+        "perMonth": "/ mo",
+        "perQuarter": "/ quarter",
+        "perYear": "/ year",
+        "lifetime": {
+          "title": "Lifetime Access",
+          "desc": "Pay once, own it forever.",
+          "cta": "Get Lifetime"
+        },
+        "tabMonthly": "Monthly",
+        "tabQuarterly": "Quarterly",
+        "tabAnnual": "Annual",
+        "pro": {
+          "f1": "<b>Unlimited</b> new words + FSRS review",
+          "f2": "All courses + <b>All TOPIK 1-6</b> papers",
+          "f3": "Full media library + <b>Smart scripts</b>",
+          "f4": "<b>AI writing evaluation</b> + speed listening",
+          "f5": "Unlimited community resources",
+          "f6": "Real-time progress sync",
+          "title": "Plus Plan",
+          "desc": "Unlock all AI features and advanced content.",
+          "cta": "Unlock Plus Now"
+        },
+        "title": "Pick a Plan, Start Learning",
+        "sub": "Join the global community and unlock the full AI Korean experience.",
+        "free": {
+          "title": "Free Tier",
+          "desc": "Start your journey for free.",
+          "unit": "/ forever",
+          "f1": "<b>5 new words</b> per day",
+          "f2": "<b>30 review cards</b> daily limit",
+          "f3": "<b>Basic courses</b> (L1–L2) access",
+          "f4": "Media <b>preview mode</b>",
+          "f5": "Selected TOPIK papers",
+          "f6": "Limited AI feedback",
+          "cta": "Get Started for Free"
+        },
+        "popular": "Popular",
+        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods."
+      },
+      "testimonials": {
+        "title": "What DuHan Learners Say",
+        "t1": {
+          "tag1": "11 months used",
+          "tag2": "Level 5 achieved",
+          "name": "Hae-eun · @hae_eun",
+          "meta": "Designer · Hangzhou",
+          "quote": "I used to use Anki but got stressed. DuHan packaged it into 'just these 4 steps,' and I've stuck with it for a year. Passed TOPIK II Level 5!"
+        },
+        "t2": {
+          "tag1": "Learn with K-Drama",
+          "tag2": "3 months",
+          "name": "Xiao Ke",
+          "meta": "University Student",
+          "quote": "No more relying on fansubs. I tap a word, it goes to my cards, I review it the next day — making drama watching the best way to learn."
+        },
+        "t3": {
+          "tag1": "Native TA",
+          "name": "Minji · TA",
+          "meta": "Seoul · Native Speaker",
+          "quote": "The UI is so healing. It's like flipping through a beautiful magazine. Most importantly, it works — I actually remember the words."
+        }
+      },
+      "faq": {
+        "title": "FAQ",
+        "q1": "Can beginners use it?",
+        "q2": "What is FSRS algorithm?",
+        "q3": "Difference between Plus and Elite?",
+        "q4": "Can I study offline?",
+        "q5": "Is there a student discount?",
+        "q6": "Can I get a refund?"
+      },
+      "finalCta": {
+        "titlePre": "Make Korean part",
+        "titleMid": "of your daily life",
+        "titlePost": "starting today",
+        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
+        "ctaPrimary": "Start for Free →",
+        "ctaSecondary": "Download App"
+      },
+      "footer": {
+        "col1": {
+          "head": "Product",
+          "l1": "Features",
+          "l3": "TOPIK Prep",
+          "l4": "Media & Listening",
+          "l5": "Graded Reading",
+          "l6": "Community"
+        },
+        "col2": {
+          "head": "Learn",
+          "l1": "Study Guides",
+          "l2": "Grammar Wiki",
+          "l3": "Prep Blog",
+          "l4": "Daily Korean"
+        },
+        "col3": {
+          "head": "Company",
+          "l1": "About DuHan",
+          "l5": "Contact Us"
+        },
+        "col4": {
+          "head": "Support",
+          "l1": "Help Center",
+          "l2": "Refund Policy",
+          "l3": "Privacy Policy",
+          "l4": "Terms of Service"
+        },
+        "tag1": "DuHan · Make Korean a daily habit.",
+        "tag2": "From Hangul to TOPIK Level 6, all in one place.",
+        "copy": "© 2026 DuHan Inc. All rights reserved."
+      }
     }
   },
   "pricing": {
@@ -1000,10 +1299,33 @@
     "verifyEmailInvalidToken": "This verification link is invalid or expired.",
     "verifyEmailDescription": "Click the button below to send a verification email.",
     "loginRequired": "Please log in first.",
-    "networkError": "Network error. Please check your connection and try again."
+    "networkError": "Network error. Please check your connection and try again.",
+    "desktop": {
+      "subtitle": "Duhan · Rediscover Korean",
+      "heroLine1": "One character",
+      "heroLine2": "Changes your day",
+      "heroDesc1": "Every character brings you closer to the language.",
+      "heroDesc2": "Immersive learning, join ",
+      "heroDesc3": "30,000",
+      "heroDesc4": " learners.",
+      "welcomeBack": "Welcome Back",
+      "startLearning": "Start Learning",
+      "welcomeBackKo": "Nice to see you again",
+      "welcomeKo": "Welcome",
+      "continueJourney": "Continue your Korean journey",
+      "joinLearners": "Join 30,000 Korean learners",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "Enter your nickname",
+      "forgotPassword": "Forgot Password?",
+      "processing": "Processing...",
+      "loginAction": "Login →",
+      "joinAction": "Join Now →",
+      "orUse": "Or use",
+      "agreement": "By continuing, you agree to our",
+      "and": "and"
+    }
   },
   "loading": "Loading...",
-  "search": "Search",
   "error": "Error",
   "pwa": {
     "install": {
@@ -1292,9 +1614,10 @@
   "footerDescription": "Your comprehensive Korean language learning platform",
   "allRightsReserved": "All rights reserved.",
   "relativeTime": {
-    "justNow": "Just now",
-    "hoursAgo": "{{count}} hours ago",
-    "daysAgo": "{{count}} days ago"
+    "justNow": "just now",
+    "minutesShort": "m",
+    "hoursShort": "h",
+    "daysShort": "d"
   },
   "preview": "Preview",
   "markdownTip": "Formatting tips: Use # for headings (# H1, ## H2, ### H3), - or * for bullet lists, 1. for numbered lists, blank lines for paragraphs",
@@ -2526,6 +2849,8 @@
   "achievements": {
     "aiTutorTagline": "Your personal Korean AI tutor",
     "saveReportImage": "Save report image",
+    "shareReportImage": "Share report image",
+    "reportImageActionFailed": "Unable to share or save this report image right now.",
     "galleryEmpty": "Complete typing or vocab practice to unlock your first badge!",
     "achievementUnlocked": "Achievement Unlocked",
     "defaultLearner": "DuHan Learner",
@@ -2551,28 +2876,94 @@
       "social": "Social"
     },
     "badges": {
-      "streak7": { "title": "7-day streak", "description": "Study for 7 days in a row." },
-      "streak14": { "title": "14-day streak", "description": "Study for 14 days in a row." },
-      "streak30": { "title": "30-day streak", "description": "Study for 30 days in a row." },
-      "streak60": { "title": "60-day streak", "description": "Study for 60 days in a row." },
-      "streak100": { "title": "100-day streak", "description": "Study for 100 days in a row." },
-      "streak365": { "title": "365-day streak", "description": "Study for a full year." },
-      "vocab100": { "title": "Vocab 100", "description": "Master 100 words." },
-      "vocab500": { "title": "Vocab 500", "description": "Master 500 words." },
-      "vocab1000": { "title": "Vocab 1000", "description": "Master 1000 words." },
-      "grammar20": { "title": "Grammar 20", "description": "Master 20 grammar points." },
-      "grammar100": { "title": "Grammar 100", "description": "Master 100 grammar points." },
-      "listening20h": { "title": "Listening 20h", "description": "Reach 20 listening hours." },
-      "listening100h": { "title": "Listening 100h", "description": "Reach 100 listening hours." },
-      "typing40": { "title": "WPM 40", "description": "Reach WPM 40 in typing practice." },
-      "typing80": { "title": "WPM 80", "description": "Reach WPM 80 in typing practice." },
-      "typing100": { "title": "WPM 100", "description": "Reach WPM 100 in typing practice." },
-      "topikPass": { "title": "TOPIK pass", "description": "Pass one TOPIK mock exam." },
-      "topikHighScore": { "title": "TOPIK high score", "description": "Earn a high score in one TOPIK mock exam." },
-      "friends1": { "title": "First friend", "description": "Add your first mutual friend." },
-      "friends10": { "title": "10 friends", "description": "Have 10 mutual friends." },
-      "groupJoin": { "title": "Join a group", "description": "Join one study group." },
-      "groupCreate": { "title": "Create a group", "description": "Create one study group." }
+      "streak7": {
+        "title": "7-day streak",
+        "description": "Study for 7 days in a row."
+      },
+      "streak14": {
+        "title": "14-day streak",
+        "description": "Study for 14 days in a row."
+      },
+      "streak30": {
+        "title": "30-day streak",
+        "description": "Study for 30 days in a row."
+      },
+      "streak60": {
+        "title": "60-day streak",
+        "description": "Study for 60 days in a row."
+      },
+      "streak100": {
+        "title": "100-day streak",
+        "description": "Study for 100 days in a row."
+      },
+      "streak365": {
+        "title": "365-day streak",
+        "description": "Study for a full year."
+      },
+      "vocab100": {
+        "title": "Vocab 100",
+        "description": "Master 100 words."
+      },
+      "vocab500": {
+        "title": "Vocab 500",
+        "description": "Master 500 words."
+      },
+      "vocab1000": {
+        "title": "Vocab 1000",
+        "description": "Master 1000 words."
+      },
+      "grammar20": {
+        "title": "Grammar 20",
+        "description": "Master 20 grammar points."
+      },
+      "grammar100": {
+        "title": "Grammar 100",
+        "description": "Master 100 grammar points."
+      },
+      "listening20h": {
+        "title": "Listening 20h",
+        "description": "Reach 20 listening hours."
+      },
+      "listening100h": {
+        "title": "Listening 100h",
+        "description": "Reach 100 listening hours."
+      },
+      "typing40": {
+        "title": "WPM 40",
+        "description": "Reach WPM 40 in typing practice."
+      },
+      "typing80": {
+        "title": "WPM 80",
+        "description": "Reach WPM 80 in typing practice."
+      },
+      "typing100": {
+        "title": "WPM 100",
+        "description": "Reach WPM 100 in typing practice."
+      },
+      "topikPass": {
+        "title": "TOPIK pass",
+        "description": "Pass one TOPIK mock exam."
+      },
+      "topikHighScore": {
+        "title": "TOPIK high score",
+        "description": "Earn a high score in one TOPIK mock exam."
+      },
+      "friends1": {
+        "title": "First friend",
+        "description": "Add your first mutual friend."
+      },
+      "friends10": {
+        "title": "10 friends",
+        "description": "Have 10 mutual friends."
+      },
+      "groupJoin": {
+        "title": "Join a group",
+        "description": "Join one study group."
+      },
+      "groupCreate": {
+        "title": "Create a group",
+        "description": "Create one study group."
+      }
     }
   },
   "weeklyActivity": {
@@ -3404,81 +3795,6 @@
       "mastered": "Mastered",
       "empty_due": "No words due for review! Good job.",
       "empty_mastered": "List of mastered words will appear here."
-    }
-  },
-  "topikWriting": {
-    "title": "TOPIK II Writing",
-    "session": {
-      "fillBlank": "Fill in the blank",
-      "graphEssay": "Graph essay",
-      "opinionEssay": "Opinion essay",
-      "exampleBox": "Example / Context",
-      "questionX": "Question {{num}}",
-      "points": "pts",
-      "answerPlaceholder": "Type your answer here...",
-      "characterCount": "{{count}} chars",
-      "remainingChars": "{{count}} left",
-      "submitConfirmTitle": "Submit Exam?",
-      "submitConfirmDesc": "Answered {{ans}}/{{total}} questions. You cannot change your answers after submitting.",
-      "exitConfirmTitle": "Exit Exam?",
-      "exitConfirmDesc": "Your current answers will be saved as a draft. You can return later to continue this exam.",
-      "continueForm": "Continue",
-      "confirmSubmit": "Confirm Submit",
-      "exiting": "Exiting...",
-      "submitting": "Submitting...",
-      "saveIdle": "Auto-save",
-      "saving": "Saving...",
-      "saved": "✓ Saved",
-      "saveError": "Save Failed",
-      "submitButton": "Submit",
-      "wongojiAnswer": "Wongoji Answer",
-      "answerArea": "Answer Area",
-      "maxLength": "Max {{count}} chars",
-      "submittedTitle": "Successfully Submitted!",
-      "submittedDesc": "Answered {{ans}} / {{total}} questions. Waiting for AI evaluation...",
-      "loadingExam": "Preparing writing exam...",
-      "q51Instruction": "Fill in the blank based on the context to make the passage complete and natural.",
-      "q52Instruction": "Fill in the blank according to the requirements of the prompt.",
-      "q53Instruction": "Based on the graph below, write an explanatory essay (200-300 characters).",
-      "q54Instruction": "Write an argumentative essay on the topic below (400-600 characters).",
-      "fillBlankPaperTitle": "Fill in blanks (㉠ / ㉡)",
-      "fillBlankOneSentence": "One sentence per blank recommended",
-      "fillBlankHint": "Please fill both ㉠ and ㉡ with complete sentences.",
-      "fillBlankA": "Fill ㉠ here",
-      "fillBlankB": "Fill ㉡ here"
-    },
-    "report": {
-      "title": "Writing Evaluation Report",
-      "subtitle": "TOPIK II Writing · AI Evaluation",
-      "evaluatingTitle": "AI is evaluating...",
-      "evaluatingDesc": "Analyzing based on official TOPIK grading criteria. Usually takes 30-60 seconds.",
-      "dimTask": "Task Accomplishment",
-      "dimStructure": "Development & Structure",
-      "dimLanguage": "Language Use",
-      "dimWongoji": "Wongoji Formatting",
-      "maxScore": "Max {{score}}",
-      "scoreLabel": "Score:",
-      "dimScores": "Dimension Scores",
-      "originalText": "Your Original Answer",
-      "notAnswered": "(Not answered)",
-      "aiCorrected": "AI Polished Version",
-      "noCorrection": "(No correction)",
-      "feedback": "Overall Feedback",
-      "loadingError": "Failed to load evaluation, please refresh the page.",
-      "back": "Back",
-      "timeElapsed": "Time elapsed:",
-      "timeFormat": "{{min}}m {{sec}}s",
-      "totalScore": "Total Score:",
-      "aiDone": "AI Evaluation Complete",
-      "passExcellent": "Excellent 🎉",
-      "passGood": "Pass ✅",
-      "passNeedsWork": "Needs Work 📚",
-      "overallAnalysis": "Overall Dimension Analysis",
-      "questionFeedback": "Detailed Feedback by Question",
-      "loadingOriginal": "Loading original exam paper...",
-      "retrigger": "Retry Evaluation",
-      "retriggering": "Retrying...",
-      "retryFailed": "Retry failed. Please try again later."
     }
   },
   "footer": {

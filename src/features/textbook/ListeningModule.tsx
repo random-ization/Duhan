@@ -26,6 +26,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../co
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
 import { Button, Select } from '../../components/ui';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 // =========================================
 // Types
@@ -48,6 +49,16 @@ interface UnitData {
   audioUrl: string;
   transcriptData?: TranscriptSegment[];
 }
+
+type PreparedTranscriptWord = {
+  word: string;
+  normalizedWord: string;
+  baseForm?: string;
+};
+
+type PreparedTranscriptSegment = TranscriptSegment & {
+  preparedWords: PreparedTranscriptWord[];
+};
 
 type ListeningUnitRecord = {
   _id: string;
@@ -198,6 +209,35 @@ function parseListeningUnitData(unit: ListeningUnitRecord | undefined): UnitData
   };
 }
 
+function prepareTranscriptSegments(
+  transcriptData: TranscriptSegment[] | undefined
+): PreparedTranscriptSegment[] {
+  if (!transcriptData || transcriptData.length === 0) return [];
+
+  return transcriptData.map(segment => {
+    const tokenBaseMap = new Map<string, string>();
+    segment.tokens?.forEach(token => {
+      const normalizedSurface = normalizeLookupWord(token.surface);
+      if (!normalizedSurface || tokenBaseMap.has(normalizedSurface)) return;
+      tokenBaseMap.set(normalizedSurface, token.base);
+    });
+
+    const preparedWords = segment.text.split(/\s+/).map(word => {
+      const normalizedWord = normalizeLookupWord(word);
+      return {
+        word,
+        normalizedWord,
+        baseForm: normalizedWord ? tokenBaseMap.get(normalizedWord) : undefined,
+      };
+    });
+
+    return {
+      ...segment,
+      preparedWords,
+    };
+  });
+}
+
 function findVocabMatch(word: string, vocabList: VocabItem[]): VocabItem | null {
   const directMatch = vocabList.find(item => item.korean === word);
   if (directMatch) return directMatch;
@@ -269,14 +309,35 @@ function shouldRenderAudioPlayer(loading: boolean, unitData: UnitData | null) {
 }
 
 function getActiveListeningSegmentIndex(
-  unitData: UnitData | null,
+  transcriptSegments: PreparedTranscriptSegment[],
   isKaraokeMode: boolean,
   currentTime: number
 ) {
-  if (!unitData?.transcriptData || !isKaraokeMode) return -1;
-  return unitData.transcriptData.findIndex(
+  if (transcriptSegments.length === 0 || !isKaraokeMode) return -1;
+  return transcriptSegments.findIndex(
     segment => currentTime >= segment.start && currentTime <= segment.end
   );
+}
+
+function scrollListeningSegmentIntoView(
+  element: HTMLButtonElement | null | undefined,
+  isMobile: boolean
+) {
+  if (!element || typeof globalThis.window === 'undefined') return;
+
+  const rect = element.getBoundingClientRect();
+  const viewportHeight = globalThis.window.innerHeight;
+  const topThreshold = isMobile ? 96 : 120;
+  const bottomThreshold = isMobile ? 176 : 220;
+  const isVisibleEnough =
+    rect.top >= topThreshold && rect.bottom <= viewportHeight - bottomThreshold;
+
+  if (isVisibleEnough) return;
+
+  element.scrollIntoView({
+    behavior: isMobile ? 'auto' : 'smooth',
+    block: 'center',
+  });
 }
 
 type ListeningUiText = {
@@ -751,7 +812,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 };
 // Transcription Segment Component
 interface SegmentViewProps {
-  segment: TranscriptSegment;
+  segment: PreparedTranscriptSegment;
   index: number;
   isActive: boolean;
   showTranslation: boolean;
@@ -800,14 +861,10 @@ const SegmentView: React.FC<SegmentViewProps> = ({
       <div
         className={`font-medium break-words ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
       >
-        {segment.text.split(/\s+/).map((word, wordIndex) => {
-          const normalizedWord = normalizeLookupWord(word);
+        {segment.preparedWords.map(({ word, normalizedWord, baseForm }, wordIndex) => {
           if (!normalizedWord) {
             return <span key={`text-${index}-${wordIndex}`}>{word} </span>;
           }
-          const baseForm = segment.tokens?.find(
-            t => normalizeLookupWord(t.surface) === normalizedWord
-          )?.base;
 
           return (
             <WordView
@@ -831,7 +888,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 };
 
 interface ListeningTranscriptBodyProps {
-  unitData: UnitData | null;
+  transcriptSegments: PreparedTranscriptSegment[];
   fontSize: number;
   isKaraokeMode: boolean;
   activeSegmentIndex: number;
@@ -847,7 +904,7 @@ interface ListeningTranscriptBodyProps {
 }
 
 const ListeningTranscriptBody: React.FC<ListeningTranscriptBodyProps> = ({
-  unitData,
+  transcriptSegments,
   fontSize,
   isKaraokeMode,
   activeSegmentIndex,
@@ -857,10 +914,10 @@ const ListeningTranscriptBody: React.FC<ListeningTranscriptBodyProps> = ({
   segmentRefs,
   onSegmentClick,
 }) => {
-  if (unitData?.transcriptData && unitData.transcriptData.length > 0) {
+  if (transcriptSegments.length > 0) {
     return (
       <div className="space-y-4" style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}>
-        {unitData.transcriptData.map((segment, index) => (
+        {transcriptSegments.map((segment, index) => (
           <SegmentView
             key={`seg-${segment.start}-${segment.end}`}
             segment={segment}
@@ -941,6 +998,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   onBack,
 }) => {
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
   const { saveWord } = useUserActions();
   const { logActivity } = useActivityLogger();
@@ -1110,6 +1168,10 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
     () => parseListeningUnitData(unitDetails?.unit),
     [unitDetails]
   );
+  const transcriptSegments = useMemo(
+    () => prepareTranscriptSegments(unitData?.transcriptData),
+    [unitData?.transcriptData]
+  );
   const moduleTitle = useMemo(
     () => resolveListeningTitle(unitData, unitTitle),
     [unitData, unitTitle]
@@ -1140,17 +1202,14 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
   // Karaoke Logic: Update active segment based on current time
   // ========================================
   const activeSegmentIndex = useMemo(
-    () => getActiveListeningSegmentIndex(unitData, isKaraokeMode, currentTime),
-    [unitData, isKaraokeMode, currentTime]
+    () => getActiveListeningSegmentIndex(transcriptSegments, isKaraokeMode, currentTime),
+    [transcriptSegments, isKaraokeMode, currentTime]
   );
 
   useEffect(() => {
     if (activeSegmentIndex < 0) return;
-    segmentRefs.current[activeSegmentIndex]?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-  }, [activeSegmentIndex]);
+    scrollListeningSegmentIntoView(segmentRefs.current[activeSegmentIndex], isMobile);
+  }, [activeSegmentIndex, isMobile]);
 
   // ========================================
   // Handlers
@@ -1414,7 +1473,7 @@ const ListeningModule: React.FC<ListeningModuleProps> = ({
                 </div>
               )}
               <ListeningTranscriptBody
-                unitData={unitData}
+                transcriptSegments={transcriptSegments}
                 fontSize={fontSize}
                 isKaraokeMode={isKaraokeMode}
                 activeSegmentIndex={activeSegmentIndex}

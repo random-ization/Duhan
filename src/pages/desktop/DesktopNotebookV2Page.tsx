@@ -22,11 +22,11 @@ export default function DesktopNotebookV2Page() {
     const diff = renderTime - ts;
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return t('relativeTime.justNow', { defaultValue: 'just now' });
-    if (mins < 60) return `${mins}m`;
+    if (mins < 60) return `${mins}${t('relativeTime.minutesShort', { defaultValue: 'm' })}`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
+    if (hours < 24) return `${hours}${t('relativeTime.hoursShort', { defaultValue: 'h' })}`;
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
+    if (days < 7) return `${days}${t('relativeTime.daysShort', { defaultValue: 'd' })}`;
     return new Date(ts).toLocaleDateString();
   };
 
@@ -35,7 +35,7 @@ export default function DesktopNotebookV2Page() {
     [t('coursesOverview.desktop.notebook.types.vocab')]: '春',
     [t('coursesOverview.desktop.notebook.types.mistakes')]: '誤',
     [t('coursesOverview.desktop.notebook.types.reflections')]: '想',
-    'default': '記'
+    default: '記',
   };
 
   const toneMap: Record<string, string> = {
@@ -43,7 +43,7 @@ export default function DesktopNotebookV2Page() {
     [t('coursesOverview.desktop.notebook.types.vocab')]: 'var(--color-k-pink)',
     [t('coursesOverview.desktop.notebook.types.mistakes')]: 'var(--color-k-mint)',
     [t('coursesOverview.desktop.notebook.types.reflections')]: 'var(--color-k-lilac)',
-    'default': 'var(--color-k-sky)',
+    default: 'var(--color-k-sky)',
   };
 
   const tagToneMap: Record<string, NotebookCardTone> = {
@@ -51,7 +51,7 @@ export default function DesktopNotebookV2Page() {
     [t('coursesOverview.desktop.notebook.types.vocab')]: 'pink',
     [t('coursesOverview.desktop.notebook.types.mistakes')]: 'crimson',
     [t('coursesOverview.desktop.notebook.types.reflections')]: 'lilac',
-    'default': 'sky',
+    default: 'sky',
   };
 
   const formatDate = (timestamp: number): string => {
@@ -59,22 +59,25 @@ export default function DesktopNotebookV2Page() {
     if (diff < 86400000) return t('coursesOverview.desktop.notebook.today');
     if (diff < 172800000) return t('coursesOverview.desktop.notebook.yesterday');
     const date = new Date(timestamp);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
   };
 
-  const [activeFilter, setActiveFilter] = useState<string>(t('coursesOverview.desktop.notebook.all'));
+  const [activeFilter, setActiveFilter] = useState<string>(
+    t('coursesOverview.desktop.notebook.all')
+  );
   const [searchQuery] = useState<string>(''); // Placeholder for search if needed later
-  
+
   // 获取用户笔记统计和分类
   const facets = useQuery(NOTE_PAGES.listFacets, {});
-  
+
   // 获取用户笔记列表
   const notesResult = useQuery(NOTE_PAGES.search, {
     query: searchQuery,
-    noteTypes: activeFilter === t('coursesOverview.desktop.notebook.all') ? undefined : [activeFilter],
-    limit: 50
+    noteTypes:
+      activeFilter === t('coursesOverview.desktop.notebook.all') ? undefined : [activeFilter],
+    limit: 50,
   });
-  
+
   const notes = (notesResult?.items || []) as SearchItem[];
   const isLoading = facets === undefined || notesResult === undefined;
 
@@ -82,12 +85,12 @@ export default function DesktopNotebookV2Page() {
   const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
 
   const scopeToneMap: Record<string, string> = {
-    'READING_ARTICLE': 'var(--color-k-pink)',
-    'TOPIK_REVIEW': 'var(--color-k-lilac)',
-    'READING_BOOK': 'var(--color-k-mint)',
-    'PODCAST': 'var(--color-k-butter)',
+    READING_ARTICLE: 'var(--color-k-pink)',
+    TOPIK_REVIEW: 'var(--color-k-lilac)',
+    READING_BOOK: 'var(--color-k-mint)',
+    PODCAST: 'var(--color-k-butter)',
   };
-  
+
   // 创建新笔记
   const createNote = useMutation(NOTE_PAGES.createPage);
 
@@ -107,23 +110,28 @@ export default function DesktopNotebookV2Page() {
     }
   };
 
-  const filters = [t('coursesOverview.desktop.notebook.all'), ...(facets?.noteTypes.map(ft => ft.key) || [])];
-  
+  const filters = [
+    t('coursesOverview.desktop.notebook.all'),
+    ...(facets?.noteTypes.map(ft => ft.key) || []),
+  ];
+
   const displayNotes = notes;
 
   return (
     <div className="p-6">
       <div className="mb-4 text-[12px] font-bold text-k-sub uppercase tracking-widest">
-        {t('coursesOverview.desktop.notebook.title').toUpperCase()} · {t('coursesOverview.desktop.notebook.noteCount', { count: facets?.total || 0 })}
+        {t('coursesOverview.desktop.notebook.title').toUpperCase()} ·{' '}
+        {t('coursesOverview.desktop.notebook.noteCount', { count: facets?.total || 0 })}
       </div>
 
       <div className="mb-[18px] flex gap-2">
         {filters.map((f, i) => {
           const isActive = f === activeFilter;
-          const count = f === t('coursesOverview.desktop.notebook.all') 
-            ? (facets?.total || 0) 
-            : facets?.noteTypes.find(nt => nt.key === f)?.count || 0;
-          
+          const count =
+            f === t('coursesOverview.desktop.notebook.all')
+              ? facets?.total || 0
+              : facets?.noteTypes.find(nt => nt.key === f)?.count || 0;
+
           return (
             <div
               key={i}
@@ -155,23 +163,30 @@ export default function DesktopNotebookV2Page() {
         </div>
       ) : displayNotes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]">
-          {displayNotes.map((n) => {
+          {displayNotes.map(n => {
             const tone = toneMap[n.noteType || 'default'] || toneMap.default;
             const tagTone = tagToneMap[n.noteType || 'default'] || tagToneMap.default;
             const kanji = n.icon || KANJI_MAP[n.noteType || ''] || KANJI_MAP.default;
             const dateStr = formatDate(n.updatedAt);
 
             return (
-              <DesktopCard key={n.id} pad={0} className="overflow-hidden transition-transform hover:-translate-y-1 cursor-pointer">
+              <DesktopCard
+                key={n.id}
+                pad={0}
+                className="overflow-hidden transition-transform hover:-translate-y-1 cursor-pointer"
+              >
                 <div className="relative h-[56px] overflow-hidden" style={{ background: tone }}>
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: 'repeating-linear-gradient(135deg, transparent 0, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 7px)',
+                      background:
+                        'repeating-linear-gradient(135deg, transparent 0, transparent 6px, rgba(0,0,0,0.04) 6px, rgba(0,0,0,0.04) 7px)',
                     }}
                   />
                   <div className="absolute left-[14px] top-[12px]">
-                    <DesignChip tone={tagTone} size="sm">{n.noteType || t('coursesOverview.desktop.notebook.types.default')}</DesignChip>
+                    <DesignChip tone={tagTone} size="sm">
+                      {n.noteType || t('coursesOverview.desktop.notebook.types.default')}
+                    </DesignChip>
                   </div>
                   <div className="absolute right-[12px] top-[8px] font-k-serif text-[36px] font-medium text-[rgba(31,27,23,0.18)]">
                     {kanji}
@@ -185,9 +200,7 @@ export default function DesktopNotebookV2Page() {
                   <div className="mt-2 line-clamp-3 text-[12px] font-medium leading-[1.5] text-k-ink2">
                     {n.snippet || t('coursesOverview.desktop.notebook.noContent')}
                   </div>
-                  <div className="mt-2.5 text-[10px] font-bold text-k-sub">
-                    {dateStr}
-                  </div>
+                  <div className="mt-2.5 text-[10px] font-bold text-k-sub">{dateStr}</div>
                 </div>
               </DesktopCard>
             );
@@ -195,10 +208,17 @@ export default function DesktopNotebookV2Page() {
         </div>
       ) : (
         <div className="flex h-64 flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-k-line bg-k-card/30 p-12 text-center">
-          <div className="mb-4 text-[48px]">empty</div>
-          <div className="text-[14px] font-bold text-k-ink">{t('coursesOverview.desktop.notebook.noNotes')}</div>
-          <div className="mt-2 text-[12px] text-k-sub">{t('coursesOverview.desktop.notebook.startJourney')}</div>
-          <Button onClick={handleCreateNote} className="mt-6 rounded-xl bg-k-ink text-k-bg px-6 py-2">
+          <div className="mb-4 text-[48px] opacity-20">📭</div>
+          <div className="text-[14px] font-bold text-k-ink">
+            {t('coursesOverview.desktop.notebook.noNotes')}
+          </div>
+          <div className="mt-2 text-[12px] text-k-sub">
+            {t('coursesOverview.desktop.notebook.startJourney')}
+          </div>
+          <Button
+            onClick={handleCreateNote}
+            className="mt-6 rounded-xl bg-k-ink text-k-bg px-6 py-2"
+          >
             {t('coursesOverview.desktop.notebook.createFirstNote')}
           </Button>
         </div>
@@ -214,16 +234,29 @@ export default function DesktopNotebookV2Page() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]">
             {recentAnnotations!.map((ann: RecentAnnotation) => {
-              const scopeLabel = ann.scopeType === 'READING_ARTICLE' ? t('notes.v2.scope.reading', { defaultValue: 'Reading' })
-                : ann.scopeType === 'TOPIK_REVIEW' ? t('notes.v2.scope.topik', { defaultValue: 'TOPIK' })
-                : ann.scopeType === 'READING_BOOK' ? t('notes.v2.scope.book', { defaultValue: 'Book' })
-                : ann.scopeType === 'PODCAST' ? t('notes.v2.scope.podcast', { defaultValue: 'Podcast' })
-                : ann.scopeType || '';
+              const scopeLabel =
+                ann.scopeType === 'READING_ARTICLE'
+                  ? t('notes.v2.scope.reading', { defaultValue: 'Reading' })
+                  : ann.scopeType === 'TOPIK_REVIEW'
+                    ? t('notes.v2.scope.topik', { defaultValue: 'TOPIK' })
+                    : ann.scopeType === 'READING_BOOK'
+                      ? t('notes.v2.scope.book', { defaultValue: 'Book' })
+                      : ann.scopeType === 'PODCAST'
+                        ? t('notes.v2.scope.podcast', { defaultValue: 'Podcast' })
+                        : ann.scopeType || '';
               return (
-                <DesktopCard key={ann.id} pad={16} className="cursor-pointer transition-transform hover:-translate-y-1">
+                <DesktopCard
+                  key={ann.id}
+                  pad={16}
+                  className="cursor-pointer transition-transform hover:-translate-y-1"
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <DesignChip tone="muted" size="sm">{scopeLabel}</DesignChip>
-                    <span className="text-[10px] font-bold text-k-sub">{formatAnnotationTime(ann.createdAt)}</span>
+                    <DesignChip tone="muted" size="sm">
+                      {scopeLabel}
+                    </DesignChip>
+                    <span className="text-[10px] font-bold text-k-sub">
+                      {formatAnnotationTime(ann.createdAt)}
+                    </span>
                   </div>
                   <div className="text-[12px] font-semibold text-k-ink leading-[1.5] line-clamp-3">
                     {ann.text}

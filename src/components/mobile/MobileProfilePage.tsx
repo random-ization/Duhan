@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
@@ -7,12 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ProfileInfoTab } from '../../pages/profile/tabs/ProfileInfoTab';
-import { ProfileStatsTab } from '../../pages/profile/tabs/ProfileStatsTab';
-import { ProfileSecurityTab } from '../../pages/profile/tabs/ProfileSecurityTab';
-import {
-  ProfileSettingsTab,
-  type SettingsSection,
-} from '../../pages/profile/tabs/ProfileSettingsTab';
+import { type SettingsSection } from '../../pages/profile/tabs/ProfileSettingsTab';
 import toast from 'react-hot-toast';
 import { useMutation, useAction, useQuery } from 'convex/react';
 import { aRef, mRef, NoArgs, qRef } from '../../utils/convexRefs';
@@ -34,6 +29,31 @@ import { getPathWithoutLang } from '../../utils/pathname';
 import { KT, Chip, Card, HanjaSeal, SectionHead, PageShell } from './ksoft/ksoft';
 
 type LegacyTab = 'info' | 'stats' | 'security' | 'settings';
+
+const LazyProfileStatsTab = lazy(() =>
+  import('../../pages/profile/tabs/ProfileStatsTab').then(module => ({
+    default: module.ProfileStatsTab,
+  }))
+);
+
+const LazyProfileSecurityTab = lazy(() =>
+  import('../../pages/profile/tabs/ProfileSecurityTab').then(module => ({
+    default: module.ProfileSecurityTab,
+  }))
+);
+
+const LazyProfileSettingsTab = lazy(() =>
+  import('../../pages/profile/tabs/ProfileSettingsTab').then(module => ({
+    default: module.ProfileSettingsTab,
+  }))
+);
+
+const LegacyTabFallback: React.FC = () => (
+  <Card pad={24}>
+    <div className="py-10 text-center text-sm font-semibold text-k-sub">Loading...</div>
+  </Card>
+);
+
 const settingsSectionFromParam = (raw: string | null): SettingsSection => {
   if (raw === 'notifications' || raw === 'language') return raw;
   return 'all';
@@ -60,7 +80,9 @@ export const MobileProfilePage: React.FC = () => {
     .filter(Boolean);
   const legacyTabFromRoute = tabFromParam(profileRouteSegments[0] ?? null);
   const settingsSectionFromRoute =
-    legacyTabFromRoute === 'settings' ? settingsSectionFromParam(profileRouteSegments[1] ?? null) : 'all';
+    legacyTabFromRoute === 'settings'
+      ? settingsSectionFromParam(profileRouteSegments[1] ?? null)
+      : 'all';
   const legacyTabFromQuery = tabFromParam(searchParams.get('tab'));
   const settingsSectionFromQuery = settingsSectionFromParam(searchParams.get('section'));
   const legacyTab = legacyTabFromRoute ?? legacyTabFromQuery;
@@ -539,44 +561,50 @@ export const MobileProfilePage: React.FC = () => {
                 />
               )}
               {legacyTab === 'stats' && (
-                <ProfileStatsTab
-                  labels={labels}
-                  dayStreak={dayStreak}
-                  savedWordsCount={savedWordsCount}
-                  examsTaken={examsTaken}
-                  averageScore={averageScore}
-                  examHistory={examHistory}
-                />
+                <Suspense fallback={<LegacyTabFallback />}>
+                  <LazyProfileStatsTab
+                    labels={labels}
+                    dayStreak={dayStreak}
+                    savedWordsCount={savedWordsCount}
+                    examsTaken={examsTaken}
+                    averageScore={averageScore}
+                    examHistory={examHistory}
+                  />
+                </Suspense>
               )}
               {legacyTab === 'security' && (
-                <ProfileSecurityTab
-                  labels={labels}
-                  handlePasswordChange={handlePasswordChange}
-                  currentPassword={currentPassword}
-                  setCurrentPassword={setCurrentPassword}
-                  newPassword={newPassword}
-                  setNewPassword={setNewPassword}
-                  confirmPassword={confirmPassword}
-                  setConfirmPassword={setConfirmPassword}
-                  isChangingPassword={isChangingPassword}
-                  accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
-                  linkedProviders={linkedProviders}
-                  linkedCount={linkedAccounts?.length || 0}
-                  accountsLoading={linkedAccounts === undefined}
-                  linkedLabel={labels.profile?.link?.linked || 'Linked'}
-                  notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
-                  unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
-                  linkLabel={labels.profile?.link?.connect || 'Connect'}
-                  signIn={signIn}
-                  unlinkAuthProviderMutation={unlinkAuthProviderMutation}
-                  getAccountButtonClass={getAccountButtonClass}
-                  success={toast.success}
-                  error={toast.error}
-                  toErrorMessage={toErrorMessage}
-                />
+                <Suspense fallback={<LegacyTabFallback />}>
+                  <LazyProfileSecurityTab
+                    labels={labels}
+                    handlePasswordChange={handlePasswordChange}
+                    currentPassword={currentPassword}
+                    setCurrentPassword={setCurrentPassword}
+                    newPassword={newPassword}
+                    setNewPassword={setNewPassword}
+                    confirmPassword={confirmPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    isChangingPassword={isChangingPassword}
+                    accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
+                    linkedProviders={linkedProviders}
+                    linkedCount={linkedAccounts?.length || 0}
+                    accountsLoading={linkedAccounts === undefined}
+                    linkedLabel={labels.profile?.link?.linked || 'Linked'}
+                    notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
+                    unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
+                    linkLabel={labels.profile?.link?.connect || 'Connect'}
+                    signIn={signIn}
+                    unlinkAuthProviderMutation={unlinkAuthProviderMutation}
+                    getAccountButtonClass={getAccountButtonClass}
+                    success={toast.success}
+                    error={toast.error}
+                    toErrorMessage={toErrorMessage}
+                  />
+                </Suspense>
               )}
               {legacyTab === 'settings' && (
-                <ProfileSettingsTab labels={labels} section={settingsSection} />
+                <Suspense fallback={<LegacyTabFallback />}>
+                  <LazyProfileSettingsTab labels={labels} section={settingsSection} />
+                </Suspense>
               )}
             </motion.div>
           </AnimatePresence>
@@ -619,7 +647,7 @@ export const MobileProfilePage: React.FC = () => {
         )}
         <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
-            <UserAvatar 
+            <UserAvatar
               user={user}
               isUploading={isUploadingAvatar}
               className="w-[68px] h-[68px] rounded-[20px] shadow-k-sh"

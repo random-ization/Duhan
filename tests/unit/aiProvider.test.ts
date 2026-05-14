@@ -39,6 +39,21 @@ describe('resolveChatProviderConfigs', () => {
       },
     ]);
   });
+
+  it('uses MIMO defaults when only MIMO is configured', () => {
+    const configs = resolveChatProviderConfigs({
+      MIMO_API_KEY: 'mimo-key',
+    });
+
+    expect(configs).toEqual([
+      {
+        provider: 'mimo',
+        apiKey: 'mimo-key',
+        baseURL: 'https://api.xiaomimimo.com/v1',
+        model: 'mimo-v2-flash',
+      },
+    ]);
+  });
 });
 
 describe('isModelAccessError', () => {

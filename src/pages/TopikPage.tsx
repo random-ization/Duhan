@@ -27,7 +27,6 @@ import { qRef, TOPIK } from '../utils/convexRefs';
 import { api } from '../../convex/_generated/api';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import MobileTopikPage from '../components/mobile/MobileTopikPage';
 import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
@@ -45,8 +44,11 @@ import {
 import { localizeInternalPath } from '../utils/localizedRouting';
 
 const TopikModule = lazy(() => import('../components/topik'));
+const MobileTopikPage = lazy(() => import('../components/mobile/MobileTopikPage'));
 
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
+const LOBBY_HISTORY_LIMIT = 50;
+const FULL_HISTORY_LIMIT = 200;
 
 const stripLocalePrefix = (pathname: string): string => {
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -69,20 +71,26 @@ const TopikPage: React.FC = () => {
   const [now] = React.useState(() => Date.now());
   const [filterType, setFilterType] = useState<'READING' | 'LISTENING' | 'WRITING'>('READING');
   const [expandedLockedExamId, setExpandedLockedExamId] = useState<string | null>(null);
+  const { examId } = useParams();
+  const pathWithoutLang = stripLocalePrefix(location.pathname);
+  const isHistoryRoute = pathWithoutLang === '/topik/history';
+  const needsLobbyInsights = Boolean(user && !isMobile && !examId && !isHistoryRoute);
+  const needsExamHistory = Boolean(user && (needsLobbyInsights || examId || isHistoryRoute));
+  const historyLimit = needsLobbyInsights ? LOBBY_HISTORY_LIMIT : FULL_HISTORY_LIMIT;
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
-    user ? {} : 'skip'
+    needsExamHistory ? { limit: historyLimit } : 'skip'
   );
 
-  const writingSessions = useQuery(api.topikWriting.getUserSessions, user ? {} : 'skip');
-  const lobbyStats = useQuery(TOPIK.getLobbyStats, user ? {} : 'skip');
+  const writingSessions = useQuery(
+    api.topikWriting.getUserSessions,
+    needsExamHistory ? { limit: historyLimit } : 'skip'
+  );
+  const lobbyStats = useQuery(TOPIK.getLobbyStats, needsLobbyInsights ? {} : 'skip');
 
   const examHistory = React.useMemo(() => {
     return [...(examAttempts ?? []), ...(writingSessions ?? [])] as ExamAttempt[];
   }, [examAttempts, writingSessions]);
-  const { examId } = useParams();
-  const pathWithoutLang = stripLocalePrefix(location.pathname);
-  const isHistoryRoute = pathWithoutLang === '/topik/history';
   const returnToParam = searchParams.get('returnTo');
   const linkReturnTo = hasSafeReturnTo(returnToParam) ? returnToParam : null;
   const topikBackPath = resolveSafeReturnTo(returnToParam, '/courses');
@@ -112,7 +120,6 @@ const TopikPage: React.FC = () => {
     () => topikExams.filter(exam => exam.type === filterType),
     [filterType, topikExams]
   );
-
 
   const topikContextualContent = React.useMemo(
     () => (
@@ -245,17 +252,27 @@ const TopikPage: React.FC = () => {
   // Mobile Lobby View
   if (isMobile) {
     return (
-      <MobileTopikPage
-        onSelectExam={id => {
-          const targetExam = topikExams.find(exam => exam.id === id);
-          if ((targetExam?.type as string) === 'WRITING') {
-            navigate(withReturnTo(`/topik/writing/${id}`));
-            return;
-          }
-          navigate(withReturnTo(`/topik/${id}`));
-        }}
-        topikExams={topikExams}
-      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-k-bg">
+            <div className="text-sm font-semibold text-k-sub">
+              {t('loading', { defaultValue: 'Loading...' })}
+            </div>
+          </div>
+        }
+      >
+        <MobileTopikPage
+          onSelectExam={id => {
+            const targetExam = topikExams.find(exam => exam.id === id);
+            if ((targetExam?.type as string) === 'WRITING') {
+              navigate(withReturnTo(`/topik/writing/${id}`));
+              return;
+            }
+            navigate(withReturnTo(`/topik/${id}`));
+          }}
+          topikExams={topikExams}
+        />
+      </Suspense>
     );
   }
 
@@ -286,7 +303,11 @@ const TopikPage: React.FC = () => {
             </div>
           </div>
           <div className="hidden lg:block">
-            <img src="/emojis/Trophy.png" className="w-20 h-20 animate-bounce-slow opacity-80" alt="" />
+            <img
+              src="/emojis/Trophy.png"
+              className="w-20 h-20 animate-bounce-slow opacity-80"
+              alt=""
+            />
           </div>
         </div>
 
@@ -294,7 +315,12 @@ const TopikPage: React.FC = () => {
         <div className="mb-10 flex flex-wrap items-center justify-between gap-6">
           <div className="flex items-center gap-2 bg-k-card p-1.5 rounded-[20px] border border-k-line shadow-k-sh-sm">
             {[
-              { id: 'READING', icon: BookOpen, label: t('dashboard.topik.reading'), tone: 'indigo' },
+              {
+                id: 'READING',
+                icon: BookOpen,
+                label: t('dashboard.topik.reading'),
+                tone: 'indigo',
+              },
               {
                 id: 'LISTENING',
                 icon: Headphones,
@@ -500,10 +526,7 @@ const TopikPage: React.FC = () => {
                               {t('topikLobby.timeLimit', { count: exam.timeLimit })}
                             </DesignChip>
                             {!isLocked && (
-                              <DesignChip
-                                tone={exam.type === 'READING' ? 'sky' : 'pink'}
-                                size="sm"
-                              >
+                              <DesignChip tone={exam.type === 'READING' ? 'sky' : 'pink'} size="sm">
                                 {exam.type === 'READING' ? 'READ' : 'LIST'}
                               </DesignChip>
                             )}
@@ -578,12 +601,20 @@ const TopikPage: React.FC = () => {
             {/* 1. Countdown Module */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <HanjaSeal c="日" size={24} bg="var(--color-k-crimson)" round={6} className="text-[12px]" />
-                <h4 className="text-[15px] font-extrabold text-k-ink">{t('dashboard.topik.nextExamTitle', { defaultValue: '距下次考试' })}</h4>
+                <HanjaSeal
+                  c="日"
+                  size={24}
+                  bg="var(--color-k-crimson)"
+                  round={6}
+                  className="text-[12px]"
+                />
+                <h4 className="text-[15px] font-extrabold text-k-ink">
+                  {t('dashboard.topik.nextExamTitle', { defaultValue: '距下次考试' })}
+                </h4>
               </div>
               <DesktopCard className="text-center py-8 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-k-crimson/5 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
-                
+
                 {lobbyStats?.upcomingExam ? (
                   <>
                     <div className="flex items-baseline justify-center gap-2">
@@ -593,7 +624,11 @@ const TopikPage: React.FC = () => {
                       <span className="text-[28px] font-black font-k-serif text-k-crimson">日</span>
                     </div>
                     <p className="mt-3 text-[13px] font-bold text-k-sub">
-                      第 {lobbyStats.upcomingExam.round} 回 TOPIK · {new Date(lobbyStats.upcomingExam.date!).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}
+                      第 {lobbyStats.upcomingExam.round} 回 TOPIK ·{' '}
+                      {new Date(lobbyStats.upcomingExam.date!).toLocaleDateString('zh-CN', {
+                        month: 'long',
+                        day: 'numeric',
+                      })}
                     </p>
                   </>
                 ) : (
@@ -605,9 +640,7 @@ const TopikPage: React.FC = () => {
                       </span>
                       <span className="text-[28px] font-black font-k-serif text-k-crimson">日</span>
                     </div>
-                    <p className="mt-3 text-[13px] font-bold text-k-sub">
-                      第 99 回 TOPIK · 7月6日
-                    </p>
+                    <p className="mt-3 text-[13px] font-bold text-k-sub">第 99 回 TOPIK · 7月6日</p>
                   </>
                 )}
               </DesktopCard>
@@ -616,8 +649,16 @@ const TopikPage: React.FC = () => {
             {/* 2. Weak Points Module */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <HanjaSeal c="弱" size={24} bg="var(--color-k-crimson)" round={6} className="text-[12px]" />
-                <h4 className="text-[15px] font-extrabold text-k-ink">{t('dashboard.topik.weakAreasTitle', { defaultValue: '待加强' })}</h4>
+                <HanjaSeal
+                  c="弱"
+                  size={24}
+                  bg="var(--color-k-crimson)"
+                  round={6}
+                  className="text-[12px]"
+                />
+                <h4 className="text-[15px] font-extrabold text-k-ink">
+                  {t('dashboard.topik.weakAreasTitle', { defaultValue: '待加强' })}
+                </h4>
               </div>
               <DesktopCard pad={0} className="overflow-hidden">
                 <div className="divide-y divide-k-line">
@@ -631,7 +672,8 @@ const TopikPage: React.FC = () => {
                           </h5>
                         </div>
                         <p className="text-[12px] font-bold text-k-sub">
-                          {t('dashboard.topik.recentScore', { defaultValue: '近期得分' })} <span className="text-k-ink">{area.score}%</span>
+                          {t('dashboard.topik.recentScore', { defaultValue: '近期得分' })}{' '}
+                          <span className="text-k-ink">{area.score}%</span>
                         </p>
                       </div>
                     ))

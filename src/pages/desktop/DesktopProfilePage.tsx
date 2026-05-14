@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
@@ -10,20 +10,18 @@ import { ExamAttempt } from '../../types';
 import { Loading, UserAvatar } from '../../components/common';
 import { KT, Card, HanjaSeal, SectionHead } from '../../components/mobile/ksoft/ksoft';
 import { ProfileInfoTab } from '../profile/tabs/ProfileInfoTab';
-import { ProfileStatsTab } from '../profile/tabs/ProfileStatsTab';
-import { ProfileSecurityTab } from '../profile/tabs/ProfileSecurityTab';
-import { ProfileSettingsTab, type SettingsSection } from '../profile/tabs/ProfileSettingsTab';
-import { 
-  User, 
-  Shield, 
-  Settings, 
-  BarChart3, 
+import type { SettingsSection } from '../profile/tabs/ProfileSettingsTab';
+import {
+  User,
+  Shield,
+  Settings,
+  BarChart3,
   CreditCard,
   ChevronRight,
   LogOut,
   Bell,
   Globe,
-  Camera
+  Camera,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
@@ -35,6 +33,30 @@ import { toErrorMessage } from '../../utils/errors';
 
 type ProfileTab = 'account' | 'stats' | 'security' | 'notifications' | 'language' | 'subscription';
 
+const LazyProfileStatsTab = lazy(() =>
+  import('../profile/tabs/ProfileStatsTab').then(module => ({
+    default: module.ProfileStatsTab,
+  }))
+);
+
+const LazyProfileSecurityTab = lazy(() =>
+  import('../profile/tabs/ProfileSecurityTab').then(module => ({
+    default: module.ProfileSecurityTab,
+  }))
+);
+
+const LazyProfileSettingsTab = lazy(() =>
+  import('../profile/tabs/ProfileSettingsTab').then(module => ({
+    default: module.ProfileSettingsTab,
+  }))
+);
+
+const ProfileTabFallback: React.FC = () => (
+  <Card pad={24}>
+    <div className="py-10 text-center text-sm font-semibold text-k-sub">Loading...</div>
+  </Card>
+);
+
 export const DesktopProfilePage: React.FC = () => {
   const { user, updateUser, logout, language, viewerAccess } = useAuth();
   const { t } = useTranslation();
@@ -42,17 +64,34 @@ export const DesktopProfilePage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState<ProfileTab>('account');
 
-  const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'), user ? {} : 'skip');
-  const examAttempts = useQuery(qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'), user ? { limit: 200 } : 'skip');
-  const vocabBookCount = useQuery(qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'), user ? { includeMastered: true } : 'skip');
-  const linkedAccounts = useQuery(qRef<NoArgs, { provider: string }[]>('auth:linkedAuthAccounts'), user ? {} : 'skip');
-  
+  const userStats = useQuery(
+    qRef<NoArgs, LearnerStatsDto>('userStats:getStats'),
+    user ? {} : 'skip'
+  );
+  const examAttempts = useQuery(
+    qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
+    user ? { limit: 200 } : 'skip'
+  );
+  const vocabBookCount = useQuery(
+    qRef<{ includeMastered?: boolean }, { count: number }>('vocab:getVocabBookCount'),
+    user ? { includeMastered: true } : 'skip'
+  );
+  const linkedAccounts = useQuery(
+    qRef<NoArgs, { provider: string }[]>('auth:linkedAuthAccounts'),
+    user ? {} : 'skip'
+  );
+
   const { examsTaken, averageScore } = useExamStats(examAttempts ?? []);
 
   const logoutMutation = useMutation(mRef('auth:logout'));
   const changePasswordMutation = useMutation(mRef('auth:changePassword'));
   const unlinkAuthProviderMutation = useMutation(mRef('auth:unlinkAuthProvider'));
-  const getUploadUrlAction = useAction(aRef<{ filename: string; contentType: string; fileSize: number; folder?: string }, { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }>('storage:getUploadUrl'));
+  const getUploadUrlAction = useAction(
+    aRef<
+      { filename: string; contentType: string; fileSize: number; folder?: string },
+      { uploadUrl: string; publicUrl: string; key: string; headers: Record<string, string> }
+    >('storage:getUploadUrl')
+  );
   const { signIn } = useAuthActions();
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -92,7 +131,9 @@ export const DesktopProfilePage: React.FC = () => {
       if (isIncorrectPasswordError(msg)) {
         toast.error(t('wrongPassword', { defaultValue: 'Incorrect password' }));
       } else {
-        toast.error(t('profile.changePasswordFailed', { defaultValue: 'Failed to change password' }));
+        toast.error(
+          t('profile.changePasswordFailed', { defaultValue: 'Failed to change password' })
+        );
       }
     } finally {
       setIsChangingPassword(false);
@@ -102,7 +143,7 @@ export const DesktopProfilePage: React.FC = () => {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     setIsUploadingAvatar(true);
     try {
       await uploadAvatarImage({
@@ -121,9 +162,24 @@ export const DesktopProfilePage: React.FC = () => {
   };
 
   const sidebarItems = [
-    { id: 'account', label: labels.profile?.accountTitle || 'Account Details', icon: User, color: KT.mintDeep },
-    { id: 'stats', label: labels.profile?.learningHub?.title || 'Learning Stats', icon: BarChart3, color: KT.butterDeep },
-    { id: 'security', label: labels.profile?.securityHub?.title || 'Security', icon: Shield, color: KT.crimson },
+    {
+      id: 'account',
+      label: labels.profile?.accountTitle || 'Account Details',
+      icon: User,
+      color: KT.mintDeep,
+    },
+    {
+      id: 'stats',
+      label: labels.profile?.learningHub?.title || 'Learning Stats',
+      icon: BarChart3,
+      color: KT.butterDeep,
+    },
+    {
+      id: 'security',
+      label: labels.profile?.securityHub?.title || 'Security',
+      icon: Shield,
+      color: KT.crimson,
+    },
     { id: 'notifications', label: 'Notifications', icon: Bell, color: KT.butterDeep },
     { id: 'language', label: 'Language', icon: Globe, color: KT.mintDeep },
     { id: 'subscription', label: 'Subscription', icon: CreditCard, color: KT.pinkDeep },
@@ -138,27 +194,34 @@ export const DesktopProfilePage: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col bg-k-bg h-full overflow-hidden">
       {/* Header Banner */}
-      <div 
+      <div
         className="shrink-0 h-48 relative overflow-hidden flex items-end px-12 pb-8"
         style={{ background: `linear-gradient(135deg, ${KT.mint}60 0%, ${KT.bg} 100%)` }}
       >
         <div className="flex items-center gap-6 z-10">
           <div className="relative group">
-            <UserAvatar 
-              user={user} 
+            <UserAvatar
+              user={user}
               isUploading={isUploadingAvatar}
               className="w-24 h-24 rounded-[28px] border-4 border-k-card shadow-xl transition-transform group-hover:scale-105"
               fallbackClassName="text-3xl"
             />
             <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-[28px] opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
               <Camera size={24} />
-              <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
+              <input
+                type="file"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                accept="image/*"
+              />
             </label>
           </div>
           <div>
             <h1 className="text-3xl font-black tracking-tight text-k-ink">{displayName}</h1>
             <p className="text-k-sub font-semibold mt-1">
-              {t('profile.level', { defaultValue: 'Level' })} {Math.max(1, Math.floor(savedWordsCount / 100))} · {dayStreak} {t('profile.dayStreak', { defaultValue: 'day streak' })}
+              {t('profile.level', { defaultValue: 'Level' })}{' '}
+              {Math.max(1, Math.floor(savedWordsCount / 100))} · {dayStreak}{' '}
+              {t('profile.dayStreak', { defaultValue: 'day streak' })}
             </p>
           </div>
           {isPremium && (
@@ -180,23 +243,31 @@ export const DesktopProfilePage: React.FC = () => {
               key={item.id}
               onClick={() => setActiveTab(item.id as ProfileTab)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group",
-                activeTab === item.id 
-                  ? "bg-k-ink text-k-bg shadow-lg shadow-k-ink/10 translate-x-1" 
-                  : "text-k-sub hover:bg-k-bg2/50 hover:text-k-ink"
+                'flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group',
+                activeTab === item.id
+                  ? 'bg-k-ink text-k-bg shadow-lg shadow-k-ink/10 translate-x-1'
+                  : 'text-k-sub hover:bg-k-bg2/50 hover:text-k-ink'
               )}
             >
-              <item.icon size={18} className={cn(
-                activeTab === item.id ? "text-k-bg" : "text-k-sub group-hover:text-k-ink"
-              )} />
+              <item.icon
+                size={18}
+                className={cn(
+                  activeTab === item.id ? 'text-k-bg' : 'text-k-sub group-hover:text-k-ink'
+                )}
+              />
               <span className="flex-1 text-left font-bold text-sm">{item.label}</span>
-              <ChevronRight size={14} className={cn(
-                "transition-transform",
-                activeTab === item.id ? "translate-x-0 opacity-100" : "translate-x-[-4px] opacity-0 group-hover:opacity-100 group-hover:translate-x-0"
-              )} />
+              <ChevronRight
+                size={14}
+                className={cn(
+                  'transition-transform',
+                  activeTab === item.id
+                    ? 'translate-x-0 opacity-100'
+                    : 'translate-x-[-4px] opacity-0 group-hover:opacity-100 group-hover:translate-x-0'
+                )}
+              />
             </button>
           ))}
-          
+
           <div className="mt-auto pt-6 border-t border-k-line">
             <button
               onClick={() => logout()}
@@ -212,7 +283,7 @@ export const DesktopProfilePage: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-12 bg-k-bg/30">
           <div className="max-w-4xl mx-auto">
             {activeTab === 'account' && (
-              <ProfileInfoTab 
+              <ProfileInfoTab
                 labels={labels}
                 user={user}
                 displayName={displayName}
@@ -222,47 +293,57 @@ export const DesktopProfilePage: React.FC = () => {
               />
             )}
             {activeTab === 'stats' && (
-              <ProfileStatsTab 
-                labels={labels}
-                dayStreak={dayStreak}
-                savedWordsCount={savedWordsCount}
-                examsTaken={examsTaken}
-                averageScore={averageScore}
-                examHistory={examAttempts ?? []}
-              />
+              <Suspense fallback={<ProfileTabFallback />}>
+                <LazyProfileStatsTab
+                  labels={labels}
+                  dayStreak={dayStreak}
+                  savedWordsCount={savedWordsCount}
+                  examsTaken={examsTaken}
+                  averageScore={averageScore}
+                  examHistory={examAttempts ?? []}
+                />
+              </Suspense>
             )}
             {activeTab === 'security' && (
-              <ProfileSecurityTab 
-                labels={labels}
-                handlePasswordChange={handlePasswordChange}
-                currentPassword={currentPassword}
-                setCurrentPassword={setCurrentPassword}
-                newPassword={newPassword}
-                setNewPassword={setNewPassword}
-                confirmPassword={confirmPassword}
-                setConfirmPassword={setConfirmPassword}
-                isChangingPassword={isChangingPassword}
-                accountSectionTitle={labels.profile?.link?.sectionTitle || "Social Accounts"}
-                linkedProviders={new Set(linkedAccounts?.map(a => a.provider) ?? [])}
-                linkedCount={linkedAccounts?.length ?? 0}
-                accountsLoading={linkedAccounts === undefined}
-                linkedLabel={labels.profile?.link?.linked || "Linked"}
-                notLinkedLabel={labels.profile?.link?.notLinked || "Not linked"}
-                unlinkLabel={labels.profile?.link?.unlink || "Unlink"}
-                linkLabel={labels.profile?.link?.connect || "Connect"}
-                signIn={signIn}
-                unlinkAuthProviderMutation={unlinkAuthProviderMutation}
-                getAccountButtonClass={isLinked => isLinked ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}
-                success={toast.success}
-                error={toast.error}
-                toErrorMessage={toErrorMessage}
-              />
+              <Suspense fallback={<ProfileTabFallback />}>
+                <LazyProfileSecurityTab
+                  labels={labels}
+                  handlePasswordChange={handlePasswordChange}
+                  currentPassword={currentPassword}
+                  setCurrentPassword={setCurrentPassword}
+                  newPassword={newPassword}
+                  setNewPassword={setNewPassword}
+                  confirmPassword={confirmPassword}
+                  setConfirmPassword={setConfirmPassword}
+                  isChangingPassword={isChangingPassword}
+                  accountSectionTitle={labels.profile?.link?.sectionTitle || 'Social Accounts'}
+                  linkedProviders={new Set(linkedAccounts?.map(a => a.provider) ?? [])}
+                  linkedCount={linkedAccounts?.length ?? 0}
+                  accountsLoading={linkedAccounts === undefined}
+                  linkedLabel={labels.profile?.link?.linked || 'Linked'}
+                  notLinkedLabel={labels.profile?.link?.notLinked || 'Not linked'}
+                  unlinkLabel={labels.profile?.link?.unlink || 'Unlink'}
+                  linkLabel={labels.profile?.link?.connect || 'Connect'}
+                  signIn={signIn}
+                  unlinkAuthProviderMutation={unlinkAuthProviderMutation}
+                  getAccountButtonClass={isLinked =>
+                    isLinked ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'
+                  }
+                  success={toast.success}
+                  error={toast.error}
+                  toErrorMessage={toErrorMessage}
+                />
+              </Suspense>
             )}
             {activeTab === 'notifications' && (
-              <ProfileSettingsTab labels={labels} section="notifications" />
+              <Suspense fallback={<ProfileTabFallback />}>
+                <LazyProfileSettingsTab labels={labels} section="notifications" />
+              </Suspense>
             )}
             {activeTab === 'language' && (
-              <ProfileSettingsTab labels={labels} section="language" />
+              <Suspense fallback={<ProfileTabFallback />}>
+                <LazyProfileSettingsTab labels={labels} section="language" />
+              </Suspense>
             )}
             {activeTab === 'subscription' && (
               <div className="space-y-6">
@@ -270,10 +351,16 @@ export const DesktopProfilePage: React.FC = () => {
                 <Card pad={24}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-k-ink">{isPremium ? 'Premium Plan' : 'Free Plan'}</h3>
-                      <p className="text-k-sub mt-1">{isPremium ? 'Thank you for supporting Duhan!' : 'Upgrade for unlimited access and offline mode.'}</p>
+                      <h3 className="text-xl font-bold text-k-ink">
+                        {isPremium ? 'Premium Plan' : 'Free Plan'}
+                      </h3>
+                      <p className="text-k-sub mt-1">
+                        {isPremium
+                          ? 'Thank you for supporting Duhan!'
+                          : 'Upgrade for unlimited access and offline mode.'}
+                      </p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => navigate('/pricing')}
                       className="px-6 py-2.5 bg-k-crimson text-white font-black rounded-xl hover:opacity-90 transition-opacity"
                     >

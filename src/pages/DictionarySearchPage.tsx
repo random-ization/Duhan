@@ -208,7 +208,6 @@ export default function DictionarySearchPage() {
     void runSearch(initialQuery);
   }, [initialQuery, runSearch, scope]);
 
-
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
@@ -281,7 +280,11 @@ export default function DictionarySearchPage() {
     return (
       <PageShell>
         <KsoftImmersiveHeader
-          eyebrow={scope === 'all' ? '搜 · SEARCH' : '典 · DICTIONARY'}
+          eyebrow={
+            scope === 'all'
+              ? `搜 · ${t('search.title', { defaultValue: 'SEARCH' })}`
+              : `典 · ${t('dashboard.dictionary.label', { defaultValue: 'DICTIONARY' })}`
+          }
           title={
             scope === 'all'
               ? t('common.search', { defaultValue: 'Search' })
@@ -289,7 +292,7 @@ export default function DictionarySearchPage() {
           }
           subtitle={
             scope === 'all'
-              ? t('search.globalPlaceholder', {
+              ? t('search.placeholder', {
                   defaultValue: 'Search grammar, books, podcasts, notes...',
                 })
               : t('dashboard.dictionary.placeholder', {
@@ -316,7 +319,7 @@ export default function DictionarySearchPage() {
               onChange={e => setQuery(e.target.value)}
               placeholder={
                 scope === 'all'
-                  ? t('search.globalPlaceholder', {
+                  ? t('search.placeholder', {
                       defaultValue: 'Search grammar, books, podcasts, notes...',
                     })
                   : t('dashboard.dictionary.placeholder', {
@@ -419,7 +422,9 @@ export default function DictionarySearchPage() {
               })}
             </div>
           ) : (
-            <KsoftEmptyState title={t('search.startTyping', { defaultValue: 'Start typing to search' })} />
+            <KsoftEmptyState
+              title={t('search.startTyping', { defaultValue: 'Start typing to search' })}
+            />
           )}
         </main>
 

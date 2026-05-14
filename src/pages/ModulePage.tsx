@@ -1,10 +1,7 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { Suspense, lazy, useMemo, useEffect } from 'react';
 import { Navigate, useParams, useSearchParams, useLocation, type Location } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
-import { VocabModule } from '../features/vocab';
-import ReadingModule from '../features/textbook/ReadingModule';
-import ListeningModule from '../features/textbook/ListeningModule';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
 import { useData } from '../contexts/DataContext';
@@ -20,6 +17,24 @@ import { TOPIK_GRAMMAR_COURSE_ID, resolveInstituteDefaultLevel } from '../utils/
 import { KT, PageShell } from '../components/mobile/ksoft/ksoft';
 import { KsoftImmersiveHeader } from '../components/mobile/ksoft/KsoftMobilePrimitives';
 import { localizeInternalPath } from '../utils/localizedRouting';
+
+const LazyVocabModule = lazy(() =>
+  import('../features/vocab/components/VocabModule').then(module => ({
+    default: module.default,
+  }))
+);
+
+const LazyReadingModule = lazy(() =>
+  import('../features/textbook/ReadingModule').then(module => ({
+    default: module.default,
+  }))
+);
+
+const LazyListeningModule = lazy(() =>
+  import('../features/textbook/ListeningModule').then(module => ({
+    default: module.default,
+  }))
+);
 
 type SavedWordRow = {
   id: string;
@@ -247,7 +262,7 @@ const renderModuleContent = ({
   switch (currentModule) {
     case LearningModuleType.VOCABULARY:
       return isCustomList ? (
-        <VocabModule
+        <LazyVocabModule
           course={currentCourse}
           instituteName={instituteName}
           language={language}
@@ -260,7 +275,7 @@ const renderModuleContent = ({
       ) : null;
     case LearningModuleType.READING:
       return (
-        <ReadingModule
+        <LazyReadingModule
           courseId={effectiveInstitute}
           unitIndex={effectiveLevel}
           unitTitle={t('module.unitTitle', { unit: effectiveLevel })}
@@ -270,7 +285,7 @@ const renderModuleContent = ({
       );
     case LearningModuleType.LISTENING:
       return (
-        <ListeningModule
+        <LazyListeningModule
           courseId={effectiveInstitute}
           unitIndex={effectiveLevel}
           unitTitle={t('module.listeningUnitTitle', { unit: effectiveLevel })}
@@ -282,6 +297,12 @@ const renderModuleContent = ({
       return null;
   }
 };
+
+const ModuleFallback: React.FC<{ message: string }> = ({ message }) => (
+  <div className="min-h-[320px] flex items-center justify-center rounded-[24px] border border-k-line bg-white/80">
+    <div className="text-sm font-semibold text-k-sub animate-pulse">{message}</div>
+  </div>
+);
 
 const ModulePage: React.FC = () => {
   const { t } = useTranslation();
@@ -413,23 +434,29 @@ const ModulePage: React.FC = () => {
   const subPath = getModuleRedirectSubPath(currentModule, isCustomList, effectiveInstitute);
 
   if (subPath) {
-    return <Navigate to={localizeInternalPath(`${courseBase}/${subPath}`, currentLanguage)} replace />;
+    return (
+      <Navigate to={localizeInternalPath(`${courseBase}/${subPath}`, currentLanguage)} replace />
+    );
   }
-  const moduleContent = renderModuleContent({
-    currentModule,
-    isCustomList,
-    currentCourse,
-    instituteName,
-    language,
-    derivedCustomList,
-    derivedListType,
-    onRecordMistake: recordMistake,
-    onSaveWord: saveWord,
-    effectiveInstitute: effectiveInstitute || '',
-    effectiveLevel,
-    t,
-    handleBack,
-  });
+  const moduleContent = (
+    <Suspense fallback={<ModuleFallback message={t('loading', { defaultValue: 'Loading...' })} />}>
+      {renderModuleContent({
+        currentModule,
+        isCustomList,
+        currentCourse,
+        instituteName,
+        language,
+        derivedCustomList,
+        derivedListType,
+        onRecordMistake: recordMistake,
+        onSaveWord: saveWord,
+        effectiveInstitute: effectiveInstitute || '',
+        effectiveLevel,
+        t,
+        handleBack,
+      })}
+    </Suspense>
+  );
 
   if (
     isMobile &&

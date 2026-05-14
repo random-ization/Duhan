@@ -569,6 +569,300 @@
       "focusInput": "Orolt deer tuvluruh",
       "wpm": "WPM",
       "acc": "Нарийвчлал"
+    },
+    "v2": {
+      "nav": {
+        "features": "Features",
+        "loop": "Daily Path",
+        "modules": "Modules",
+        "community": "Community",
+        "pricing": "Pricing",
+        "faq": "FAQ",
+        "login": "Log In",
+        "register": "Register"
+      },
+      "hero": {
+        "phone": {
+          "s1": {
+            "t": "Morning Review",
+            "s": "18 cards due · Done"
+          },
+          "s2": {
+            "t": "New Lesson · L24 Alleyway",
+            "s": "In progress · 8 min"
+          },
+          "s3": {
+            "t": "Podcast Clip",
+            "s": "Seoul Alley Walk · 6 min"
+          },
+          "s4": {
+            "t": "Bedtime Reading",
+            "s": "Article · Memories of the Alleyway"
+          },
+          "date": "May 11th",
+          "greet": "Hello, Hae-eun",
+          "sub": "Daily path ready · 4 steps, ~22 mins"
+        },
+        "eyebrow": "v3.0 Released · New learning path & community",
+        "titleKo": "DuHan",
+        "titlePre": "Make Korean ",
+        "titleUnderlined": "part of your routine",
+        "ctaPrimary": "Start Learning for Free →",
+        "ctaSecondary": "Watch 90s Demo",
+        "meta1": "Active Learners",
+        "meta2": "Cards Reviewed Daily",
+        "meta3": "App Store Rating",
+        "chip1": {
+          "t": "Streak",
+          "v": "47 Days"
+        },
+        "chip2": {
+          "t": "New Words Today",
+          "v": "12 / 15"
+        },
+        "chip3": {
+          "t": "TOPIK II",
+          "v": "Level 5 · 87%"
+        }
+      },
+      "logos": {
+        "v1": "Immersive Reading in Real Context",
+        "v2": "Listen to Real Audio from Movies & Podcasts",
+        "v3": "Smart Review with FSRS Algorithm",
+        "v4": "Community Translations & Mutual Help",
+        "v5": "Sync Progress Across All Platforms"
+      },
+      "features": {
+        "t1": {
+          "title": "Daily Learning Path",
+          "pill": "/ Generated at 7:00 AM · Avg 22 mins"
+        },
+        "t2": {
+          "title": "Vocab Book + 4 Modes",
+          "desc": "Flashcards, Learn, Test, and Match — four ways to master one word.",
+          "pill": "/ TOPIK I + II · 9,300 words"
+        },
+        "t3": {
+          "title": "Grammar & Sentence Library",
+          "desc": "Each grammar point comes with real examples + past papers. Errors are automatically added to review.",
+          "pill": "/ 480 core grammar points"
+        },
+        "t4": {
+          "title": "TOPIK Preparation",
+          "desc": "Past papers / Mock exams / AI writing evaluation + Speed listening",
+          "pill": "/ Avg TOPIK II improvement: 1.4 levels"
+        },
+        "t6": {
+          "title": "Native Community · Translation",
+          "desc": "Unsure about a translation? Post a bounty and get help from native speakers.",
+          "pill": "/ 1.2k+ active help groups"
+        },
+        "t5": {
+          "title": "Movies · Podcasts · Reading Immersive",
+          "pill": "/ 4,800+ learning materials · Weekly updates"
+        },
+        "title": "The All-in-One Korean Learning Toolkit"
+      },
+      "loop": {
+        "s1": {
+          "label": "STEP 1 · Morning",
+          "title": "Review Due Cards",
+          "desc": "FSRS algorithm decides what to review today · Done in 7 mins on average.",
+          "preview": "18 cards · 7 mins"
+        },
+        "s2": {
+          "label": "STEP 2 · Course",
+          "title": "New Lesson Content",
+          "desc": "Textbook + Listening + Instant Test · Capture any clip as a card.",
+          "preview": "L24 · 8 mins"
+        },
+        "s3": {
+          "label": "STEP 3 · Commute",
+          "title": "Listening Immersion",
+          "desc": "Real podcast or K-Drama clips · Bilingual subtitles · Save words instantly.",
+          "preview": "Podcast 6 mins"
+        },
+        "s4": {
+          "label": "STEP 4 · Bedtime",
+          "title": "Read a Passage",
+          "desc": "Auto-matched difficulty · Reading one article consolidates today's learning.",
+          "preview": "Short story 4 mins"
+        },
+        "title": "Four steps, your daily Korean is set.",
+        "sub": "No willpower needed · Open the app to see your checklist · Resume anytime"
+      },
+      "modules": {
+        "title": "Modules Built for Long-term Learning",
+        "sub": "Polished hundreds of times · No feature bloat · It just works.",
+        "m1": {
+          "title": "Vocab · 4 Practice Modes",
+          "desc": "One word, four ways — Flashcards for familiarity, Learning for depth, Test for time limits, and Match for fun. Each word has an FSRS memory strength bar.",
+          "tag1": "FSRS Algorithm",
+          "tag2": "4 Practice Modes",
+          "tag3": "Context Examples",
+          "tag4": "Vocab Filter",
+          "link": "Explore Vocab Module →"
+        },
+        "m2": {
+          "title": "TOPIK · Papers + AI Scoring",
+          "desc": "Deep archive of past reading and listening papers, 1:1 real exam environment. AI writing evaluation provides 4D feedback, plus mock listening with speed control.",
+          "tag1": "10 Years of Papers",
+          "tag2": "1:1 Exam Environment",
+          "tag3": "AI Writing Feedback",
+          "tag4": "All-around Score Prediction",
+          "link": "Explore TOPIK Module →"
+        },
+        "m3": {
+          "title": "Media · Speed Listening",
+          "desc": "Goodbye boring listening drills. Huge library of real podcasts and videos, supporting 0.5x–1.5x speed, synced scripts, and one-tap word saving.",
+          "tag1": "4,800+ Clips",
+          "tag2": "Bilingual Subs",
+          "tag3": "Tap to Save",
+          "tag4": "Graded Difficulty",
+          "link": "Explore Immersion Module →"
+        },
+        "m4": {
+          "title": "Reading · AI Assistance",
+          "desc": "From news to picture books, all content is precisely graded L1–L6. AI automatically extracts core vocab and provides one-tap translation for complex sentences.",
+          "tag1": "Grades 1–6",
+          "tag2": "Picture Book Library",
+          "tag3": "One-tap Lookup",
+          "tag4": "Notes to Cards",
+          "link": "Explore Reading Module →"
+        }
+      },
+      "community": {
+        "s1": {
+          "l": "Study Mates",
+          "s": "Grow Together"
+        },
+        "s2": {
+          "l": "Public Vocab Books",
+          "s": "Resource Sharing"
+        },
+        "s3": {
+          "l": "Study Tips",
+          "s": "Experience Sharing"
+        },
+        "s4": {
+          "l": "Daily Streak",
+          "s": "Keep Going"
+        },
+        "title": "Don't study alone, go further together.",
+        "sub": "Share vocab cards, exchange prep tips, and witness each other's growth · K-Soft community makes Korean learning less lonely."
+      },
+      "pricing": {
+        "perMonth": "/ mo",
+        "perQuarter": "/ quarter",
+        "perYear": "/ year",
+        "lifetime": {
+          "title": "Lifetime Access",
+          "desc": "Pay once, own it forever.",
+          "cta": "Get Lifetime"
+        },
+        "tabMonthly": "Monthly",
+        "tabQuarterly": "Quarterly",
+        "tabAnnual": "Annual",
+        "pro": {
+          "f1": "<b>Unlimited</b> new words + FSRS review",
+          "f2": "All courses + <b>All TOPIK 1-6</b> papers",
+          "f3": "Full media library + <b>Smart scripts</b>",
+          "f4": "<b>AI writing evaluation</b> + speed listening",
+          "f5": "Unlimited community resources",
+          "f6": "Real-time progress sync",
+          "title": "Plus Plan",
+          "desc": "Unlock all AI features and advanced content.",
+          "cta": "Unlock Plus Now"
+        },
+        "title": "Pick a Plan, Start Learning",
+        "sub": "Join the global community and unlock the full AI Korean experience.",
+        "free": {
+          "title": "Free Tier",
+          "desc": "Start your journey for free.",
+          "unit": "/ forever",
+          "f1": "<b>5 new words</b> per day",
+          "f2": "<b>30 review cards</b> daily limit",
+          "f3": "<b>Basic courses</b> (L1–L2) access",
+          "f4": "Media <b>preview mode</b>",
+          "f5": "Selected TOPIK papers",
+          "f6": "Limited AI feedback",
+          "cta": "Get Started for Free"
+        },
+        "popular": "Popular",
+        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods."
+      },
+      "testimonials": {
+        "title": "What DuHan Learners Say",
+        "t1": {
+          "tag1": "11 months used",
+          "tag2": "Level 5 achieved",
+          "name": "Hae-eun · @hae_eun",
+          "meta": "Designer · Hangzhou",
+          "quote": "I used to use Anki but got stressed. DuHan packaged it into 'just these 4 steps,' and I've stuck with it for a year. Passed TOPIK II Level 5!"
+        },
+        "t2": {
+          "tag1": "Learn with K-Drama",
+          "tag2": "3 months",
+          "name": "Xiao Ke",
+          "meta": "University Student",
+          "quote": "No more relying on fansubs. I tap a word, it goes to my cards, I review it the next day — making drama watching the best way to learn."
+        },
+        "t3": {
+          "tag1": "Native TA",
+          "name": "Minji · TA",
+          "meta": "Seoul · Native Speaker",
+          "quote": "The UI is so healing. It's like flipping through a beautiful magazine. Most importantly, it works — I actually remember the words."
+        }
+      },
+      "faq": {
+        "title": "FAQ",
+        "q1": "Can beginners use it?",
+        "q2": "What is FSRS algorithm?",
+        "q3": "Difference between Plus and Elite?",
+        "q4": "Can I study offline?",
+        "q5": "Is there a student discount?",
+        "q6": "Can I get a refund?"
+      },
+      "finalCta": {
+        "titlePre": "Make Korean part",
+        "titleMid": "of your daily life",
+        "titlePost": "starting today",
+        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
+        "ctaPrimary": "Start for Free →",
+        "ctaSecondary": "Download App"
+      },
+      "footer": {
+        "col1": {
+          "head": "Product",
+          "l1": "Features",
+          "l3": "TOPIK Prep",
+          "l4": "Media & Listening",
+          "l5": "Graded Reading",
+          "l6": "Community"
+        },
+        "col2": {
+          "head": "Learn",
+          "l1": "Study Guides",
+          "l2": "Grammar Wiki",
+          "l3": "Prep Blog",
+          "l4": "Daily Korean"
+        },
+        "col3": {
+          "head": "Company",
+          "l1": "About DuHan",
+          "l5": "Contact Us"
+        },
+        "col4": {
+          "head": "Support",
+          "l1": "Help Center",
+          "l2": "Refund Policy",
+          "l3": "Privacy Policy",
+          "l4": "Terms of Service"
+        },
+        "tag1": "DuHan · Make Korean a daily habit.",
+        "tag2": "From Hangul to TOPIK Level 6, all in one place.",
+        "copy": "© 2026 DuHan Inc. All rights reserved."
+      }
     }
   },
   "pricing": {
@@ -892,7 +1186,31 @@
     "verifyEmailDescription": "Доорх товчийг дарж баталгаажуулах имэйл илгээнэ үү.",
     "loginRequired": "Эхлээд нэвтэрнэ үү.",
     "networkError": "Сүлжээний алдаа. Холболтоо шалгаад дахин оролдоно уу.",
-    "passwordMismatch": "The two password fields do not match."
+    "passwordMismatch": "The two password fields do not match.",
+    "desktop": {
+      "subtitle": "Duhan · Rediscover Korean",
+      "heroLine1": "One character",
+      "heroLine2": "Changes your day",
+      "heroDesc1": "Every character brings you closer to the language.",
+      "heroDesc2": "Immersive learning, join ",
+      "heroDesc3": "30,000",
+      "heroDesc4": " learners.",
+      "welcomeBack": "Welcome Back",
+      "startLearning": "Start Learning",
+      "welcomeBackKo": "Nice to see you again",
+      "welcomeKo": "Welcome",
+      "continueJourney": "Continue your Korean journey",
+      "joinLearners": "Join 30,000 Korean learners",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "Enter your nickname",
+      "forgotPassword": "Forgot Password?",
+      "processing": "Processing...",
+      "loginAction": "Login →",
+      "joinAction": "Join Now →",
+      "orUse": "Or use",
+      "agreement": "By continuing, you agree to our",
+      "and": "and"
+    }
   },
   "common": {
     "appName": "Duhan",
@@ -945,19 +1263,24 @@
     "switchTab": "Таб солих",
     "loading": "Уншиж байна...",
     "error": "Алдаа гарлаа.",
-    "allRightsReserved": "Бүх эрх хуулиар хамгаалагдсан."
+    "allRightsReserved": "Бүх эрх хуулиар хамгаалагдсан.",
+    "levelSuffix": "",
+    "level": "Level",
+    "daysShort": {
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S",
+      "sun": "S"
+    },
+    "units": "Units",
+    "words": "Words",
+    "cards": "Cards",
+    "book": "Book"
   },
-  "search": {
-    "placeholder": "Дүрэм, ном, тэмдэглэл хайх...",
-    "startTyping": "Хайхын тулд бичиж эхлээрэй",
-    "empty": "Илэрц олдсонгүй.",
-    "bucket": {
-      "grammar": "Дүрэм",
-      "book": "Ном",
-      "podcast": "Подкаст",
-      "note": "Тэмдэглэл"
-    }
-  },
+  "search": "Хайх",
   "notifications": {
     "open": "Мэдэгдлүүд",
     "title": "Мэдэгдлүүд",
@@ -1003,7 +1326,6 @@
   },
   "notebook": "Миний тэмдэглэлийн дэвтэр",
   "loading": "Уншиж байна...",
-  "search": "Хайх",
   "error": "Алдаа",
   "pwa": {
     "install": {
@@ -2525,6 +2847,8 @@
   "achievements": {
     "aiTutorTagline": "Таны хувийн солонгос хэлний AI багш",
     "saveReportImage": "Тайлангийн зураг хадгалах",
+    "shareReportImage": "Тайлангийн зургийг хуваалцах",
+    "reportImageActionFailed": "Энэ тайлангийн зургийг одоогоор хуваалцах эсвэл хадгалах боломжгүй байна.",
     "galleryEmpty": "Бичих эсвэл үгийн сангийн дасгал хийж анхны тэмдгээ нээгээрэй!",
     "achievementUnlocked": "Амжилт нээгдлээ",
     "defaultLearner": "DuHan суралцагч",
@@ -2550,28 +2874,94 @@
       "social": "Нийгмийн"
     },
     "badges": {
-      "streak7": { "title": "7 өдөр дараалан", "description": "7 өдөр дараалан суралцах." },
-      "streak14": { "title": "14 өдөр дараалан", "description": "14 өдөр дараалан суралцах." },
-      "streak30": { "title": "30 өдөр дараалан", "description": "30 өдөр дараалан суралцах." },
-      "streak60": { "title": "60 өдөр дараалан", "description": "60 өдөр дараалан суралцах." },
-      "streak100": { "title": "100 өдөр дараалан", "description": "100 өдөр дараалан суралцах." },
-      "streak365": { "title": "365 өдөр дараалан", "description": "Бүтэн жил суралцах." },
-      "vocab100": { "title": "Үг 100", "description": "100 үг эзэмших." },
-      "vocab500": { "title": "Үг 500", "description": "500 үг эзэмших." },
-      "vocab1000": { "title": "Үг 1000", "description": "1000 үг эзэмших." },
-      "grammar20": { "title": "Дүрэм 20", "description": "20 дүрмийн сэдэв эзэмших." },
-      "grammar100": { "title": "Дүрэм 100", "description": "100 дүрмийн сэдэв эзэмших." },
-      "listening20h": { "title": "Сонсох 20 цаг", "description": "20 цагийн сонсох дадлага хийх." },
-      "listening100h": { "title": "Сонсох 100 цаг", "description": "100 цагийн сонсох дадлага хийх." },
-      "typing40": { "title": "WPM 40", "description": "Бичих дадлагад WPM 40 хүрэх." },
-      "typing80": { "title": "WPM 80", "description": "Бичих дадлагад WPM 80 хүрэх." },
-      "typing100": { "title": "WPM 100", "description": "Бичих дадлагад WPM 100 хүрэх." },
-      "topikPass": { "title": "TOPIK тэнцсэн", "description": "Нэг TOPIK туршилтын шалгалтад тэнцэх." },
-      "topikHighScore": { "title": "TOPIK өндөр оноо", "description": "Нэг TOPIK туршилтын шалгалтад өндөр оноо авах." },
-      "friends1": { "title": "Анхны найз", "description": "Анхны харилцан найзаа нэмэх." },
-      "friends10": { "title": "10 найз", "description": "10 харилцан найзтай болох." },
-      "groupJoin": { "title": "Бүлэгт нэгдэх", "description": "Нэг сургалтын бүлэгт нэгдэх." },
-      "groupCreate": { "title": "Бүлэг үүсгэх", "description": "Нэг сургалтын бүлэг үүсгэх." }
+      "streak7": {
+        "title": "7 өдөр дараалан",
+        "description": "7 өдөр дараалан суралцах."
+      },
+      "streak14": {
+        "title": "14 өдөр дараалан",
+        "description": "14 өдөр дараалан суралцах."
+      },
+      "streak30": {
+        "title": "30 өдөр дараалан",
+        "description": "30 өдөр дараалан суралцах."
+      },
+      "streak60": {
+        "title": "60 өдөр дараалан",
+        "description": "60 өдөр дараалан суралцах."
+      },
+      "streak100": {
+        "title": "100 өдөр дараалан",
+        "description": "100 өдөр дараалан суралцах."
+      },
+      "streak365": {
+        "title": "365 өдөр дараалан",
+        "description": "Бүтэн жил суралцах."
+      },
+      "vocab100": {
+        "title": "Үг 100",
+        "description": "100 үг эзэмших."
+      },
+      "vocab500": {
+        "title": "Үг 500",
+        "description": "500 үг эзэмших."
+      },
+      "vocab1000": {
+        "title": "Үг 1000",
+        "description": "1000 үг эзэмших."
+      },
+      "grammar20": {
+        "title": "Дүрэм 20",
+        "description": "20 дүрмийн сэдэв эзэмших."
+      },
+      "grammar100": {
+        "title": "Дүрэм 100",
+        "description": "100 дүрмийн сэдэв эзэмших."
+      },
+      "listening20h": {
+        "title": "Сонсох 20 цаг",
+        "description": "20 цагийн сонсох дадлага хийх."
+      },
+      "listening100h": {
+        "title": "Сонсох 100 цаг",
+        "description": "100 цагийн сонсох дадлага хийх."
+      },
+      "typing40": {
+        "title": "WPM 40",
+        "description": "Бичих дадлагад WPM 40 хүрэх."
+      },
+      "typing80": {
+        "title": "WPM 80",
+        "description": "Бичих дадлагад WPM 80 хүрэх."
+      },
+      "typing100": {
+        "title": "WPM 100",
+        "description": "Бичих дадлагад WPM 100 хүрэх."
+      },
+      "topikPass": {
+        "title": "TOPIK тэнцсэн",
+        "description": "Нэг TOPIK туршилтын шалгалтад тэнцэх."
+      },
+      "topikHighScore": {
+        "title": "TOPIK өндөр оноо",
+        "description": "Нэг TOPIK туршилтын шалгалтад өндөр оноо авах."
+      },
+      "friends1": {
+        "title": "Анхны найз",
+        "description": "Анхны харилцан найзаа нэмэх."
+      },
+      "friends10": {
+        "title": "10 найз",
+        "description": "10 харилцан найзтай болох."
+      },
+      "groupJoin": {
+        "title": "Бүлэгт нэгдэх",
+        "description": "Нэг сургалтын бүлэгт нэгдэх."
+      },
+      "groupCreate": {
+        "title": "Бүлэг үүсгэх",
+        "description": "Нэг сургалтын бүлэг үүсгэх."
+      }
     }
   },
   "weeklyActivity": {
@@ -3405,81 +3795,6 @@
       "empty_mastered": "Эзэмшсэн үгсийн жагсаалт энд харагдана."
     }
   },
-  "topikWriting": {
-    "title": "TOPIK II Бичих",
-    "session": {
-      "fillBlank": "Нөхөх дагалгавар",
-      "graphEssay": "График эссэ",
-      "opinionEssay": "Эссэ",
-      "exampleBox": "Жишээ / Context",
-      "questionX": "Асуулт {{num}}",
-      "points": "оноо",
-      "answerPlaceholder": "Хариултаа оруулна уу...",
-      "characterCount": "{{count}} үсэг",
-      "remainingChars": "{{count}} үлдлээ",
-      "submitConfirmTitle": "Илгээх үү?",
-      "submitConfirmDesc": "{{total}} асуултаас {{ans}}-д хариулав. Илгээсний дараа засах боломжгүй.",
-      "exitConfirmTitle": "Шалгалтаас гарах уу?",
-      "exitConfirmDesc": "Одоогийн хариултууд ноорог хэлбэрээр хадгалагдана. Та дараа нь буцаж ирээд үргэлжлүүлж болно.",
-      "continueForm": "Үргэлжлүүлэх",
-      "confirmSubmit": "Илгээхийг баталгаажуулах",
-      "exiting": "Гарч байна...",
-      "submitting": "Илгээж байна...",
-      "saveIdle": "Автомат хадгалалт",
-      "saving": "Хадгалж байна...",
-      "saved": "✓ Хадгалагдсан",
-      "saveError": "Хадгалж чадсангүй",
-      "submitButton": "Илгээх",
-      "wongojiAnswer": "Вонгожи хариулт",
-      "answerArea": "Хариулах хэсэг",
-      "maxLength": "Ихдээ {{count}} үсэг",
-      "submittedTitle": "Амжилттай илгээлээ!",
-      "submittedDesc": "{{ans}} / {{total}} асуултад хариулав. AI үнэлгээг хүлээж байна...",
-      "loadingExam": "Бичгийн шалгалтад бэлтгэж байна...",
-      "q51Instruction": "Орчмын утганд тохируулан хоосон зайг бөглөж, эхийг бүрэн, жам ёсны болгоно уу.",
-      "q52Instruction": "Даалгаврын шаардлагын дагуу хоосон зайг нөхнө үү.",
-      "q53Instruction": "Доорх графикийг ашиглан тайлбарласан эссэ бичнэ үү (200-300 үсэг).",
-      "q54Instruction": "Доорх сэдвээр нотлон бичих эссэ бичнэ үү (400-600 үсэг).",
-      "fillBlankPaperTitle": "Хоосон зай бөглөх (㉠ / ㉡)",
-      "fillBlankOneSentence": "Нэг нүхэнд нэг өгүүлбэр саналтай",
-      "fillBlankHint": "㉠ болон ㉡-г тус бүр бүтэн өгүүлбэрээр бөглөнө үү.",
-      "fillBlankA": "㉠ энд бичнэ үү",
-      "fillBlankB": "㉡ энд бичнэ үү"
-    },
-    "report": {
-      "title": "Бичих үнэлгээний тайлан",
-      "subtitle": "TOPIK II Бичих · AI үнэлгээ",
-      "evaluatingTitle": "AI дүгнэж байна...",
-      "evaluatingDesc": "TOPIK албан ёсны шалгуурын дагуу шинжилж байна. Ихэвчлэн 30-60 секунд болно.",
-      "dimTask": "Даалгавар гүйцэтгэл",
-      "dimStructure": "Бүтэц ба хөгжүүлэлт",
-      "dimLanguage": "Хэлний хэрэглээ",
-      "dimWongoji": "Вонгожи дүрэм",
-      "maxScore": "Дээд {{score}}",
-      "scoreLabel": "Оноо:",
-      "dimScores": "Хэсгийн оноо",
-      "originalText": "Таны хариулт",
-      "notAnswered": "(Хариулаагүй)",
-      "aiCorrected": "AI сайжруулсан хувилбар",
-      "noCorrection": "(Засваргүй)",
-      "feedback": "Ерөнхий дүгнэлт",
-      "loadingError": "Тайлан ачаалж чадсангүй нүүрийг дахин ачаална уу.",
-      "back": "Буцах",
-      "timeElapsed": "Зарцуулсан хугацаа:",
-      "timeFormat": "{{min}}м {{sec}}с",
-      "totalScore": "Нийт оноо:",
-      "aiDone": "AI үнэлгээ дууссан",
-      "passExcellent": "Онц 🎉",
-      "passGood": "Тэнцсэн ✅",
-      "passNeedsWork": "Сайжруулах 📚",
-      "overallAnalysis": "Ерөнхий шинжилгээ",
-      "questionFeedback": "Асуулт бүрийн дэлгэрэнгүй дүгнэлт",
-      "loadingOriginal": "Эх шалгалтын материалыг ачаалж байна...",
-      "retrigger": "Дахин үнэлгээ эхлүүлэх",
-      "retriggering": "Дахин оролдож байна...",
-      "retryFailed": "Дахин оролдлого амжилтгүй. Түр хүлээгээд дахин оролдоно уу."
-    }
-  },
   "footer": {
     "contactSupport": "Дэмжлэгтэй холбогдох",
     "joinDiscord": "Discord-д нэгдэх",
@@ -3533,6 +3848,9 @@
   "relativeTime": {
     "daysAgo": "{{count}} өдрийн өмнө",
     "hoursAgo": "{{count}} цагийн өмнө",
-    "justNow": "Яг одоо"
+    "justNow": "Яг одоо",
+    "minutesShort": "m",
+    "hoursShort": "h",
+    "daysShort": "d"
   }
 }

@@ -1,13 +1,30 @@
-import * as Sentry from '@sentry/react';
-
 let initialized = false;
+let sentryModule: typeof import('@sentry/react') | null = null;
+let sentryModulePromise: Promise<typeof import('@sentry/react') | null> | null = null;
 
-export function initSentry() {
+async function loadSentryModule() {
+  if (sentryModule) return sentryModule;
+  if (sentryModulePromise) return sentryModulePromise;
+
+  sentryModulePromise = import('@sentry/react')
+    .then(module => {
+      sentryModule = module;
+      return module;
+    })
+    .catch(() => null);
+
+  return sentryModulePromise;
+}
+
+export async function initSentry() {
   if (initialized) return;
   if (!import.meta.env.PROD) return;
 
   const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
   if (!dsn) return;
+
+  const Sentry = await loadSentryModule();
+  if (!Sentry) return;
 
   Sentry.init({
     dsn,
@@ -19,8 +36,15 @@ export function initSentry() {
   initialized = true;
 }
 
-export function captureException(error: unknown, context?: Record<string, unknown>) {
+export async function captureException(error: unknown, context?: Record<string, unknown>) {
+  if (!initialized) {
+    await initSentry();
+  }
   if (!initialized) return;
+
+  const Sentry = await loadSentryModule();
+  if (!Sentry) return;
+
   if (error instanceof Error) {
     Sentry.captureException(error, { extra: context });
     return;
@@ -28,11 +52,18 @@ export function captureException(error: unknown, context?: Record<string, unknow
   Sentry.captureException(new Error(String(error)), { extra: context });
 }
 
-export function captureMessage(
+export async function captureMessage(
   message: string,
   level: 'warning' | 'error' | 'info' = 'info',
   context?: Record<string, unknown>
 ) {
+  if (!initialized) {
+    await initSentry();
+  }
   if (!initialized) return;
+
+  const Sentry = await loadSentryModule();
+  if (!Sentry) return;
+
   Sentry.captureMessage(message, { level, extra: context });
 }

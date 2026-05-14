@@ -60,7 +60,14 @@ export function MobileBottomNav() {
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
-  const pendingBadges = useQuery(api.achievements.getPendingBadges);
+  const isProfileTabActive =
+    pathWithoutLang.startsWith('/profile') ||
+    pathWithoutLang.startsWith('/pricing') ||
+    pathWithoutLang.startsWith('/subscription');
+  const pendingBadges = useQuery(
+    api.achievements.getPendingBadges,
+    isProfileTabActive ? 'skip' : {}
+  );
   const hasPendingBadges = (pendingBadges?.length ?? 0) > 0;
 
   const tabs: Tab[] = [
@@ -131,11 +138,7 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/podcasts')
       );
     }
-    return (
-      pathWithoutLang.startsWith('/profile') ||
-      pathWithoutLang.startsWith('/pricing') ||
-      pathWithoutLang.startsWith('/subscription')
-    );
+    return isProfileTabActive;
   };
 
   const handleTabPress = (path: string) => {

@@ -1,4 +1,13 @@
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy } from 'react';
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  lazy,
+} from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { useParams, useSearchParams } from 'react-router-dom';
 // import {
@@ -60,7 +69,7 @@ import type {
   NoteVisualState,
   NoteAnchor,
   VocabularyItem,
-//   GrammarItem,
+  //   GrammarItem,
   DictionaryEntry,
   DictionarySearchResult,
   ReadingAiResult,
@@ -75,11 +84,7 @@ import type {
 const DesktopReadingArticlePage = lazy(() => import('./desktop/DesktopReadingArticlePage'));
 const MobileReadingArticlePage = lazy(() => import('./mobile/MobileReadingArticlePage'));
 
-
-import { 
-  ReadingArticleSidebar,
-  renderReadingArticleState,
-} from './reading/ReadingComponents';
+import { ReadingArticleSidebar, renderReadingArticleState } from './reading/ReadingComponents';
 
 const SELECTION_TOOLBAR_DISMISS_SELECTORS = [
   '[data-reading-selection-toolbar]',
@@ -116,6 +121,7 @@ export default function ReadingArticlePage() {
   );
   const contentRef = useRef<HTMLDivElement | null>(null);
   const restoredSessionKeyRef = useRef<string | null>(null);
+  const persistSessionTimeoutRef = useRef<number | null>(null);
   const [panelTab, setPanelTab] = useState<PanelTab>(() => persistedSessionState?.panelTab ?? 'ai');
   const [fontSize, setFontSize] = useState(() => persistedSessionState?.fontSize ?? 18);
   const [translationEnabled, setTranslationEnabled] = useState(
@@ -438,10 +444,26 @@ export default function ReadingArticlePage() {
       return;
     }
 
+    if (!translationEnabled) {
+      translationRequestKeyRef.current = null;
+      setTranslations(prev => (prev.length === 0 ? prev : []));
+      setTranslationLoading(false);
+      setTranslationError(null);
+      return;
+    }
+
     if (translationRequestKeyRef.current === requestKey) return;
     translationRequestKeyRef.current = requestKey;
     void requestTranslations();
-  }, [article, articleConvexId, articleTitle, paragraphs, requestTranslations, translationLang]);
+  }, [
+    article,
+    articleConvexId,
+    articleTitle,
+    paragraphs,
+    requestTranslations,
+    translationEnabled,
+    translationLang,
+  ]);
 
   useEffect(() => {
     const onMouseUp = () => {
@@ -846,14 +868,22 @@ export default function ReadingArticlePage() {
   const persistArticleSession = useCallback(
     (scrollTop?: number) => {
       if (restoredSessionKeyRef.current !== sessionStorageKey) return;
-      persistReadingArticleSessionState(sessionStorageKey, {
-        scrollTop: Math.max(0, scrollTop ?? contentRef.current?.scrollTop ?? 0),
-        fontSize,
-        translationEnabled,
-        panelTab,
-        activeWord: normalizeInlineWhitespace(activeWord),
-        timestamp: Date.now(),
-      });
+      const nextScrollTop = Math.max(0, scrollTop ?? contentRef.current?.scrollTop ?? 0);
+
+      if (persistSessionTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
+      }
+
+      persistSessionTimeoutRef.current = globalThis.window.setTimeout(() => {
+        persistReadingArticleSessionState(sessionStorageKey, {
+          scrollTop: nextScrollTop,
+          fontSize,
+          translationEnabled,
+          panelTab,
+          activeWord: normalizeInlineWhitespace(activeWord),
+          timestamp: Date.now(),
+        });
+      }, 180);
     },
     [activeWord, fontSize, panelTab, sessionStorageKey, translationEnabled]
   );
@@ -889,6 +919,10 @@ export default function ReadingArticlePage() {
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      if (persistSessionTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
+        persistSessionTimeoutRef.current = null;
+      }
       persistArticleSession(container.scrollTop);
       container.removeEventListener('scroll', handleScroll);
     };
@@ -921,6 +955,14 @@ export default function ReadingArticlePage() {
   useEffect(() => {
     persistArticleSession();
   }, [persistArticleSession]);
+
+  useEffect(() => {
+    return () => {
+      if (persistSessionTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const focusNote = useCallback((noteId: string) => {
     setSelectedNoteId(noteId);
@@ -1121,4 +1163,3 @@ export default function ReadingArticlePage() {
     </Suspense>
   );
 }
-

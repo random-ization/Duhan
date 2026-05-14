@@ -58,7 +58,11 @@ export default function DesktopAuthPage() {
 
   const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     if (!isLogin) {
-      trackEvent('signup_start', { language: currentLanguage, method: provider, platform: 'desktop' });
+      trackEvent('signup_start', {
+        language: currentLanguage,
+        method: provider,
+        platform: 'desktop',
+      });
     }
     try {
       await signIn(provider, { redirectTo: postAuthRedirectUrl });
@@ -88,7 +92,11 @@ export default function DesktopAuthPage() {
           flow: 'signUp',
           redirectTo: postAuthRedirectUrl,
         });
-        trackEvent('signup_success', { language: currentLanguage, method: 'password', platform: 'desktop' });
+        trackEvent('signup_success', {
+          language: currentLanguage,
+          method: 'password',
+          platform: 'desktop',
+        });
       }
     } catch (e: unknown) {
       setError(toAuthErrorMessage(e, 'auth.loginFailed'));
@@ -98,7 +106,10 @@ export default function DesktopAuthPage() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden" style={{ fontFamily: KT.font }}>
+    <div
+      className="h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden"
+      style={{ fontFamily: KT.font }}
+    >
       <Seo
         title={meta.title}
         description={meta.description}
@@ -107,70 +118,82 @@ export default function DesktopAuthPage() {
       />
 
       {/* Left Side: Immersive Hero - FIXED HEIGHT & REFINED */}
-      <div 
+      <div
         className="hidden md:flex w-1/2 h-full flex-col justify-between p-16 relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${KT.crimson} 0%, ${KT.indigo} 100%)` }}
       >
         {/* Grain Texture Overlay */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay grain-overlay" />
-        
+
         {/* Rim Light Effect */}
         <div className="absolute inset-0 border-r border-white/5 pointer-events-none" />
 
         {/* Large background traditional kanji - Reduced size & repositioned for balance */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 1.1 }}
           animate={{ opacity: 0.12, scale: 1 }}
-          transition={{ duration: 2, ease: "easeOut" }}
+          transition={{ duration: 2, ease: 'easeOut' }}
           className="absolute right-0 top-10 font-serif font-medium pointer-events-none select-none"
-          style={{ 
-            fontSize: '480px', 
-            lineHeight: 1, 
+          style={{
+            fontSize: '480px',
+            lineHeight: 1,
             color: '#fff',
             WebkitMaskImage: 'radial-gradient(circle at 60% 40%, black 10%, transparent 90%)',
-            maskImage: 'radial-gradient(circle at 60% 40%, black 10%, transparent 90%)'
+            maskImage: 'radial-gradient(circle at 60% 40%, black 10%, transparent 90%)',
           }}
         >
           韓
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10"
         >
           <div className="flex items-center gap-5">
-            <div className="relative group">
-              <div className="absolute -inset-2 bg-white/10 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition duration-500" />
-              <img src="/logo.svg" alt="Duhan Logo" width={60} height={60} className="rounded-2xl shadow-sm" />
-            </div>
-            <div>
-              <div className="text-3xl font-black text-white tracking-tighter">Duhan</div>
-              <div className="text-[10px] font-bold text-white/50 uppercase tracking-[0.3em] mt-1">讀韓 · 重新认识韩语</div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-8">
+                <HanjaSeal c="韓" size={48} className="shadow-lg" />
+                <h1 className="text-2xl font-bold tracking-tight text-white">
+                  {t('auth.desktop.subtitle', { defaultValue: '讀韓 · 重新认识韩语' })}
+                </h1>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-6xl font-black text-white opacity-90"
+                  >
+                    {t('auth.desktop.heroLine1', { defaultValue: '한 글자가' })}
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-6xl font-black text-white/90"
+                  >
+                    {t('auth.desktop.heroLine2', { defaultValue: '하루를 바꾼다' })}
+                  </motion.div>
+                </div>
+
+                <p className="text-lg text-white/70 font-medium leading-relaxed max-w-sm">
+                  {t('auth.desktop.heroDesc1', {
+                    defaultValue: '每个字，都让你离这门语言更近一步。',
+                  })}
+                  <br />
+                  {t('auth.desktop.heroDesc2', { defaultValue: '沉浸学习，与 ' })}
+                  <span className="text-white font-bold border-b-2 border-white/30">
+                    {t('auth.desktop.heroDesc3', { defaultValue: '三万' })}
+                  </span>
+                  {t('auth.desktop.heroDesc4', { defaultValue: ' 学韩者同行。' })}
+                </p>
+              </div>
             </div>
           </div>
         </motion.div>
-
-        <div className="relative z-10">
-          <motion.h1 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-[68px] font-black text-white leading-[1.05] tracking-tight"
-          >
-            한 글자가<br/>
-            <span className="text-white/90">하루를 바꾼다</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-10 text-xl font-medium text-white/60 leading-relaxed max-w-md"
-          >
-            每个字，都让你离这门语言更近一步。<br/>
-            沉浸学习，与 <span className="text-white font-bold">三万</span> 学韩者同行。
-          </motion.p>
-        </div>
       </div>
 
       {/* Right Side: Auth Form - SCROLLABLE & STABLE */}
@@ -178,17 +201,17 @@ export default function DesktopAuthPage() {
         <div className="w-full max-w-md py-12">
           {/* Mode Switcher */}
           <div className="flex bg-k-bg2 p-1 rounded-2xl w-fit mb-12 shadow-inner">
-            <button 
+            <button
               onClick={() => setIsLogin(true)}
-              className={`px-10 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${isLogin ? 'bg-k-ink text-white shadow-xl scale-[1.02]' : 'text-k-sub hover:text-k-ink'}`}
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isLogin ? 'bg-k-ink text-white shadow-lg' : 'text-k-sub hover:text-k-ink'}`}
             >
-              登录
+              {t('login')}
             </button>
-            <button 
+            <button
               onClick={() => setIsLogin(false)}
-              className={`px-10 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${!isLogin ? 'bg-k-ink text-white shadow-xl scale-[1.02]' : 'text-k-sub hover:text-k-ink'}`}
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isLogin ? 'bg-k-ink text-white shadow-lg' : 'text-k-sub hover:text-k-ink'}`}
             >
-              注册
+              {t('register')}
             </button>
           </div>
 
@@ -203,21 +226,31 @@ export default function DesktopAuthPage() {
               >
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <h2 className="text-[34px] font-black tracking-tighter text-k-ink leading-tight">
-                    {isLogin ? '欢迎回来' : '开始学习'}
+                    {isLogin
+                      ? t('auth.desktop.welcomeBack', { defaultValue: '欢迎回来' })
+                      : t('auth.desktop.startLearning', { defaultValue: '开始学习' })}
                   </h2>
-                  <span className="text-[28px] font-serif text-k-crimson opacity-70">
-                    {isLogin ? '다시 만나서 반갑습니다' : '환영합니다'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[15px] font-serif text-k-crimson font-medium">
+                      {isLogin
+                        ? t('auth.desktop.welcomeBackKo', {
+                            defaultValue: '다시 만나서 반갑습니다',
+                          })
+                        : t('auth.desktop.welcomeKo', { defaultValue: '환영합니다' })}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-2 text-k-sub font-bold opacity-80">
-                  {isLogin ? '继续你的韩语之旅' : '加入三万名韩语学习者'}
+                <p className="mt-3 text-k-sub text-[15px] font-medium opacity-70">
+                  {isLogin
+                    ? t('auth.desktop.continueJourney', { defaultValue: '继续你的韩语之旅' })
+                    : t('auth.desktop.joinLearners', { defaultValue: '加入三万名韩语学习者' })}
                 </p>
               </motion.div>
             </AnimatePresence>
           </div>
 
           {error && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-8 p-4 rounded-2xl border-2 border-red-100 bg-red-50 text-red-600 text-sm font-black flex items-center gap-3 shadow-sm"
@@ -236,12 +269,19 @@ export default function DesktopAuthPage() {
                   exit={{ opacity: 0, height: 0, y: -10 }}
                   className="space-y-2 overflow-hidden"
                 >
-                  <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em] px-1">昵称</label>
+                  <label className="block text-[13px] font-black text-k-ink uppercase tracking-wider mb-2 ml-1">
+                    {t('auth.desktop.nickname', { defaultValue: '昵称' })}
+                  </label>
                   <div className="relative group">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                    <User
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-k-sub group-focus-within:text-k-ink transition-colors"
+                      size={18}
+                    />
                     <input
                       type="text"
-                      placeholder="输入你的昵称"
+                      placeholder={t('auth.desktop.nicknamePlaceholder', {
+                        defaultValue: '输入你的昵称',
+                      })}
                       className="w-full bg-k-bg2/30 px-14 py-4 rounded-2xl border-2 border-k-line/50 font-bold text-k-ink placeholder:text-k-sub focus:border-k-ink focus:bg-white outline-none transition-all shadow-sm focus:shadow-md"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -253,9 +293,14 @@ export default function DesktopAuthPage() {
             </AnimatePresence>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em] px-1">邮箱</label>
+              <label className="block text-[13px] font-black text-k-ink uppercase tracking-wider mb-2 ml-1">
+                {t('email')}
+              </label>
               <div className="relative group">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                <Mail
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110"
+                  size={18}
+                />
                 <input
                   type="email"
                   placeholder="haeun@email.com"
@@ -268,20 +313,25 @@ export default function DesktopAuthPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-black text-k-sub uppercase tracking-[0.2em]">密码</label>
+              <div className="flex justify-between items-center mb-2 ml-1">
+                <label className="block text-[13px] font-black text-k-ink uppercase tracking-wider">
+                  {t('password')}
+                </label>
                 {isLogin && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => navigate('/forgot-password')}
-                    className="text-[10px] font-black text-k-crimson hover:underline tracking-tight uppercase"
+                    className="text-xs font-bold text-k-crimson hover:underline"
                   >
-                    忘记密码?
+                    {t('auth.desktop.forgotPassword', { defaultValue: '忘记密码?' })}
                   </button>
                 )}
               </div>
               <div className="relative group">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110" size={18} />
+                <Lock
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink group-focus-within:scale-110"
+                  size={18}
+                />
                 <input
                   type="password"
                   placeholder="••••••••"
@@ -296,17 +346,23 @@ export default function DesktopAuthPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ background: KT.crimson }}
-              className="w-full py-5 mt-4 rounded-2xl text-white font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all shadow-xl shadow-k-crimson/30 disabled:opacity-50"
+              className="w-full bg-k-ink text-white h-14 mt-4 rounded-2xl font-black text-lg shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? '处理中...' : (isLogin ? '登录 →' : '立即加入 →')}
+              {loading
+                ? t('auth.desktop.processing', { defaultValue: '处理中...' })
+                : isLogin
+                  ? t('auth.desktop.loginAction', { defaultValue: '登录 →' })
+                  : t('auth.desktop.joinAction', { defaultValue: '立即加入 →' })}
             </button>
           </form>
 
-          <div className="my-12 flex items-center gap-6">
-            <div className="h-px bg-k-line flex-1"></div>
-            <span className="text-[10px] font-black text-k-sub uppercase tracking-[0.3em] opacity-60">或者使用</span>
-            <div className="h-px bg-k-line flex-1"></div>
+          <div className="my-12 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-k-line"></div>
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black text-k-sub/60 bg-white px-4">
+              {t('auth.desktop.orUse', { defaultValue: '或者使用' })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -314,21 +370,35 @@ export default function DesktopAuthPage() {
               onClick={() => handleSocialLogin('kakao')}
               className="flex items-center justify-center gap-3 py-4 border-2 border-k-line/60 rounded-2xl font-bold text-k-ink hover:bg-k-bg2/40 hover:border-k-ink/20 transition-all shadow-sm"
             >
-              <div className="bg-[#FEE500] text-black text-[9px] font-black w-5 h-5 rounded-md flex items-center justify-center">K</div>
+              <div className="bg-[#FEE500] text-black text-[9px] font-black w-5 h-5 rounded-md flex items-center justify-center">
+                K
+              </div>
               <span className="text-sm">Kakao</span>
             </button>
             <button
               onClick={() => handleSocialLogin('google')}
               className="flex items-center justify-center gap-3 py-4 border-2 border-k-line/60 rounded-2xl font-bold text-k-ink hover:bg-k-bg2/40 hover:border-k-ink/20 transition-all shadow-sm"
             >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+              <img
+                src="https://www.svgrepo.com/show/475656/google-color.svg"
+                className="w-5 h-5"
+                alt="Google"
+              />
               <span className="text-sm">Google</span>
             </button>
           </div>
 
-          <div className="mt-14 text-center text-[12px] font-bold text-k-sub leading-relaxed opacity-70">
-            继续即表示同意 <button className="text-k-ink font-black hover:underline underline-offset-4 decoration-k-line">服务条款</button> 与 <button className="text-k-ink font-black hover:underline underline-offset-4 decoration-k-line">隐私政策</button>
-          </div>
+          <p className="mt-14 text-center text-xs text-k-sub/50 font-medium px-4 leading-relaxed">
+            {t('auth.desktop.agreement', { defaultValue: '继续即表示同意' })} {t('appName')}{' '}
+            {t('auth.desktop.and', { defaultValue: '与' })}{' '}
+            <span className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson">
+              {t('common.terms')}
+            </span>{' '}
+            {t('auth.desktop.and', { defaultValue: '与' })}{' '}
+            <span className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson">
+              {t('common.privacy')}
+            </span>
+          </p>
         </div>
       </div>
     </div>

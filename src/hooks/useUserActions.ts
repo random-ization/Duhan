@@ -122,7 +122,13 @@ export const useUserActions = () => {
   );
   const updateLearningProgressMutation = useMutation(
     mRef<
-      { lastInstitute?: string; lastLevel?: number; lastUnit?: number; lastModule?: string },
+      {
+        lastInstitute?: string;
+        lastLevel?: number;
+        lastUnit?: number;
+        lastModule?: string;
+        lastGrammarId?: string;
+      },
       { success: boolean }
     >('user:updateLearningProgress')
   );
@@ -218,9 +224,7 @@ export const useUserActions = () => {
       variant: 'destructive',
     });
     if (!confirmed) return;
-    clearMistakesMutation({}).catch(e =>
-      logError('Failed to clear mistakes', toErrorMessage(e))
-    );
+    clearMistakesMutation({}).catch(e => logError('Failed to clear mistakes', toErrorMessage(e)));
   }, [clearMistakesMutation, confirm]);
 
   const saveAnnotation = useCallback(

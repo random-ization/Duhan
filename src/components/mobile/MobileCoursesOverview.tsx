@@ -73,325 +73,6 @@ type UnitProgressStats = {
 
 const PRIORITY_COURSE_ID = TOPIK_GRAMMAR_COURSE_ID;
 
-type LearnCopy = {
-  hanjaTag: string;
-  latin: string;
-  title: string;
-  subtitle: string;
-  tabs: LearnTab[];
-  progressLabel: (pct: number) => string;
-  unitsLabel: (done: number, total: number) => string;
-  estimate: (days: number) => string;
-  journeyTitle: string;
-  journeyAction: string;
-  completed: string;
-  toolsTitle: string;
-  tools: LearnTool[];
-  vocabModesTitle: string;
-  vocabModes: VocabModeCard[];
-  vocabNoWords: string;
-  unitLabel: string;
-  levelBadge: string;
-  defaultCourseTitle: string;
-  defaultCourseMeta: string;
-  tapToStart: string;
-};
-
-const buildLearnTabs = (labels: {
-  mine: string;
-  grammar: string;
-  vocabulary: string;
-  typing: string;
-  topik: string;
-}): LearnTab[] => [
-  { key: 'mine', label: labels.mine },
-  { key: 'grammar', label: labels.grammar, action: { kind: 'module', module: 'grammar' } },
-  {
-    key: 'vocabulary',
-    label: labels.vocabulary,
-    action: { kind: 'module', module: 'vocabulary' },
-  },
-  { key: 'typing', label: labels.typing, action: { kind: 'path', path: '/typing' } },
-  { key: 'topik', label: labels.topik, action: { kind: 'path', path: '/topik' } },
-];
-
-const buildLearnTools = (labels: {
-  flashcards: string;
-  flashcardsSub: string;
-  dictation: string;
-  dictationSub: string;
-  typing: string;
-  typingSub: string;
-  pronunciation: string;
-  pronunciationSub: string;
-}): LearnTool[] => [
-  {
-    k: '詞',
-    l: labels.flashcards,
-    s: labels.flashcardsSub,
-    tone: 'pink',
-    action: { kind: 'path', path: buildVocabBookModePath('flashcard') },
-  },
-  {
-    k: '聽',
-    l: labels.dictation,
-    s: labels.dictationSub,
-    tone: 'mint',
-    action: { kind: 'path', path: buildVocabBookModePath('test') },
-  },
-  {
-    k: '寫',
-    l: labels.typing,
-    s: labels.typingSub,
-    tone: 'butter',
-    action: { kind: 'path', path: '/typing' },
-  },
-  {
-    k: '說',
-    l: labels.pronunciation,
-    s: labels.pronunciationSub,
-    tone: 'lilac',
-    action: { kind: 'path', path: buildVocabBookModePath('match') },
-  },
-];
-
-const buildVocabModeCards = (labels: {
-  flashcard: string;
-  flashcardSub: string;
-  test: string;
-  testSub: string;
-  learn: string;
-  learnSub: string;
-  match: string;
-  matchSub: string;
-}): VocabModeCard[] => [
-  {
-    key: 'flashcard',
-    k: '閃',
-    l: labels.flashcard,
-    s: labels.flashcardSub,
-    tone: 'pink',
-  },
-  {
-    key: 'test',
-    k: '試',
-    l: labels.test,
-    s: labels.testSub,
-    tone: 'butter',
-  },
-  {
-    key: 'learn',
-    k: '學',
-    l: labels.learn,
-    s: labels.learnSub,
-    tone: 'mint',
-  },
-  {
-    key: 'match',
-    k: '配',
-    l: labels.match,
-    s: labels.matchSub,
-    tone: 'lilac',
-  },
-];
-
-const getCopy = (language: string): LearnCopy => {
-  if (language.startsWith('zh')) {
-    return {
-      hanjaTag: '學',
-      latin: 'LEARN',
-      title: '배우다',
-      subtitle: '系统地掌握韩语',
-      tabs: buildLearnTabs({
-        mine: '我的课程',
-        grammar: '语法',
-        vocabulary: '词汇',
-        typing: '写作',
-        topik: 'TOPIK',
-      }),
-      progressLabel: pct => `进行中 · ${pct}%`,
-      unitsLabel: (done, total) => `${done} / ${total} 单元`,
-      estimate: d => `约 ${d} 天`,
-      journeyTitle: '学习旅程',
-      journeyAction: '全部',
-      completed: '完成 ✓',
-      toolsTitle: '学习工具',
-      tools: buildLearnTools({
-        flashcards: '单词闪卡',
-        flashcardsSub: '翻卡与记忆强化',
-        dictation: '听写训练',
-        dictationSub: '边听边写',
-        typing: '打字练习',
-        typingSub: '提升输入速度',
-        pronunciation: '发音练习',
-        pronunciationSub: '跟读与辨音',
-      }),
-      vocabModesTitle: '单词学习模式',
-      vocabModes: buildVocabModeCards({
-        flashcard: '闪卡',
-        flashcardSub: '翻卡记忆与 FSRS 复习',
-        test: '考试',
-        testSub: '限时测验与错题反馈',
-        learn: '学习',
-        learnSub: '选择、拼写和分批掌握',
-        match: '拼图',
-        matchSub: '配对游戏强化反应',
-      }),
-      vocabNoWords: '该单元暂无词汇',
-      unitLabel: '单元',
-      levelBadge: '级',
-      defaultCourseTitle: 'TOPIK II 综合课程',
-      defaultCourseMeta: '中级',
-      tapToStart: '开始学习',
-    };
-  }
-  if (language.startsWith('vi')) {
-    return {
-      hanjaTag: '學',
-      latin: 'LEARN',
-      title: '배우다',
-      subtitle: 'Học tiếng Hàn có hệ thống',
-      tabs: buildLearnTabs({
-        mine: 'Khóa học',
-        grammar: 'Ngữ pháp',
-        vocabulary: 'Từ vựng',
-        typing: 'Viết',
-        topik: 'TOPIK',
-      }),
-      progressLabel: pct => `Đang học · ${pct}%`,
-      unitsLabel: (done, total) => `${done} / ${total} bài`,
-      estimate: d => `~${d} ngày`,
-      journeyTitle: 'Hành trình',
-      journeyAction: 'Tất cả',
-      completed: 'Xong ✓',
-      toolsTitle: 'Công cụ học',
-      tools: buildLearnTools({
-        flashcards: 'Flashcard từ',
-        flashcardsSub: 'Lật thẻ và ghi nhớ',
-        dictation: 'Chép chính tả',
-        dictationSub: 'Nghe và gõ lại',
-        typing: 'Luyện gõ',
-        typingSub: 'Tăng tốc độ nhập',
-        pronunciation: 'Phát âm',
-        pronunciationSub: 'Nghe mẫu và nhắc lại',
-      }),
-      vocabModesTitle: 'Chế độ từ vựng',
-      vocabModes: buildVocabModeCards({
-        flashcard: 'Flashcard',
-        flashcardSub: 'Ôn nhớ với FSRS',
-        test: 'Kiểm tra',
-        testSub: 'Làm bài và xem lỗi sai',
-        learn: 'Học',
-        learnSub: 'Học theo từng nhóm nhỏ',
-        match: 'Ghép cặp',
-        matchSub: 'Luyện phản xạ qua trò chơi',
-      }),
-      vocabNoWords: 'Bài này chưa có từ vựng',
-      unitLabel: 'Bài',
-      levelBadge: 'Cấp',
-      defaultCourseTitle: 'TOPIK II Tổng hợp',
-      defaultCourseMeta: 'Trung cấp',
-      tapToStart: 'Bắt đầu',
-    };
-  }
-  if (language.startsWith('mn')) {
-    return {
-      hanjaTag: '學',
-      latin: 'LEARN',
-      title: '배우다',
-      subtitle: 'Системээр солонгос хэл сурах',
-      tabs: buildLearnTabs({
-        mine: 'Миний хичээл',
-        grammar: 'Дүрэм',
-        vocabulary: 'Үгсийн сан',
-        typing: 'Бичих',
-        topik: 'TOPIK',
-      }),
-      progressLabel: pct => `Үргэлжилж · ${pct}%`,
-      unitsLabel: (done, total) => `${done} / ${total} хичээл`,
-      estimate: d => `~${d} өдөр`,
-      journeyTitle: 'Сургалтын зам',
-      journeyAction: 'Бүгд',
-      completed: 'Дууссан ✓',
-      toolsTitle: 'Сургалтын хэрэгсэл',
-      tools: buildLearnTools({
-        flashcards: 'Үгийн карт',
-        flashcardsSub: 'Карт эргүүлж цээжлэх',
-        dictation: 'Сонсож бичих',
-        dictationSub: 'Сонсоод бичнэ',
-        typing: 'Шивэх дасгал',
-        typingSub: 'Оруулах хурдаа өсгөх',
-        pronunciation: 'Дуудлага',
-        pronunciationSub: 'Сонсоод даган хэлэх',
-      }),
-      vocabModesTitle: 'Үгийн сангийн горим',
-      vocabModes: buildVocabModeCards({
-        flashcard: 'Карт',
-        flashcardSub: 'FSRS давтлага',
-        test: 'Шалгалт',
-        testSub: 'Алдаа шалгах сорил',
-        learn: 'Сурах',
-        learnSub: 'Бага багаар эзэмших',
-        match: 'Тааруулах',
-        matchSub: 'Тоглоомоор бататгах',
-      }),
-      vocabNoWords: 'Энэ нэгжид үг алга',
-      unitLabel: 'Хичээл',
-      levelBadge: 'Түв',
-      defaultCourseTitle: 'TOPIK II Нэгтгэл',
-      defaultCourseMeta: 'Дунд',
-      tapToStart: 'Эхлэх',
-    };
-  }
-  return {
-    hanjaTag: '學',
-    latin: 'LEARN',
-    title: '배우다',
-    subtitle: 'Master Korean systematically',
-    tabs: buildLearnTabs({
-      mine: 'My course',
-      grammar: 'Grammar',
-      vocabulary: 'Vocab',
-      typing: 'Writing',
-      topik: 'TOPIK',
-    }),
-    progressLabel: pct => `In progress · ${pct}%`,
-    unitsLabel: (done, total) => `${done} / ${total} units`,
-    estimate: d => `~${d} days`,
-    journeyTitle: 'Learning journey',
-    journeyAction: 'View all',
-    completed: 'Done ✓',
-    toolsTitle: 'Learning tools',
-    tools: buildLearnTools({
-      flashcards: 'Flashcards',
-      flashcardsSub: 'Flip cards and reinforce recall',
-      dictation: 'Dictation',
-      dictationSub: 'Listen and write back',
-      typing: 'Typing',
-      typingSub: 'Build speed and accuracy',
-      pronunciation: 'Pronunciation',
-      pronunciationSub: 'Shadow native audio',
-    }),
-    vocabModesTitle: 'Word study modes',
-    vocabModes: buildVocabModeCards({
-      flashcard: 'Flashcard',
-      flashcardSub: 'Flip cards with FSRS review',
-      test: 'Test',
-      testSub: 'Timed quiz with mistake feedback',
-      learn: 'Learn',
-      learnSub: 'Master words in focused batches',
-      match: 'Match',
-      matchSub: 'Pair words through a quick puzzle',
-    }),
-    vocabNoWords: 'No words in this unit yet',
-    unitLabel: 'Unit',
-    levelBadge: 'Lv',
-    defaultCourseTitle: 'TOPIK II Grammar',
-    defaultCourseMeta: 'Intermediate',
-    tapToStart: 'Start',
-  };
-};
-
 const getInstituteLocalizedName = (institute: Institute | undefined, language: string) => {
   if (!institute) return '';
   if (language.startsWith('zh')) return institute.nameZh || institute.name;
@@ -421,11 +102,8 @@ const BEAD_TONES: Array<'mint' | 'butter' | 'pink' | 'lilac' | 'sky'> = [
 
 const UNIT_BEADS: LucideIcon[] = [BookOpen, PenLine, Clock3, Compass, GraduationCap, Sparkles];
 
-const getDefaultUnitTitle = (unitNumber: number, language: string): string => {
-  if (language.startsWith('zh')) return `单元 ${unitNumber}`;
-  if (language.startsWith('vi')) return `Bài ${unitNumber}`;
-  if (language.startsWith('mn')) return `Хичээл ${unitNumber}`;
-  return `Unit ${unitNumber}`;
+const getDefaultUnitTitle = (unitNumber: number, t: (k: string, o?: any) => string): string => {
+  return t('coursesOverview.mobile.unitLabel', { defaultValue: 'Unit' }) + ' ' + unitNumber;
 };
 
 const buildCourseVocabModePath = (
@@ -448,7 +126,106 @@ const MobileCoursesOverview: React.FC = () => {
   const { setRecentMaterial, setSelectedInstitute, setSelectedLevel } = useLearningActions();
   const [isCoursePickerOpen, setIsCoursePickerOpen] = useState(false);
   const language = i18n.resolvedLanguage || i18n.language || 'en';
-  const copy = useMemo(() => getCopy(language), [language]);
+
+  const tabs = useMemo<LearnTab[]>(
+    () => [
+      { key: 'mine', label: t('coursesOverview.mobile.tabs.mine', { defaultValue: '我的课程' }) },
+      {
+        key: 'grammar',
+        label: t('coursesOverview.mobile.tabs.grammar', { defaultValue: '语法' }),
+        action: { kind: 'module', module: 'grammar' },
+      },
+      {
+        key: 'vocabulary',
+        label: t('coursesOverview.mobile.tabs.vocabulary', { defaultValue: '词汇' }),
+        action: { kind: 'module', module: 'vocabulary' },
+      },
+      {
+        key: 'typing',
+        label: t('coursesOverview.mobile.tabs.typing', { defaultValue: '写作' }),
+        action: { kind: 'path', path: '/typing' },
+      },
+      {
+        key: 'topik',
+        label: t('coursesOverview.mobile.tabs.topik', { defaultValue: 'TOPIK' }),
+        action: { kind: 'path', path: '/topik' },
+      },
+    ],
+    [t]
+  );
+
+  const tools = useMemo<LearnTool[]>(
+    () => [
+      {
+        k: '詞',
+        l: t('coursesOverview.mobile.tools.flashcards', { defaultValue: '单词闪卡' }),
+        s: t('coursesOverview.mobile.tools.flashcardsSub', { defaultValue: '翻卡与记忆强化' }),
+        tone: 'pink',
+        action: { kind: 'path', path: buildVocabBookModePath('flashcard') },
+      },
+      {
+        k: '聽',
+        l: t('coursesOverview.mobile.tools.dictation', { defaultValue: '听写训练' }),
+        s: t('coursesOverview.mobile.tools.dictationSub', { defaultValue: '边听边写' }),
+        tone: 'mint',
+        action: { kind: 'path', path: buildVocabBookModePath('test') },
+      },
+      {
+        k: '寫',
+        l: t('coursesOverview.mobile.tools.typing', { defaultValue: '打字练习' }),
+        s: t('coursesOverview.mobile.tools.typingSub', { defaultValue: '提升输入速度' }),
+        tone: 'butter',
+        action: { kind: 'path', path: '/typing' },
+      },
+      {
+        k: '說',
+        l: t('coursesOverview.mobile.tools.pronunciation', { defaultValue: '发音练习' }),
+        s: t('coursesOverview.mobile.tools.pronunciationSub', { defaultValue: '跟读与辨音' }),
+        tone: 'lilac',
+        action: { kind: 'path', path: buildVocabBookModePath('match') },
+      },
+    ],
+    [t]
+  );
+
+  const vocabModes = useMemo<VocabModeCard[]>(
+    () => [
+      {
+        key: 'flashcard',
+        k: '閃',
+        l: t('coursesOverview.mobile.vocabModes.flashcard', { defaultValue: '闪卡' }),
+        s: t('coursesOverview.mobile.vocabModes.flashcardSub', {
+          defaultValue: '翻卡记忆与 FSRS 复习',
+        }),
+        tone: 'pink',
+      },
+      {
+        key: 'test',
+        k: '試',
+        l: t('coursesOverview.mobile.vocabModes.test', { defaultValue: '考试' }),
+        s: t('coursesOverview.mobile.vocabModes.testSub', { defaultValue: '限时测验与错题反馈' }),
+        tone: 'butter',
+      },
+      {
+        key: 'learn',
+        k: '學',
+        l: t('coursesOverview.mobile.vocabModes.learn', { defaultValue: '学习' }),
+        s: t('coursesOverview.mobile.vocabModes.learnSub', {
+          defaultValue: '选择、拼写和分批掌握',
+        }),
+        tone: 'mint',
+      },
+      {
+        key: 'match',
+        k: '配',
+        l: t('coursesOverview.mobile.vocabModes.match', { defaultValue: '拼图' }),
+        s: t('coursesOverview.mobile.vocabModes.matchSub', { defaultValue: '配对游戏强化反应' }),
+        tone: 'lilac',
+      },
+    ],
+    [t]
+  );
+
   const activeTab = useMemo<LearnTabKey>(() => {
     const moduleParam = (searchParams.get('module') || '').trim().toLowerCase();
     if (moduleParam === 'typing') return 'typing';
@@ -484,7 +261,7 @@ const MobileCoursesOverview: React.FC = () => {
     const preferredRecentMaterial =
       activeTab === 'vocabulary'
         ? recentMaterials?.vocabulary
-        : recentMaterials?.grammar ?? recentMaterials?.vocabulary;
+        : (recentMaterials?.grammar ?? recentMaterials?.vocabulary);
     if (preferredRecentMaterial?.instituteId) {
       const preferredMatch = list.find(course => course.id === preferredRecentMaterial.instituteId);
       if (preferredMatch) return preferredMatch;
@@ -512,9 +289,7 @@ const MobileCoursesOverview: React.FC = () => {
   );
   const courseGrammars = useQuery(
     GRAMMARS.getByCourse,
-    currentCourse?.id && usesGrammarJourney
-      ? { courseId: currentCourse.id, language }
-      : 'skip'
+    currentCourse?.id && usesGrammarJourney ? { courseId: currentCourse.id, language } : 'skip'
   );
   const courseUnits = useQuery(
     qRef<{ courseId: string }, CourseUnitEntry[]>('units:getByCourse'),
@@ -675,7 +450,7 @@ const MobileCoursesOverview: React.FC = () => {
       const pct =
         progress && progress.total > 0 ? Math.min(1, progress.mastered / progress.total) : 0;
       const tone = BEAD_TONES[i % BEAD_TONES.length];
-      const fallbackTitle = getDefaultUnitTitle(unitNumber, language);
+      const fallbackTitle = getDefaultUnitTitle(unitNumber, t);
       const grammarTitle = usesSemanticGrammarUnits ? grammarUnitTitleMap.get(unitNumber) : '';
       const title = usesGrammarJourney
         ? meta?.title || grammarTitle || fallbackTitle
@@ -699,7 +474,7 @@ const MobileCoursesOverview: React.FC = () => {
     activeUnitProgressMap,
     currentCourse?.totalUnits,
     grammarUnitTitleMap,
-    language,
+    t,
     unitMetaMap,
     usesSemanticGrammarUnits,
     usesGrammarJourney,
@@ -815,7 +590,8 @@ const MobileCoursesOverview: React.FC = () => {
   );
 
   const courseName =
-    getInstituteLocalizedName(currentCourse ?? undefined, language) || copy.defaultCourseTitle;
+    getInstituteLocalizedName(currentCourse ?? undefined, language) ||
+    t('coursesOverview.mobile.defaultCourseTitle', { defaultValue: 'TOPIK II 综合课程' });
   const courseLevel =
     currentCourse?.displayLevel ||
     (typeof currentCourse?.levels?.[0] === 'number'
@@ -830,9 +606,8 @@ const MobileCoursesOverview: React.FC = () => {
   );
   const typedWpm = Math.max(0, typingStats?.highestWpm ?? 0);
   const tabLabelMap = useMemo(
-    () =>
-      Object.fromEntries(copy.tabs.map(tab => [tab.key, tab.label])) as Record<LearnTabKey, string>,
-    [copy.tabs]
+    () => Object.fromEntries(tabs.map(tab => [tab.key, tab.label])) as Record<LearnTabKey, string>,
+    [tabs]
   );
   const heroChipLabel =
     activeTab === 'grammar'
@@ -843,33 +618,37 @@ const MobileCoursesOverview: React.FC = () => {
           ? `${tabLabelMap.typing} · ${typedWpm} WPM`
           : activeTab === 'topik'
             ? `${tabLabelMap.topik} · TOPIK`
-            : copy.progressLabel(overallPct);
+            : t('coursesOverview.mobile.progressLabel', {
+                defaultValue: '进行中 · {{pct}}%',
+                pct: overallPct,
+              });
   const heroTitle =
     activeTab === 'grammar'
       ? `${courseName} · ${tabLabelMap.grammar}`
       : activeTab === 'vocabulary'
         ? `${courseName} · ${tabLabelMap.vocabulary}`
         : activeTab === 'typing'
-          ? copy.tools[2]?.l || tabLabelMap.typing
+          ? t('coursesOverview.mobile.tools.typing', { defaultValue: '打字练习' })
           : activeTab === 'topik'
-            ? `${tabLabelMap.topik} · ${copy.tapToStart}`
+            ? `${tabLabelMap.topik} · ${t('coursesOverview.mobile.tapToStart', { defaultValue: '开始学习' })}`
             : courseName;
   const heroMeta =
     activeTab === 'grammar' || activeTab === 'vocabulary'
-      ? `${copy.defaultCourseMeta} · ${copy.unitLabel} ${completedUnits} / ${totalUnits}`
+      ? `${t('coursesOverview.mobile.defaultCourseMeta', { defaultValue: '中级' })} · ${t('coursesOverview.mobile.unitLabel', { defaultValue: '单元' })} ${completedUnits} / ${totalUnits}`
       : activeTab === 'typing'
-        ? language.startsWith('zh')
-          ? `${typingStats?.totalTests ?? 0} 次测试 · 最高 ${typedWpm} WPM`
-          : `${typingStats?.totalTests ?? 0} tests · best ${typedWpm} WPM`
+        ? t('coursesOverview.mobile.typing.testsCount', {
+            defaultValue: '{{count}} 次测试 · 最高 {{wpm}} WPM',
+            count: typingStats?.totalTests ?? 0,
+            wpm: typedWpm,
+          })
         : activeTab === 'topik'
-          ? language.startsWith('zh')
-            ? '历年真题与模考'
-            : 'Mock exams and historical papers'
-          : `${copy.defaultCourseMeta} · ${copy.levelBadge} ${courseLevel}`;
+          ? t('coursesOverview.mobile.topik.meta', { defaultValue: '历年真题与模考' })
+          : `${t('coursesOverview.mobile.defaultCourseMeta', { defaultValue: '中级' })} · ${t('coursesOverview.mobile.levelBadge', { defaultValue: '级' })} ${courseLevel}`;
   const showUnitJourney =
     activeTab === 'mine' || activeTab === 'grammar' || activeTab === 'vocabulary';
   const showLearningTools = activeTab === 'mine' || activeTab === 'vocabulary';
-  const vocabModesDisabled = !usesGrammarJourney && courseWords !== undefined && courseWords.length === 0;
+  const vocabModesDisabled =
+    !usesGrammarJourney && courseWords !== undefined && courseWords.length === 0;
   const showSwitchMaterialInHero =
     activeTab === 'mine' || activeTab === 'grammar' || activeTab === 'vocabulary';
   const switchMaterialModule: LearningFlowModule =
@@ -921,15 +700,18 @@ const MobileCoursesOverview: React.FC = () => {
   return (
     <PageShell>
       <PageIntro
-        hanja={copy.hanjaTag}
-        latin={copy.latin}
-        title={copy.title}
-        subtitle={copy.subtitle}
+        hanja={t('coursesOverview.mobile.hanjaTag', { defaultValue: '學' })}
+        latin={t('coursesOverview.mobile.latin', { defaultValue: 'LEARN' })}
+        title={t('coursesOverview.mobile.title', { defaultValue: '배우다' })}
+        subtitle={t('coursesOverview.mobile.subtitle', { defaultValue: '系统地掌握韩语' })}
       />
 
       {/* Course tabs */}
-      <div className="hide-scroll" style={{ padding: '0 18px 14px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-        {copy.tabs.map((tab, i) => {
+      <div
+        className="hide-scroll"
+        style={{ padding: '0 18px 14px', display: 'flex', gap: 8, overflowX: 'auto' }}
+      >
+        {tabs.map((tab, i) => {
           const isActive = tab.key === activeTab;
           return (
             <button
@@ -1057,7 +839,12 @@ const MobileCoursesOverview: React.FC = () => {
                   </span>
                 </button>
               ) : null}
-              <HanjaSeal c="級" size={44} bg={KT.ink} round={10} />
+              <HanjaSeal
+                c={t('coursesOverview.mobile.levelBadge', { defaultValue: '级' })}
+                size={44}
+                bg={KT.ink}
+                round={10}
+              />
             </div>
           </div>
           <button
@@ -1089,8 +876,7 @@ const MobileCoursesOverview: React.FC = () => {
                   background: KT.ink,
                   borderRadius: 3,
                 }}
-              >
-              </div>
+              ></div>
             </div>
             <div
               style={{
@@ -1100,10 +886,17 @@ const MobileCoursesOverview: React.FC = () => {
               }}
             >
               <div style={{ fontSize: 11, color: KT.ink2, fontWeight: 700 }}>
-                {copy.unitsLabel(completedUnits, totalUnits)}
+                {t('coursesOverview.mobile.unitsLabel', {
+                  defaultValue: '{{done}} / {{total}} 单元',
+                  done: completedUnits,
+                  total: totalUnits,
+                })}
               </div>
               <div style={{ fontSize: 11, color: KT.ink2, fontWeight: 700 }}>
-                {copy.estimate(estimatedDays)}
+                {t('coursesOverview.mobile.estimate', {
+                  defaultValue: '约 {{days}} 天',
+                  days: estimatedDays,
+                })}
               </div>
             </div>
           </button>
@@ -1114,9 +907,9 @@ const MobileCoursesOverview: React.FC = () => {
       {showUnitJourney ? (
         <div style={{ padding: '0 18px 28px' }}>
           <SectionHead
-            kanji="路"
-            title={copy.journeyTitle}
-            action={copy.journeyAction}
+            kanji={t('coursesOverview.mobile.hanjaJourney', { defaultValue: '路' })}
+            title={t('coursesOverview.mobile.journeyTitle', { defaultValue: '学习旅程' })}
+            action={t('coursesOverview.mobile.journeyAction', { defaultValue: '全部' })}
             onAction={handleCourseOpen}
           />
           <Card pad={20}>
@@ -1190,11 +983,14 @@ const MobileCoursesOverview: React.FC = () => {
                           letterSpacing: 1,
                         }}
                       >
-                        {copy.unitLabel.toUpperCase()} {String(u.n).padStart(2, '0')}
+                        {t('coursesOverview.mobile.unitLabel', {
+                          defaultValue: '单元',
+                        }).toUpperCase()}{' '}
+                        {String(u.n).padStart(2, '0')}
                       </span>
                       {u.pct === 1 && (
                         <span style={{ fontSize: 11, color: KT.mintDeep, fontWeight: 800 }}>
-                          {copy.completed}
+                          {t('coursesOverview.mobile.completed', { defaultValue: '完成 ✓' })}
                         </span>
                       )}
                       {u.pct > 0 && u.pct < 1 && (
@@ -1268,15 +1064,13 @@ const MobileCoursesOverview: React.FC = () => {
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: KT.ink, letterSpacing: -0.2 }}>
                   {activeTab === 'typing'
-                    ? copy.tools[2]?.l || tabLabelMap.typing
-                    : tabLabelMap.topik}
+                    ? t('coursesOverview.mobile.tools.typing', { defaultValue: '打字练习' })
+                    : t('coursesOverview.mobile.tabs.topik', { defaultValue: 'TOPIK' })}
                 </div>
                 <div style={{ fontSize: 12, color: KT.sub, marginTop: 4, fontWeight: 600 }}>
                   {activeTab === 'typing'
-                    ? copy.tools[2]?.s || copy.tapToStart
-                    : language.startsWith('zh')
-                      ? '进入模拟考试与历史成绩'
-                      : 'Jump into mock exams and history'}
+                    ? t('coursesOverview.mobile.tools.typingSub', { defaultValue: '提升输入速度' })
+                    : t('coursesOverview.mobile.topik.meta', { defaultValue: '历年真题与模考' })}
                 </div>
               </div>
               <button
@@ -1294,7 +1088,7 @@ const MobileCoursesOverview: React.FC = () => {
                   fontFamily: KT.font,
                 }}
               >
-                {copy.tapToStart}
+                {t('coursesOverview.mobile.tapToStart', { defaultValue: '开始学习' })}
               </button>
             </div>
           </Card>
@@ -1304,9 +1098,12 @@ const MobileCoursesOverview: React.FC = () => {
       {/* Learning tools grid */}
       {showLearningTools && (
         <div style={{ padding: '0 18px 28px' }}>
-          <SectionHead kanji="具" title={copy.toolsTitle} />
+          <SectionHead
+            kanji={t('coursesOverview.mobile.hanjaTools', { defaultValue: '具' })}
+            title={t('coursesOverview.mobile.toolsTitle', { defaultValue: '学习工具' })}
+          />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {copy.tools.map((m, i) => {
+            {tools.map((m, i) => {
               const deepKey = `${m.tone}Deep` as const;
               const bg = KT[deepKey] || KT.ink;
               return (
@@ -1356,9 +1153,12 @@ const MobileCoursesOverview: React.FC = () => {
 
       {activeTab === 'vocabulary' && (
         <div style={{ padding: '0 18px 28px' }}>
-          <SectionHead kanji="詞" title={copy.vocabModesTitle} />
+          <SectionHead
+            kanji={t('coursesOverview.mobile.hanjaVocab', { defaultValue: '詞' })}
+            title={t('coursesOverview.mobile.vocabModesTitle', { defaultValue: '单词学习模式' })}
+          />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {copy.vocabModes.map(mode => {
+            {vocabModes.map(mode => {
               const deepKey = `${mode.tone}Deep` as const;
               const bg = KT[deepKey] || KT.ink;
               return (
@@ -1403,7 +1203,9 @@ const MobileCoursesOverview: React.FC = () => {
                       lineHeight: 1.45,
                     }}
                   >
-                    {vocabModesDisabled ? copy.vocabNoWords : mode.s}
+                    {vocabModesDisabled
+                      ? t('coursesOverview.mobile.vocabNoWords', { defaultValue: '该单元暂无词汇' })
+                      : mode.s}
                   </div>
                 </button>
               );
@@ -1422,9 +1224,7 @@ const MobileCoursesOverview: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          {language.startsWith('zh')
-            ? '登录后可查看个人学习进度'
-            : 'Sign in to track personal progress'}
+          {t('coursesOverview.mobile.loginHint', { defaultValue: '登录后可查看个人学习进度' })}
         </div>
       )}
 
@@ -1440,7 +1240,9 @@ const MobileCoursesOverview: React.FC = () => {
           {(courses ?? []).map(course => {
             const isActive = currentCourse?.id === course.id;
             const localizedName =
-              getInstituteLocalizedName(course, language) || course.name || copy.defaultCourseTitle;
+              getInstituteLocalizedName(course, language) ||
+              course.name ||
+              t('coursesOverview.mobile.defaultCourseTitle', { defaultValue: 'TOPIK II 综合课程' });
             const levelLabel =
               course.displayLevel ||
               (typeof course.levels?.[0] === 'number'
@@ -1450,7 +1252,7 @@ const MobileCoursesOverview: React.FC = () => {
                     'level' in course.levels[0] &&
                     typeof course.levels[0].level === 'number'
                   ? `${course.levels[0].level}`
-                  : copy.levelBadge);
+                  : t('coursesOverview.mobile.levelBadge', { defaultValue: '级' }));
 
             return (
               <button
@@ -1497,12 +1299,15 @@ const MobileCoursesOverview: React.FC = () => {
                         lineHeight: 1.5,
                       }}
                     >
-                      {course.publisher || copy.defaultCourseMeta}
+                      {course.publisher ||
+                        t('coursesOverview.mobile.defaultCourseMeta', { defaultValue: '中级' })}
                       {' · '}
                       {levelLabel}
                     </div>
                   </div>
-                  {isActive ? <Chip tone="ink">{t('common.current', { defaultValue: 'Current' })}</Chip> : null}
+                  {isActive ? (
+                    <Chip tone="ink">{t('common.current', { defaultValue: 'Current' })}</Chip>
+                  ) : null}
                 </div>
               </button>
             );

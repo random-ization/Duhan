@@ -1,0 +1,1380 @@
+126:  return (rawAnswer ?? '').trim().length > 0;
+127-}
+128-
+129-function getQuestionTypeLabel(
+130-  questionType: WritingQuestion['questionType'],
+131-  t: WritingTranslationFn
+132-): string {
+133-  if (questionType === 'FILL_BLANK') {
+134-    return t('topikWriting.session.fillBlank', {
+135-      defaultValue: 'Fill in the blank',
+136-    });
+137-  }
+138-  if (questionType === 'GRAPH_ESSAY') {
+139-    return t('topikWriting.session.graphEssay', { defaultValue: 'Graph essay' });
+140-  }
+141-  return t('topikWriting.session.opinionEssay', {
+142-    defaultValue: 'Opinion essay',
+143-  });
+144-}
+145-
+146-// ─── Sub-components ───────────────────────────────────────────────────────────
+147-
+148-interface QuestionTabProps {
+149-  number: number;
+150-  isActive: boolean;
+151-  hasContent: boolean;
+152-  onClick: () => void;
+153-}
+154-
+155-const QuestionTab: React.FC<QuestionTabProps> = ({ number, isActive, hasContent, onClick }) => (
+156-  <Button
+157-    type="button"
+158-    variant="ghost"
+159-    size="auto"
+160-    onClick={onClick}
+161-    className={cn(
+162-      'relative flex items-center justify-center w-12 h-12 rounded-xl font-black text-sm border-2 transition-all',
+163-      isActive
+164-        ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+165-        : hasContent
+166-          ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-400'
+167-          : 'bg-card text-muted-foreground border-border hover:border-foreground hover:text-foreground'
+168-    )}
+169-  >
+170-    {number}
+171-    {hasContent && !isActive && (
+172-      <CheckCircle2
+173-        size={10}
+174-        className="absolute -top-1 -right-1 text-emerald-500 fill-emerald-500"
+175-      />
+176-    )}
+177-  </Button>
+178-);
+179-
+180-// ─── FillBlankTextarea ────────────────────────────────────────────────────────
+181-
+182-interface FillBlankProps {
+183-  value: string;
+184-  onChange: (v: string) => void;
+185-  maxLength: number;
+186-  compact?: boolean;
+187-}
+188-
+189-const FillBlankTextarea: React.FC<FillBlankProps> = ({
+190-  value,
+191-  onChange,
+192-  maxLength,
+193-  compact = false,
+194-}) => {
+195-  const { t } = useTranslation();
+196-  const remaining = maxLength - value.length;
+197:  return (
+198-    <div className="flex flex-col gap-2 h-full">
+199-      <Textarea
+200-        value={value}
+201-        onChange={e => onChange(e.target.value.slice(0, maxLength))}
+202-        className={cn(
+203-          'flex-1 w-full resize-none border-2 border-border bg-background font-medium text-foreground leading-relaxed',
+204-          compact
+205-            ? 'min-h-[240px] rounded-[18px] p-4 text-[16px]'
+206-            : 'min-h-[200px] rounded-xl p-4 text-base',
+207-          'focus:outline-none focus:border-primary transition-colors',
+208-        )}
+209-        placeholder={t('topikWriting.session.answerPlaceholder', {
+210-          defaultValue: 'Type your answer here...',
+211-        })}
+212-        spellCheck={false}
+213-      />
+214-      <div className="flex justify-between text-xs text-muted-foreground px-1">
+215-        <span>
+216-          {t('topikWriting.session.characterCount', {
+217-            count: value.length,
+218-            defaultValue: '{{count}} chars',
+219-          })}
+220-        </span>
+221-        <span className={cn(remaining <= 20 ? 'text-destructive font-bold' : '')}>
+222-          {t('topikWriting.session.remainingChars', {
+223-            count: remaining,
+224-            defaultValue: '{{count}} left',
+225-          })}
+226-        </span>
+227-      </div>
+228-    </div>
+229-  );
+230-};
+231-
+232-interface DualFillBlankProps {
+233-  value: string;
+234-  onChange: (v: string) => void;
+235-  maxLength: number;
+236-  compact?: boolean;
+237-}
+238-
+239-const DualFillBlankInputs: React.FC<DualFillBlankProps> = ({
+240-  value,
+241-  onChange,
+242-  maxLength,
+243-  compact = false,
+244-}) => {
+245-  const { t } = useTranslation();
+246-  const parsed = useMemo(() => parseDualFillAnswer(value), [value]);
+247-  const perFieldMax = Math.max(40, Math.floor(maxLength / 2));
+248-  const totalUsed = parsed.slotA.length + parsed.slotB.length;
+249-  const remaining = maxLength - totalUsed;
+250-
+251:  return (
+252-    <div className="flex h-full flex-col gap-3">
+253-      <div
+254-        className={cn(
+255-          'border bg-[#fffef8] flex-1',
+256-          compact
+257-            ? 'rounded-[20px] p-4 space-y-4 shadow-sm'
+258-            : 'rounded-2xl p-5 md:p-6 space-y-5 shadow-[4px_4px_0px_0px_#18181B]'
+259-        )}
+260-        style={compact ? { borderColor: KT.line2, background: KT.bg } : undefined}
+261-      >
+262-        <div className="flex items-center justify-between gap-3 flex-wrap">
+263-          <p
+264-            className="text-sm font-black text-zinc-800"
+265-            style={compact ? { color: KT.ink } : undefined}
+266-          >
+267-            {t('topikWriting.session.fillBlankPaperTitle', {
+268-              defaultValue: 'Fill in blanks (㉠ / ㉡)',
+269-            })}
+270-          </p>
+271-          <span
+272-            className="text-[11px] font-bold text-zinc-500"
+273-            style={compact ? { color: KT.sub } : undefined}
+274-          >
+275-            {t('topikWriting.session.fillBlankOneSentence', {
+276-              defaultValue: 'One sentence per blank recommended',
+277-            })}
+278-          </span>
+279-        </div>
+280-        <p
+281-          className="text-sm text-zinc-600 font-medium leading-relaxed"
+282-          style={compact ? { color: KT.sub } : undefined}
+283-        >
+284-          {t('topikWriting.session.fillBlankHint', {
+285-            defaultValue: 'Please fill both ㉠ and ㉡ with complete sentences.',
+286-          })}
+287-        </p>
+288-        <div className="grid grid-cols-1 gap-3">
+289-          <label className="grid grid-cols-[auto_1fr] items-end gap-3">
+290-            <span
+291-              className="inline-flex items-center justify-center h-9 min-w-9 px-2 rounded-full border text-sm font-black text-zinc-900 bg-white"
+292-              style={compact ? { borderColor: KT.line2, color: KT.ink, background: KT.card } : undefined}
+293-            >
+294-              ㉠
+295-            </span>
+296-            <Input
+297-              value={parsed.slotA}
+298-              onChange={e =>
+299-                onChange(
+300-                  serializeDualFillAnswer({
+301-                    slotA: e.target.value.slice(0, perFieldMax),
+302-                    slotB: parsed.slotB,
+303-                  })
+304-                )
+305-              }
+306-              className={cn(
+307-                'w-full bg-transparent border-0 border-b-2 border-zinc-900 rounded-none px-1 pb-1 font-semibold text-zinc-900',
+308-                compact ? 'h-12 text-[16px]' : 'h-11 text-base md:text-lg',
+309-                'focus:outline-none focus:border-primary transition-colors',
+310-                'placeholder:text-zinc-400'
+311-              )}
+312-              style={compact ? { borderColor: KT.line2, color: KT.ink } : undefined}
+313-              placeholder={t('topikWriting.session.fillBlankA', {
+314-                defaultValue: 'Fill ㉠ here',
+315-              })}
+316-              spellCheck={false}
+317-            />
+318-          </label>
+319-
+320-          <label className="grid grid-cols-[auto_1fr] items-end gap-3">
+321-            <span
+322-              className="inline-flex items-center justify-center h-9 min-w-9 px-2 rounded-full border text-sm font-black text-zinc-900 bg-white"
+323-              style={compact ? { borderColor: KT.line2, color: KT.ink, background: KT.card } : undefined}
+324-            >
+325-              ㉡
+326-            </span>
+327-            <Input
+328-              value={parsed.slotB}
+329-              onChange={e =>
+330-                onChange(
+331-                  serializeDualFillAnswer({
+332-                    slotA: parsed.slotA,
+333-                    slotB: e.target.value.slice(0, perFieldMax),
+334-                  })
+335-                )
+336-              }
+337-              className={cn(
+338-                'w-full bg-transparent border-0 border-b-2 border-zinc-900 rounded-none px-1 pb-1 font-semibold text-zinc-900',
+339-                compact ? 'h-12 text-[16px]' : 'h-11 text-base md:text-lg',
+340-                'focus:outline-none focus:border-primary transition-colors',
+341-                'placeholder:text-zinc-400'
+342-              )}
+343-              style={compact ? { borderColor: KT.line2, color: KT.ink } : undefined}
+344-              placeholder={t('topikWriting.session.fillBlankB', {
+345-                defaultValue: 'Fill ㉡ here',
+346-              })}
+347-              spellCheck={false}
+348-            />
+349-          </label>
+350-        </div>
+351-      </div>
+352-
+353-      <div className="flex justify-between text-xs text-muted-foreground px-1">
+354-        <span>
+355-          {t('topikWriting.session.characterCount', {
+356-            count: totalUsed,
+357-            defaultValue: '{{count}} chars',
+358-          })}
+359-        </span>
+360-        <span className={cn(remaining <= 20 ? 'text-destructive font-bold' : '')}>
+361-          {t('topikWriting.session.remainingChars', {
+362-            count: remaining,
+363-            defaultValue: '{{count}} left',
+364-          })}
+365-        </span>
+366-      </div>
+367-    </div>
+368-  );
+369-};
+370-
+371-// ─── QuestionPrompt ───────────────────────────────────────────────────────────
+372-
+373-interface QuestionPromptProps {
+374-  question: WritingQuestion;
+375-  hideTextContent?: boolean;
+376-  hideMetaHeader?: boolean;
+377-  surfaceTone?: 'default' | 'paper';
+378-  compact?: boolean;
+379-}
+380-
+381-const QuestionPrompt: React.FC<QuestionPromptProps> = ({
+382-  question,
+383-  hideTextContent = false,
+384-  hideMetaHeader = false,
+385-  surfaceTone = 'default',
+386-  compact = false,
+387-}) => {
+388-  const { t } = useTranslation();
+389-  const isPaperTone = surfaceTone === 'paper';
+390:  return (
+391-    <div className={cn('h-full overflow-y-auto pr-1.5', compact ? 'space-y-4' : 'space-y-5')}>
+392-      {!hideTextContent && !hideMetaHeader && (
+393-        <div className="flex items-center gap-3 flex-wrap">
+394-          <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg font-black text-sm">
+395-            {t('topikWriting.session.questionX', {
+396-              num: question.number,
+397-              defaultValue: `Question ${question.number}`,
+398-            })}
+399-          </div>
+400-          <div className="text-sm font-bold text-muted-foreground bg-card px-3 py-1.5 rounded-md border border-border">
+401-            {question.score} {t('topikWriting.session.points', { defaultValue: 'pts' })}
+402-          </div>
+403-          <div className="text-xs font-black text-foreground/80 uppercase tracking-[0.08em] bg-muted px-2.5 py-1 rounded-md">
+404-            {
+405-              {
+406-                FILL_BLANK: t('topikWriting.session.fillBlank', {
+407-                  defaultValue: 'Fill in the blank',
+408-                }),
+409-                GRAPH_ESSAY: t('topikWriting.session.graphEssay', { defaultValue: 'Graph essay' }),
+410-                OPINION_ESSAY: t('topikWriting.session.opinionEssay', {
+411-                  defaultValue: 'Opinion essay',
+412-                }),
+413-              }[question.questionType]
+414-            }
+415-          </div>
+416-        </div>
+417-      )}
+418-
+419-      {!hideTextContent && question.instruction && (
+420-        <div
+421-          className={cn(
+422-            'rounded-2xl border-2 shadow-sm',
+423-            compact ? 'p-3.5 md:p-4' : 'p-4 md:p-5'
+424-          )}
+425-          style={
+426-            isPaperTone
+427-              ? {
+428-                  borderColor: KT.line2,
+429-                  background: KT.card,
+430-                }
+431-              : undefined
+432-          }
+433-        >
+434-          <p
+435-            className={cn(
+436-              'whitespace-pre-wrap break-words font-semibold',
+437-              compact ? 'text-[14px] leading-7 md:text-[15px]' : 'text-[15px] leading-8 md:text-base'
+438-            )}
+439-            style={isPaperTone ? { color: KT.ink } : undefined}
+440-          >
+441-            {question.instruction}
+442-          </p>
+443-        </div>
+444-      )}
+445-
+446-      {!hideTextContent && question.contextBox && (
+447-        <div
+448-          className={cn(
+449-            'relative rounded-2xl border-2 shadow-sm',
+450-            compact ? 'p-3.5 md:p-4' : 'p-4 md:p-5'
+451-          )}
+452-          style={
+453-            isPaperTone
+454-              ? {
+455-                  borderColor: KT.line2,
+456-                  background: KT.bg,
+457-                }
+458-              : undefined
+459-          }
+460-        >
+461-          <div
+462-            className="absolute -top-3 left-4 rounded border px-2 text-[11px] font-black text-muted-foreground"
+463-            style={
+464-              isPaperTone
+465-                ? {
+466-                    borderColor: KT.line2,
+467-                    background: KT.bg,
+468-                  }
+469-                : undefined
+470-            }
+471-          >
+472-            {t('topikWriting.session.exampleBox', { defaultValue: 'Example / Context' })}
+473-          </div>
+474-          <p
+475-            className={cn(
+476-              'whitespace-pre-wrap break-words',
+477-              compact ? 'text-[14px] leading-7 md:text-[15px]' : 'text-[15px] leading-8 md:text-base'
+478-            )}
+479-            style={isPaperTone ? { color: KT.ink2 } : undefined}
+480-          >
+481-            {question.contextBox}
+482-          </p>
+483-        </div>
+484-      )}
+485-
+486-      {question.image && (
+487-        <div
+488-          className="rounded-2xl border-2 p-3 shadow-sm"
+489-          style={
+490-            isPaperTone
+491-              ? {
+492-                  borderColor: KT.line2,
+493-                  background: KT.card,
+494-                }
+495-              : undefined
+496-          }
+497-        >
+498-          <img
+499-            src={question.image}
+500-            alt={String(question.number)}
+501-            className={cn(
+502-              'w-full rounded-xl border object-contain',
+503-              compact ? 'max-h-[300px]' : 'max-h-[460px]'
+504-            )}
+505-            style={
+506-              isPaperTone
+507-                ? {
+508-                    borderColor: KT.line2,
+509-                    background: KT.bg,
+510-                  }
+511-                : undefined
+512-            }
+513-          />
+514-        </div>
+515-      )}
+516-    </div>
+517-  );
+518-};
+519-
+520-type WritingTranslationFn = ReturnType<typeof useTranslation>['t'];
+521-
+522-function getSaveStatusClass(saveStatus: SaveStatus): string {
+523-  if (saveStatus === 'saving') return 'text-amber-500';
+524-  if (saveStatus === 'saved') return 'text-emerald-600 dark:text-emerald-400';
+525-  if (saveStatus === 'error') return 'text-destructive';
+526-  return 'text-muted-foreground';
+527-}
+528-
+529-function getSaveStatusText(saveStatus: SaveStatus, t: WritingTranslationFn): string {
+530-  if (saveStatus === 'saving') {
+531-    return t('topikWriting.session.saving', { defaultValue: 'Saving...' });
+532-  }
+533-  if (saveStatus === 'saved') {
+534-    return t('topikWriting.session.saved', { defaultValue: '✓ Saved' });
+535-  }
+536-  if (saveStatus === 'error') {
+537-    return t('topikWriting.session.saveError', { defaultValue: 'Save Failed' });
+538-  }
+539-  return t('topikWriting.session.saveIdle', { defaultValue: 'Auto-save' });
+540-}
+541-
+542-const SessionHeader: React.FC<{
+543-  isMobile: boolean;
+544-  t: WritingTranslationFn;
+545-  questions: WritingQuestion[];
+546-  activeQuestion: number;
+547-  localAnswers: Record<number, string>;
+548-  answeredCount: number;
+549-  totalScore: number;
+550-  saveStatus: SaveStatus;
+551-  remainingMs: number;
+552-  isSubmitting: boolean;
+553-  isExiting: boolean;
+554-  onSelectQuestion: (questionNumber: number) => void;
+555-  onRequestExit: () => void;
+556-  onRequestSubmit: () => void;
+557-}> = ({
+558-  isMobile,
+559-  t,
+560-  questions,
+561-  activeQuestion,
+562-  localAnswers,
+563-  answeredCount,
+564-  totalScore,
+565-  saveStatus,
+566-  remainingMs,
+567-  isSubmitting,
+568-  isExiting,
+569-  onSelectQuestion,
+570-  onRequestExit,
+571-  onRequestSubmit,
+572-}) => {
+573-  if (isMobile) {
+574:    return (
+575-      <MobileImmersiveHeader
+576-        eyebrow={t('dashboard.topik.writing', { defaultValue: 'TOPIK Writing' })}
+577-        title={t('topikWriting.title', { defaultValue: 'TOPIK II Writing' })}
+578-        subtitle={t('topikWriting.session.mobileHeaderSubtitle', {
+579-          active: activeQuestion,
+580-          answered: answeredCount,
+581-          total: questions.length,
+582-          defaultValue: `Question ${activeQuestion} · ${answeredCount}/${questions.length} answered`,
+583-        })}
+584-        onBack={onRequestExit}
+585-        backLabel={t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+586-        status={
+587-          <div className="rounded-2xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+588-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+589-              {t('topikWriting.session.time', { defaultValue: 'Time' })}
+590-            </div>
+591-            <div className="mt-1 text-sm font-black text-foreground">{formatTime(remainingMs)}</div>
+592-          </div>
+593-        }
+594-      >
+595-        <div className="space-y-3">
+596-          <div className="flex items-center justify-between gap-3">
+597-            <div className="rounded-2xl border border-border bg-card px-3 py-2 shadow-sm">
+598-              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+599-                {t('topikWriting.session.progress', { defaultValue: 'Progress' })}
+600-              </div>
+601-              <div className="mt-1 text-sm font-black text-foreground">
+602-                {answeredCount}/{questions.length} · {totalScore}{' '}
+603-                {t('topikWriting.session.points', { defaultValue: 'pts' })}
+604-              </div>
+605-            </div>
+606-            <div
+607-              className={cn('text-[11px] font-bold transition-all', getSaveStatusClass(saveStatus))}
+608-            >
+609-              {getSaveStatusText(saveStatus, t)}
+610-            </div>
+611-          </div>
+612-
+613-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+614-            {questions.map(question => (
+615-              <QuestionTab
+616-                key={question.number}
+617-                number={question.number}
+618-                isActive={question.number === activeQuestion}
+619-                hasContent={hasMeaningfulContent(
+620-                  question.number,
+621-                  localAnswers[question.number] ?? ''
+622-                )}
+623-                onClick={() => onSelectQuestion(question.number)}
+624-              />
+625-            ))}
+626-          </div>
+627-
+628-          <Button
+629-            type="button"
+630-            variant="ghost"
+631-            size="auto"
+632-            onClick={onRequestSubmit}
+633-            disabled={isSubmitting || isExiting}
+634-            className="h-11 w-full rounded-2xl border-2 border-primary bg-primary text-sm font-black text-primary-foreground shadow-sm disabled:opacity-50"
+635-          >
+636-            <Send size={14} className="mr-2" />
+637-            {t('topikWriting.session.submitButton', { defaultValue: 'Submit' })}
+638-          </Button>
+639-        </div>
+640-      </MobileImmersiveHeader>
+641-    );
+642-  }
+643-
+644-  // On desktop, we hide the top bar to maximize vertical space for writing.
+645-  // All status information (Timer, Progress, Navigator, Save state) is already visible in the sidebar.
+646-  return null;
+647-};
+648-
+649-const SubmitConfirmDialog: React.FC<{
+650-  open: boolean;
+651-  isMobile: boolean;
+652-  t: WritingTranslationFn;
+653-  answeredCount: number;
+654-  totalQuestions: number;
+655-  isSubmitting: boolean;
+656-  isExiting: boolean;
+657-  onCancel: () => void;
+658-  onConfirm: () => void;
+659-}> = ({
+660-  open,
+661-  isMobile,
+662-  t,
+663-  answeredCount,
+664-  totalQuestions,
+665-  isSubmitting,
+666-  isExiting,
+667-  onCancel,
+668-  onConfirm,
+669-}) => {
+670-  if (!open) return null;
+671:  return (
+672-    <div
+673-      className={cn(
+674-        'fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm',
+675-        isMobile
+676-          ? 'items-end justify-center px-4 pb-[calc(var(--mobile-safe-bottom)+16px)] pt-16'
+677-          : 'items-center justify-center'
+678-      )}
+679-    >
+680-      <div
+681-        className={cn(
+682-          'w-full max-w-md space-y-5 border-2 border-border bg-card shadow-2xl',
+683-          isMobile ? 'rounded-[28px] p-6' : 'mx-4 rounded-2xl p-8'
+684-        )}
+685-      >
+686-        <div className="flex items-center gap-3">
+687-          <AlertTriangle size={28} className="text-amber-500 shrink-0" />
+688-          <div>
+689-            <h3 className="font-black text-foreground text-lg">
+690-              {t('topikWriting.session.submitConfirmTitle', { defaultValue: 'Submit Exam?' })}
+691-            </h3>
+692-            <p className="text-muted-foreground text-sm mt-1">
+693-              {t('topikWriting.session.submitConfirmDesc', {
+694-                ans: answeredCount,
+695-                total: totalQuestions,
+696-                defaultValue: `Answered ${answeredCount}/${totalQuestions} questions. You cannot change your answers after submitting.`,
+697-              })}
+698-            </p>
+699-          </div>
+700-        </div>
+701-        <div className="flex gap-3">
+702-          <Button
+703-            type="button"
+704-            variant="ghost"
+705-            size="auto"
+706-            onClick={onCancel}
+707-            className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
+708-          >
+709-            {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
+710-          </Button>
+711-          <Button
+712-            type="button"
+713-            variant="ghost"
+714-            size="auto"
+715-            onClick={onConfirm}
+716-            disabled={isSubmitting || isExiting}
+717-            className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-sm hover:opacity-90 transition disabled:opacity-50"
+718-          >
+719-            {isSubmitting
+720-              ? t('topikWriting.session.submitting', { defaultValue: 'Submitting...' })
+721-              : t('topikWriting.session.confirmSubmit', { defaultValue: 'Confirm Submit' })}
+722-          </Button>
+723-        </div>
+724-      </div>
+725-    </div>
+726-  );
+727-};
+728-
+729-const ExitConfirmDialog: React.FC<{
+730-  open: boolean;
+731-  isMobile: boolean;
+732-  t: WritingTranslationFn;
+733-  isSubmitting: boolean;
+734-  isExiting: boolean;
+735-  onCancel: () => void;
+736-  onConfirm: () => void;
+737-}> = ({ open, isMobile, t, isSubmitting, isExiting, onCancel, onConfirm }) => {
+738-  if (!open) return null;
+739:  return (
+740-    <div
+741-      className={cn(
+742-        'fixed inset-0 z-50 flex bg-black/50 backdrop-blur-sm',
+743-        isMobile
+744-          ? 'items-end justify-center px-4 pb-[calc(var(--mobile-safe-bottom)+16px)] pt-16'
+745-          : 'items-center justify-center'
+746-      )}
+747-    >
+748-      <div
+749-        className={cn(
+750-          'w-full max-w-md space-y-5 border-2 border-border bg-card shadow-2xl',
+751-          isMobile ? 'rounded-[28px] p-6' : 'mx-4 rounded-2xl p-8'
+752-        )}
+753-      >
+754-        <div className="flex items-center gap-3">
+755-          <AlertTriangle size={28} className="text-amber-500 shrink-0" />
+756-          <div>
+757-            <h3 className="font-black text-foreground text-lg">
+758-              {t('topikWriting.session.exitConfirmTitle', { defaultValue: 'Exit Exam?' })}
+759-            </h3>
+760-            <p className="text-muted-foreground text-sm mt-1">
+761-              {t('topikWriting.session.exitConfirmDesc', {
+762-                defaultValue:
+763-                  'Your current answers will be saved as a draft. You can return later to continue this exam.',
+764-              })}
+765-            </p>
+766-          </div>
+767-        </div>
+768-        <div className="flex gap-3">
+769-          <Button
+770-            type="button"
+771-            variant="ghost"
+772-            size="auto"
+773-            onClick={onCancel}
+774-            className="flex-1 py-2.5 rounded-xl border-2 border-border font-bold text-sm text-foreground hover:bg-muted transition"
+775-          >
+776-            {t('topikWriting.session.continueForm', { defaultValue: 'Continue' })}
+777-          </Button>
+778-          <Button
+779-            type="button"
+780-            variant="ghost"
+781-            size="auto"
+782-            onClick={onConfirm}
+783-            disabled={isSubmitting || isExiting}
+784-            className="flex-1 py-2.5 rounded-xl bg-card border-2 border-border text-foreground font-black text-sm hover:bg-muted transition disabled:opacity-50"
+785-          >
+786-            {isExiting
+787-              ? t('topikWriting.session.exiting', { defaultValue: 'Exiting...' })
+788-              : t('dashboard.topik.controller.exit', { defaultValue: 'Exit' })}
+789-          </Button>
+790-        </div>
+791-      </div>
+792-    </div>
+793-  );
+794-};
+795-
+796-const WritingSessionBody: React.FC<{
+797-  isMobile: boolean;
+798-  t: WritingTranslationFn;
+799-  questions: WritingQuestion[];
+800-  currentQuestion: WritingQuestion | undefined;
+801-  isDualFillQuestion: boolean;
+802-  isImageOnlyPromptQuestion: boolean;
+803-  localAnswers: Record<number, string>;
+804-  saveStatus: SaveStatus;
+805-  remainingMs: number;
+806-  isSubmitting: boolean;
+807-  isExiting: boolean;
+808-  onSelectQuestion: (questionNumber: number) => void;
+809-  onAnswerChange: (questionNumber: number, text: string) => void;
+810-  onRequestExit: () => void;
+811-  onRequestSubmit: () => void;
+812-}> = ({
+813-  isMobile,
+814-  t,
+815-  questions,
+816-  currentQuestion,
+817-  isDualFillQuestion,
+818-  isImageOnlyPromptQuestion,
+819-  localAnswers,
+820-  saveStatus,
+821-  remainingMs,
+822-  isSubmitting,
+823-  isExiting,
+824-  onSelectQuestion,
+825-  onAnswerChange,
+826-  onRequestExit,
+827-  onRequestSubmit,
+828-}) => {
+829-  if (!currentQuestion) return null;
+830-
+831-  const maxLength = MAX_LENGTH[currentQuestion.number] ?? 200;
+832-
+833-  if (isMobile && isDualFillQuestion) {
+834:    return (
+835-      <div
+836-        className={cn(
+837-          'flex-1 overflow-y-auto bg-muted/20',
+838-          isMobile ? 'px-4 pb-mobile-safe pt-4' : 'p-4 md:p-6 xl:p-8'
+839-        )}
+840-      >
+841-        <div className={cn('space-y-6', isMobile ? '' : 'max-w-5xl mx-auto')}>
+842-          <section className="rounded-2xl border-2 border-border bg-card p-4 md:p-6 shadow-sm">
+843-            <div className="flex items-center gap-3 flex-wrap mb-4">
+844-              <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg font-black text-sm">
+845-                {t('topikWriting.session.questionX', {
+846-                  num: currentQuestion.number,
+847-                  defaultValue: `Question ${currentQuestion.number}`,
+848-                })}
+849-              </div>
+850-              <div className="text-sm font-bold text-muted-foreground bg-muted px-3 py-1.5 rounded-md border border-border">
+851-                {currentQuestion.score} {t('topikWriting.session.points', { defaultValue: 'pts' })}
+852-              </div>
+853-            </div>
+854-            <QuestionPrompt
+855-              question={currentQuestion}
+856-              hideTextContent={isImageOnlyPromptQuestion}
+857-              hideMetaHeader
+858-            />
+859-          </section>
+860-
+861-          <section className="rounded-2xl border-2 border-border bg-background p-4 md:p-6 shadow-sm">
+862-            <div className="flex items-center justify-between mb-3">
+863-              <h3 className="font-black text-sm text-foreground uppercase tracking-wide">
+864-                {t('topikWriting.session.answerArea', { defaultValue: 'Answer Area' })}
+865-              </h3>
+866-              <span className="text-xs text-muted-foreground font-medium">
+867-                {t('topikWriting.session.maxLength', {
+868-                  count: maxLength,
+869-                  defaultValue: `Max ${maxLength} chars`,
+870-                })}
+871-              </span>
+872-            </div>
+873-            <DualFillBlankInputs
+874-              value={localAnswers[currentQuestion.number] ?? ''}
+875-              onChange={text => onAnswerChange(currentQuestion.number, text)}
+876-              maxLength={maxLength}
+877-            />
+878-          </section>
+879-        </div>
+880-      </div>
+881-    );
+882-  }
+883-
+884-  if (isMobile) {
+885:    return (
+886-      <div className="flex-1 overflow-y-auto bg-muted/20 px-4 pb-mobile-safe pt-4">
+887-        <div className="space-y-4">
+888-          <section className="rounded-2xl border-2 border-border bg-card p-4 shadow-sm">
+889-            <QuestionPrompt question={currentQuestion} />
+890-          </section>
+891-
+892-          <section className="rounded-2xl border-2 border-border bg-background p-4 shadow-sm">
+893-            <div className="mb-3 flex items-center justify-between">
+894-              <h3 className="font-black text-sm uppercase tracking-wide text-foreground">
+895-                {WONGOJI_QUESTIONS.has(currentQuestion.number)
+896-                  ? t('topikWriting.session.wongojiAnswer', { defaultValue: 'Wongoji Answer' })
+897-                  : t('topikWriting.session.answerArea', { defaultValue: 'Answer Area' })}
+898-              </h3>
+899-              <span className="text-xs font-medium text-muted-foreground">
+900-                {t('topikWriting.session.maxLength', {
+901-                  count: MAX_LENGTH[currentQuestion.number] ?? 600,
+902-                  defaultValue: `Max ${MAX_LENGTH[currentQuestion.number] ?? 600} chars`,
+903-                })}
+904-              </span>
+905-            </div>
+906-
+907-            {WONGOJI_QUESTIONS.has(currentQuestion.number) ? (
+908-              <WongojiEditor
+909-                value={localAnswers[currentQuestion.number] ?? ''}
+910-                onChange={text => onAnswerChange(currentQuestion.number, text)}
+911-                maxLength={MAX_LENGTH[currentQuestion.number] ?? 600}
+912-                className="flex-1"
+913-              />
+914-            ) : (
+915-              <FillBlankTextarea
+916-                value={localAnswers[currentQuestion.number] ?? ''}
+917-                onChange={text => onAnswerChange(currentQuestion.number, text)}
+918-                maxLength={MAX_LENGTH[currentQuestion.number] ?? 200}
+919-              />
+920-            )}
+921-          </section>
+922-        </div>
+923-      </div>
+924-    );
+925-  }
+926-
+927-  const currentAnswer = localAnswers[currentQuestion.number] ?? '';
+928-  const maxAnswerLength = MAX_LENGTH[currentQuestion.number] ?? 200;
+929-  const currentQuestionTypeLabel = getQuestionTypeLabel(currentQuestion.questionType, t);
+930-  const dualFillAnswer = isDualFillQuestion ? parseDualFillAnswer(currentAnswer) : null;
+931-  const currentCharCount = dualFillAnswer
+932-    ? dualFillAnswer.slotA.length + dualFillAnswer.slotB.length
+933-    : currentAnswer.length;
+934-  const remainingChars = Math.max(0, maxAnswerLength - currentCharCount);
+935-  const isLongFormQuestion = WONGOJI_QUESTIONS.has(currentQuestion.number);
+936-  const reminderItems = [
+937-    t('topikWriting.session.desktopReminderAutosave', {
+938-      defaultValue: 'Drafts auto-save while you work. Save state in the header and sidebar is read-only.',
+939-    }),
+940-    t('topikWriting.session.desktopReminderFlow', {
+941-      defaultValue: 'Questions 51-52 reward concise completion. Questions 53-54 reward structure and clarity.',
+942-    }),
+943-    t('topikWriting.session.desktopReminderFocus', {
+944-      defaultValue: 'This supervision rail does not rewrite your answer. It only keeps time, status, and navigation visible.',
+945-    }),
+946-  ];
+947-  const completedQuestionCount = questions.filter(question =>
+948-    hasMeaningfulContent(question.number, localAnswers[question.number] ?? '')
+949-  ).length;
+950-
+951:  return (
+952-    <div
+953-      className="flex-1 overflow-hidden px-4 pb-4 pt-4 xl:px-6 xl:pb-6 xl:pt-6"
+954-      style={{
+955-        background: `linear-gradient(180deg, ${KT.bg} 0%, ${KT.bg2} 100%)`,
+956-      }}
+957-    >
+958-      <div
+959-        data-testid="desktop-writing-layout"
+960-        className="mx-auto grid h-full max-w-[1560px] min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_208px]"
+961-      >
+962-        <div className="grid min-h-0 gap-4 xl:grid-rows-[auto_minmax(0,1fr)]">
+963-          <section
+964-            className="rounded-[22px] border px-5 py-3 xl:px-6 xl:py-3.5"
+965-            style={{
+966-              borderColor: KT.line2,
+967-              background: KT.card,
+968-              boxShadow: KT.shSm,
+969-            }}
+970-          >
+971-            <div className="flex flex-wrap items-start justify-between gap-3">
+972-              <div className="min-w-0 flex-1 space-y-2">
+973-                <div className="flex flex-wrap items-center gap-2">
+974-                  <DesignChip tone="pink">
+975-                    {t('topikWriting.session.questionX', {
+976-                      num: currentQuestion.number,
+977-                      defaultValue: `Question ${currentQuestion.number}`,
+978-                    })}
+979-                  </DesignChip>
+980-                  <DesignChip tone="butter">
+981-                    {currentQuestion.score} {t('topikWriting.session.points', { defaultValue: 'pts' })}
+982-                  </DesignChip>
+983-                  <DesignChip tone="sky">{currentQuestionTypeLabel}</DesignChip>
+984-                </div>
+985-                <div className="space-y-1">
+986-                  <h2
+987-                    className="text-[17px] font-semibold tracking-[-0.03em] xl:text-[18px]"
+988-                    style={{ color: KT.ink, fontFamily: KT.serif }}
+989-                  >
+990-                    {t('topikWriting.session.desktopWorkspaceTitle', {
+991-                      defaultValue: 'Writing workspace',
+992-                    })}
+993-                  </h2>
+994-                  <p className="text-[12px] font-medium leading-4.5" style={{ color: KT.sub }}>
+995-                    {isLongFormQuestion
+996-                      ? t('topikWriting.session.desktopWorkspaceSummaryLong', {
+997-                          defaultValue: 'Source on the left, draft on the sheet.',
+998-                        })
+999-                      : t('topikWriting.session.desktopWorkspaceSummaryShort', {
+1000-                          defaultValue: 'Prompt on the left, answer on the right.',
+1001-                        })}
+1002-                  </p>
+1003-                </div>
+1004-              </div>
+1005-              <div className="flex flex-wrap items-center gap-2">
+1006-                <div
+1007-                  className="rounded-full border px-3 py-1.5 text-[12px] font-black"
+1008-                  style={{ borderColor: KT.line, background: KT.bg, color: KT.ink }}
+1009-                >
+1010-                  {currentCharCount}/{maxAnswerLength}
+1011-                </div>
+1012-                <div
+1013-                  className="rounded-full border px-3 py-1.5 text-[12px] font-semibold"
+1014-                  style={{ borderColor: KT.line, background: KT.bg, color: KT.sub }}
+1015-                >
+1016-                  {t('topikWriting.session.remainingChars', {
+1017-                    count: remainingChars,
+1018-                    defaultValue: '{{count}} left',
+1019-                  })}
+1020-                </div>
+1021-                <div
+1022-                  className={cn(
+1023-                    'rounded-full border px-3 py-1.5 text-[12px] font-black',
+1024-                    getSaveStatusClass(saveStatus)
+1025-                  )}
+1026-                  style={{ borderColor: KT.line, background: KT.bg }}
+1027-                >
+1028-                  {getSaveStatusText(saveStatus, t)}
+1029-                </div>
+1030-              </div>
+1031-            </div>
+1032-          </section>
+1033-
+1034-          <div
+1035-            className={cn(
+1036-              'grid min-h-0 gap-4',
+1037-              isLongFormQuestion
+1038-                ? 'xl:grid-cols-[minmax(280px,0.58fr)_minmax(0,1.42fr)]'
+1039-                : 'xl:grid-cols-[minmax(280px,0.62fr)_minmax(0,1.38fr)]'
+1040-            )}
+1041-          >
+1042-            <section
+1043-              className="flex min-h-0 flex-col rounded-[22px] border px-4 py-3.5 xl:px-5 xl:py-4"
+1044-              style={{
+1045-                borderColor: KT.line2,
+1046-                background: KT.card,
+1047-                boxShadow: KT.shSm,
+1048-              }}
+1049-            >
+1050-              <div className="flex items-start justify-between gap-3">
+1051-                <div className="space-y-1">
+1052-                  <h2
+1053-                    className="text-[17px] font-semibold tracking-[-0.03em] xl:text-[18px]"
+1054-                    style={{ color: KT.ink, fontFamily: KT.serif }}
+1055-                  >
+1056-                    {t('topikWriting.session.promptBoard', {
+1057-                      defaultValue: 'Prompt board',
+1058-                    })}
+1059-                  </h2>
+1060-                  <p className="text-[12px] font-medium leading-4.5" style={{ color: KT.sub }}>
+1061-                    {isLongFormQuestion
+1062-                      ? t('topikWriting.session.desktopPromptBoardLong', {
+1063-                          defaultValue: 'Keep the source visible while drafting.',
+1064-                        })
+1065-                      : t('topikWriting.session.desktopPromptBoardShort', {
+1066-                          defaultValue: 'Read once, then fill both blanks directly.',
+1067-                        })}
+1068-                  </p>
+1069-                </div>
+1070-                {!isLongFormQuestion ? (
+1071-                  <div
+1072-                    className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em]"
+1073-                    style={{ borderColor: KT.line, background: KT.bg, color: KT.sub }}
+1074-                  >
+1075-                    {t('topikWriting.session.shortFormMode', {
+1076-                      defaultValue: 'Short form',
+1077-                    })}
+1078-                  </div>
+1079-                ) : null}
+1080-              </div>
+1081-
+1082-              <div
+1083-                className={cn(
+1084-                  'mt-3 min-h-0 flex-1 rounded-[20px] border p-3 xl:p-3.5',
+1085-                  isLongFormQuestion ? 'overflow-hidden' : ''
+1086-                )}
+1087-                style={{ borderColor: KT.line, background: KT.bg }}
+1088-              >
+1089-                <QuestionPrompt
+1090-                  question={currentQuestion}
+1091-                  hideTextContent={isImageOnlyPromptQuestion}
+1092-                  hideMetaHeader
+1093-                  surfaceTone="paper"
+1094-                  compact
+1095-                />
+1096-              </div>
+1097-            </section>
+1098-
+1099-            <section
+1100-              data-testid="desktop-answer-panel"
+1101-              className="flex min-h-0 flex-col rounded-[22px] border px-4 py-3.5 xl:px-5 xl:py-4"
+1102-              style={{
+1103-                borderColor: KT.line2,
+1104-                background: KT.card,
+1105-                boxShadow: KT.shSm,
+1106-              }}
+1107-            >
+1108-              <div className="flex flex-wrap items-start justify-between gap-3">
+1109-                <div className="min-w-0 flex-1 space-y-1">
+1110-                  <div className="flex items-center gap-3">
+1111-                    <div
+1112-                      className="flex h-9 w-9 items-center justify-center rounded-[12px]"
+1113-                      style={{ background: KT.bg2, color: KT.ink }}
+1114-                    >
+1115-                      <FileText size={15} />
+1116-                    </div>
+1117-                    <h2
+1118-                      className="text-[17px] font-semibold tracking-[-0.03em] xl:text-[18px]"
+1119-                      style={{ color: KT.ink, fontFamily: KT.serif }}
+1120-                    >
+1121-                      {isLongFormQuestion
+1122-                        ? t('topikWriting.session.writingSheet', {
+1123-                            defaultValue: 'Writing sheet',
+1124-                          })
+1125-                        : isDualFillQuestion
+1126-                          ? t('topikWriting.session.responseSlots', {
+1127-                              defaultValue: 'Response slots',
+1128-                            })
+1129-                          : t('topikWriting.session.answerSheet', {
+1130-                              defaultValue: 'Answer sheet',
+1131-                            })}
+1132-                    </h2>
+1133-                  </div>
+1134-                  <p className="text-[12px] font-medium leading-4.5" style={{ color: KT.sub }}>
+1135-                    {isLongFormQuestion
+1136-                      ? t('topikWriting.session.desktopAnswerSummaryWongoji', {
+1137-                          defaultValue: 'Draft directly on the sheet.',
+1138-                        })
+1139-                      : t('topikWriting.session.desktopAnswerSummaryFillCompact', {
+1140-                          defaultValue: 'Complete both blanks in one pass.',
+1141-                        })}
+1142-                  </p>
+1143-                  <div className="flex flex-wrap items-center gap-2 pt-1">
+1144-                    <div
+1145-                      className="rounded-full border px-3 py-1 text-[11px] font-black"
+1146-                      style={{ borderColor: KT.line, background: KT.bg, color: KT.ink }}
+1147-                    >
+1148-                      {currentCharCount}/{maxAnswerLength}
+1149-                    </div>
+1150-                    <div
+1151-                      className="rounded-full border px-3 py-1 text-[11px] font-semibold"
+--
+1325:                  return (
+1326-                    <Button
+1327-                      key={question.number}
+1328-                      type="button"
+1329-                      variant="ghost"
+1330-                      size="auto"
+1331-                      onClick={() => onSelectQuestion(question.number)}
+1332-                      className="w-full rounded-[14px] border px-3 py-2.5 text-left transition-colors"
+1333-                      style={{
+1334-                        borderColor: isActive ? KT.line2 : KT.line,
+1335-                        background: isActive ? KT.bg2 : 'transparent',
+1336-                        boxShadow: 'none',
+1337-                      }}
+1338-                    >
+1339-                      <div className="flex items-start justify-between gap-3">
+1340-                        <div className="min-w-0">
+1341-                          <div className="text-[12px] font-black" style={{ color: KT.ink }}>
+1342-                            {t('topikWriting.session.questionX', {
+1343-                              num: question.number,
+1344-                              defaultValue: `Question ${question.number}`,
+1345-                            })}
+1346-                          </div>
+1347-                          <div className="mt-0.5 text-[10px] font-medium" style={{ color: KT.sub }}>
+1348-                            {getQuestionTypeLabel(question.questionType, t)}
+1349-                          </div>
+1350-                        </div>
+1351-                        <DesignChip tone={hasContent ? 'mint' : isActive ? 'ink' : 'muted'}>
+1352-                          {hasContent
+1353-                            ? t('topikWriting.session.completed', {
+1354-                                defaultValue: 'Done',
+1355-                              })
+1356-                            : isActive
+1357-                              ? t('topikWriting.session.current', {
+1358-                                  defaultValue: 'Current',
+1359-                                })
+1360-                              : t('topikWriting.session.pending', {
+1361-                                  defaultValue: 'Pending',
+1362-                                })}
+1363-                        </DesignChip>
+1364-                      </div>
+1365-                      <div className="mt-1.5 flex items-center justify-between text-[10px] font-medium" style={{ color: KT.sub }}>
+1366-                        <span>
+1367-                          {question.score} {t('topikWriting.session.points', { defaultValue: 'pts' })}
+1368-                        </span>
+1369-                        <span>
+1370-                          {t('topikWriting.session.maxLength', {
+1371-                            count: MAX_LENGTH[question.number] ?? 200,
+1372-                            defaultValue: `${MAX_LENGTH[question.number] ?? 200} chars`,
+1373-                          })}
+1374-                        </span>
+1375-                      </div>
+1376-                    </Button>
+1377-                  );
+1378-                })}
+1379-              </div>
+1380-            </section>
+1381-
+1382-            <section
+1383-              className="rounded-[20px] border p-3.5"
+1384-              style={{
+1385-                borderColor: KT.line2,
+1386-                background: 'rgba(255,255,255,0.96)',
+1387-                boxShadow: KT.shSm,
+1388-              }}
+1389-            >
+1390-              <h3 className="text-[14px] font-black" style={{ color: KT.ink }}>
+1391-                {t('topikWriting.session.quickChecks', {
+1392-                  defaultValue: 'Quick checks',
+1393-                })}
+1394-              </h3>
+1395-              <div className="mt-2.5 space-y-2">
+1396-                {reminderItems.map(reminder => (
+1397-                  <div
+1398-                    key={reminder}
+1399-                    className="rounded-[14px] border px-3 py-2 text-[12px] font-medium leading-4.5"
+1400-                    style={{ borderColor: KT.line, background: KT.bg }}
+1401-                  >
+1402-                    {reminder}
+1403-                  </div>
+1404-                ))}
+1405-              </div>
+1406-            </section>
+1407-          </div>
+1408-        </aside>
+1409-      </div>
+1410-    </div>
+1411-  );
+1412-};
+1413-
+1414-// ─── Main Component ───────────────────────────────────────────────────────────
+1415-
+1416-export const WritingExamSession: React.FC<WritingExamSessionProps> = ({
+1417-  sessionId,
+1418-  endTime,
+1419-  questions,
+1420-  initialAnswers = {},
+1421-  onSubmitted,
+1422-  onSubmitError,
+1423-  onExit,
+1424-}) => {
+1425-  const { t, i18n } = useTranslation();
+1426-  const isMobile = useIsMobile();
+1427-
+1428-  // ── Convex mutations ──────────────────────────────────────────────────────
+1429-  const saveDraft = useMutation(api.topikWriting.saveDraft);
+1430-  const submitSession = useMutation(api.topikWriting.submitSession);
+1431-
+1432-  // ── Local state ───────────────────────────────────────────────────────────
+1433-  const [localAnswers, setLocalAnswers] = useState<Record<number, string>>(() => {
+1434-    const result: Record<number, string> = {};
+1435-    for (const [k, v] of Object.entries(initialAnswers)) {
+1436-      result[Number(k)] = v;
+1437-    }
+1438-    return result;
+1439-  });
+1440-
+1441-  const [activeQuestion, setActiveQuestion] = useState<number>(questions[0]?.number ?? 51);
+1442-  const [remainingMs, setRemainingMs] = useState<number>(endTime - Date.now());
+1443-  const [isSubmitting, setIsSubmitting] = useState(false);
+1444-  const [isExiting, setIsExiting] = useState(false);
+1445-  const [isSubmitted, setIsSubmitted] = useState(false);
+1446-  const [showConfirm, setShowConfirm] = useState(false);
+1447-  const [showExitConfirm, setShowExitConfirm] = useState(false);
+1448-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+1449-
+1450-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+1451-  const hasAutoSubmitted = useRef(false);
+1452-  const handleSubmitRef = useRef<(forced?: boolean) => Promise<void>>(async () => {});
+1453-
+1454-  // ── Timer ─────────────────────────────────────────────────────────────────
+1455-  useEffect(() => {
+1456-    const interval = setInterval(() => {
+1457-      const remaining = endTime - Date.now();
+1458-      setRemainingMs(remaining);
+1459-
+1460-      if (remaining <= 0) {
+1461-        clearInterval(interval);
+1462-        if (!hasAutoSubmitted.current) {
+1463-          hasAutoSubmitted.current = true;
+1464-          void handleSubmitRef.current(true);
+1465-        }
+1466-      }
+1467-    }, 1000);
+1468-
+1469:    return () => clearInterval(interval);
+1470-  }, [endTime]);
+1471-
+1472-  // ── Debounced auto-save ───────────────────────────────────────────────────
+1473-  useEffect(() => {
+1474-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+1475-    if (isSubmitting || isExiting || isSubmitted) return;
+1476-
+1477-    setSaveStatus('idle');
+1478-    autoSaveTimerRef.current = setTimeout(async () => {
+1479-      setSaveStatus('saving');
+1480-      try {
+1481-        const answersRecord: Record<string, string> = {};
+1482-        for (const [k, v] of Object.entries(localAnswers)) {
+1483-          answersRecord[String(k)] = v;
+1484-        }
+1485-        await saveDraft({ sessionId, answers: answersRecord });
+1486-        setSaveStatus('saved');
+1487-      } catch {
+1488-        setSaveStatus('error');
+1489-      }
+1490-    }, 2000);
+1491-
+1492:    return () => {
+1493-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+1494-    };
+1495-  }, [localAnswers, sessionId, saveDraft, isSubmitting, isExiting, isSubmitted]);
+1496-
+1497-  // ── Handlers ──────────────────────────────────────────────────────────────
+1498-  const handleAnswerChange = useCallback((qNum: number, text: string) => {
+1499-    setLocalAnswers(prev => ({ ...prev, [qNum]: text }));
+1500-  }, []);
+1501-
+1502-  const buildAnswersRecord = useCallback(() => {
+1503-    const answersRecord: Record<string, string> = {};
+1504-    for (const [k, v] of Object.entries(localAnswers)) {
+1505-      answersRecord[String(k)] = v;
+1506-    }
+1507-    return answersRecord;
+1508-  }, [localAnswers]);
+1509-
+1510-  const handleSubmit = useCallback(
+1511-    async (_forced = false) => {
+1512-      if (isSubmitting || isSubmitted || isExiting) return;
+1513-
+1514-      if (autoSaveTimerRef.current) {
+1515-        clearTimeout(autoSaveTimerRef.current);
+1516-        autoSaveTimerRef.current = null;
+1517-      }
+1518-      setIsSubmitting(true);
+1519-      setShowConfirm(false);
+1520-      setShowExitConfirm(false);
+1521-
+1522-      try {
+1523-        // Final save before submit
+1524-        const answersRecord = buildAnswersRecord();
+1525-        await saveDraft({ sessionId, answers: answersRecord });
+1526-        await submitSession({ sessionId, language: i18n.language });
+1527-        setIsSubmitted(true);
+1528-        onSubmitted?.(answersRecord);
+1529-      } catch (error) {
+1530-        onSubmitError?.(error);
+1531-        setIsSubmitting(false);
+1532-      }
+1533-    },
+1534-    [
+1535-      isSubmitting,
+1536-      isSubmitted,
+1537-      isExiting,
+1538-      buildAnswersRecord,
+1539-      sessionId,
+1540-      saveDraft,
+1541-      submitSession,
+1542-      i18n.language,
+1543-      onSubmitted,
+1544-      onSubmitError,
+1545-    ]
+1546-  );
+1547-
+1548-  useEffect(() => {
+1549-    handleSubmitRef.current = handleSubmit;
+1550-  }, [handleSubmit]);
+1551-
+1552-  const handleExit = useCallback(async () => {
+1553-    if (isSubmitting || isSubmitted || isExiting) return;
+1554-
+1555-    if (autoSaveTimerRef.current) {
+1556-      clearTimeout(autoSaveTimerRef.current);
+1557-      autoSaveTimerRef.current = null;
+1558-    }
+1559-    setIsExiting(true);
+1560-    setShowExitConfirm(false);
+1561-
+1562-    try {
+1563-      // Best-effort save before leaving so users can resume later.
+1564-      const answersRecord = buildAnswersRecord();
+1565-      try {
+1566-        await saveDraft({ sessionId, answers: answersRecord });
+1567-      } catch {
+1568-        /* ignore save failure on exit */
+1569-      }
+1570-      await onExit?.(answersRecord);
+1571-    } finally {
+1572-      setIsExiting(false);
+1573-    }
+1574-  }, [isSubmitting, isSubmitted, isExiting, buildAnswersRecord, saveDraft, sessionId, onExit]);
+1575-
+1576-  // ── Derived values ────────────────────────────────────────────────────────
+1577-  const currentQuestion = questions.find(q => q.number === activeQuestion) ?? questions[0];
+1578-  const isDualFillQuestion = DUAL_FILL_QUESTIONS.has(currentQuestion.number);
+1579-  const isImageOnlyPromptQuestion = currentQuestion.number === 51;
+1580-  const answeredCount = questions.filter(q =>
+1581-    hasMeaningfulContent(q.number, localAnswers[q.number] ?? '')
+1582-  ).length;
+1583-  const totalScore = questions.reduce((sum, q) => sum + q.score, 0);
+1584-
+1585-  // ── Submitted screen ──────────────────────────────────────────────────────
+1586-  if (isSubmitted) {
+1587:    return (
+1588-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
+1589-        <CheckCircle2 size={64} className="text-emerald-500" />
+1590-        <div>
+1591-          <h2 className="text-2xl font-black text-foreground">
+1592-            {t('topikWriting.session.submittedTitle', { defaultValue: 'Successfully Submitted!' })}
+1593-          </h2>
+1594-          <p className="text-muted-foreground mt-2">
+1595-            {t('topikWriting.session.submittedDesc', {
+1596-              ans: answeredCount,
+1597-              total: questions.length,
+1598-              defaultValue: `Answered ${answeredCount} / ${questions.length} questions. Waiting for AI evaluation...`,
+1599-            })}
+1600-          </p>
+1601-        </div>
+1602-      </div>
+1603-    );
+1604-  }
+1605-
+1606:  return (
+1607-    <div
+1608-      className={cn(
+1609-        'flex h-screen h-[100dvh] flex-col font-sans',
+1610-        isMobile ? 'bg-background' : 'bg-[#FBF8F3]'
+1611-      )}
+1612-    >
+1613-      <SessionHeader
+1614-        isMobile={isMobile}
+1615-        t={t}
+1616-        questions={questions}
+1617-        activeQuestion={activeQuestion}
+1618-        localAnswers={localAnswers}
+1619-        answeredCount={answeredCount}
+1620-        totalScore={totalScore}
+1621-        saveStatus={saveStatus}
+1622-        remainingMs={remainingMs}
+1623-        isSubmitting={isSubmitting}
+1624-        isExiting={isExiting}
+1625-        onSelectQuestion={setActiveQuestion}
+1626-        onRequestExit={() => setShowExitConfirm(true)}
+1627-        onRequestSubmit={() => setShowConfirm(true)}
+1628-      />
+1629-
+1630-      <SubmitConfirmDialog
+1631-        open={showConfirm}
+1632-        isMobile={isMobile}
+1633-        t={t}
+1634-        answeredCount={answeredCount}
+1635-        totalQuestions={questions.length}
+1636-        isSubmitting={isSubmitting}
+1637-        isExiting={isExiting}
+1638-        onCancel={() => setShowConfirm(false)}
+1639-        onConfirm={() => {
+1640-          void handleSubmit(true);
+1641-        }}
+1642-      />
+1643-
+1644-      <ExitConfirmDialog
+1645-        open={showExitConfirm}
+1646-        isMobile={isMobile}
+1647-        t={t}
+1648-        isSubmitting={isSubmitting}
+1649-        isExiting={isExiting}
+1650-        onCancel={() => setShowExitConfirm(false)}
+1651-        onConfirm={() => {
+1652-          void handleExit();
+1653-        }}
+1654-      />
+1655-
+1656-      <WritingSessionBody
+1657-        isMobile={isMobile}
+1658-        t={t}
+1659-        questions={questions}
+1660-        currentQuestion={currentQuestion}
+1661-        isDualFillQuestion={isDualFillQuestion}
+1662-        isImageOnlyPromptQuestion={isImageOnlyPromptQuestion}
+1663-        localAnswers={localAnswers}
+1664-        saveStatus={saveStatus}
+1665-        remainingMs={remainingMs}
+1666-        isSubmitting={isSubmitting}
+1667-        isExiting={isExiting}
+1668-        onSelectQuestion={setActiveQuestion}
+1669-        onAnswerChange={handleAnswerChange}
+1670-        onRequestExit={() => setShowExitConfirm(true)}
+1671-        onRequestSubmit={() => setShowConfirm(true)}
+1672-      />
+1673-    </div>
+1674-  );
+1675-};
+1676-
+1677-export default WritingExamSession;

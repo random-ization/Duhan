@@ -82,6 +82,66 @@ const SettingValueValidator = v.union(
   v.record(v.string(), SettingPrimitiveValidator)
 );
 
+const SentenceTokenValidator = v.object({
+  surface: v.string(),
+  lemma: v.optional(v.string()),
+  partOfSpeech: v.optional(v.string()),
+  start: v.optional(v.number()),
+  end: v.optional(v.number()),
+  length: v.optional(v.number()),
+  wordPosition: v.optional(v.number()),
+  sentencePosition: v.optional(v.number()),
+});
+
+const SentenceVocabularyItemValidator = v.object({
+  surface: v.string(),
+  lemma: v.optional(v.string()),
+  partOfSpeech: v.optional(v.string()),
+  meaning: v.optional(v.string()),
+  difficultyLevel: v.optional(v.string()),
+  difficultyScore: v.optional(v.number()),
+});
+
+const SentenceGrammarItemValidator = v.object({
+  pattern: v.string(),
+  explanation: v.optional(v.string()),
+  reason: v.optional(v.string()),
+  start: v.optional(v.number()),
+  end: v.optional(v.number()),
+});
+
+const SentenceExplanationPayloadValidator = v.object({
+  sentence: v.string(),
+  normalizedText: v.optional(v.string()),
+  summary: v.optional(v.string()),
+  overallMeaning: v.optional(v.string()),
+  naturalTranslation: v.optional(v.string()),
+  tokens: v.optional(v.array(SentenceTokenValidator)),
+  vocabulary: v.optional(v.array(SentenceVocabularyItemValidator)),
+  grammar: v.optional(v.array(SentenceGrammarItemValidator)),
+  notes: v.optional(v.array(v.string())),
+});
+
+const DailyTaskItemValidator = v.object({
+  taskId: v.string(),
+  kind: v.string(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  targetCount: v.optional(v.number()),
+  currentCount: v.optional(v.number()),
+  completed: v.boolean(),
+  linkPath: v.optional(v.string()),
+  assetType: v.optional(v.string()),
+  assetRefId: v.optional(v.string()),
+  metadata: v.optional(v.record(v.string(), SettingPrimitiveValidator)),
+});
+
+const DailyTaskReviewSummaryValidator = v.object({
+  dueVocabCount: v.optional(v.number()),
+  dueNoteCount: v.optional(v.number()),
+  weakPointSummary: v.optional(v.string()),
+});
+
 const GrammarConjugationRulesValidator = v.union(
   v.record(v.string(), v.string()),
   v.array(v.string()),
@@ -158,6 +218,7 @@ export default defineSchema({
     lastLevel: v.optional(v.number()),
     lastUnit: v.optional(v.number()),
     lastModule: v.optional(v.string()), // Added
+    lastGrammarId: v.optional(v.string()),
     lastLoginAt: v.optional(v.number()),
     lastActivityAt: v.optional(v.number()),
     lastActivityType: v.optional(v.string()),
@@ -300,8 +361,14 @@ export default defineSchema({
     meaningMn: v.optional(v.string()), // Mongolian
 
     hanja: v.optional(v.string()),
+    lemma: v.optional(v.string()),
+    normalized: v.optional(v.string()),
     pronunciation: v.optional(v.string()),
     audioUrl: v.optional(v.string()),
+    difficultyLevel: v.optional(v.string()),
+    difficultyScore: v.optional(v.number()),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
 
     tips: v.optional(
       v.object({
@@ -315,6 +382,8 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index('by_word', ['word'])
+    .index('by_lemma', ['lemma'])
+    .index('by_normalized', ['normalized'])
     .index('by_postgresId', ['postgresId']),
 
   // Vocabulary Appearances (Linking Words to Courses)
@@ -372,12 +441,91 @@ export default defineSchema({
 
     // Source tracking
     savedByUser: v.optional(v.boolean()), // true = manually added to Vocab Book
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index('by_user_word', ['userId', 'wordId'])
     .index('by_user_next_review', ['userId', 'nextReviewAt'])
     .index('by_user_due', ['userId', 'due'])
     .index('by_user', ['userId'])
-    .index('by_user_saved', ['userId', 'savedByUser']),
+    .index('by_user_saved', ['userId', 'savedByUser'])
+    .index('by_user_source', ['userId', 'source'])
+    .index('by_user_source_ref', ['userId', 'source', 'sourceRefId']),
+
+  content_sentences: defineTable({
+    contentType: v.string(),
+    contentRefId: v.string(),
+    blockId: v.optional(v.string()),
+    sentenceIndex: v.number(),
+    text: v.string(),
+    normalizedText: v.optional(v.string()),
+    textHash: v.string(),
+    language: v.string(),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_content_ref', ['contentType', 'contentRefId'])
+    .index('by_content_block_sentence', ['contentType', 'contentRefId', 'blockId', 'sentenceIndex'])
+    .index('by_text_hash', ['textHash']),
+
+  sentence_explanations: defineTable({
+    sentenceId: v.optional(v.id('content_sentences')),
+    userId: v.optional(v.id('users')),
+    textHash: v.string(),
+    sentence: v.string(),
+    targetLanguage: v.string(),
+    explanationVersion: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    cacheKey: v.optional(v.string()),
+    payload: SentenceExplanationPayloadValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_sentence_language', ['sentenceId', 'targetLanguage'])
+    .index('by_text_hash_language', ['textHash', 'targetLanguage'])
+    .index('by_cache_key', ['cacheKey'])
+    .index('by_user_createdAt', ['userId', 'createdAt']),
+
+  user_saved_sentences: defineTable({
+    userId: v.id('users'),
+    sentenceId: v.optional(v.id('content_sentences')),
+    explanationId: v.optional(v.id('sentence_explanations')),
+    text: v.string(),
+    normalizedText: v.optional(v.string()),
+    translation: v.optional(v.string()),
+    notePageId: v.optional(v.id('note_pages')),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_user_sentence', ['userId', 'sentenceId'])
+    .index('by_user_source_ref', ['userId', 'source', 'sourceRefId']),
+
+  user_grammar_saved: defineTable({
+    userId: v.id('users'),
+    grammarId: v.optional(v.id('grammar_points')),
+    sentenceId: v.optional(v.id('content_sentences')),
+    explanationId: v.optional(v.id('sentence_explanations')),
+    grammarKey: v.string(),
+    pattern: v.string(),
+    explanation: v.optional(v.string()),
+    notePageId: v.optional(v.id('note_pages')),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_user_createdAt', ['userId', 'createdAt'])
+    .index('by_user_grammar', ['userId', 'grammarId'])
+    .index('by_user_grammar_key', ['userId', 'grammarKey'])
+    .index('by_user_sentence', ['userId', 'sentenceId']),
 
   // Grammar Points (Master Library)
   grammar_points: defineTable({
@@ -431,6 +579,7 @@ export default defineSchema({
   })
     .index('by_title', ['title'])
     .index('by_postgresId', ['postgresId'])
+    .index('by_searchKey', ['searchKey'])
     .searchIndex('search_title', { searchField: 'title' }),
 
   // Course Grammar (Linking Grammar to Courses)
@@ -1062,16 +1211,74 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
-  // AI response cache (reading analysis / translation)
-  ai_response_cache: defineTable({
-    key: v.string(),
-    kind: v.string(), // "reading_analysis" | "reading_translation"
-    language: v.string(),
-    contentHash: v.string(),
-    payload: v.union(ReadingAnalysisPayloadValidator, ReadingTranslationPayloadValidator),
+  kiwi_tokenize_cache: defineTable({
+    textHash: v.string(),
+    text: v.string(),
+    normalizedText: v.optional(v.string()),
+    modelVersion: v.string(),
+    tokenCount: v.number(),
+    tokens: v.array(SentenceTokenValidator),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index('by_key', ['key']),
+  })
+    .index('by_text_hash_model', ['textHash', 'modelVersion'])
+    .index('by_text_hash', ['textHash'])
+    .index('by_model_updatedAt', ['modelVersion', 'updatedAt']),
+
+  // AI response cache (reading analysis / translation / sentence explanation)
+  ai_response_cache: defineTable({
+    key: v.string(),
+    kind: v.string(), // "reading_analysis" | "reading_translation" | "sentence_explanation"
+    language: v.string(),
+    contentHash: v.string(),
+    payload: v.union(
+      ReadingAnalysisPayloadValidator,
+      ReadingTranslationPayloadValidator,
+      SentenceExplanationPayloadValidator
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_key', ['key'])
+    .index('by_kind_language_hash', ['kind', 'language', 'contentHash'])
+    .index('by_kind_updatedAt', ['kind', 'updatedAt']),
+
+  user_goal_profile: defineTable({
+    userId: v.id('users'),
+    status: v.string(),
+    onboardingVersion: v.optional(v.string()),
+    preferredLanguage: v.optional(v.string()),
+    currentLevel: v.optional(v.string()),
+    targetLevel: v.optional(v.string()),
+    targetExam: v.optional(v.string()),
+    dailyMinutes: v.optional(v.number()),
+    studyFocus: v.optional(v.array(v.string())),
+    diagnosisSummary: v.optional(v.string()),
+    diagnosisSnapshot: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_status', ['userId', 'status']),
+
+  daily_task_plan: defineTable({
+    userId: v.id('users'),
+    date: v.string(),
+    status: v.string(),
+    goalProfileId: v.optional(v.id('user_goal_profile')),
+    taskVersion: v.optional(v.string()),
+    source: v.optional(v.string()),
+    tasks: v.array(DailyTaskItemValidator),
+    reviewSummary: v.optional(DailyTaskReviewSummaryValidator),
+    generatedAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index('by_user_date', ['userId', 'date'])
+    .index('by_user_status_date', ['userId', 'status', 'date'])
+    .index('by_date_status', ['date', 'status']),
 
   // Global Site Settings
   site_settings: defineTable({
@@ -1341,13 +1548,21 @@ export default defineSchema({
   community_posts: defineTable({
     userId: v.id('users'),
     content: v.string(),
-    type: v.union(v.literal('all'), v.literal('following'), v.literal('milestones'), v.literal('qa'), v.literal('resources')),
-    attachment: v.optional(v.object({
-      type: v.string(), // e.g. "study_card"
-      id: v.string(),
-      title: v.string(),
-      description: v.optional(v.string()),
-    })),
+    type: v.union(
+      v.literal('all'),
+      v.literal('following'),
+      v.literal('milestones'),
+      v.literal('qa'),
+      v.literal('resources')
+    ),
+    attachment: v.optional(
+      v.object({
+        type: v.string(), // e.g. "study_card"
+        id: v.string(),
+        title: v.string(),
+        description: v.optional(v.string()),
+      })
+    ),
     images: v.optional(v.array(v.string())),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -1369,8 +1584,7 @@ export default defineSchema({
     userId: v.id('users'),
     content: v.string(),
     createdAt: v.number(),
-  })
-    .index('by_post_createdAt', ['postId', 'createdAt']),
+  }).index('by_post_createdAt', ['postId', 'createdAt']),
 
   qa_topics: defineTable({
     slug: v.string(),
@@ -1593,7 +1807,9 @@ export default defineSchema({
     dailyGoalMinutes: v.optional(
       v.union(v.literal(15), v.literal(20), v.literal(30), v.literal(45), v.literal(60))
     ),
-    topikFilterType: v.optional(v.union(v.literal('ALL'), v.literal('READING'), v.literal('LISTENING'))),
+    topikFilterType: v.optional(
+      v.union(v.literal('ALL'), v.literal('READING'), v.literal('LISTENING'))
+    ),
     vocabActiveTab: v.optional(v.union(v.literal('courses'), v.literal('my-vocab'))),
     grammarAiPanelOpen: v.optional(v.boolean()),
     routeFavorites: v.optional(v.array(v.string())),
@@ -1639,12 +1855,7 @@ export default defineSchema({
       v.literal('group_accepted')
     ),
     category: v.optional(
-      v.union(
-        v.literal('learning'),
-        v.literal('exam'),
-        v.literal('social'),
-        v.literal('system')
-      )
+      v.union(v.literal('learning'), v.literal('exam'), v.literal('social'), v.literal('system'))
     ),
     priority: v.optional(v.union(v.literal('low'), v.literal('normal'), v.literal('high'))),
     title: v.string(),

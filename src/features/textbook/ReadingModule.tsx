@@ -34,6 +34,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../co
 import { Popover, PopoverContent, PopoverPortal } from '../../components/ui';
 import { Button, Input, Select, Textarea } from '../../components/ui';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 // Legacy API removed - using Convex
 
@@ -1484,6 +1485,7 @@ interface ReadingLoadedContentProps {
   mobileSheetOpen: boolean;
   setMobileSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onSwitchMaterial: () => void;
+  isMobile: boolean;
 }
 
 const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
@@ -1530,6 +1532,7 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
   mobileSheetOpen,
   setMobileSheetOpen,
   onSwitchMaterial,
+  isMobile,
 }) => (
   <>
     <ReadingModuleHeader
@@ -1567,18 +1570,20 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
         completingUnit={completingUnit}
         onCompleteUnit={onCompleteUnit}
       />
-      <ReadingDesktopStudyHub
-        labels={labels}
-        language={language}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        notes={notes}
-        grammarList={grammarList}
-        aiMessages={aiMessages}
-        aiInput={aiInput}
-        setAiInput={setAiInput}
-        sendAiMessage={sendAiMessage}
-      />
+      {!isMobile ? (
+        <ReadingDesktopStudyHub
+          labels={labels}
+          language={language}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          notes={notes}
+          grammarList={grammarList}
+          aiMessages={aiMessages}
+          aiInput={aiInput}
+          setAiInput={setAiInput}
+          sendAiMessage={sendAiMessage}
+        />
+      ) : null}
     </div>
 
     <ReadingPopovers
@@ -1597,16 +1602,18 @@ const ReadingLoadedContent: React.FC<ReadingLoadedContentProps> = ({
       language={language}
     />
 
-    <ReadingMobileStudyHub
-      labels={labels}
-      language={language}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      mobileSheetOpen={mobileSheetOpen}
-      setMobileSheetOpen={setMobileSheetOpen}
-      grammarList={grammarList}
-      notes={notes}
-    />
+    {isMobile ? (
+      <ReadingMobileStudyHub
+        labels={labels}
+        language={language}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        mobileSheetOpen={mobileSheetOpen}
+        setMobileSheetOpen={setMobileSheetOpen}
+        grammarList={grammarList}
+        notes={notes}
+      />
+    ) : null}
   </>
 );
 
@@ -1629,6 +1636,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   onBack,
 }) => {
   const navigate = useLocalizedNavigate();
+  const isMobile = useIsMobile();
   const labels = getLabels(language);
   const moduleText = useMemo(() => resolveReadingModuleText(labels), [labels]);
   const { speak: speakTTS, stop: stopTTS } = useTTS();
@@ -1943,6 +1951,26 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   ]);
 
   const readerRef = useRef<HTMLDivElement>(null);
+
+  const highlightEntries = useMemo(
+    () =>
+      highlights.map(highlight => ({
+        item: highlight,
+        start: highlight.startOffset,
+        end: highlight.endOffset,
+      })),
+    [highlights]
+  );
+
+  const noteEntries = useMemo(
+    () =>
+      notes.map(note => ({
+        item: note,
+        start: note.startOffset,
+        end: note.endOffset,
+      })),
+    [notes]
+  );
 
   // ========================================
   // Smart Word Lookup: Find base form using analysisData
@@ -2414,8 +2442,13 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
         return <span key={`text-${startOffset}-${i}`}>{part}</span>;
       }
 
-      const hasHighlight = highlights.find(h => h.text.includes(part));
-      const hasNote = notes.find(n => n.text.includes(part));
+      const endOffset = currentOffset;
+      const hasHighlight = highlightEntries.find(
+        entry => entry.end > startOffset && entry.start < endOffset
+      )?.item;
+      const hasNote = noteEntries.find(
+        entry => entry.end > startOffset && entry.start < endOffset
+      )?.item;
 
       return (
         <WordEntry
@@ -2535,6 +2568,7 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
           mobileSheetOpen={mobileSheetOpen}
           setMobileSheetOpen={setMobileSheetOpen}
           onSwitchMaterial={() => navigate('/courses')}
+          isMobile={isMobile}
         />
       )}
     </div>

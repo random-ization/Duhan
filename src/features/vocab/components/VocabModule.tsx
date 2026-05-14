@@ -1,20 +1,26 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Filter, Layers, Brain, List as ListIcon, Settings as SettingsIcon } from 'lucide-react';
 import { CourseSelection, VocabularyItem, Language, TextbookContent } from '../../../types';
 import { getLabels } from '../../../utils/i18n';
 import { useActivityLogger } from '../../../hooks/useActivityLogger';
-import FlashcardView from './FlashcardView';
-import LearnModeView from './LearnModeView';
-import ListView from './ListView';
-
-import VocabSettingsModal from './VocabSettingsModal';
-import SessionSummary from './SessionSummary';
 import { ExtendedVocabularyItem, VocabSettings, LearningMode, SessionStats } from '../types';
 import { shuffleArray } from '../utils';
 import { logger } from '../../../utils/logger';
 import { Button } from '../../../components/ui';
 import { Select } from '../../../components/ui';
 import { useGlobalSettings } from '../../../hooks/useGlobalSettings';
+
+const LazyFlashcardView = lazy(() => import('./FlashcardView'));
+const LazyLearnModeView = lazy(() => import('./LearnModeView'));
+const LazyListView = lazy(() => import('./ListView'));
+const LazyVocabSettingsModal = lazy(() => import('./VocabSettingsModal'));
+const LazySessionSummary = lazy(() => import('./SessionSummary'));
+
+const VocabContentFallback: React.FC = () => (
+  <div className="w-full max-w-4xl mx-auto rounded-2xl border border-border bg-card p-8 text-center text-sm font-semibold text-muted-foreground">
+    Loading...
+  </div>
+);
 
 interface VocabModuleProps {
   course: CourseSelection;
@@ -143,18 +149,38 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     return allWords;
   }, [allWords, selectedUnitFilter, reviewingIncorrect, sessionStats.incorrect]);
 
-  const handleSessionComplete = useCallback(
-    (stats: SessionStats) => {
-      setSessionStats(stats);
-      setIsSessionComplete(true);
+  const availableUnits = useMemo(() => {
+    const units = Array.from(
+      new Set(allWords.map(w => w.unit).filter((u): u is number => typeof u === 'number'))
+    );
+    units.sort((a, b) => a - b);
+    return units;
+  }, [allWords]);
 
-      // Log activity
-      const duration = Math.round((Date.now() - sessionStartTime) / 60000);
-      const itemsStudied = stats.correct.length + stats.incorrect.length;
-      logActivity('VOCAB', duration, itemsStudied);
-    },
-    [sessionStartTime, logActivity, setIsSessionComplete]
-  );
+  const sessionWords = useMemo((): ExtendedVocabularyItem[] => {
+    const batchSize =
+      viewMode === 'CARDS' ? settings.flashcard.batchSize : settings.learn.batchSize;
+    const shouldShuffle = viewMode === 'CARDS' ? settings.flashcard.random : settings.learn.random;
+
+    const baseWords = shouldShuffle ? shuffleArray([...filteredWords]) : filteredWords;
+    return baseWords.slice(0, batchSize);
+  }, [
+    filteredWords,
+    settings.flashcard.batchSize,
+    settings.flashcard.random,
+    settings.learn.batchSize,
+    settings.learn.random,
+    viewMode,
+  ]);
+
+  const handleSessionComplete = (stats: SessionStats) => {
+    setSessionStats(stats);
+    setIsSessionComplete(true);
+
+    const duration = Math.round((Date.now() - sessionStartTime) / 60000);
+    const itemsStudied = stats.correct.length + stats.incorrect.length;
+    logActivity('VOCAB', duration, itemsStudied);
+  };
 
   const handleNewSession = () => {
     setIsSessionComplete(false);
@@ -169,22 +195,11 @@ const VocabModule: React.FC<VocabModuleProps> = ({
     setSessionStartTime(Date.now());
   };
 
-  const getSessionWords = (): ExtendedVocabularyItem[] => {
-    const batchSize =
-      viewMode === 'CARDS' ? settings.flashcard.batchSize : settings.learn.batchSize;
-    const shouldShuffle = viewMode === 'CARDS' ? settings.flashcard.random : settings.learn.random;
-
-    let words = [...filteredWords];
-    if (shouldShuffle) {
-      words = shuffleArray(words);
-    }
-    return words.slice(0, batchSize);
+  const handleSelectViewMode = (mode: LearningMode) => {
+    setViewMode(mode);
+    setIsSessionComplete(false);
+    setReviewingIncorrect(false);
   };
-
-  const availableUnits: number[] = Array.from(
-    new Set(allWords.map(w => w.unit).filter((u): u is number => typeof u === 'number'))
-  );
-  availableUnits.sort((a, b) => a - b);
 
   if (allWords.length === 0) {
     return (
@@ -245,11 +260,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => {
-              setViewMode('CARDS');
-              setIsSessionComplete(false);
-              setReviewingIncorrect(false);
-            }}
+            onClick={() => handleSelectViewMode('CARDS')}
             className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
               viewMode === 'CARDS'
                 ? 'bg-card text-indigo-700 shadow-sm'
@@ -262,11 +273,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => {
-              setViewMode('LEARN');
-              setIsSessionComplete(false);
-              setReviewingIncorrect(false);
-            }}
+            onClick={() => handleSelectViewMode('LEARN')}
             className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
               viewMode === 'LEARN'
                 ? 'bg-card text-indigo-700 shadow-sm'
@@ -279,11 +286,7 @@ const VocabModule: React.FC<VocabModuleProps> = ({
           <Button
             variant="ghost"
             size="auto"
-            onClick={() => {
-              setViewMode('LIST');
-              setIsSessionComplete(false);
-              setReviewingIncorrect(false);
-            }}
+            onClick={() => handleSelectViewMode('LIST')}
             className={`flex-1 lg:flex-none flex items-center justify-center px-4 py-2 rounded-md transition-all whitespace-nowrap ${
               viewMode === 'LIST'
                 ? 'bg-card text-indigo-700 shadow-sm'
@@ -298,65 +301,77 @@ const VocabModule: React.FC<VocabModuleProps> = ({
 
       {/* Content */}
       {isSessionComplete ? (
-        <SessionSummary
-          sessionStats={sessionStats}
-          language={language}
-          onNewSession={handleNewSession}
-          onReviewIncorrect={handleReviewIncorrect}
-        />
+        <Suspense fallback={<VocabContentFallback />}>
+          <LazySessionSummary
+            sessionStats={sessionStats}
+            language={language}
+            onNewSession={handleNewSession}
+            onReviewIncorrect={handleReviewIncorrect}
+          />
+        </Suspense>
       ) : (
         <>
           {viewMode === 'CARDS' && (
-            <FlashcardView
-              words={getSessionWords()}
-              settings={settings}
-              language={language}
-              onComplete={handleSessionComplete}
-              onSaveWord={onSaveWord}
-              onUpdateFlashcardSettings={nextSettings => {
-                void updateGlobalSettings({
-                  flashcardAutoTTS: nextSettings.autoTTS,
-                  flashcardFront: nextSettings.cardFront,
-                  flashcardRatingMode: nextSettings.ratingMode,
-                });
-              }}
-            />
+            <Suspense fallback={<VocabContentFallback />}>
+              <LazyFlashcardView
+                words={sessionWords}
+                settings={settings}
+                language={language}
+                onComplete={handleSessionComplete}
+                onSaveWord={onSaveWord}
+                onUpdateFlashcardSettings={nextSettings => {
+                  void updateGlobalSettings({
+                    flashcardAutoTTS: nextSettings.autoTTS,
+                    flashcardFront: nextSettings.cardFront,
+                    flashcardRatingMode: nextSettings.ratingMode,
+                  });
+                }}
+              />
+            </Suspense>
           )}
 
           {viewMode === 'LEARN' && (
-            <LearnModeView
-              words={getSessionWords()}
-              settings={settings}
-              language={language}
-              allWords={allWords}
-              onComplete={handleSessionComplete}
-              onRecordMistake={onRecordMistake}
-            />
+            <Suspense fallback={<VocabContentFallback />}>
+              <LazyLearnModeView
+                words={sessionWords}
+                settings={settings}
+                language={language}
+                allWords={allWords}
+                onComplete={handleSessionComplete}
+                onRecordMistake={onRecordMistake}
+              />
+            </Suspense>
           )}
 
           {viewMode === 'LIST' && (
-            <ListView words={filteredWords} settings={settings} language={language} />
+            <Suspense fallback={<VocabContentFallback />}>
+              <LazyListView words={filteredWords} settings={settings} language={language} />
+            </Suspense>
           )}
         </>
       )}
 
       {/* Settings Modal */}
-      <VocabSettingsModal
-        isOpen={showSettings}
-        settings={settings}
-        language={language}
-        initialTab={viewMode === 'LEARN' ? 'LEARN' : 'FLASHCARD'}
-        onClose={() => setShowSettings(false)}
-        onUpdate={newSettings => {
-          setLocalSettings(newSettings);
-          setIsSessionComplete(false); // Reset session when settings change
-          void updateGlobalSettings({
-            flashcardAutoTTS: newSettings.flashcard.autoTTS,
-            flashcardFront: newSettings.flashcard.cardFront,
-            flashcardRatingMode: newSettings.flashcard.ratingMode,
-          });
-        }}
-      />
+      {showSettings ? (
+        <Suspense fallback={null}>
+          <LazyVocabSettingsModal
+            isOpen={showSettings}
+            settings={settings}
+            language={language}
+            initialTab={viewMode === 'LEARN' ? 'LEARN' : 'FLASHCARD'}
+            onClose={() => setShowSettings(false)}
+            onUpdate={newSettings => {
+              setLocalSettings(newSettings);
+              setIsSessionComplete(false); // Reset session when settings change
+              void updateGlobalSettings({
+                flashcardAutoTTS: newSettings.flashcard.autoTTS,
+                flashcardFront: newSettings.flashcard.cardFront,
+                flashcardRatingMode: newSettings.flashcard.ratingMode,
+              });
+            }}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 };
