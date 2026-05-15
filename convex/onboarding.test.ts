@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest';
 import { convexTest } from 'convex-test';
 import schema from './schema';
@@ -8,8 +9,8 @@ import * as serverModule from './_generated/server';
 describe('Onboarding Flow', () => {
   it('should return default state for new user', async () => {
     const modules = {
-      'onboarding/index': onboardingModule,
-      '_generated/server': serverModule,
+      'onboarding/index': async () => onboardingModule,
+      '_generated/server': async () => serverModule,
     };
     const t = convexTest(schema, modules);
     const userId = await t.run(async ctx => {
@@ -21,7 +22,7 @@ describe('Onboarding Flow', () => {
 
     const tAsUser = t.withIdentity({ subject: userId });
 
-    const state = await tAsUser.query(onboardingModule.getState, {});
+    const state: any = await tAsUser.query(onboardingModule.getState as any, {});
     expect(state.profile).toBeNull();
     expect(state.shouldTrigger).toBe(true);
     expect(state.hasCompletedOnboarding).toBe(false);
@@ -29,8 +30,8 @@ describe('Onboarding Flow', () => {
 
   it('should transition to goal_set after submitGoals', async () => {
     const modules = {
-      'onboarding/index': onboardingModule,
-      '_generated/server': serverModule,
+      'onboarding/index': async () => onboardingModule,
+      '_generated/server': async () => serverModule,
     };
     const t = convexTest(schema, modules);
     const userId = await t.run(async ctx => {
@@ -41,7 +42,7 @@ describe('Onboarding Flow', () => {
     });
     const tAsUser = t.withIdentity({ subject: userId });
 
-    const result = await tAsUser.mutation(onboardingModule.submitGoals, {
+    const result: any = await tAsUser.mutation(onboardingModule.submitGoals as any, {
       preferredLanguage: 'en',
       targetLevel: 'TOPIK 2',
       dailyMinutes: 30,
@@ -50,15 +51,15 @@ describe('Onboarding Flow', () => {
     expect(result.profile.status).toBe('goal_set');
     expect(result.profile.targetLevel).toBe('TOPIK 2');
 
-    const state = await tAsUser.query(onboardingModule.getState, {});
+    const state: any = await tAsUser.query(onboardingModule.getState as any, {});
     expect(state.profile?.id).toBe(result.profile.id);
     expect(state.shouldTrigger).toBe(true);
   });
 
   it('should transition to completed after submitDiagnosisResult', async () => {
     const modules = {
-      'onboarding/index': onboardingModule,
-      '_generated/server': serverModule,
+      'onboarding/index': async () => onboardingModule,
+      '_generated/server': async () => serverModule,
     };
     const t = convexTest(schema, modules);
     const userId = await t.run(async ctx => {
@@ -69,11 +70,11 @@ describe('Onboarding Flow', () => {
     });
     const tAsUser = t.withIdentity({ subject: userId });
 
-    await tAsUser.mutation(onboardingModule.submitGoals, {
+    await tAsUser.mutation(onboardingModule.submitGoals as any, {
       preferredLanguage: 'zh',
     });
 
-    const result = await tAsUser.mutation(onboardingModule.submitDiagnosisResult, {
+    const result: any = await tAsUser.mutation(onboardingModule.submitDiagnosisResult as any, {
       answers: [
         { questionId: 'reading_confidence', optionId: 'keyword_only' }, // score 2
         { questionId: 'listening_confidence', optionId: 'word_by_word' }, // score 1
@@ -86,7 +87,7 @@ describe('Onboarding Flow', () => {
     expect(result.recommendedCurrentLevel).toBe('TOPIK 2');
     expect(result.profile.diagnosisSummary).toContain('TOPIK 2');
 
-    const state = await tAsUser.query(onboardingModule.getState, {});
+    const state: any = await tAsUser.query(onboardingModule.getState as any, {});
     expect(state.hasCompletedOnboarding).toBe(true);
     expect(state.shouldTrigger).toBe(false);
   });

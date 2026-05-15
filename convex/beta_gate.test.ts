@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { convexTest } from 'convex-test';
 import { expect, test, describe } from 'vitest';
 import schema from './schema';
 import * as onboardingModule from './onboarding/index';
+import * as dailyTaskModule from './dailyTask/index';
 import * as aiUsageLogsModule from './aiUsageLogs';
 import * as vocabMutationsModule from './vocab/vocabMutations';
 import * as learningAssetsModule from './learningAssets';
@@ -9,12 +11,13 @@ import * as sentenceExplainerSaveModule from './sentenceExplainer/save';
 import * as serverModule from './_generated/server';
 
 const modules = {
-  'onboarding/index': onboardingModule,
-  aiUsageLogs: aiUsageLogsModule,
-  'vocab/vocabMutations': vocabMutationsModule,
-  learningAssets: learningAssetsModule,
-  'sentenceExplainer/save': sentenceExplainerSaveModule,
-  '_generated/server': serverModule,
+  'onboarding/index': async () => onboardingModule,
+  'dailyTask/index': async () => dailyTaskModule,
+  aiUsageLogs: async () => aiUsageLogsModule,
+  'vocab/vocabMutations': async () => vocabMutationsModule,
+  learningAssets: async () => learningAssetsModule,
+  'sentenceExplainer/save': async () => sentenceExplainerSaveModule,
+  '_generated/server': async () => serverModule,
 };
 
 /**
@@ -37,7 +40,7 @@ describe('P0 Beta Gate', () => {
     const tAsUser = t.withIdentity({ subject: userId });
 
     // 1. AI Usage Tracking Verification
-    await tAsUser.mutation(aiUsageLogsModule.logUsage, {
+    await tAsUser.mutation(aiUsageLogsModule.logUsage as any, {
       userId,
       feature: 'sentence_explanation',
       model: 'gpt-4o',
@@ -55,13 +58,13 @@ describe('P0 Beta Gate', () => {
     expect(logs.length).toBeGreaterThanOrEqual(1);
 
     // 2. Learning Assets Aggregation Verification
-    await tAsUser.mutation(vocabMutationsModule.addToReview, {
+    await tAsUser.mutation(vocabMutationsModule.addToReview as any, {
       word: '사과',
       meaning: 'apple',
       source: 'reading',
     });
 
-    const summary = await tAsUser.query(learningAssetsModule.getReviewAggregate, {});
+    const summary: any = await tAsUser.query(learningAssetsModule.getReviewAggregate as any, {});
     expect(summary.savedWordCount).toBeGreaterThanOrEqual(1);
 
     // 3. Save Asset Traceability Verification
@@ -81,7 +84,7 @@ describe('P0 Beta Gate', () => {
       });
     });
 
-    await tAsUser.mutation(sentenceExplainerSaveModule.saveAssets, {
+    await tAsUser.mutation(sentenceExplainerSaveModule.saveAssets as any, {
       explanationId,
       sentence: '안녕하세요',
       translation: 'Hello',
@@ -89,8 +92,10 @@ describe('P0 Beta Gate', () => {
       sourceRefId: 'ref456',
     });
 
-    const recent = await tAsUser.query(learningAssetsModule.getRecentSavedAssets, { limit: 5 });
-    const saved = recent.find(r => r.title === '안녕하세요');
+    const recent: any = await tAsUser.query(learningAssetsModule.getRecentSavedAssets as any, {
+      limit: 5,
+    });
+    const saved = recent.find((r: any) => r.title === '안녕하세요');
     expect(saved).toBeDefined();
   });
 });
