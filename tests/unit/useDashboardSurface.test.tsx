@@ -4,6 +4,7 @@ import { useDashboardSurface } from '../../src/hooks/useDashboardSurface';
 
 vi.mock('convex/react', () => ({
   useQuery: vi.fn(() => undefined),
+  useMutation: vi.fn(() => vi.fn()),
 }));
 
 describe('useDashboardSurface', () => {

@@ -52,7 +52,7 @@ describe('ensureLocaleNamespaces', () => {
     expect(result).toEqual({ loaded: ['app'], failed: [] });
     expect(addResourceBundleMock).toHaveBeenCalledWith(
       'en',
-      'translation',
+      'app',
       { dashboard: { title: 'Dashboard' } },
       true,
       true
