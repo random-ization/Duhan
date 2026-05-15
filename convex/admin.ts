@@ -1588,7 +1588,8 @@ export const runDataAudit = query({
     
     // Check lemmas individually since we can't load the whole word table
     for (const exp of explanations) {
-      const payload = exp.payload as { tokens?: { lemma?: string }[] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload = exp.payload as any;
       if (payload?.tokens) {
         for (const token of payload.tokens) {
           totalTokens++;

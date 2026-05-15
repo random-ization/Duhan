@@ -39,7 +39,7 @@ function DailyTaskCockpit({
   plan,
   t,
   navigate,
-  onComplete,
+  _onComplete,
 }: {
   plan: DailyTaskPlanDto;
   t: TFunction;
@@ -99,7 +99,7 @@ function DailyTaskCockpit({
           task={task}
           isLast={i === plan.tasks.length - 1}
           navigate={navigate}
-          onComplete={onComplete}
+          _onComplete={_onComplete}
         />
       ))}
 
@@ -360,7 +360,7 @@ export default function DesktopDashboardPage() {
           plan={dailyTaskPlan}
           t={t}
           navigate={navigate}
-          onComplete={handleTaskComplete}
+          _onComplete={handleTaskComplete}
         />
       )}
 
