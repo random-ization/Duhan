@@ -29,7 +29,7 @@ export function ProfileSetupModalTrigger({
     if (isProfileRoute) return;
     if (shownRef.current) return;
     if (isOpen('profile-setup')) return;
-    
+
     // Don't show on small mobile viewports (bottom sheet / full page preferred)
     if (typeof window !== 'undefined' && matchesMediaQuery('(max-width: 767px)')) return;
 
@@ -41,16 +41,25 @@ export function ProfileSetupModalTrigger({
       return;
     }
 
-    // A user "has a profile" if they have a name that isn't just their email address.
-    // If they have a real name, we don't need to show the 'Complete Profile' (name/avatar) prompt.
+    // A user "has a profile" if they have a name that isn't just their email address,
+    // OR if they have already completed the core onboarding (goals/diagnosis).
     const hasRealName = user.name && !user.name.includes('@');
-    if (hasRealName) {
+    const hasCompletedOnboarding = onboardingState?.hasCompletedOnboarding;
+
+    if (hasRealName || hasCompletedOnboarding) {
       shownRef.current = true;
       return;
     }
 
-    // Wait for onboarding state as a secondary signal, but the primary decision is based on user data
+    // Wait for onboarding state as a secondary signal
     if (onboardingState === undefined) return;
+
+    // If the backend says we shouldn't trigger onboarding, we should also be careful
+    // about nagging for a profile name if they've already passed that stage.
+    if (!onboardingState.shouldTrigger && hasCompletedOnboarding) {
+      shownRef.current = true;
+      return;
+    }
 
     shownRef.current = true;
     showModal('profile-setup');
