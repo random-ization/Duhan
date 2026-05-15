@@ -305,7 +305,7 @@ const ModuleFallback: React.FC<{ message: string }> = ({ message }) => (
 );
 
 const ModulePage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const { user, language } = useAuth();
   const { saveWord, recordMistake } = useUserActions();
   const isMobile = useIsMobile();

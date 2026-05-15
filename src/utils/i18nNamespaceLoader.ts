@@ -1,7 +1,7 @@
 import i18n from './i18next-config';
 import { logger } from './logger';
 
-type LocaleNamespace = 'app';
+type LocaleNamespace = 'app' | 'public';
 
 const loaded = new Set<string>();
 const inflight = new Map<string, Promise<boolean>>();
@@ -50,7 +50,7 @@ const loadNamespace = async (language: string, namespace: LocaleNamespace): Prom
         throw new Error(`Invalid i18n payload for namespace: ${namespace}`);
       }
 
-      i18n.addResourceBundle(language, 'translation', payload, true, true);
+      i18n.addResourceBundle(language, namespace, payload, true, true);
       loaded.add(key);
       return true;
     } catch (error) {

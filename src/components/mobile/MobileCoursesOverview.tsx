@@ -119,7 +119,7 @@ const buildCourseVocabModePath = (
 const MobileCoursesOverview: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  const { i18n, t } = useTranslation();
+  const { i18n, t } = useTranslation('public');
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { recentMaterials, selectedInstitute } = useLearningSelection();

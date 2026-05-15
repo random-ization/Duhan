@@ -1103,6 +1103,16 @@ export const getReviewSummary = query({
         summary.total += trulyNewCount;
       }
 
+      // Add legacy saved words to counts if not filtering by course
+      if (!courseId) {
+        const legacyWords = await ctx.db
+          .query('saved_words')
+          .withIndex('by_user', q => q.eq('userId', userId))
+          .collect();
+        summary.unlearned += legacyWords.length;
+        summary.total += legacyWords.length;
+      }
+
       return summary;
     } catch (err) {
       vocabLogger.error('getReviewSummary failed', err);

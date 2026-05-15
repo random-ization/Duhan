@@ -6,6 +6,7 @@ import { Bell, BookOpen, ShieldAlert, UserRoundPlus, Users } from 'lucide-react'
 import type { Id } from '../../../convex/_generated/dataModel';
 import type { CommunityActivityDto } from '../../../convex/community';
 import type { DailyChallengeDto } from '../../../convex/dailyChallenges';
+import type { DailyTaskPlanDto, DailyTaskItemDto, DailyTaskKind } from '../../../convex/dailyTask/shared';
 import type { FriendSearchItemDto } from '../../../convex/friends';
 import type { PartnershipDto } from '../../../convex/partnerships';
 import type { GrammarItemDto } from '../../../convex/grammars';
@@ -15,6 +16,7 @@ import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import {
   COMMUNITY,
   DAILY_CHALLENGES,
+  DAILY_TASK,
   FRIENDS,
   GRAMMARS,
   INSTITUTES,
@@ -655,6 +657,7 @@ export const MobileDashboard: React.FC<{
   const [localHour] = React.useState(() => new Date().getHours());
   const nextBestAction = useQuery(RECOMMENDATIONS.getNextBestAction, user ? { localHour } : 'skip');
   const vocabReviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
+  const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language } : 'skip');
   const weakVocabCategories = useQuery(
     WEAK_POINTS.getWeakVocabCategories,
     user ? { limit: 3, language } : 'skip'
@@ -1670,6 +1673,204 @@ export const MobileDashboard: React.FC<{
           </button>
         </div>
       )}
+
+      {/* DAILY TASK COCKPIT */}
+      {dailyTaskPlan && dailyTaskPlan.tasks.length > 0 && (() => {
+        const allDone = dailyTaskPlan.status === 'completed';
+        const completedCount = dailyTaskPlan.tasks.filter((tk: DailyTaskItemDto) => tk.completed).length;
+        const totalCount = dailyTaskPlan.tasks.length;
+        const taskKindMeta: Record<string, { k: string; bg: string }> = {
+          vocab_20: { k: '詞', bg: KT.pink },
+          grammar_drill: { k: '法', bg: KT.mint },
+          listening_10min: { k: '聽', bg: KT.butter },
+          typing_wpm: { k: '寫', bg: KT.lilac },
+          note_review: { k: '記', bg: KT.butter },
+        };
+        return (
+          <div style={{ padding: '0 18px', marginTop: 10 }}>
+            <div
+              style={{
+                background: KT.card,
+                borderRadius: 22,
+                boxShadow: KT.sh,
+                overflow: 'hidden',
+                border: `1px solid ${KT.line}`,
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: '14px 18px 12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: allDone
+                    ? `linear-gradient(135deg, ${KT.mint}30 0%, transparent 100%)`
+                    : `linear-gradient(135deg, ${KT.butter}20 0%, transparent 100%)`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <HanjaSeal c="任" size={26} bg={KT.crimson} round={6} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: KT.ink, letterSpacing: -0.2 }}>
+                      {language.startsWith('zh') ? '今日任务' : language.startsWith('vi') ? 'Nhiệm vụ hôm nay' : language.startsWith('mn') ? 'Өнөөдрийн даалгавар' : "Today's Tasks"}
+                    </div>
+                    <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600, marginTop: 1 }}>
+                      {completedCount}/{totalCount} · {dailyTaskPlan.date}
+                    </div>
+                  </div>
+                </div>
+                {allDone && (
+                  <Chip tone="mint" size="sm">✓ DONE</Chip>
+                )}
+              </div>
+
+              {/* Global progress bar */}
+              <div style={{ height: 3, background: KT.line }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
+                    background: allDone ? KT.mint : KT.crimson,
+                    transition: 'width 0.6s ease-out',
+                  }}
+                />
+              </div>
+
+              {/* Task rows */}
+              {dailyTaskPlan.tasks.map((task: DailyTaskItemDto, idx: number) => {
+                const meta = taskKindMeta[task.kind] ?? { k: '?', bg: KT.sub };
+                const target = task.targetCount ?? 1;
+                const current = Math.min(task.currentCount ?? 0, target);
+                const pct = target > 0 ? Math.round((current / target) * 100) : 0;
+                const xp = typeof task.metadata?.rewardXp === 'number' ? task.metadata.rewardXp : 0;
+                return (
+                  <button
+                    key={task.taskId}
+                    type="button"
+                    onClick={() => {
+                      if (!task.completed && task.linkPath) navigate(task.linkPath);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 18px',
+                      width: '100%',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: idx < dailyTaskPlan.tasks.length - 1 ? `1px solid ${KT.line}` : 'none',
+                      cursor: task.completed ? 'default' : 'pointer',
+                      opacity: task.completed ? 0.6 : 1,
+                      textAlign: 'left',
+                      fontFamily: KT.font,
+                    }}
+                  >
+                    <HanjaSeal
+                      c={meta.k}
+                      size={32}
+                      bg={task.completed ? KT.mint : meta.bg}
+                      round={8}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: KT.ink,
+                            letterSpacing: -0.2,
+                            textDecoration: task.completed ? 'line-through' : 'none',
+                          }}
+                        >
+                          {task.title}
+                        </span>
+                        {xp > 0 && (
+                          <span style={{ fontSize: 9, fontWeight: 900, color: KT.crimson, letterSpacing: 0.5 }}>
+                            +{xp} XP
+                          </span>
+                        )}
+                      </div>
+                      {task.description && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: KT.sub,
+                            fontWeight: 500,
+                            marginTop: 2,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {task.description}
+                        </div>
+                      )}
+                      {target > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 4,
+                              borderRadius: 2,
+                              background: KT.line,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: '100%',
+                                borderRadius: 2,
+                                width: `${pct}%`,
+                                background: task.completed ? KT.mint : KT.crimson,
+                                transition: 'width 0.5s ease',
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 900, color: KT.sub, flexShrink: 0 }}>
+                            {current}/{target}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {task.completed ? (
+                      <span style={{ fontSize: 14, color: KT.mint, fontWeight: 900, flexShrink: 0 }}>✓</span>
+                    ) : (
+                      <span style={{ fontSize: 16, fontFamily: KT.serif, color: KT.crimson, opacity: 0.6, flexShrink: 0 }}>→</span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Review summary footer */}
+              {dailyTaskPlan.reviewSummary && (dailyTaskPlan.reviewSummary.dueVocabCount || dailyTaskPlan.reviewSummary.weakPointSummary) && (
+                <div
+                  style={{
+                    padding: '8px 18px',
+                    borderTop: `1px solid ${KT.line}`,
+                    background: KT.bg2,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: KT.sub,
+                  }}
+                >
+                  {dailyTaskPlan.reviewSummary.dueVocabCount != null && dailyTaskPlan.reviewSummary.dueVocabCount > 0 && (
+                    <span>📚 {dailyTaskPlan.reviewSummary.dueVocabCount} {language.startsWith('zh') ? '词待复习' : 'vocab due'}</span>
+                  )}
+                  {dailyTaskPlan.reviewSummary.weakPointSummary && (
+                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>💡 {dailyTaskPlan.reviewSummary.weakPointSummary}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TODAY'S PATH hero (Vocab focus) */}
       <div style={{ padding: '0 18px', marginTop: 8 }}>

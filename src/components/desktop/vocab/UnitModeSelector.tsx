@@ -19,7 +19,7 @@ export function UnitModeSelector({
   unitProgress,
   onBack,
 }: UnitModeSelectorProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const navigate = useLocalizedNavigate();
 
   const { totalWords, masteredWords } = unitProgress;

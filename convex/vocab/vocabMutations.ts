@@ -227,11 +227,13 @@ export const addToReview = mutation({
   args: {
     word: v.string(),
     meaning: v.string(),
-    meaningZh: v.string(),
-    meaningVi: v.string(),
-    meaningMn: v.string(),
+    meaningZh: v.optional(v.string()),
+    meaningVi: v.optional(v.string()),
+    meaningMn: v.optional(v.string()),
+    partOfSpeech: v.optional(v.string()),
     context: v.optional(v.string()),
     source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     vocabLogger.debug(`addToReview called for word: ${args.word}, source: ${args.source}`);
@@ -255,7 +257,11 @@ export const addToReview = mutation({
         meaningEn: args.meaningZh,
         meaningVi: args.meaningVi,
         meaningMn: args.meaningMn,
-        partOfSpeech: 'noun',
+        partOfSpeech: args.partOfSpeech || 'noun',
+        source: args.source,
+        sourceRefId: args.sourceRefId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       });
     }
 
@@ -267,11 +273,19 @@ export const addToReview = mutation({
 
     if (!existingProgress) {
       // Create new progress entry
+      const now = Date.now();
       await ctx.db.insert('user_vocab_progress', {
         userId,
         wordId,
         status: 'NEW',
+        state: 0, // NEW
+        due: now,
+        nextReviewAt: now,
         savedByUser: true,
+        source: args.source,
+        sourceRefId: args.sourceRefId,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 

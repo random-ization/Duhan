@@ -1,10 +1,69 @@
 {
-  "status": "状态",
+  "status": {
+    "mastered": "已掌握",
+    "learning": "学习中",
+    "inProgress": "进行中"
+  },
   "home": "首页",
   "textbookLearning": "教材学习",
-  "topik": "TOPIK 备考",
+  "topik": {
+    "noHistory": "暂无考试记录",
+    "mobileSubtitle": "选择一套模拟题，保持你的做题节奏。",
+    "mobile": {
+      "questionType": {
+        "visual": "图文理解",
+        "sequence": "段落排序",
+        "insert": "句子插入",
+        "headline": "新闻标题",
+        "fillBlank": "填空题",
+        "reading": "阅读理解",
+        "multipleChoice": "选择题"
+      }
+    }
+  },
   "notebook": "我的笔记",
-  "admin": "管理后台",
+  "admin": {
+    "epubReview": {
+      "status": {
+        "allBooks": "全部书籍",
+        "processing": "处理中",
+        "readyForReview": "待审核",
+        "inReview": "审核中",
+        "published": "已发布",
+        "rejected": "已拒绝",
+        "processingFailed": "处理失败"
+      },
+      "summary": {
+        "ready": "待审核",
+        "processing": "处理中",
+        "published": "已发布",
+        "failed": "失败"
+      },
+      "title": "EPUB 书库审核",
+      "subtitle": "审核社区上传的 EPUB，并将通过的内容发布到阅读书库。",
+      "filterTitle": "状态筛选",
+      "empty": "当前状态下没有书籍。",
+      "unknownOwner": "未知",
+      "selectTitle": "选择一本书开始审核",
+      "selectBody": "从列表中选择一份投稿，查看元数据、章节预览和审核操作。",
+      "chapterCount": "{{count}} 章",
+      "noDescription": "暂无简介。",
+      "owner": "上传者",
+      "language": "语言",
+      "words": "词数",
+      "reviewNote": "审核备注",
+      "reviewNotePlaceholder": "可填写通过备注，或必填拒绝原因。",
+      "actions": {
+        "approve": "通过",
+        "reject": "拒绝",
+        "retry": "重新处理"
+      },
+      "chapterPreview": "章节预览",
+      "noParsedChapters": "当前还没有可用的解析章节。",
+      "wordCount": "{{count}} 词",
+      "noPreview": "暂无预览。"
+    }
+  },
   "signOut": "退出登录",
   "guest": "访客",
   "login": "登录",
@@ -85,7 +144,8 @@
       "shuffleLabel": "乱序导出"
     },
     "expandMeaning": "展开释义",
-    "collapseMeaning": "收起释义"
+    "collapseMeaning": "收起释义",
+    "save": "保存单词"
   },
   "vocab": {
     "resumePrompt": {
@@ -222,7 +282,33 @@
     "dictationStartButton": "开始播放",
     "unassigned": "未分单元",
     "reviewed": "已复习",
-    "loadingMatch": "配对加载中..."
+    "loadingMatch": "配对加载中...",
+    "learnPromptMeaning": "下列单词的意思是？",
+    "learnPromptKorean": "下列意思对应的韩语是？",
+    "learnSelectCorrect": "请选择正确答案",
+    "stage": {
+      "recommended": "推荐"
+    },
+    "resume": {
+      "label": "继续学习",
+      "progress": "已完成 {{completed}}/{{total}}",
+      "restart": "重新开始",
+      "continue": "继续学习"
+    },
+    "completeSession": "完成本轮学习",
+    "word": "单词",
+    "swipeLeft": "左滑",
+    "swipeMistakeHint": "没想起来",
+    "swipeRight": "右滑",
+    "swipeCorrectHint": "记起来了",
+    "flipCard": "翻转卡片",
+    "cardBackMeaning": "释义与例句",
+    "example": "例句",
+    "didNotRecall": "没记住",
+    "didNotRecallHint": "使用 Again / Hard",
+    "recalled": "记住了",
+    "recalledHint": "使用 Good / Easy",
+    "showMeaning": "显示答案"
   },
   "subscriptionType": "订阅类型",
   "annualMember": "年度会员",
@@ -322,9 +408,67 @@
     "units": "单元",
     "words": "词",
     "cards": "张",
-    "book": "册"
+    "book": "册",
+    "allWordbooks": "全部词书",
+    "challengeMode": "挑战模式",
+    "code": "邀请码",
+    "current": "当前",
+    "done": "完成",
+    "image": "图片",
+    "intermediate": "中级",
+    "items": "项",
+    "learnChar": "学",
+    "learner": "学习者",
+    "masteredChar": "会",
+    "notes": "笔记",
+    "now": "现在",
+    "post": "发布",
+    "progress": "进度",
+    "reading": "阅读",
+    "start": "开始",
+    "summary": "摘要",
+    "vocabChar": "词",
+    "volume": "音量",
+    "select": "选择内容",
+    "cancel": "取消",
+    "restart": "重新开始",
+    "tryAgain": "再试一次",
+    "backToDashboard": "返回首页",
+    "playing": "播放中",
+    "notStarted": "未开始",
+    "continueReading": "继续阅读",
+    "unknownSource": "未知来源",
+    "levelNum": "${levelDisplay}级",
+    "tenThousand": "万",
+    "hanok": "韩屋",
+    "village": "村庄",
+    "walk": "散步",
+    "alley": "小巷",
+    "tradition": "传统",
+    "culturalVisit": "文化探访",
+    "channel": "频道",
+    "clear": "清除",
+    "cherryBlossom": "樱花",
+    "noun": "名词",
+    "flower": "花",
+    "spring": "春天",
+    "cherryTree": "樱花树",
+    "delete": "删除",
+    "add": "添加"
   },
-  "search": "搜索",
+  "search": {
+    "noResults": "没有匹配结果",
+    "bucket": {
+      "book": "书籍",
+      "grammar": "语法",
+      "note": "笔记",
+      "podcast": "播客"
+    },
+    "title": "搜索",
+    "placeholder": "搜索语法点或用法...",
+    "startTyping": "输入后开始搜索",
+    "empty": "没有找到结果"
+  },
   "notifications": {
     "open": "通知",
     "title": "通知",
@@ -388,7 +532,7 @@
       "closeMenu": "关闭菜单"
     },
     "typing": {
-      "badge": "NEW FEATURE",
+      "badge": "新功能",
       "titleLine1": "像弹钢琴一样",
       "titleHighlight": "流利输入韩语",
       "desc": "告别“一指禅”打字。通过我们内置的智能跟打练习，从基础字母到完整文章，建立肌肉记忆。无需额外安装软件，直接在浏览器中体验原生韩语输入法的节奏感。",
@@ -398,22 +542,22 @@
       "feature2Desc": "智能预判并高亮下一键位，提供即时的视觉反馈。无需生硬记忆键位图，在流畅的跟打中自然形成肌肉记忆。",
       "cta": "开始打字练习",
       "preview": {
-        "label": "TYPING PREVIEW",
+        "label": "打字预览",
         "text1": "한",
         "text2": "국",
         "text3": "어",
         "text4": "를 배워요",
-        "wpmLabel": "WPM",
-        "accLabel": "Acc",
-        "nextKeyLabel": "NEXT KEY",
-        "layoutLabel": "KOREAN 2-SET"
+        "wpmLabel": "每分钟字数",
+        "accLabel": "准确率",
+        "nextKeyLabel": "下一键",
+        "layoutLabel": "韩文 2-Set 键盘"
       }
     },
     "typingGame": {
       "title": "打字练习",
       "nextSentence": "下一句",
       "focusInput": "聚焦输入框",
-      "wpm": "WPM",
+      "wpm": "每分钟字数",
       "acc": "准确率"
     },
     "hero": {
@@ -431,7 +575,7 @@
       "aiLabel": "语法解析内核",
       "fsrsValue": "FSRS",
       "fsrsLabel": "自适应记忆算法",
-      "levelRange": "TOPIK1-6",
+      "levelRange": "TOPIK 1-6级",
       "levelSupportLabel": "全等级支持"
     },
     "topik": {
@@ -445,7 +589,7 @@
       "point2Desc": "一眼看出你是听力弱还是阅读弱。",
       "mockDomain": "secure.topik-exam.com",
       "mockTitle": "제 64회 한국어능력시험",
-      "mockSubtitle": "TOPIK II - 읽기 (Reading)",
+      "mockSubtitle": "TOPIK II - 阅读",
       "mockQuestion": "1. 다음 ( )에 알맞은 것을 고르십시오.",
       "mockStem": "비가 오면 우산을 ( ).",
       "mockChoice1": "쓰다",
@@ -462,20 +606,20 @@
       "stat1Label": "复习时间节省",
       "stat2Value": "95%",
       "stat2Label": "长期记忆保留率",
-      "cardBadge": "New Word",
+      "cardBadge": "新词卡",
       "word": "개발자",
-      "wordMeaning": "Developer",
-      "rateAgain": "Again",
+      "wordMeaning": "开发者",
+      "rateAgain": "重来",
       "rateAgainHint": "1m",
-      "rateHard": "Hard",
+      "rateHard": "困难",
       "rateHardHint": "6m",
-      "rateGood": "Good",
+      "rateGood": "良好",
       "rateGoodHint": "10m",
-      "rateEasy": "Easy",
+      "rateEasy": "简单",
       "rateEasyHint": "4d"
     },
     "ai": {
-      "badge": "DuHan Intelligence",
+      "badge": "DuHan 智能引擎",
       "titleLine1": "24小时待命的",
       "titleHighlight": "AI 语法私教",
       "desc": "遇到看不懂的长难句，或分不清 “-는데 / -니까” 的语境差别？点击任意句子，AI 老师会立刻用你的母语拆解语法结构、分析语境，并给出例句。",
@@ -484,15 +628,15 @@
       "feature2": "同义词辨析",
       "feature3": "作文润色",
       "feature4": "口语纠错",
-      "chatTitle": "Grammar Analysis",
-      "chatSubtitle": "Powered by GPT-5 nano",
+      "chatTitle": "语法解析",
+      "chatSubtitle": "由 GPT-5 nano 驱动",
       "userAlt": "用户",
       "userQuestion": "这句话里的 -다가 是什么意思？",
       "userExample": "\"학교에 가다가 친구를 만났어요.\"",
       "botAnswer": "这里的 -다가 表示动作在进行过程中发生了中途转换：在“去学校”的途中，发生了“遇到朋友”的动作（还没到学校）。"
     },
     "toolbox": {
-      "badge": "Interactive Demo",
+      "badge": "交互演示",
       "title": "不仅如此。",
       "subtitle": "点击下方卡片，探索 DuHan 强大的学习工具箱。",
       "card1Title": "PDF 导出 & 默写",
@@ -526,11 +670,11 @@
           "meaning2": "吃",
           "meaning3": "学习",
           "footerLeft": "DuHan - 韩语学习平台",
-          "footerRight": "Page 1 / 5"
+          "footerRight": "第 1 / 5 页"
         },
         "podcast": {
           "nowPlaying": "正在播放",
-          "episodeTitle": "Talk To Me In Korean Ep.14",
+          "episodeTitle": "跟我学韩语 第14集",
           "tooltip": "好 (Good)",
           "translation": "今天天气真的很好。",
           "liveTranscript": "实时字幕",
@@ -560,7 +704,7 @@
         "cta": "注册账号"
       },
       "pro": {
-        "badge": "Most Popular",
+        "badge": "最受欢迎",
         "title": "Pro 会员",
         "price": "$6.9",
         "period": "/ 月 (年付更优惠)",
@@ -655,7 +799,7 @@
     "footer": {
       "about": "关于我们",
       "learnGuides": "学习指南",
-      "copyright": "© 2026 DuHan Inc. Seoul, South Korea."
+      "copyright": "© 2026 DuHan Inc. 韩国首尔。"
     },
     "v2": {
       "nav": {
@@ -708,9 +852,10 @@
           "v": "12 / 15"
         },
         "chip3": {
-          "t": "TOPIK II",
+          "t": "5 级 · 87%",
           "v": "5 级 · 87%"
-        }
+        },
+        "sub": "每天一条精心编排的学习路径 · 单词、语法、TOPIK、影视、播客、阅读、社区互译串联 · 基于 FSRS 记忆模型，跟你的学习节奏一起呼吸。"
       },
       "logos": {
         "v1": "真实语境沉浸阅读",
@@ -722,7 +867,8 @@
       "features": {
         "t1": {
           "title": "每日学习路径",
-          "pill": "/ 早 7:00 自动生成 · 平均 22 分钟"
+          "pill": "/ 早 7:00 自动生成 · 平均 22 分钟",
+          "desc": "基于昨日表现与 FSRS 算法，自动生成「复习 → 新学 → 听 → 读」四步闭环。无需自己排程，打开就是今天最该做的事。"
         },
         "t2": {
           "title": "词汇本 + 四种模式",
@@ -746,9 +892,11 @@
         },
         "t5": {
           "title": "影视 · 播客 · 阅读 三栖沉浸",
-          "pill": "/ 4,800+ 学习素材 · 每周更新"
+          "pill": "/ 4,800+ 学习素材 · 每周更新",
+          "desc": "韩剧片段、Spotify 播客、新闻短文 — 一键转录、双语字幕、生词点译入卡 · 把追剧变成最香的学习。"
         },
-        "title": "一站式的韩语学习工具箱"
+        "title": "一站式的韩语学习工具箱",
+        "sub": "从五十音到 TOPIK 6 级，覆盖你学韩语过程中的每一个场景 — 不再东拼西凑十个 App。"
       },
       "loop": {
         "s1": {
@@ -843,9 +991,9 @@
         "perQuarter": "/ 季付",
         "perYear": "/ 年付",
         "lifetime": {
-          "title": "终身版 · Lifetime",
-          "desc": "终身无忧 · 一次投资，永久享有所有功能",
-          "cta": "永久买断"
+          "cta": "立即解锁终身版",
+          "desc": "一次付费，长期使用所有高级功能。",
+          "title": "终身方案"
         },
         "tabMonthly": "月付",
         "tabQuarterly": "季付",
@@ -875,7 +1023,7 @@
           "f6": "AI 写作诊断",
           "cta": "免费开始"
         },
-        "popular": "Popular",
+        "popular": "热门",
         "fine": "系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联"
       },
       "testimonials": {
@@ -908,7 +1056,13 @@
         "q3": "Plus 和 Elite 的核心差别？",
         "q4": "能离线学吗？",
         "q5": "有学生折扣吗？",
-        "q6": "不满意可以退款吗？"
+        "q6": "不满意可以退款吗？",
+        "a1": "完全可以。新用户引导会评估你的水平 · 从五十音到入门会话都有完整课程 · 系统会按你的节奏推进，永远不会让你卡在「太难了」上。",
+        "a2": "基于学习科学的间隔重复算法（比传统 Anki SM-2 更精准）· 根据你每次回忆的难度自动安排下一次复习时间 · 平均节省 30% 复习时间，记忆留存却更久。",
+        "a3": "Plus 给你全部学习内容 · Elite 在此之上加 1v1 真人语伴、写作精改、专属顾问、留学求职配套 — 适合 6 个月内需要拿出实绩的学习者（TOPIK 高分 / 求职 / 留学）。",
+        "a4": "Plus 起支持离线 · 课程、闪卡、播客、阅读素材都可下载 · 通勤地铁、飞机上完全没问题。",
+        "a5": "学生认证（学信网 / 学生证）可享 Plus 七折 · Elite 八折。每年学生节（9/1 和 3/1）另有立减券。",
+        "a6": "符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。"
       },
       "finalCta": {
         "titlePre": "今天就让韩语",
@@ -957,7 +1111,7 @@
     "paymentMethods": "支持微信支付和支付宝",
     "notSure": "不确定哪个计划适合您？",
     "trial": "开始 7 天免费试用",
-    "discount": "70% OFF",
+    "discount": "七折优惠",
     "title": "为您的韩语流利度投资",
     "subtitle": "选择适合您进度的计划。",
     "paymentUpgrading": "支付系统升级中……",
@@ -977,7 +1131,11 @@
         "foreverAccess": "永久解锁所有内容",
         "futureUpdates": "包含未来更新"
       }
-    }
+    },
+    "checkoutError": "无法启动结账，请稍后重试",
+    "monthlyDesc": "适合短期突击学习",
+    "annualDesc": "最受核心学习者欢迎",
+    "lifetimeDesc": "终身解锁，无后顾之忧"
   },
   "pricingDetails": {
     "refundBadge": "7天免费试用",
@@ -1022,7 +1180,7 @@
         }
       },
       "pro": {
-        "badge": "Most Popular",
+        "badge": "最受欢迎",
         "title": "Pro 会员",
         "subtitle": "适合认真的备考者",
         "cta": "立即升级 Pro",
@@ -1050,8 +1208,8 @@
       "title": "详细权益对比",
       "subtitle": "为什么选择 Pro 会员？一目了然。",
       "th1": "权益细则",
-      "th2": "Free",
-      "th3": "Pro / Lifetime",
+      "th2": "免费版",
+      "th3": "专业版 / 终身版",
       "section": {
         "fsrs": "单词特训 (FSRS)",
         "topik": "TOPIK 备考",
@@ -1104,10 +1262,10 @@
       }
     },
     "footer": {
-      "poweredBy": "Secure Payment Powered By",
+      "poweredBy": "安全支付服务提供方",
       "stripe": "Stripe",
       "paypal": "PayPal",
-      "copyright": "© 2026 DuHan Inc. All rights reserved."
+      "copyright": "© 2026 DuHan Inc. 版权所有。"
     },
     "accountNote": {
       "title": "会员将开通到你当前登录的账号",
@@ -1154,7 +1312,20 @@
       "pricing": "价格页"
     },
     "redirectingBack": "正在返回你刚才的学习页面...",
-    "goBack": "返回原页面"
+    "goBack": "返回原页面",
+    "verifying": "正在验证支付...",
+    "verificationFailed": "支付验证失败。",
+    "activationPending": "支付已确认，正在等待订阅生效...",
+    "activationDelayed": "支付已完成，但会员开通时间比预期稍长。",
+    "successBody": "你的订阅已成功开通。",
+    "processing": "处理中...",
+    "successTitle": "支付成功",
+    "redirecting": "正在跳转到首页...",
+    "pendingTitle": "已收到支付",
+    "checkAgain": "再次检查",
+    "goDashboard": "前往首页",
+    "errorTitle": "出现了一些问题",
+    "backToPricing": "返回定价页"
   },
   "phoneVerifyModal": {
     "title": "手机号码校验",
@@ -1297,7 +1468,9 @@
       "orUse": "或者使用",
       "agreement": "继续即表示同意",
       "and": "与"
-    }
+    },
+    "signIn": "登录",
+    "login": "登录"
   },
   "errors": {
     "CHANNEL_CREATION_FAILED": "创建播客频道失败。",
@@ -1355,7 +1528,13 @@
   "feature": {
     "topik_access": "无限 TOPIK 模考",
     "textbook_access": "解锁所有教科书",
-    "no_ads": "无广告体验"
+    "no_ads": "无广告体验",
+    "allCourses": "全库教材",
+    "allCoursesDesc": "包含延世、首尔大、庆熙大等所有核心教材课程",
+    "topikArchive": "TOPIK 真题",
+    "topikArchiveDesc": "1-6 级历年真题库，支持模拟考试与即时评分",
+    "aiWriting": "AI 写作评分",
+    "aiWritingDesc": "基于大语言模型的精准批改，像私人教师一样纠正语法"
   },
   "dailyExpression": "每日一句",
   "dailyMeaning": "祝你度过美好的一天！",
@@ -1393,7 +1572,19 @@
   "readingDesc": "包含即时翻译和标注功能的文章。",
   "listening": "听力训练",
   "listeningDesc": "带有交互式脚本的音频练习。",
-  "grammar": "语法解析",
+  "grammar": {
+    "status": {
+      "completedBadge": "已完成",
+      "learning": "学习中",
+      "mastered": "已掌握",
+      "new": "新内容"
+    },
+    "actions": {
+      "markLearning": "标记为学习中",
+      "markMastered": "标记为已掌握"
+    },
+    "mobileSubtitle": "浏览语法点、搜索讲解，并专注于当前单元。"
+  },
   "grammarDesc": "AI 智能分析的语法点和例句。",
   "review": "复习与练习",
   "savedWordsDesc": "复习您手动保存的单词。",
@@ -1670,7 +1861,299 @@
     "booksDigitized": "100+ 数字化教材",
     "examPapers": "35+ 套真题试卷",
     "pageTitle": "课程",
-    "subtitle": "浏览你的教材"
+    "subtitle": "浏览你的教材",
+    "mobile": {
+      "hanjaJourney": "汉字脉络",
+      "hanjaTools": "汉字工具",
+      "hanjaVocab": "汉字词汇",
+      "loginHint": "登录后可在多设备同步学习进度。",
+      "topik": {
+        "meta": "{{year}} 年 第 {{round}} 回"
+      },
+      "typing": {
+        "testsCount": "{{count}} 组练习"
+      },
+      "unitLabel": "单元",
+      "tabs": {
+        "mine": "我的课程",
+        "grammar": "语法",
+        "vocabulary": "词汇",
+        "typing": "写作",
+        "topik": "TOPIK"
+      },
+      "tools": {
+        "flashcards": "单词闪卡",
+        "flashcardsSub": "翻卡与记忆强化",
+        "dictation": "听写训练",
+        "dictationSub": "边听边写",
+        "typing": "打字练习",
+        "typingSub": "提升输入速度",
+        "pronunciation": "发音练习",
+        "pronunciationSub": "跟读与辨音"
+      },
+      "vocabModes": {
+        "flashcard": "闪卡",
+        "flashcardSub": "翻卡记忆与 FSRS 复习",
+        "test": "考试",
+        "testSub": "限时测验与错题反馈",
+        "learn": "学习",
+        "learnSub": "选择、拼写和分批掌握",
+        "match": "拼图",
+        "matchSub": "配对游戏强化反应"
+      },
+      "defaultCourseTitle": "TOPIK II 综合课程",
+      "progressLabel": "进行中 · {{pct}}%",
+      "tapToStart": "开始学习",
+      "defaultCourseMeta": "中级",
+      "levelBadge": "级",
+      "hanjaTag": "學",
+      "latin": "系统地掌握韩语",
+      "title": "배우다",
+      "subtitle": "系统地掌握韩语",
+      "unitsLabel": "{{done}} / {{total}} 单元",
+      "estimate": "约 {{days}} 天",
+      "journeyTitle": "学习旅程",
+      "journeyAction": "全部",
+      "completed": "完成 ✓",
+      "toolsTitle": "学习工具",
+      "vocabModesTitle": "单词学习模式",
+      "vocabNoWords": "该单元暂无词汇"
+    },
+    "desktop": {
+      "typing": {
+        "yourInput": "你的输入",
+        "clickToStart": "点击开始",
+        "speed": "速度",
+        "accuracy": "准确率",
+        "avgSpeed": "平均速度",
+        "totalTests": "总测试数",
+        "highestSpeed": "最高速度",
+        "commonPhrases": "常用短句",
+        "practicePrompt": "练习提示",
+        "fullMode": "完整模式"
+      },
+      "mediaHub": {
+        "podcasts": "播客",
+        "videos": "视频",
+        "reading": "阅读",
+        "pictureBooks": "绘本",
+        "difficulty": "难度",
+        "continueListening": "继续收听",
+        "trendingPodcasts": "热门播客",
+        "trendingVideos": "热门视频",
+        "mySubscriptions": "我的订阅",
+        "episodes": "剧集",
+        "noSubscriptions": "暂无订阅",
+        "contentUpdates": "内容更新",
+        "exploreMessage": "去发现更多内容"
+      },
+      "podcast": {
+        "bilingual": "双语",
+        "backToMedia": "返回媒体库",
+        "channel": "频道"
+      },
+      "notebook": {
+        "types": {
+          "grammar": "语法",
+          "vocab": "词汇",
+          "mistakes": "错题",
+          "reflections": "复盘",
+          "default": "默认"
+        },
+        "today": "今天",
+        "yesterday": "昨天",
+        "all": "全部",
+        "newNote": "新建笔记",
+        "title": "标题",
+        "noteCount": "笔记数",
+        "loadingNotes": "加载笔记中",
+        "noContent": "暂无内容",
+        "noNotes": "暂无笔记",
+        "startJourney": "开始记录",
+        "createFirstNote": "创建第一条笔记"
+      },
+      "topikWriting": {
+        "roundLabel": "回次",
+        "defaultDescription": "默认说明",
+        "fetchingExam": "正在加载考试",
+        "noChallenge": "暂无可用题目",
+        "answerArea": "作答区",
+        "wordCount": "字数",
+        "placeholder": "请输入作答内容",
+        "template": "模板",
+        "save": "保存",
+        "submit": "提交",
+        "aiFeedback": "AI 反馈",
+        "contentScore": "内容得分",
+        "grammarScore": "语法得分",
+        "vocabScore": "词汇得分",
+        "structureScore": "结构得分",
+        "aiFeedbackNote": "AI 点评",
+        "gradingCriteria": "评分标准",
+        "criteria1": "任务完成度",
+        "criteria2": "结构与展开",
+        "criteria3": "语言表达"
+      },
+      "vocabulary": {
+        "categories": {
+          "other": "其他来源",
+          "course": "教材词汇",
+          "reading": "阅读词汇"
+        },
+        "masteredStatus": "已掌握 {{count}} 词",
+        "startStudy": "词汇学习",
+        "viewAll": "查看全部",
+        "dueToday": "今日待复习",
+        "minuteEstimate": "预计 {{count}} 分钟完成",
+        "mastered": "已掌握",
+        "startReview": "开始复习",
+        "totalVocab": "总词数",
+        "toLearn": "未学",
+        "learningPath": "当前学习路径",
+        "selectCoursePrompt": "请选择一个教材以查看单元",
+        "forecastTitle": "学习进度预测",
+        "forecastTotal": "待复习 {{count}} 词",
+        "forecastDays": {
+          "today": "今天",
+          "tomorrow": "明天",
+          "after": "后天",
+          "plus2": "3天后",
+          "plus3": "4天后",
+          "plus4": "5天后",
+          "plus5": "6天后"
+        },
+        "vocabBookTitle": "词汇学习",
+        "emptyVocab": "暂无词汇，开始学习吧！",
+        "current": "当前",
+        "learningHeat": "学习热度",
+        "weakWords": "薄弱词汇",
+        "noWeakWords": "暂无薄弱词汇",
+        "center": "词汇中心",
+        "description": "查看词汇分布、学习进度和复习重点。",
+        "availableToLearn": "可学习",
+        "startLearning": "开始学习",
+        "studiedToday": "今日已学",
+        "myWordbooks": "我的词书",
+        "create": "新建",
+        "modes": {
+          "title": "练习模式",
+          "flashcard": "闪卡",
+          "learn": "学习",
+          "test": "测试",
+          "match": "配对"
+        },
+        "forecast": "学习进度预测",
+        "totalProgress": "总进度",
+        "unit": "单元",
+        "emptyUnit": "该单元暂无词汇"
+      },
+      "video": {
+        "title": "标题",
+        "notSelected": "未选择视频",
+        "loading": "加载中",
+        "notFound": "未找到视频",
+        "views": "播放量",
+        "fullTranscript": "完整字幕",
+        "vocabCount": "生词数",
+        "slowPlayback": "慢速播放",
+        "videoVocab": "视频词汇",
+        "relatedVideos": "相关视频",
+        "noRecommendations": "暂无推荐"
+      },
+      "grammar": {
+        "learningNote": "学习提示",
+        "aiCheck": "AI 句子检查",
+        "aiCheckDesc": "写一句包含该语法点的韩语句子，获取 AI 反馈。",
+        "aiCheckPlaceholder": "输入一条韩语句子...",
+        "aiCorrect": "正确",
+        "aiIncorrect": "需要修改",
+        "aiSuggested": "建议写法",
+        "conjugationRules": "活用规则",
+        "quickFilter": "快速筛选语法点",
+        "myProgress": "我的进度",
+        "masteryRate": "掌握率",
+        "redEyeOff": "护眼关闭",
+        "redEyeMode": "护眼模式",
+        "markMastered": "标记已掌握",
+        "explanation": "讲解",
+        "examples": "例句",
+        "selectGrammar": "选择语法点",
+        "introduction": "引入",
+        "coreUsage": "核心用法",
+        "comparative": "对比用法",
+        "culturalNotes": "文化提示",
+        "commonMistakes": "常见错误",
+        "review": "复习",
+        "noDetail": "当前语言下暂无该语法点详情。"
+      },
+      "review": {
+        "clearConfirm": "确认清空",
+        "title": "词汇复习",
+        "mistakesTitle": "错题",
+        "totalMistakes": "错题总数",
+        "pendingReview": "待复习",
+        "clearMistakes": "清空错题",
+        "mainSource": "主要来源",
+        "mistakeList": "错题列表",
+        "totalCount": "总数",
+        "greatJob": "做得很好",
+        "noMistakes": "暂无错题",
+        "reviewCount": "复习次数",
+        "remove": "移除"
+      },
+      "currentJourney": "当前学习旅程",
+      "noOtherCourses": "暂无其他活跃课程",
+      "learningJourney": "学习旅程",
+      "learningTools": {
+        "title": "学习工具",
+        "flashcards": "闪卡",
+        "reviewStatus": "待复习 {{count}}",
+        "grammar": "语法",
+        "masteredStatus": "已掌握 {{count}}",
+        "typing": "挑战",
+        "notebook": "笔记"
+      },
+      "streakMessage": "已连续学习 {{count}} 天，超过 {{percent}}% 的学习者。",
+      "searchCourses": "搜索课程",
+      "topik": {
+        "mockExam": "模拟考试",
+        "examTitlePlaceholder": "第 88 回 · 完整模拟题",
+        "examInfo": "听力 50 题 · 写作 4 题 · 阅读 50 题 · 180 分钟",
+        "predictedScore": "预测分数",
+        "targetLevel": "级",
+        "startExam": "开始考试",
+        "questions": "题目数",
+        "recentAttempts": "最近模考记录"
+      },
+      "tabs": {
+        "mine": "我的课程",
+        "grammar": "语法",
+        "vocabulary": "词汇",
+        "typing": "打字",
+        "topik": "TOPIK"
+      },
+      "quiz": {
+        "reviewing": "复习中",
+        "reviewNum": "复习次数",
+        "revealAnswer": "显示答案",
+        "again": "重来",
+        "timeUnit": {
+          "minute": "分钟",
+          "minutes": "分钟",
+          "day": "天",
+          "days": "天"
+        },
+        "hard": "困难",
+        "good": "良好",
+        "easy": "简单",
+        "revealed": "已显示",
+        "pressToReveal": "点击显示释义",
+        "relatedVocab": "相关词汇",
+        "reviewHistory": "复习记录",
+        "accuracyRate": "正确率",
+        "fsrsReview": "FSRS 复习"
+      }
+    }
   },
   "courseDashboard": {
     "defaultCourseName": "首尔大学韩国语 1A",
@@ -1684,7 +2167,8 @@
       "vocabulary": "单词记忆",
       "grammar": "语法训练",
       "reading": "课文阅读",
-      "listening": "听力磨耳朵"
+      "listening": "听力磨耳朵",
+      "topikGrammarSub": "全等级核心考点"
     },
     "progress": {
       "totalWords": "总单词",
@@ -1736,7 +2220,9 @@
       "good": "保持连胜！继续保持势头。",
       "warn": "距离上次练习已过 {{count}} 天 — 保持敏锐！",
       "danger": "距离上次练习已过 {{count}} 天 — 记忆可能已经衰退！"
-    }
+    },
+    "examsAvailable": "exams",
+    "allLevels": "ALL LEVELS"
   },
   "dashboard": {
     "banner": {
@@ -1765,7 +2251,7 @@
       "weeklyStudyTime": "本周学习时长 (分钟)",
       "dailyGoal": "今日目标",
       "viewAllPlans": "查看全部计划",
-      "comingUp": "Coming Up",
+      "comingUp": "即将到来",
       "daysLeft": "天后考试",
       "examDate": "考试日期: {{date}}",
       "makePlan": "制定复习计划",
@@ -1801,13 +2287,13 @@
     "welcome": "下午好, {name}!",
     "streak": "连续打卡",
     "days": "{count} 天",
-    "premium": "Premium",
+    "premium": "会员",
     "premiumBadge": "高级会员",
     "upgrade": {
       "premium": "高级版 →"
     },
     "upgradeBanner": {
-      "badge": "Premium",
+      "badge": "会员",
       "title": "继续学习，解锁更完整的学习体验",
       "description": "使用当前账号即可解锁教材、完整 TOPIK 模考和 AI 学习工具：{{email}}",
       "primaryCta": "查看推荐套餐",
@@ -1866,7 +2352,7 @@
       "passRate": "通过率",
       "total": "总计",
       "mobile": {
-        "dDay": "D-{{count}}",
+        "dDay": "距考试 {{count}} 天",
         "roundBadge": "第{{round}}届",
         "roundBadgeFallback": "TOPIK",
         "nextExamName": "第 {{round}} 届 TOPIK II",
@@ -1875,7 +2361,7 @@
         "typeListeningShort": "听力",
         "minuteShort": "{{minutes}}分",
         "questionCountShort": "{{count}}题",
-        "bestScore": "{{score}}%",
+        "bestScore": "最高分 {{score}}%",
         "questionType": {
           "visual": "图表阅读",
           "sequence": "段落排序",
@@ -1899,7 +2385,9 @@
           "readingTip": "阅读篇幅较长，建议在安静环境下完成。",
           "startExam": "开始考试",
           "listeningTitle": "听力注意事项",
-          "startConfirm": "点击开始即表示你已准备好。"
+          "startConfirm": "点击开始即表示你已准备好。",
+          "listeningTipShort": "戴上耳机，专注跟住音频节奏。",
+          "readingTipShort": "注意时间分配，先扫题再细读。"
         },
         "session": {
           "passageFor": "第{{start}}-{{end}}题材料",
@@ -1919,7 +2407,8 @@
           "sectionListening": "听力",
           "pageHeader": "第 {{round}} 届 TOPIK II {{paperType}} 卷 · {{period}}（{{section}}）",
           "range": "TOPIK II {{section}}（第1题 ~ 第{{count}}题）",
-          "endOfSection": "本节结束"
+          "endOfSection": "本节结束",
+          "questionProgress": "第 {{current}} / {{total}} 题"
         },
         "review": {
           "mode": "复习模式",
@@ -1965,9 +2454,16 @@
           "saveToNotebookTitle": "保存 AI 解析",
           "saveToNotebookDescription": "请选择目标笔记本，或先创建一个后再保存。",
           "saveToNotebookConfirm": "保存到笔记本",
-          "saveToNotebookCancel": "取消"
+          "saveToNotebookCancel": "取消",
+          "analysis": "AI 解析",
+          "detailTitle": "题目详情",
+          "questionProgress": "第 {{current}} / {{total}} 题",
+          "wrongOptions": "错误选项"
         },
-        "typeWritingShort": "写作"
+        "typeWritingShort": "写作",
+        "result": {
+          "title": "考试结果"
+        }
       },
       "totalAttempts": "作答次数",
       "writing": "写作",
@@ -2010,7 +2506,11 @@
         "wrongQuestions": "错题 ({{count}}):",
         "allCorrect": "🎉 全部正确！",
         "endOfSection": "本节结束"
-      }
+      },
+      "history": "历史记录",
+      "nextExamTitle": "下一次考试目标",
+      "recentScore": "最近成绩",
+      "weakAreasTitle": "薄弱项"
     },
     "readingHub": {
       "title": "阅读发现",
@@ -2041,7 +2541,10 @@
       "hint": "点击句子跳转播放，点击单词查词",
       "noSubtitles": "暂无字幕数据",
       "noSubtitlesDesc": "该视频尚未配置字幕",
-      "loadingPlayer": "播放器加载中..."
+      "loadingPlayer": "播放器加载中...",
+      "playbackLocked": "当前无法播放。",
+      "jumpToLine": "跳转",
+      "noVideosForLevel": "该级别下暂无视频，请尝试其他筛选。"
     },
     "podcast": {
       "label": "播客",
@@ -2233,7 +2736,9 @@
         "beginner": "初级",
         "intermediate": "中级",
         "advanced": "高级"
-      }
+      },
+      "viewSource": "查看来源",
+      "sense": "义项"
     },
     "mobile": {
       "keepMomentum": "保持学习势头！",
@@ -2288,9 +2793,102 @@
       "listening": "用真实语料提升听力理解",
       "reading": "通过文章练习提升阅读流畅度"
     },
-    "subtitle": "Ready to beat today's boss?",
+    "subtitle": "准备好击败今天的学习 Boss 了吗？",
     "alt": {
       "tigerCoach": "老虎教练"
+    },
+    "recommendation": {
+      "title": "下一步推荐",
+      "empty": "当前没有阻塞项，任选一个模块继续学习即可。",
+      "open": "打开推荐任务"
+    },
+    "desktop": {
+      "dailyTasks": "今日任务",
+      "dueVocab": "{{count}} 个待复习词汇",
+      "notesDue": "条笔记待处理",
+      "notesQueued": "待处理笔记",
+      "nothingDue": "当前没有待完成项目",
+      "now": "现在",
+      "notebook": "笔记本",
+      "reviewStatus": "复习状态",
+      "vocabDueToday": "今日待复习词汇",
+      "minutesAgo": "{{count}} 分钟前",
+      "hoursAgo": "{{count}} 小时前",
+      "modules": {
+        "review": "复习",
+        "grammar": "语法",
+        "listening": "听力",
+        "topik": "TOPIK"
+      },
+      "greeting": "你好",
+      "tasksLeftSummary": "还有 ${taskCount} 项任务待完成",
+      "allDone": "今日任务已完成 ✓",
+      "weeklyGoal": "本周目标",
+      "hours": "小时",
+      "todayPath": "今日路径",
+      "weeklyActivity": "活动",
+      "viewAll": "完整榜单",
+      "insights": {
+        "title": "30 天洞见",
+        "retention": "记忆留存",
+        "activeDays": "活跃天数",
+        "reviews": "总复习数"
+      },
+      "dailyPhrase": "今日金句",
+      "streak": "连续学习",
+      "consecutiveDays": "天",
+      "upcomingReviews": "即将到期",
+      "reviewCta": "完成复习",
+      "noUpcomingReviews": "暂无待复习",
+      "justNow": "刚刚",
+      "dayJoined": "${diffDay}天前",
+      "approxTime": "学习了 ${minutes} 分钟",
+      "friendActivity": "学习伙伴",
+      "noFriendActivity": "暂无在线伙伴",
+      "vocabBook": "词书",
+      "tasksLeft": "剩余任务",
+      "myResources": "我的资源",
+      "incorrectBook": "错题本",
+      "achievements": "成就",
+      "history": "历史",
+      "daysActivity": "近 90 天活动",
+      "settings": "设置",
+      "subscription": "订阅",
+      "notifications": "通知",
+      "language": "语言",
+      "help": "帮助",
+      "logout": "退出登录",
+      "primaryAction": {
+        "reviewEyebrow": "复习 · REVIEW",
+        "reviewTitle": "${dueNow} 张到期卡片",
+        "reviewSubtitle": "预计 ${estMin} 分钟 · FSRS 智能复习",
+        "startReview": "开始复习 →",
+        "challengeEyebrow": "今日挑战 · CHALLENGE",
+        "continueChallenge": "继续挑战 →",
+        "weakAreaEyebrow": "强化薄弱 · WEAK AREA",
+        "weakAreaTitle": "${weak.label} · ${weak.score} 分",
+        "strengthen": "专项练习 →",
+        "grammarEyebrow": "继续学习 · GRAMMAR",
+        "grammarTitle": "第 ${courseProgress.lastUnitIndex + 1} 单元",
+        "continueLesson": "继续学习 →",
+        "podcastEyebrow": "今日沉浸 · LISTEN",
+        "podcastTitle": "今日播客推荐",
+        "podcastSubtitle": "坚持每天 10 分钟听力",
+        "openPodcast": "打开播客 →"
+      },
+      "welcomeBack": "欢迎回来",
+      "topikCountdown": {
+        "title": "TOPIK 备考",
+        "lobby": "入口",
+        "daysLeft": "天后",
+        "noUpcoming": "暂无报名的考试",
+        "weakAreasLabel": "薄弱项",
+        "noWeakAreas": "完成一次模拟题即可看到薄弱项"
+      }
+    },
+    "streakDays": "天",
+    "progress": {
+      "title": "进度"
     }
   },
   "learningFlow": {
@@ -2373,7 +2971,12 @@
     "focusInput": "聚焦输入框",
     "wpm": "速度 (WPM)",
     "acc": "准确率",
-    "switchImeWarning": "检测到英文输入，请切换到韩语输入法。"
+    "switchImeWarning": "检测到英文输入，请切换到韩语输入法。",
+    "accuracy": "准确率",
+    "errorCount": "错误数",
+    "course": "课程",
+    "volumeLevel": "音量 / 难度",
+    "tapToStartTyping": "输入句子后开始"
   },
   "sidebar": {
     "dashboard": "学习主页",
@@ -2444,7 +3047,8 @@
       "stemTranslation": "题干翻译",
       "keyPoint": "核心考点",
       "correctAnalysis": "正解分析",
-      "distractorAnalysis": "干扰项分析"
+      "distractorAnalysis": "干扰项分析",
+      "quote": "保存为引用笔记"
     },
     "newPage": "新建页面",
     "newSubPage": "新建子页面",
@@ -2565,44 +3169,44 @@
         "slash": {
           "title": "斜杠命令",
           "text": {
-            "label": "Text",
-            "hint": "Plain paragraph text"
+            "label": "正文",
+            "hint": "普通段落文本"
           },
           "h1": {
-            "label": "Heading 1",
-            "hint": "Large section title"
+            "label": "标题 1",
+            "hint": "大号章节标题"
           },
           "h2": {
-            "label": "Heading 2",
-            "hint": "Medium section heading"
+            "label": "标题 2",
+            "hint": "中号小节标题"
           },
           "bullet": {
-            "label": "Bullet List",
-            "hint": "Simple bullet points"
+            "label": "无序列表",
+            "hint": "简单项目符号列表"
           },
           "ordered": {
-            "label": "Numbered List",
-            "hint": "Ordered items"
+            "label": "有序列表",
+            "hint": "按顺序排列的条目"
           },
           "todo": {
-            "label": "To-do List",
-            "hint": "Track tasks with checkboxes"
+            "label": "待办列表",
+            "hint": "用复选框跟踪任务"
           },
           "quote": {
-            "label": "Quote",
-            "hint": "Emphasized quotation block"
+            "label": "引用",
+            "hint": "强调型引用块"
           },
           "code": {
-            "label": "Code Block",
-            "hint": "Formatted code snippet"
+            "label": "代码块",
+            "hint": "格式化代码片段"
           },
           "divider": {
-            "label": "Divider",
-            "hint": "Horizontal separator line"
+            "label": "分隔线",
+            "hint": "插入水平分割线"
           },
           "table": {
-            "label": "Table",
-            "hint": "Insert a 3x3 table"
+            "label": "表格",
+            "hint": "插入 3x3 表格"
           }
         },
         "colors": {
@@ -2610,50 +3214,50 @@
           "textTitle": "文字颜色",
           "highlightTitle": "高亮颜色",
           "text": {
-            "default": "Default",
-            "gray": "Gray",
-            "brown": "Brown",
-            "orange": "Orange",
-            "yellow": "Yellow",
-            "green": "Green",
-            "blue": "Blue",
-            "purple": "Purple",
-            "pink": "Pink",
-            "red": "Red"
+            "default": "默认",
+            "gray": "灰色",
+            "brown": "棕色",
+            "orange": "橙色",
+            "yellow": "黄色",
+            "green": "绿色",
+            "blue": "蓝色",
+            "purple": "紫色",
+            "pink": "粉色",
+            "red": "红色"
           },
           "highlight": {
-            "default": "Default",
-            "grayBg": "Gray BG",
-            "brownBg": "Brown BG",
-            "orangeBg": "Orange BG",
-            "yellowBg": "Yellow BG",
-            "greenBg": "Green BG",
-            "blueBg": "Blue BG",
-            "purpleBg": "Purple BG",
-            "pinkBg": "Pink BG",
-            "redBg": "Red BG"
+            "default": "默认",
+            "grayBg": "灰色背景",
+            "brownBg": "棕色背景",
+            "orangeBg": "橙色背景",
+            "yellowBg": "黄色背景",
+            "greenBg": "绿色背景",
+            "blueBg": "蓝色背景",
+            "purpleBg": "紫色背景",
+            "pinkBg": "粉色背景",
+            "redBg": "红色背景"
           }
         },
         "actions": {
-          "bulletList": "Bullet List",
-          "numberedList": "Numbered List",
-          "taskList": "Task List",
-          "quote": "Quote",
-          "bold": "Bold",
-          "italic": "Italic",
-          "underline": "Underline",
-          "strike": "Strike",
-          "link": "Link",
-          "textAndHighlightColors": "Text and Highlight colors",
+          "bulletList": "无序列表",
+          "numberedList": "有序列表",
+          "taskList": "待办列表",
+          "quote": "引用",
+          "bold": "加粗",
+          "italic": "斜体",
+          "underline": "下划线",
+          "strike": "删除线",
+          "link": "链接",
+          "textAndHighlightColors": "文字与高亮颜色",
           "moreTools": "更多工具",
-          "h1": "Heading 1",
-          "h2": "Heading 2",
-          "h3": "Heading 3",
-          "codeBlock": "Code Block",
-          "table": "Table",
-          "divider": "Divider",
-          "undo": "Undo",
-          "redo": "Redo"
+          "h1": "标题 1",
+          "h2": "标题 2",
+          "h3": "标题 3",
+          "codeBlock": "代码块",
+          "table": "表格",
+          "divider": "分隔线",
+          "undo": "撤销",
+          "redo": "重做"
         },
         "study": {
           "keyWord": "重点词",
@@ -2691,7 +3295,7 @@
         "viewList": "列表视图",
         "viewTable": "表格视图",
         "searchPlaceholder": "搜索引用或笔记...",
-        "sourceOption": "{{label}} ({{count}})",
+        "sourceOption": "{{label}}（{{count}}）",
         "newNoteButton": "新建笔记",
         "emptyNotes": "暂无笔记，点击“新建笔记”开始记录。",
         "clickToViewAndEdit": "点击查看并编辑内容",
@@ -2718,7 +3322,9 @@
         "quoteMissing": "未找到引用原文",
         "myNote": "我的笔记",
         "quoteEditorPlaceholder": "写下你对这句原文的理解、疑问或翻译。",
-        "editorPlaceholder": "在这里开始记录你的想法..."
+        "editorPlaceholder": "在这里开始记录你的想法...",
+        "newNote": "创建笔记",
+        "viewSource": "查看来源"
       },
       "context": {
         "smartNotebook": "智能笔记本",
@@ -2729,7 +3335,17 @@
         "pendingReview": "待复习任务",
         "startSmartReview": "开始智能复习",
         "noNotebooks": "暂无笔记本",
-        "noNotebooksHint": "创建第一条笔记后会自动出现。"
+        "noNotebooksHint": "创建第一条笔记后会自动出现。",
+        "recentHighlights": "最近高亮"
+      },
+      "recentHighlights": "最近高亮",
+      "scope": {
+        "reading": "阅读",
+        "topik": "TOPIK",
+        "book": "书籍",
+        "podcast": "播客",
+        "video": "视频",
+        "note": "笔记"
       }
     },
     "picker": {
@@ -2752,7 +3368,8 @@
         "confirm": "保存到笔记本",
         "cancel": "取消"
       }
-    }
+    },
+    "mobileSubtitle": "记录引用、追踪错题，并持续推进你的复习队列。"
   },
   "annotationMenu": {
     "saveToVocab": "存入生词本",
@@ -2780,7 +3397,9 @@
   },
   "grammarFeed": {
     "allPoints": "全部语法点",
-    "empty": "此单元暂无语法点"
+    "empty": "此单元暂无语法点",
+    "emptyHint": "试试其他单元或更宽泛的搜索词。",
+    "collection": "语法合集"
   },
   "grammarModule": {
     "title": "语法专项训练",
@@ -2840,7 +3459,10 @@
       "unit14": "基准",
       "unit15": "助词"
     },
-    "sentencePracticeWith": "使用该语法造句："
+    "sentencePracticeWith": "使用该语法造句：",
+    "catalog": "语法目录",
+    "aiTutorPopupHint": "打开 AI 面板查看完整回答。",
+    "aiTutorCompactHint": "这里显示简短预览，完整讲解会在阅读面板打开。"
   },
   "analysisSheet": {
     "title": "AI 句子分析",
@@ -2854,12 +3476,34 @@
   "wongojiEditor": {
     "row": "行",
     "column": "列",
-    "perLine": "每行 {{count}} 字 · 原稿纸"
+    "perLine": "每行 {{count}} 字 · 原稿纸",
+    "lineStatus": "Row {{row}} · Col {{column}}",
+    "mobileHint": "Scroll sideways if needed"
   },
   "leaderboard": {
     "weeklyTitle": "本周排行榜",
     "empty": "还没有人上榜，成为第一个吧！",
-    "meTag": "(我)"
+    "meTag": "(我)",
+    "weekly": "周榜",
+    "topLearners": "本周学习达人",
+    "desktop": {
+      "title": "本周排行",
+      "weekLeft": "剩余 {{days}} 天 {{hours}} 小时",
+      "fetchingData": "正在加载数据",
+      "promotionCutoff": "晋级线",
+      "relegationZone": "降级区",
+      "myRank": "我的排名",
+      "promote": "晋级",
+      "stay": "保级",
+      "seasonProgress": "赛季进度",
+      "weekLabel": "第 {{count}} 周",
+      "rewards": "奖励",
+      "rewardsList": {
+        "firstPlace": "第一名",
+        "topThree": "前三名",
+        "promotion": "晋级名额"
+      }
+    }
   },
   "achievements": {
     "aiTutorTagline": "专属韩语 AI 私教",
@@ -3053,7 +3697,16 @@
     "rule": "规则变化",
     "quizzes": "实战演练",
     "customNote": "教研组小贴士",
-    "answerShort": "答："
+    "answerShort": "答：",
+    "learningNote": "学习笔记",
+    "fontSize": "字号",
+    "redEyeMode": "护眼模式",
+    "redEyeOn": "护眼模式已开启：隐藏翻译和答案",
+    "redEyeOff": "护眼模式已关闭：显示翻译和答案",
+    "practiceTitle": "练习句子",
+    "checkError": "句子检查失败。",
+    "collapse": "收起",
+    "expand": "展开"
   },
   "podcast": {
     "title": "播客",
@@ -3110,18 +3763,18 @@
       "PLAYER_TRANSLATION_DESC": "显示中文翻译",
       "PLAYER_AUTO_SCROLL_ON": "自动滚动",
       "PLAYER_AUTO_SCROLL_OFF": "自动滚动",
-      "PLAYER_BACK_TO_FEED": "Back to Feed",
+      "PLAYER_BACK_TO_FEED": "返回列表",
       "PLAYER_PLAYLIST": "播放列表",
       "PLAYER_FAVORITE": "收藏此集",
       "PLAYER_SHARE": "分享",
-      "PLAYER_LOOP": "Loop",
-      "PLAYER_LOOP_ACTIVE": "Loop Active",
-      "PLAYER_SET_B": "Set B",
+      "PLAYER_LOOP": "循环播放",
+      "PLAYER_LOOP_ACTIVE": "已开启循环",
+      "PLAYER_SET_B": "设置 B 点",
       "DASHBOARD_TITLE": "播客学韩语",
       "DASHBOARD_LATEST": "最新更新",
       "DASHBOARD_EDITOR_PICKS": "编辑推荐",
       "DASHBOARD_TRENDING": "热门榜单",
-      "DASHBOARD_APPLE_TOP": "Apple Top 10",
+      "DASHBOARD_APPLE_TOP": "Apple 播客前 10",
       "DASHBOARD_COMMUNITY": "社区热播",
       "DASHBOARD_VIEW_ALL": "查看全部",
       "DASHBOARD_SEARCH_RESULTS": "搜索结果",
@@ -3142,7 +3795,11 @@
       "picks": "精选"
     },
     "emptyTrending": "当前暂无热门播客。",
-    "loadError": "当前无法加载播客数据，请稍后重试。"
+    "loadError": "当前无法加载播客数据，请稍后重试。",
+    "noSubscriptions": "你还没有订阅任何播客。",
+    "explorePodcasts": "探索播客",
+    "unknownAuthor": "未知作者",
+    "emptyTrendingHint": "试试切换标签，或稍后回来看看新的推荐。"
   },
   "typing": {
     "label": "打字练习",
@@ -3175,6 +3832,30 @@
       "durationLabel": "用时",
       "stopButton": "结束",
       "retryButton": "再试一次"
+    },
+    "mobile": {
+      "averageWpm": "平均速度",
+      "bestWpm": "最高 WPM",
+      "failedToSave": "保存失败：{{msg}}",
+      "firstSessionSubtitle": "完成一次练习后，这里会显示你的进度卡片。",
+      "firstSessionTitle": "从第一次练习开始",
+      "gettingFaster": "你打得越来越快了！",
+      "greatJob": "练得很好！",
+      "lobby": "练习大厅",
+      "lobbyIntro": "先用引导练习热身，再进入完整韩语打字。",
+      "longText": "长文本",
+      "personalBest": "个人最佳",
+      "resultSaved": "结果已保存",
+      "resultsSubtitle": "持续练习，才是掌握韩语打字的关键。",
+      "resultsTitle": "练习完成！",
+      "retry": "再来一次",
+      "sessionComplete": "已完成",
+      "sets": "组",
+      "startWordPractice": "开始单词练习",
+      "thisWeekCount": "本周 {{count}} 次",
+      "totalSessions": "累计 {{count}} 次",
+      "unknownError": "未知错误",
+      "lastDrill": "Last drill"
     }
   },
   "vocabLabel": "词汇学习",
@@ -3428,7 +4109,9 @@
       "tabLabel": "安全",
       "summaryTitle": "安全摘要",
       "summaryDescription": "先看状态，再进入详细控制，避免安全页变成纯表单堆叠。"
-    }
+    },
+    "level": "等级",
+    "dayStreak": "连续学习天数"
   },
   "typingLobby": {
     "title": "韩语打字练习",
@@ -3583,7 +4266,8 @@
     "difficulty": {
       "l1": "A2 初阶",
       "l2": "B2 中阶",
-      "l3": "C1 高阶"
+      "l3": "C1 高阶",
+      "intermediate": "中级"
     },
     "filters": {
       "all": "全部",
@@ -3603,7 +4287,14 @@
       "autoRefreshed": "已根据阅读记录自动更新推荐",
       "manualLimitReached": "今日手动刷新已达上限（3次）",
       "manualRefreshed": "刷新成功，今日剩余 {{count}} 次",
-      "manualRefreshFailed": "刷新失败，请稍后重试"
+      "manualRefreshFailed": "刷新失败，请稍后重试",
+      "countSuffix": "篇",
+      "justNow": "刚刚更新",
+      "liveTitle": "实时新闻流",
+      "loadingMore": "正在加载更多新闻...",
+      "readMorePlaceholder": "打开文章",
+      "updated": "每小时更新",
+      "updating": "正在刷新"
     },
     "articles": {
       "title": "文化与典藏",
@@ -3611,7 +4302,9 @@
       "viewAll": "查看全部文章",
       "typeEncyclopedia": "百科条目",
       "recommended": "推荐精读",
-      "sourceWikipedia": "维基百科"
+      "sourceWikipedia": "维基百科",
+      "startReading": "开始阅读",
+      "readMore": "继续阅读"
     },
     "pictureBooks": {
       "title": "画册阅读",
@@ -3626,7 +4319,19 @@
       "sentenceSync": "句子同步",
       "pages": "{{count}} 页",
       "minutes": "约 {{minutes}} 分钟",
-      "levelBadge": "{{level}} 级"
+      "levelBadge": "{{level}} 级",
+      "catalogTitle": "绘本书架",
+      "countSuffix": "本",
+      "description": "适合轻松阅读练习的短篇插图故事。",
+      "featured": "精选绘本",
+      "openCard": "打开书籍",
+      "readingMinutes": "约 {{count}} 分钟",
+      "searchPlaceholder": "搜索绘本",
+      "startReading": "开始阅读",
+      "total": "本绘本",
+      "unclassified": "未分类",
+      "viewAll": "查看全部",
+      "weeklyFeatured": "本周推荐"
     },
     "fallback": {
       "wikipediaSource": "韩国文化百科",
@@ -3643,9 +4348,107 @@
     "mobile": {
       "globalInsights": "全球洞察",
       "articlesToday": "今日 {{count}} 篇",
-      "swipeHint": "左右滑动"
+      "swipeHint": "左右滑动",
+      "privateUploads": "Only visible to you"
     },
-    "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）"
+    "footer": "数据来自 Convex newsIngestion:getUserFeed（阅读后 24 小时自动刷新，手动刷新每日最多 3 次）",
+    "noContent": "暂时还没有可阅读内容",
+    "tabs": {
+      "all": "全部",
+      "pictureBooks": "绘本",
+      "news": "新闻",
+      "epubs": "书库"
+    },
+    "meta": {
+      "reading": "阅读",
+      "minutes": "分钟",
+      "pages": "页"
+    },
+    "epubs": {
+      "title": "我的书库",
+      "upload": "上传 EPUB",
+      "privateLibrary": "私有书库",
+      "loginPrompt": "登录后管理你的私有书库...",
+      "empty": "书库为空",
+      "emptyPrompt": "导入你的第一本 EPUB...",
+      "uploadNow": "立即上传"
+    },
+    "reader": {
+      "notFoundTitle": "书籍未找到",
+      "notFoundBody": "该电子书可能已被移除，或者您没有访问权限。",
+      "settings": {
+        "title": "阅读设置",
+        "fontSize": "字号",
+        "theme": "主题"
+      }
+    },
+    "library": {
+      "shareCopied": "分享链接已复制",
+      "shareFailed": "当前无法分享这本书。",
+      "shareDisabled": "分享链接已关闭",
+      "shareDisableFailed": "当前无法关闭分享。",
+      "title": "经典阅读",
+      "subtitle": "轮换展示一篇 Wikipedia 精选内容，并整合社区 EPUB 上传、个人草稿与审核流程。",
+      "myUploads": "我的上传",
+      "uploadCta": "上传 EPUB",
+      "myUploadsSubtitle": "查看草稿、处理中任务、被拒稿件和已发布 EPUB。",
+      "emptyMyUploads": "你还没有上传任何 EPUB。",
+      "chapterCount": "{{count}} 章",
+      "openReader": "打开阅读器",
+      "shareLink": "分享链接",
+      "stopSharing": "停止分享",
+      "wikipediaSpotlight": "Wikipedia 聚焦",
+      "wikipediaTitle": "精选档案推荐",
+      "previousSpotlight": "上一条推荐",
+      "nextSpotlight": "下一条推荐",
+      "wikipediaSourceFallback": "Wikipedia",
+      "featuredToday": "今日推荐",
+      "read": "阅读",
+      "wikipediaEmpty": "暂时没有可用的 Wikipedia 精选内容。",
+      "privateLabel": "私有 EPUB 书库",
+      "privateTitle": "仅你本人和被分享的人可见",
+      "privateLogin": "登录后即可查看你的私有 EPUB 书库并创建分享链接。",
+      "privateEmpty": "还没有私有 EPUB。点击上方按钮上传你的第一本书。",
+      "descriptionFallback": "打开阅读器即可查看章节目录并开始阅读。",
+      "wordCount": "{{count}} 词",
+      "copyShareLink": "复制分享链接",
+      "shareShort": "分享",
+      "stopShareShort": "停止"
+    },
+    "upload": {
+      "errors": {
+        "invalidExtension": "请选择 EPUB 文件（.epub）。",
+        "unsupportedType": "仅支持 EPUB 文件。",
+        "emptyFile": "所选文件为空。",
+        "fileTooLarge": "EPUB 文件必须小于 100MB。",
+        "fileRequired": "请选择一个 EPUB 文件。",
+        "titleAuthorRequired": "标题和作者为必填项。",
+        "uploadFailed": "上传 EPUB 失败。"
+      },
+      "title": "上传 EPUB",
+      "subtitle": "上传 EPUB 后，我们会解析章节、构建阅读器并加入审核队列。",
+      "action": "上传",
+      "supportedFormat": "支持格式：EPUB。上传后文件会被解析，并以草稿形式保存。",
+      "fileLabel": "EPUB 文件",
+      "uploading": "上传中 {{progress}}%",
+      "chooseFile": "选择 EPUB 文件",
+      "maxSize": "最大 100MB",
+      "titleLabel": "标题",
+      "authorLabel": "作者",
+      "descriptionLabel": "简介",
+      "languageLabel": "语言",
+      "languages": {
+        "en": "英语",
+        "ko": "韩语",
+        "zh": "中文",
+        "vi": "越南语",
+        "mn": "蒙古语",
+        "ja": "日语"
+      },
+      "tagsLabel": "标签",
+      "tagsPlaceholder": "添加标签",
+      "submit": "上传书籍"
+    }
   },
   "pictureBookReader": {
     "audioErrorPlaybackFailed": "这句话的音频播放失败。",
@@ -3693,18 +4496,23 @@
     "aiMeaningFallback": "AI 释义",
     "meta": {
       "words": "{{count}} 字",
-      "translationTarget": "翻译目标：{{language}}"
+      "translationTarget": "翻译目标：{{language}}",
+      "unknownSource": "未知来源",
+      "dateUnavailable": "日期不可用",
+      "wordCount": "词"
     },
     "toolbar": {
       "lookup": "查词",
       "note": "笔记",
       "saveToVocab": "存入生词本",
       "saveAsQuoteNote": "保存为句子笔记",
-      "close": "关闭"
+      "close": "关闭",
+      "explain": "解析"
     },
     "tabs": {
       "ai": "AI 分析",
-      "notes": "词典/笔记"
+      "notes": "词典/笔记",
+      "explain": "解析"
     },
     "tts": {
       "play": "朗读",
@@ -3743,7 +4551,8 @@
       "unknownPos": "词性待判断",
       "example": "例句",
       "note": "提示",
-      "noResult": "未找到可用释义。"
+      "noResult": "未找到可用释义。",
+      "save": "保存单词"
     },
     "notes": {
       "title": "笔记",
@@ -3763,7 +4572,28 @@
       "aiDictionaryFailed": "AI 释义失败",
       "dictionaryLookupFailed": "词典查询失败",
       "noteSyncFailed": "笔记同步 Notebook 失败"
-    }
+    },
+    "controls": {
+      "fontSize": "字号",
+      "speaking": "朗读中...",
+      "speak": "朗读",
+      "hideTranslation": "隐藏翻译",
+      "showTranslation": "显示翻译"
+    },
+    "explain": {
+      "targetSentence": "目标句子",
+      "noSelection": "尚未选择句子。",
+      "loading": "正在分析句子结构...",
+      "error": "解析失败",
+      "translation": "自然译文",
+      "vocabulary": "重点词汇",
+      "grammar": "语法点",
+      "saved": "已保存到笔记本！",
+      "saveAll": "保存到笔记本并加入复习",
+      "title": "句子解析"
+    },
+    "startReading": "开始阅读",
+    "markAsRead": "标记为已读"
   },
   "reviewPage": {
     "card": {
@@ -3771,7 +4601,8 @@
       "wordsDue": "{{count}} 个待复习",
       "description": "通过为您量身定制的间隔重复系统，强化您的长期记忆。",
       "estimatedTime": "预计时间: ~{{min}} 分钟",
-      "start": "开始复习"
+      "start": "开始复习",
+      "recommendedToday": "Recommended today: ${recommendedCount} words"
     },
     "dashboard": {
       "title": "每日复习",
@@ -3811,6 +4642,12 @@
       "mastered": "已掌握",
       "empty_due": "没有待复习的单词！做得好。",
       "empty_mastered": "已掌握的单词列表将显示在这里。"
+    },
+    "sidebar": {
+      "views": "浏览量",
+      "dailyHint": "先从到期队列开始",
+      "quickMode": "快速复习",
+      "subtitle": "把你的复习队列控制在可管理范围内"
     }
   },
   "footer": {
@@ -3862,5 +4699,336 @@
   },
   "mediaHub": {
     "subtitle": "视频、播客与阅读"
+  },
+  "time": {
+    "now": "现在"
+  },
+  "dailyChallenge": {
+    "label": "今日挑战",
+    "claimed": "奖励已领取",
+    "claim": "领取奖励",
+    "continue": "继续完成"
+  },
+  "community": {
+    "postSuccess": "发布成功",
+    "postError": "发布失败，请重试",
+    "composerPlaceholder": "分享你今天的学习心得...",
+    "like": "点赞",
+    "comment": "评论",
+    "mobile": {
+      "title": "学习伙伴",
+      "subtitle": "分享进度、提问交流，让学习不再是一个人的事。"
+    },
+    "tabs": {
+      "feed": "动态",
+      "rank": "排行"
+    },
+    "desktop": {
+      "addImage": "添加图片",
+      "commentPlaceholder": "写下你的回复...",
+      "reply": "回复",
+      "sharedPost": "分享了一条动态",
+      "events": {
+        "completedContent": "完成了课程内容",
+        "submittedExam": "提交了一次考试",
+        "topikScore": "更新了 TOPIK 成绩"
+      },
+      "tags": {
+        "grammar": "语法",
+        "listening": "听力",
+        "milestone": "里程碑",
+        "qa": "问答",
+        "resources": "资料",
+        "study": "学习",
+        "topik": "里程碑",
+        "vocab": "词汇"
+      },
+      "filters": {
+        "all": "全部",
+        "following": "关注",
+        "milestones": "里程碑",
+        "qa": "问答",
+        "resources": "资料分享"
+      },
+      "composerPlaceholder": "分享你的学习过程...",
+      "studyCard": "学习卡",
+      "publish": "发布动态",
+      "noActivity": "探索学习之路",
+      "like": "赞",
+      "comment": "评论",
+      "share": "分享"
+    }
+  },
+  "friends": {
+    "requestSent": "已发送申请",
+    "alreadyFriends": "已经是好友",
+    "actionFailed": "操作失败，请稍后重试",
+    "searchTitle": "寻找学习伙伴",
+    "searchPlaceholder": "按姓名或邮箱搜索",
+    "isFriend": "好友",
+    "sent": "已发送",
+    "add": "添加"
+  },
+  "subscription": {
+    "manage": {
+      "access": "权益",
+      "account": "账号",
+      "actions": {
+        "dashboard": "打开首页",
+        "profile": "前往设置"
+      },
+      "active": "已生效",
+      "aiCredits": "AI 点数",
+      "badge": "订阅管理",
+      "billingHelp": {
+        "body": "如果你需要账单、发票或支付方式方面的帮助，可以联系支持团队。",
+        "title": "账单帮助"
+      },
+      "checking": "检查中",
+      "checkingSubtitle": "正在同步当前账号的最新订阅状态。",
+      "checkingTitle": "正在检查你的会员状态",
+      "daysRemaining": "剩余 {{count}} 天",
+      "enabled": "已开启",
+      "entitlements": {
+        "ai": {
+          "body": "无限使用 AI 写作评分、句子解析和智能学习辅助。",
+          "title": "AI 学习工具"
+        },
+        "course": {
+          "body": "解锁与你当前方案对应的全部高级课程、练习和考试内容。",
+          "title": "课程权益"
+        },
+        "export": {
+          "body": "导出 PDF、学习清单和可打印的复习资料。",
+          "title": "导出工具"
+        },
+        "media": {
+          "body": "解锁完整播客、视频播放控制和高级阅读媒体功能。",
+          "title": "媒体权益"
+        }
+      },
+      "expiryFallback": "无到期日",
+      "lifetimeExpiry": "终身有效",
+      "plan": "方案",
+      "renewal": "续费",
+      "subtitle": "查看会员已解锁的全部能力，并保持账单状态同步。",
+      "sync": "同步会员状态",
+      "syncError": "同步会员状态失败，请稍后重试。",
+      "syncing": "同步中...",
+      "title": "你的会员已生效",
+      "unlimited": "不限量"
+    }
+  },
+  "media": {
+    "bilingual": "双语",
+    "sourceOnly": "原文",
+    "continueListening": "继续收听",
+    "videoCountLabel": "{{count}} 节课程",
+    "videoEmptyHint": "试试其他等级，或重置筛选来浏览完整课程库。"
+  },
+  "epub": {
+    "upload": {
+      "title": "导入您的私人书库",
+      "description": "上传 EPUB 格式的电子书，我们将为您自动解析章节，并提供沉浸式的阅读体验。所有书籍仅存放在您的私人书库中。",
+      "features": {
+        "parsing": {
+          "title": "章节智能解析",
+          "desc": "上传后系统将自动识别书籍目录与结构"
+        },
+        "reader": {
+          "title": "个性化阅读器",
+          "desc": "支持多种配色方案、字号与排版调节"
+        },
+        "sync": {
+          "title": "多端进度同步",
+          "desc": "在手机与电脑间无缝切换阅读进度"
+        }
+      }
+    }
+  },
+  "topikWriting": {
+    "session": {
+      "examNotFound": "找不到这套写作试题。",
+      "startFailed": "当前无法开始这场写作考试。",
+      "loadingExam": "正在准备写作考试...",
+      "q51Instruction": "请根据上下文完成填空，使全文自然完整。",
+      "q52Instruction": "请根据题目要求完成填空。",
+      "q53Instruction": "请根据下图写一篇说明文（200-300 字）。",
+      "q54Instruction": "请围绕下列主题写一篇议论文（400-700 字）。",
+      "submitFailed": "当前无法提交这场写作考试。",
+      "charsUnit": "字",
+      "remainingChars": "剩余 {{count}} 字",
+      "answerArea": "作答区",
+      "questionX": "第 {{questionNumber}} 题",
+      "fillBlank": "填空题",
+      "graphEssay": "图表作文",
+      "opinionEssay": "议论文",
+      "answerPlaceholder": "在这里输入你的答案...",
+      "characterCount": "{{count}} 字",
+      "fillBlankPaperTitle": "填空作答（㉠ / ㉡）",
+      "fillBlankOneSentence": "建议每个空写一句完整句子",
+      "fillBlankHint": "请用完整句子填写 ㉠ 和 ㉡。",
+      "fillBlankA": "在此填写 ㉠",
+      "fillBlankB": "在此填写 ㉡",
+      "points": "分",
+      "exampleBox": "示例 / 语境",
+      "saving": "保存中...",
+      "saved": "已保存",
+      "saveError": "保存失败",
+      "saveIdle": "自动保存",
+      "mobileHeaderSubtitle": "第 {{activeQuestion}} 题 · 已答 {{answeredCount}}/{{totalQuestions}}",
+      "time": "时间",
+      "progress": "进度",
+      "submitButton": "提交",
+      "submitConfirmTitle": "确认提交考试？",
+      "submitConfirmDesc": "你已完成 {{answeredCount}}/{{totalQuestions}} 题。提交后将无法修改答案。",
+      "continueForm": "继续作答",
+      "submitting": "提交中...",
+      "confirmSubmit": "确认提交",
+      "exitConfirmTitle": "确认退出考试？",
+      "exitConfirmDesc": "退出后将返回上一页，当前作答进度会保留。",
+      "exiting": "退出中...",
+      "maxLength": "最多 {{maxLength}} 字",
+      "wongojiAnswer": "稿纸作答",
+      "desktopReminderAutosave": "你作答时草稿会自动保存。顶部和侧边栏中的保存状态仅用于显示。",
+      "desktopReminderFlow": "51-52 题更看重简洁完整，53-54 题更看重结构与表达。",
+      "desktopReminderFocus": "该侧栏不会改写你的答案，只负责展示时间、状态与导航。",
+      "desktopWorkspaceTitle": "写作工作区",
+      "desktopWorkspaceSummaryLong": "左侧看题，右侧在稿纸上作答。",
+      "desktopWorkspaceSummaryShort": "左侧看题，右侧填写答案。",
+      "promptBoard": "题目面板",
+      "desktopPromptBoardLong": "作答时保持题目可见。",
+      "desktopPromptBoardShort": "先读题，再一次性完成两个空。",
+      "shortFormMode": "短题模式",
+      "writingSheet": "写作稿纸",
+      "responseSlots": "作答栏",
+      "answerSheet": "答题纸",
+      "desktopAnswerSummaryWongoji": "直接在稿纸上完成草稿。",
+      "desktopAnswerSummaryFillCompact": "一次性完成两个空。",
+      "completed": "已完成",
+      "current": "当前",
+      "pending": "待完成",
+      "quickChecks": "快速检查",
+      "submittedTitle": "提交成功",
+      "submittedDesc": "已完成 {{answeredCount}} / {{totalQuestions}} 题，正在等待 AI 评估...",
+      "desktopQuestionMeta": "第 {{questionNumber}} 题 · {{questionTypeLabel}} · {{score}} 分",
+      "collapseImage": "收起图片",
+      "expandImage": "展开图片",
+      "examStatus": "考试状态",
+      "pointsSummary": "总计 {{total}} 分",
+      "saveState": "保存状态",
+      "questionNavigator": "题目导航"
+    },
+    "title": "TOPIK II Writing",
+    "report": {
+      "back": "返回",
+      "evaluatingTitle": "AI 正在评分...",
+      "evaluatingDesc": "正在依据 TOPIK 官方评分标准分析，通常需要 30-60 秒。",
+      "dimTask": "任务完成度",
+      "dimStructure": "展开与结构",
+      "dimLanguage": "语言运用",
+      "dimWongoji": "稿纸格式",
+      "retriggering": "重新评分中...",
+      "retriggerCooldown": "{{count}} 秒后可重试",
+      "retrigger": "重新评估",
+      "maxScore": "满分 {{maxScore}}",
+      "scoreLabel": "得分：",
+      "dimScores": "维度分数",
+      "originalText": "你的原始答案",
+      "notAnswered": "（未作答）",
+      "aiCorrected": "AI 优化版本",
+      "noCorrection": "（无修正版）",
+      "feedback": "整体反馈",
+      "title": "写作评估报告",
+      "loading": "正在加载评估结果...",
+      "loadingError": "加载评估失败，请刷新页面重试。",
+      "retryFailed": "重试失败，请稍后再试。",
+      "status": "状态",
+      "evaluatingShort": "AI 评分中",
+      "timeFormat": "{{min}}分 {{sec}}秒",
+      "passExcellent": "优秀 🎉",
+      "passGood": "通过 ✅",
+      "passNeedsWork": "仍需提升 📚",
+      "subtitle": "TOPIK II 写作 · AI 评估",
+      "totalScore": "总分：",
+      "timeElapsed": "耗时：",
+      "aiDone": "AI 评估完成",
+      "overallAnalysis": "整体维度分析",
+      "questionFeedback": "分题详细反馈"
+    }
+  },
+  "qa": {
+    "askQuestion": "提问",
+    "title": "问答",
+    "noQuestions": "还没有问题，来做第一个提问的人吧！",
+    "sidebarHint": "分享你的韩语学习问题，也可以通过回答帮助其他学习者。",
+    "backToList": "返回问答列表",
+    "selectTopic": "选择主题",
+    "questionTitle": "问题标题",
+    "questionTitlePlaceholder": "你想了解哪些韩语内容？",
+    "questionContent": "详情",
+    "questionContentPlaceholder": "详细描述你的问题...",
+    "cancel": "取消",
+    "submit": "提交",
+    "tabFeed": "动态",
+    "tabQA": "问答",
+    "profileNotFound": "未找到该资料。",
+    "communityProfile": "社区资料",
+    "questionsAsked": "提问数",
+    "answersGiven": "回答数",
+    "acceptanceRate": "采纳率",
+    "totalVotes": "票数",
+    "recentQuestions": "最近问题",
+    "noRecentQuestions": "还没有公开问题。",
+    "answersOne": "条回答",
+    "recentAnswers": "最近回答",
+    "noRecentAnswers": "还没有公开回答。",
+    "accepted": "已采纳",
+    "editQuestion": "编辑问题",
+    "deleteQuestion": "删除问题",
+    "report": "举报",
+    "openAuthorProfile": "查看 ${question.author.name} 的资料",
+    "answersZero": "还没有回答",
+    "answers": "${question.answers.length} 条回答",
+    "editQuestionDescription": "更新这个问题的标题、主题和详情。",
+    "saveEdit": "保存修改",
+    "deleteQuestionConfirm": "这将从问答板块中移除整条讨论。",
+    "writeAnswer": "写下你的回答...",
+    "submitAnswer": "提交回答",
+    "searchPlaceholder": "搜索问题...",
+    "sortRecent": "最新",
+    "sortTop": "热门",
+    "sortUnanswered": "未回答",
+    "edited": "已编辑",
+    "unaccept": "取消采纳",
+    "accept": "采纳",
+    "editAnswer": "编辑回答",
+    "deleteAnswer": "删除回答",
+    "deleteAnswerConfirm": "这条回答将从话题中移除。",
+    "reportSuccess": "举报已提交",
+    "reportFailed": "提交举报失败",
+    "reportTitle": "举报内容",
+    "reportDescription": "告诉我们为什么这条内容需要由审核团队复查。",
+    "reportDetailsPlaceholder": "补充说明（可选）",
+    "submitReport": "提交举报",
+    "allTopics": "全部主题"
+  },
+  "add": "添加",
+  "viewAll": "View All",
+  "words": "Words",
+  "tabs": {
+    "mine": "My Courses"
+  },
+  "weakPoints": {
+    "title": "Focus areas"
+  },
+  "mobileVocabDashboard": {
+    "memoryEmpty": "连续复习 2 天后，这里会显示你的记忆趋势。",
+    "dueReviews": "待复习",
+    "retention30d": "30天保持率",
+    "focusAreas": "重点攻克",
+    "weakGrammar": "需要回顾的语法",
+    "weakVocab": "容易遗忘的单词",
+    "lapseCount": "{{count}} 次遗忘 · {{words}} 个单词"
   }
 }

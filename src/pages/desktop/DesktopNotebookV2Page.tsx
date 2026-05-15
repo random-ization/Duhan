@@ -13,7 +13,7 @@ import type { SearchItem } from '../NotebookV2Page';
 type NotebookCardTone = 'butter' | 'pink' | 'crimson' | 'lilac' | 'sky';
 
 export default function DesktopNotebookV2Page() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const navigate = useLocalizedNavigate();
 
   const [renderTime] = useState(() => Date.now());

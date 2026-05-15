@@ -51,6 +51,7 @@ interface MobileReadingArticlePageProps {
   noteColor: NoteColor;
   setNoteColor: (color: NoteColor) => void;
   onLookupSelection: () => void;
+  onExplainSelection: () => void;
   onSaveSelectionWord: (text: string) => Promise<void>;
   startNoteFromSelection: () => void;
   setSelectionToolbar: React.Dispatch<React.SetStateAction<SelectionToolbarState>>;
@@ -93,6 +94,7 @@ export default function MobileReadingArticlePage({
   noteColor,
   setNoteColor,
   onLookupSelection,
+  onExplainSelection,
   onSaveSelectionWord,
   startNoteFromSelection,
   setSelectionToolbar,
@@ -195,6 +197,7 @@ export default function MobileReadingArticlePage({
         noteColor={noteColor}
         setNoteColor={setNoteColor}
         onLookupSelection={onLookupSelection}
+        onExplainSelection={onExplainSelection}
         onSaveSelectionWord={onSaveSelectionWord}
         startNoteFromSelection={startNoteFromSelection}
         onClose={() => setSelectionToolbar((prev: SelectionToolbarState) => ({ ...prev, visible: false }))}

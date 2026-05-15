@@ -1517,3 +1517,92 @@ export const getRecentActivity = query({
     };
   },
 });
+
+export const runDataAudit = query({
+  args: {},
+  handler: async (ctx) => {
+    // await requireAdmin(ctx);
+    interface AuditSection {
+      total: number;
+      missingFields: number;
+      duplicates: number;
+      duplicateItems: string[];
+    }
+    const results = {
+      grammar: {
+        total: 0,
+        missingFields: 0,
+        duplicates: 0,
+        duplicateItems: [] as string[],
+      } as AuditSection,
+      words: {
+        total: 0,
+        missingFields: 0,
+        duplicates: 0,
+        duplicateItems: [] as string[],
+      } as AuditSection,
+      lemmas: {
+        total: 0,
+        hitRate: 0,
+      }
+    };
+
+    // 1. Audit Grammar Points (Sampled)
+    const grammarPoints = await ctx.db.query("grammar_points").take(1000);
+    results.grammar.total = grammarPoints.length;
+    
+    const patterns = new Set<string>();
+    for (const gp of grammarPoints) {
+      if (!gp.titleZh || !gp.summary || !gp.level) {
+        results.grammar.missingFields++;
+      }
+      if (patterns.has(gp.title)) {
+        results.grammar.duplicates++;
+        results.grammar.duplicateItems.push(gp.title);
+      }
+      patterns.add(gp.title);
+    }
+
+    // 2. Audit Words (Sampled)
+    const words = await ctx.db.query("words").take(1000);
+    results.words.total = words.length;
+    
+    const lemmas = new Set<string>();
+    for (const w of words) {
+      if (!w.word || !w.meaning || !w.partOfSpeech) {
+        results.words.missingFields++;
+      }
+      
+      const lemmaKey = `${w.word}_${w.partOfSpeech}`;
+      if (lemmas.has(lemmaKey)) {
+        results.words.duplicates++;
+        results.words.duplicateItems.push(lemmaKey);
+      }
+      lemmas.add(lemmaKey);
+    }
+
+    // 3. Lemma hit rate in existing explanations (sample)
+    const explanations = await ctx.db.query("sentence_explanations").take(20);
+    let totalTokens = 0;
+    let hitTokens = 0;
+    
+    // Check lemmas individually since we can't load the whole word table
+    for (const exp of explanations) {
+      const payload = exp.payload as { tokens?: { lemma?: string }[] };
+      if (payload?.tokens) {
+        for (const token of payload.tokens) {
+          totalTokens++;
+          if (token.lemma) {
+             const match = await ctx.db.query("words").withIndex("by_word", q => q.eq("word", token.lemma)).first();
+             if (match) hitTokens++;
+          }
+        }
+      }
+    }
+    
+    results.lemmas.total = totalTokens;
+    results.lemmas.hitRate = totalTokens > 0 ? hitTokens / totalTokens : 0;
+
+    return results;
+  }
+});

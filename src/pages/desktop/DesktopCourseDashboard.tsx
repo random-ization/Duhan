@@ -14,6 +14,8 @@ import { VOCAB, TOPIK, DAILY_CHALLENGES } from '../../utils/convexRefs';
 
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 
+import type { DailyTaskPlanDto } from '../../../convex/dailyTask/shared';
+
 interface CourseProgress {
   courseId?: string;
   courseName?: string;
@@ -57,14 +59,16 @@ export default function DesktopCourseDashboard({
   reviewSummary,
   dailyPhrase,
   stats,
+  dailyTaskPlan: _dailyTaskPlan,
 }: {
   courseProgress: CourseProgress | null;
   reviewSummary: ReviewSummary | null;
   dailyPhrase: DailyPhrase | null;
   stats: LearnerStatsDto | null;
+  dailyTaskPlan: DailyTaskPlanDto | null;
 }) {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
   const dashboardLanguage = i18n.language || 'en';
   const navigate = useLocalizedNavigate();
   const [now] = React.useState(() => Date.now());

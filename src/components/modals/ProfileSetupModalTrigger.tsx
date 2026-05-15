@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { useQuery } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGlobalModal } from '../../contexts/GlobalModalContext';
 import { safeGetSessionStorageItem } from '../../utils/browserStorage';
 import { matchesMediaQuery } from '../../utils/mediaQuery';
+import { ONBOARDING } from '../../utils/convexRefs';
 
 const PROFILE_PROMPT_DISMISS_KEY = 'profile_setup_prompt_dismissed';
 
@@ -18,11 +20,17 @@ export function ProfileSetupModalTrigger({
   const shownRef = useRef(false);
   const isProfileRoute = pathWithoutLang === '/profile' || pathWithoutLang.startsWith('/profile/');
 
+  // Query the onboarding state to decide whether to trigger the modal.
+  // Falls back to name-missing check while the query is loading.
+  const onboardingState = useQuery(ONBOARDING.getState, user ? {} : 'skip');
+
   useEffect(() => {
     if (!user) return;
     if (isProfileRoute) return;
     if (shownRef.current) return;
     if (isOpen('profile-setup')) return;
+    
+    // Don't show on small mobile viewports (bottom sheet / full page preferred)
     if (typeof window !== 'undefined' && matchesMediaQuery('(max-width: 767px)')) return;
 
     const dismissed =
@@ -33,12 +41,20 @@ export function ProfileSetupModalTrigger({
       return;
     }
 
-    const nameMissing = !user.name?.trim();
-    if (!nameMissing) return;
+    // A user "has a profile" if they have a name that isn't just their email address.
+    // If they have a real name, we don't need to show the 'Complete Profile' (name/avatar) prompt.
+    const hasRealName = user.name && !user.name.includes('@');
+    if (hasRealName) {
+      shownRef.current = true;
+      return;
+    }
+
+    // Wait for onboarding state as a secondary signal, but the primary decision is based on user data
+    if (onboardingState === undefined) return;
 
     shownRef.current = true;
     showModal('profile-setup');
-  }, [isOpen, isProfileRoute, showModal, user]);
+  }, [isOpen, isProfileRoute, showModal, user, onboardingState]);
 
   return null;
 }

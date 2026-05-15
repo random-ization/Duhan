@@ -32,7 +32,7 @@ function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; t
 }
 
 export default function DesktopTopikWritingPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const [text, setText] = useState('');
   
   // Get writing prompt list

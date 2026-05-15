@@ -49,7 +49,7 @@ export default function DesktopReviewDashboardPage({
   navigate,
   t: passedT,
 }: DesktopReviewDashboardProps) {
-  const { t: localT } = useTranslation();
+  const { t: localT } = useTranslation('public');
   const t = passedT || localT;
   // 获取用户错题列表
   const mistakes = useQuery(qRef<{ limit?: number }, Mistake[]>('user:getMistakes'), { limit: 200 });

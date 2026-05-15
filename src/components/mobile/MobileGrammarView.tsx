@@ -121,7 +121,7 @@ export default function MobileGrammarView({
             type="text"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            placeholder={t('search', { defaultValue: 'Search patterns or usages...' })}
+            placeholder={t('search.placeholder', { defaultValue: 'Search patterns or usages...' })}
             className="w-full h-12 rounded-[1.25rem] pl-11 pr-4 text-sm font-bold outline-none transition-all"
             style={{
               background: 'rgba(255,255,255,0.9)',

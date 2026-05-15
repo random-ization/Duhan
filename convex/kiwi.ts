@@ -3,6 +3,8 @@ import { action, internalAction } from './_generated/server';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { v } from 'convex/values';
 import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
@@ -27,9 +29,8 @@ type PersistedSentenceToken = {
 const require = createRequire(import.meta.url);
 
 const DEFAULT_MODEL_URLS = [
-  'https://github.com/bab2min/Kiwi/releases/download/v0.22.2/kiwi_model_v0.22.2_cong_base.tgz',
-  'https://github.com/bab2min/Kiwi/releases/download/v0.22.1/kiwi_model_v0.22.1_cong_base.tgz',
-  'https://github.com/bab2min/Kiwi/releases/download/v0.21.0/kiwi_model_v0.21.0_cong_base.tgz',
+  'https://github.com/bab2min/Kiwi/releases/download/v0.22.1/kiwi_model_v0.22.1_base.tgz',
+  'https://github.com/bab2min/Kiwi/releases/download/v0.22.2/kiwi_model_v0.22.2_base.tgz',
 ];
 
 const MODEL_VERSION = 'kiwi-cong-0.22.x';
@@ -204,7 +205,7 @@ function parseTarGz(buffer: ArrayBuffer): KiwiModelFiles {
     if (!baseName) continue;
     files[baseName] = new Uint8Array(content);
   }
-
+  log.info(`Extracted model files: ${Object.keys(files).join(', ')}`);
   return files;
 }
 
@@ -236,9 +237,40 @@ async function loadModelFiles(): Promise<KiwiModelFiles> {
   return parseTarGz(tarGz);
 }
 
+async function getWasmPath(): Promise<string> {
+  // Use a predictable path in /tmp for Lambda environments
+  const wasmTmpPath = path.join('/tmp', 'kiwi-wasm-0.22.1.wasm');
+
+  // If it already exists in /tmp, we can reuse it
+  if (fs.existsSync(wasmTmpPath)) return wasmTmpPath;
+
+  // Try to find it in node_modules locally (works in local dev server or if node_modules is preserved)
+  try {
+    const localWasm = require.resolve('kiwi-nlp/dist/kiwi-wasm.wasm');
+    if (fs.existsSync(localWasm)) {
+      log.info(`Using local Kiwi WASM: ${localWasm}`);
+      return localWasm;
+    }
+  } catch (e) {
+    // require.resolve might fail in bundled environments, which is expected
+  }
+
+  // Fallback: download from CDN if not found locally
+  log.info('Downloading Kiwi WASM from CDN...');
+  const wasmUrl = 'https://unpkg.com/kiwi-nlp@0.22.1/dist/kiwi-wasm.wasm';
+  const response = await fetch(wasmUrl);
+  if (!response.ok) throw new Error(`Failed to download Kiwi WASM from ${wasmUrl}: ${response.statusText}`);
+
+  const buffer = await response.arrayBuffer();
+  fs.writeFileSync(wasmTmpPath, Buffer.from(buffer));
+  log.info(`Kiwi WASM saved to ${wasmTmpPath}`);
+
+  return wasmTmpPath;
+}
+
 export async function getKiwi(): Promise<Kiwi> {
   kiwiPromise ??= (async () => {
-    const wasmPath = require.resolve('kiwi-nlp/dist/kiwi-wasm.wasm');
+    const wasmPath = await getWasmPath();
     const builder = await KiwiBuilder.create(wasmPath);
     modelFilesPromise ??= loadModelFiles();
     const modelFiles = await modelFilesPromise;

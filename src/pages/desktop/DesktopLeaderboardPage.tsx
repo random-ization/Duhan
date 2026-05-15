@@ -15,7 +15,7 @@ const LEAGUE_COLORS: Record<string, string> = {
 };
 
 export default function DesktopLeaderboardPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const weeklyOverview = useQuery(LEADERBOARD.getWeeklyOverview, {});
   const weeklyTop = useQuery(LEADERBOARD.getWeeklyTop, { limit: 30 });
 

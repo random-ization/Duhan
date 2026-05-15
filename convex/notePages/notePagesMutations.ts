@@ -46,6 +46,8 @@ export const createPage = mutation({
     kind: v.string(),
     tags: v.array(v.string()),
     blocks: v.array(v.any()),
+    sourceModule: v.optional(v.string()),
+    noteType: v.optional(v.string()),
     sortOrder: v.optional(v.number()),
     parentPageId: v.optional(v.id('note_pages')),
   },
@@ -61,6 +63,8 @@ export const createPage = mutation({
       parentPageId: args.parentPageId,
       title: args.title,
       tags: args.tags,
+      sourceModule: args.sourceModule,
+      noteType: args.noteType,
       metadata: {
         kind: args.kind,
         notebookKey: args.notebookKey,

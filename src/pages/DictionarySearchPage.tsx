@@ -24,7 +24,6 @@ import {
   KsoftListRow,
 } from '../components/mobile/ksoft/KsoftMobilePrimitives';
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -115,17 +114,7 @@ export default function DictionarySearchPage() {
   );
 
   const searchDictionary = useAction(
-    aRef<
-      {
-        query: string;
-        translationLang?: string;
-        start?: number;
-        num?: number;
-        part?: string;
-        sort?: string;
-      },
-      SearchResult
-    >('dictionary:searchDictionary')
+    aRef<{ query: string; translationLang?: string; start?: number; num?: number; part?: string; sort?: string }, SearchResult>('dictionary:searchDictionary')
   );
 
   const getWordDetail = useAction(
@@ -207,6 +196,8 @@ export default function DictionarySearchPage() {
     }
     void runSearch(initialQuery);
   }, [initialQuery, runSearch, scope]);
+
+  
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,7 +346,7 @@ export default function DictionarySearchPage() {
                 opacity: isSearching || !query.trim() ? 0.45 : 1,
               }}
             >
-              {t('search', { defaultValue: 'Search' })}
+              {t('search.title', { defaultValue: 'Search' })}
             </button>
           </form>
 

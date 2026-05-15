@@ -52,7 +52,7 @@ function DRail({ kanji, title, action, children, pad = 14 }: {
 }
 
 export default function DesktopVideoPlayerPage() {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
   const { videoId } = useParams<{ videoId: string }>();
   const routerNavigate = useRouterNavigate();
   const { settings: globalSettings } = useGlobalSettings();

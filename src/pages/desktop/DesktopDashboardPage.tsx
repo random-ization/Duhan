@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useQuery } from 'convex/react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { useQuery, useMutation } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,9 +9,10 @@ import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
 import { UserAvatar } from '../../components/common';
 import { DRail } from '../../components/desktop/ui/DRail';
-import { qRef, NOTE_PAGES } from '../../utils/convexRefs';
+import { qRef, NOTE_PAGES, DAILY_TASK } from '../../utils/convexRefs';
 import { DesktopKsoftDashboardRail } from '../../components/desktop/DesktopKsoftDashboardRail';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
+import type { DailyTaskPlanDto, DailyTaskItemDto, DailyTaskKind } from '../../../convex/dailyTask/shared';
 import { UserTier, SubscriptionType } from '../../types';
 
 // 格式化学习时长
@@ -22,6 +23,192 @@ function formatStudyHours(minutes: number): string {
 // 格式化数字
 function formatNumber(n: number): string {
   return n.toLocaleString();
+}
+
+// --- 今日任务 Hanja / Tone 映射 ---
+const TASK_KIND_META: Record<DailyTaskKind, { k: string; tone: string }> = {
+  vocab_20: { k: '詞', tone: 'pink' },
+  grammar_drill: { k: '法', tone: 'mint' },
+  listening_10min: { k: '聽', tone: 'butter' },
+  typing_wpm: { k: '寫', tone: 'lilac' },
+  note_review: { k: '記', tone: 'sky' },
+};
+
+// --- DailyTaskCockpit ---
+function DailyTaskCockpit({
+  plan,
+  t,
+  navigate,
+  onComplete,
+}: {
+  plan: DailyTaskPlanDto;
+  t: TFunction;
+  navigate: ReturnType<typeof useLocalizedNavigate>;
+  _onComplete: (taskId: string) => void;
+}) {
+  const allDone = plan.status === 'completed';
+  const completedCount = plan.tasks.filter(task => task.completed).length;
+  const totalCount = plan.tasks.length;
+
+  return (
+    <DesktopCard pad={0} className="mb-[22px] overflow-hidden">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-[20px] py-[14px] border-b"
+        style={{
+          borderColor: 'var(--color-k-line)',
+          background: allDone
+            ? 'linear-gradient(135deg, var(--color-k-mint)30 0%, var(--color-k-bg)00 100%)'
+            : 'linear-gradient(135deg, var(--color-k-butter)20 0%, var(--color-k-bg)00 100%)',
+        }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="font-k-serif text-[16px] font-medium text-k-crimson">任</span>
+          <span className="text-[14px] font-extrabold text-k-ink">
+            {t('dashboard.desktop.dailyTasks', { defaultValue: "Today's Tasks" })}
+          </span>
+          <DesignChip tone={allDone ? 'mint' : 'muted'} size="sm">
+            {completedCount}/{totalCount}
+          </DesignChip>
+        </div>
+        <div className="flex items-center gap-2">
+          {allDone && (
+            <span className="text-[11px] font-black text-k-mint-deep tracking-wide">
+              {t('dashboard.desktop.allDone', { defaultValue: '✓ ALL DONE' })}
+            </span>
+          )}
+          <span className="text-[10px] font-bold text-k-sub">{plan.date}</span>
+        </div>
+      </div>
+
+      {/* Global progress bar */}
+      <div className="h-[3px] w-full bg-k-line">
+        <div
+          className="h-full transition-all duration-700 ease-out"
+          style={{
+            width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
+            background: allDone ? 'var(--color-k-mint-deep)' : 'var(--color-k-crimson)',
+          }}
+        />
+      </div>
+
+      {/* Task items */}
+      {plan.tasks.map((task, i) => (
+        <DailyTaskRow
+          key={task.taskId}
+          task={task}
+          isLast={i === plan.tasks.length - 1}
+          navigate={navigate}
+          onComplete={onComplete}
+        />
+      ))}
+
+      {/* Review summary footer */}
+      {plan.reviewSummary && (plan.reviewSummary.dueVocabCount || plan.reviewSummary.weakPointSummary) && (
+        <div
+          className="px-[20px] py-[10px] border-t flex items-center gap-3 text-[11px] font-semibold text-k-sub"
+          style={{ borderColor: 'var(--color-k-line)', background: 'var(--color-k-bg2)' }}
+        >
+          {plan.reviewSummary.dueVocabCount != null && plan.reviewSummary.dueVocabCount > 0 && (
+            <span>📚 {t('dashboard.desktop.dueVocab', { count: plan.reviewSummary.dueVocabCount, defaultValue: `${plan.reviewSummary.dueVocabCount} vocab due` })}</span>
+          )}
+          {plan.reviewSummary.dueNoteCount != null && plan.reviewSummary.dueNoteCount > 0 && (
+            <span>📝 {plan.reviewSummary.dueNoteCount} {t('dashboard.desktop.notesDue', { defaultValue: 'notes queued' })}</span>
+          )}
+          {plan.reviewSummary.weakPointSummary && (
+            <span className="ml-auto italic opacity-70 max-w-[280px] truncate" title={plan.reviewSummary.weakPointSummary}>
+              💡 {plan.reviewSummary.weakPointSummary}
+            </span>
+          )}
+        </div>
+      )}
+    </DesktopCard>
+  );
+}
+
+function DailyTaskRow({
+  task,
+  isLast,
+  navigate,
+  _onComplete,
+}: {
+  task: DailyTaskItemDto;
+  isLast: boolean;
+  navigate: ReturnType<typeof useLocalizedNavigate>;
+  _onComplete: (taskId: string) => void;
+}) {
+  const meta = TASK_KIND_META[task.kind] ?? { k: '?', tone: 'muted' };
+  const target = task.targetCount ?? 1;
+  const current = Math.min(task.currentCount ?? 0, target);
+  const pct = target > 0 ? Math.round((current / target) * 100) : 0;
+  const xp = typeof task.metadata?.rewardXp === 'number' ? task.metadata.rewardXp : 0;
+
+  return (
+    <div
+      className="flex items-center gap-3.5 px-[20px] py-[13px] transition-colors hover:bg-k-bg2 group"
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid var(--color-k-line)',
+        opacity: task.completed ? 0.65 : 1,
+      }}
+    >
+      {/* Icon */}
+      <HanjaSeal
+        c={meta.k}
+        size={36}
+        bg={task.completed ? 'var(--color-k-mint-deep)' : `var(--color-k-${meta.tone}-deep)`}
+        round={9}
+      />
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-[13px] font-extrabold text-k-ink ${task.completed ? 'line-through' : ''}`}>
+            {task.title}
+          </span>
+          {xp > 0 && (
+            <span className="text-[9px] font-black text-k-crimson tracking-wide">+{xp} XP</span>
+          )}
+        </div>
+        {task.description && (
+          <div className="text-[11px] font-semibold text-k-sub mt-0.5 line-clamp-1">
+            {task.description}
+          </div>
+        )}
+        {/* Progress bar */}
+        {target > 1 && (
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-[4px] flex-1 rounded-full bg-k-line overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${pct}%`,
+                  background: task.completed ? 'var(--color-k-mint-deep)' : 'var(--color-k-crimson)',
+                }}
+              />
+            </div>
+            <span className="text-[10px] font-black text-k-sub shrink-0">{current}/{target}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Action */}
+      {task.completed ? (
+        <span className="text-[14px] text-k-mint-deep font-black shrink-0">✓</span>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (task.linkPath) {
+              navigate(task.linkPath);
+            }
+          }}
+          className="shrink-0 rounded-lg bg-k-ink px-3 py-1.5 text-[10px] font-black text-k-bg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-k-ink/85"
+        >
+          GO →
+        </button>
+      )}
+    </div>
+  );
 }
 
 // 热力图数据组件 - 使用真实数据
@@ -85,7 +272,7 @@ function BadgesRail({ stats, t }: { stats: LearnerStatsDto | undefined, t: TFunc
 
 export default function DesktopDashboardPage() {
   const { user, logout } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
   const navigate = useLocalizedNavigate();
   const dashboardLanguage = i18n.language || 'en';
   const [now] = useState(() => Date.now());
@@ -95,6 +282,14 @@ export default function DesktopDashboardPage() {
   
   // 获取笔记统计数据
   const noteFacets = useQuery(NOTE_PAGES.listFacets, {});
+
+  // 获取今日任务计划
+  const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language: dashboardLanguage } : 'skip');
+  const updateTaskCompletion = useMutation(DAILY_TASK.updateTaskCompletion);
+
+  const handleTaskComplete = useCallback((taskId: string) => {
+    void updateTaskCompletion({ taskId, completed: true });
+  }, [updateTaskCompletion]);
 
   // 计算加入天数
   const daysJoined = useMemo(() => {
@@ -158,6 +353,16 @@ export default function DesktopDashboardPage() {
           </div>
         </div>
       </DesktopCard>
+
+      {/* Today's Tasks Cockpit */}
+      {dailyTaskPlan && dailyTaskPlan.tasks.length > 0 && (
+        <DailyTaskCockpit
+          plan={dailyTaskPlan}
+          t={t}
+          navigate={navigate}
+          onComplete={handleTaskComplete}
+        />
+      )}
 
       {/* 2-col: Library + Settings */}
       <div className="grid grid-cols-[1.3fr_1fr] gap-[18px]">
@@ -233,6 +438,52 @@ export default function DesktopDashboardPage() {
 
   const right = (
     <div>
+      {/* Review Status Rail */}
+      {dailyTaskPlan && (
+        <DRail kanji="復" title={t('dashboard.desktop.reviewStatus', { defaultValue: 'Review Status' })} pad={14}>
+          <div className="space-y-2.5">
+            {dailyTaskPlan.reviewSummary?.dueVocabCount != null && dailyTaskPlan.reviewSummary.dueVocabCount > 0 && (
+              <div
+                className="flex items-center gap-2.5 cursor-pointer rounded-lg px-2.5 py-2 transition-colors hover:bg-k-bg2"
+                onClick={() => navigate('/review')}
+              >
+                <HanjaSeal c="詞" size={28} bg="var(--color-k-pink-deep)" round={7} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-extrabold text-k-ink">{dailyTaskPlan.reviewSummary.dueVocabCount}</div>
+                  <div className="text-[9px] font-bold text-k-sub">{t('dashboard.desktop.vocabDueToday', { defaultValue: 'Vocab due today' })}</div>
+                </div>
+                <span className="text-[14px] text-k-sub-light">›</span>
+              </div>
+            )}
+            {dailyTaskPlan.reviewSummary?.dueNoteCount != null && dailyTaskPlan.reviewSummary.dueNoteCount > 0 && (
+              <div
+                className="flex items-center gap-2.5 cursor-pointer rounded-lg px-2.5 py-2 transition-colors hover:bg-k-bg2"
+                onClick={() => navigate('/notebook')}
+              >
+                <HanjaSeal c="記" size={28} bg="var(--color-k-butter-deep)" round={7} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-extrabold text-k-ink">{dailyTaskPlan.reviewSummary.dueNoteCount}</div>
+                  <div className="text-[9px] font-bold text-k-sub">{t('dashboard.desktop.notesQueued', { defaultValue: 'Notes queued' })}</div>
+                </div>
+                <span className="text-[14px] text-k-sub-light">›</span>
+              </div>
+            )}
+            {dailyTaskPlan.reviewSummary?.weakPointSummary && (
+              <div className="px-2.5 py-1.5 rounded-lg bg-k-bg2">
+                <div className="text-[10px] font-bold text-k-sub italic leading-relaxed">
+                  💡 {dailyTaskPlan.reviewSummary.weakPointSummary}
+                </div>
+              </div>
+            )}
+            {!dailyTaskPlan.reviewSummary?.dueVocabCount && !dailyTaskPlan.reviewSummary?.dueNoteCount && !dailyTaskPlan.reviewSummary?.weakPointSummary && (
+              <div className="text-center text-[11px] font-bold text-k-sub/50 py-2 italic">
+                {t('dashboard.desktop.nothingDue', { defaultValue: 'All caught up! 🎉' })}
+              </div>
+            )}
+          </div>
+        </DRail>
+      )}
+
       <DRail kanji="火" title={t('dashboard.desktop.weeklyActivity')} pad={14}>
         <HeatmapGrid stats={stats} />
         <div className="mt-2 flex justify-between text-[9px] font-bold text-k-sub">
@@ -266,4 +517,3 @@ export default function DesktopDashboardPage() {
     </div>
   );
 }
-

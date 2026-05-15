@@ -8,7 +8,7 @@ export type ReadingArticleSessionState = {
   scrollTop: number;
   fontSize: number;
   translationEnabled: boolean;
-  panelTab: 'ai' | 'notes';
+  panelTab: 'ai' | 'notes' | 'explain';
   activeWord: string;
   timestamp: number;
 };

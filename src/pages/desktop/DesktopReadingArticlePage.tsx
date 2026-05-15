@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { cn } from '../../lib/utils';
+import { ReadingSelectionToolbar } from '../reading/ReadingComponents';
+import type { SelectionToolbarState, NoteColor } from '../reading/types';
 
 type DesktopReadingArticleProps = {
   t: any;
@@ -32,6 +34,15 @@ type DesktopReadingArticleProps = {
   readingSidebarContent: any;
   onWordClick: (word: string) => void;
   activeWord: string;
+  selectionToolbar: SelectionToolbarState;
+  noteColor: NoteColor;
+  setNoteColor: (color: NoteColor) => void;
+  onLookupSelection: () => void;
+  onExplainSelection: () => void;
+  onSaveSelectionWord: (text: string) => Promise<void>;
+  startNoteFromSelection: () => void;
+  setSelectionToolbar: React.Dispatch<React.SetStateAction<SelectionToolbarState>>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 };
 
 // function DRail({ kanji, title, action, children, pad = 14 }: { kanji?: string; title: string; action?: string; children: React.ReactNode; pad?: number }) {
@@ -78,6 +89,15 @@ export default function DesktopReadingArticlePage({
   readingSidebarContent,
   onWordClick,
   activeWord,
+  selectionToolbar,
+  noteColor,
+  setNoteColor,
+  onLookupSelection,
+  onExplainSelection,
+  onSaveSelectionWord,
+  startNoteFromSelection,
+  setSelectionToolbar,
+  contentRef,
 }: DesktopReadingArticleProps) {
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -158,7 +178,7 @@ export default function DesktopReadingArticlePage({
 
       <main className="max-w-[1280px] mx-auto px-8 py-12 grid grid-cols-[1fr_340px] gap-12">
         {/* Main Content */}
-        <article className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <article ref={contentRef} className="animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="relative aspect-[21/9] rounded-[32px] overflow-hidden mb-12 shadow-k-sh-lg border border-k-line/5 bg-k-card">
             {resolvedArticle?.imageUrl ? (
               <img src={resolvedArticle.imageUrl} className="w-full h-full object-cover opacity-80" alt="" />
@@ -258,6 +278,18 @@ export default function DesktopReadingArticlePage({
           </div>
         </aside>
       </main>
+
+      <ReadingSelectionToolbar
+        t={t}
+        selectionToolbar={selectionToolbar}
+        noteColor={noteColor}
+        setNoteColor={setNoteColor}
+        onLookupSelection={onLookupSelection}
+        onExplainSelection={onExplainSelection}
+        onSaveSelectionWord={onSaveSelectionWord}
+        startNoteFromSelection={startNoteFromSelection}
+        onClose={() => setSelectionToolbar((prev: SelectionToolbarState) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 }

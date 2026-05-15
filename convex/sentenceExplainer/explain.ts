@@ -1,6 +1,7 @@
 'use node';
 
-import { action } from '../_generated/server';
+import { action, internalMutation, internalQuery } from '../_generated/server';
+import { api, internal } from '../_generated/api';
 import type { ActionCtx } from '../_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
@@ -704,6 +705,7 @@ Rules:
         promptTokens: usage?.prompt_tokens,
         completionTokens: usage?.completion_tokens,
         totalTokens: usage?.total_tokens,
+        costUsd: 0,
         durationMs: Date.now() - startedAt,
       });
 

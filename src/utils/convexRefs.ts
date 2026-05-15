@@ -13,6 +13,7 @@ import type {
 } from '../types/globalUserSettings';
 import type { LearnerStatsDto, CourseDashboardDto } from '../../convex/learningStats';
 import type { CommunityUserProfileDto } from '../../convex/userProfile';
+import type { DailyTaskPlanDto } from '../../convex/dailyTask/shared';
 
 export type NoArgs = Record<string, never>;
 
@@ -142,6 +143,84 @@ export const AI = {
       }>;
     } | null
   >('ai:adminClassifyTopikBySemantics'),
+};
+
+export const DAILY_TASK = {
+  getTodayPlan: qRef<{ language?: string }, DailyTaskPlanDto>('dailyTask:getTodayPlan'),
+  generateTodayPlan: mRef<{ language?: string }, DailyTaskPlanDto>('dailyTask:generateTodayPlan'),
+  updateTaskCompletion: mRef<
+    { taskId: string; completed: boolean; currentCount?: number },
+    DailyTaskPlanDto
+  >('dailyTask:updateTaskCompletion'),
+};
+
+export const ONBOARDING = {
+  getState: qRef<
+    Record<string, never>,
+    { profile: unknown | null; shouldTrigger: boolean; hasCompletedOnboarding: boolean; diagnosisCompleted: boolean }
+  >('onboarding:getState'),
+};
+export const SENTENCE_EXPLAINER = {
+  explainSentence: aRef<
+    {
+      sentence: string;
+      sentenceId?: string;
+      targetLanguage?: string;
+      source?: string;
+      sourceRefId?: string;
+      forceRefresh?: boolean;
+    },
+    {
+      success: boolean;
+      source?: string;
+      sourceRefId?: string;
+      explanationId?: string;
+      cacheHit?: boolean;
+      data?: any;
+      error?: string;
+    }
+  >('sentenceExplainer/explain:explainSentence'),
+  saveAssets: mRef<
+    {
+      explanationId: string;
+      saveSentence?: boolean;
+      selectedWords?: any[];
+      selectedGrammar?: any[];
+      createNotePage?: boolean;
+      enqueueForReview?: boolean;
+      noteTitle?: string;
+      source?: string;
+      sourceRefId?: string;
+    },
+    {
+      success: boolean;
+      source?: string;
+      savedSentenceId?: string;
+      notePageId?: string;
+      savedWordCount?: number;
+      savedGrammarCount?: number;
+      recentWords?: any[];
+    }
+  >('sentenceExplainer/save:saveAssets'),
+  getLatest: qRef<
+    {
+      sentenceId?: string;
+      textHash?: string;
+      targetLanguage?: string;
+    },
+    any
+  >('sentenceExplainer/query:getLatest'),
+  getSavedState: qRef<
+    {
+      explanationId: string;
+    },
+    {
+      hasSavedSentence: boolean;
+      savedGrammarCount: number;
+      savedWordCount: number;
+      notePageId: string | null;
+    }
+  >('sentenceExplainer/query:getSavedState'),
 };
 
 export const UNITS = {
@@ -441,6 +520,7 @@ export const VOCAB = {
       partOfSpeech?: string;
       context?: string;
       source?: string;
+      sourceRefId?: string;
     },
     void
   >('vocab:addToReview'),

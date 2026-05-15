@@ -578,6 +578,8 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index('by_title', ['title'])
+    .index('by_level', ['level'])
+    .index('by_type', ['type'])
     .index('by_postgresId', ['postgresId'])
     .index('by_searchKey', ['searchKey'])
     .searchIndex('search_title', { searchField: 'title' }),

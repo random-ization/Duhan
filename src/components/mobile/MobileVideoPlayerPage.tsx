@@ -378,7 +378,9 @@ export const MobileVideoPlayerPage: React.FC = () => {
               }}
             >
               <Languages size={14} />
-              {showTranslation ? '双语' : '原文'}
+              {showTranslation
+                ? t('media.bilingual', { defaultValue: 'Bilingual' })
+                : t('media.sourceOnly', { defaultValue: 'Source only' })}
             </button>
             <button
               type="button"

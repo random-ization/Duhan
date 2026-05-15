@@ -49,8 +49,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // reports `user === null`, so we fall through to the redirect below.
   const isAuthenticated = !loading && user !== null;
   useQuery({
-    queryKey: ['i18n', 'namespace', 'app', language],
-    queryFn: () => ensureLocaleNamespaces(language, ['app']),
+    queryKey: ['i18n', 'namespace', 'protected', language],
+    queryFn: () => ensureLocaleNamespaces(language, ['public', 'app']),
     enabled: isAuthenticated && Boolean(language),
     staleTime: Infinity,
     gcTime: Infinity,

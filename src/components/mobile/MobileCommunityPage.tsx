@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   COMMUNITY, 
@@ -46,21 +47,73 @@ type CommunityViewer = {
   avatar: string | null;
 };
 
-const getActivityTone = (moduleName: string): { emoji: string; tag: string; tone: any; bg: string } => {
+type ActivityTone = Readonly<{
+  emoji: string;
+  tag: string;
+  tone: 'pink' | 'mint' | 'butter' | 'lilac' | 'muted';
+  bg: string;
+}>;
+
+type CommunityAttachment = Readonly<{
+  emoji?: string;
+  title: string;
+  description: string;
+}>;
+
+type CommunityFeedItem = Readonly<{
+  activityId: string;
+  actorAvatar?: string | null;
+  actorName: string;
+  attachment?: CommunityAttachment | null;
+  body: string;
+  commentCount?: number;
+  images?: readonly string[];
+  likeCount?: number;
+  likedByMe?: boolean;
+  module?: string;
+  time: string;
+}>;
+
+const getActivityTone = (moduleName: string, t: TFunction): ActivityTone => {
   const lower = (moduleName || '').toLowerCase();
   if (lower.includes('vocab') || lower.includes('review')) {
-    return { emoji: '📝', tag: '词汇', tone: 'pink', bg: 'var(--color-k-pink)' };
+    return {
+      emoji: '📝',
+      tag: t('community.desktop.tags.vocab', { defaultValue: '词汇' }),
+      tone: 'pink',
+      bg: 'var(--color-k-pink)',
+    };
   }
   if (lower.includes('grammar')) {
-    return { emoji: '📘', tag: '语法', tone: 'mint', bg: 'var(--color-k-mint-deep)' };
+    return {
+      emoji: '📘',
+      tag: t('community.desktop.tags.grammar', { defaultValue: '语法' }),
+      tone: 'mint',
+      bg: 'var(--color-k-mint-deep)',
+    };
   }
   if (lower.includes('podcast') || lower.includes('listening')) {
-    return { emoji: '🎧', tag: '听力', tone: 'butter', bg: 'var(--color-k-butter)' };
+    return {
+      emoji: '🎧',
+      tag: t('community.desktop.tags.listening', { defaultValue: '听力' }),
+      tone: 'butter',
+      bg: 'var(--color-k-butter)',
+    };
   }
   if (lower.includes('topik') || lower.includes('exam')) {
-    return { emoji: '🎯', tag: 'TOPIK', tone: 'lilac', bg: 'var(--color-k-lilac)' };
+    return {
+      emoji: '🎯',
+      tag: t('community.desktop.tags.topik', { defaultValue: 'TOPIK' }),
+      tone: 'lilac',
+      bg: 'var(--color-k-lilac)',
+    };
   }
-  return { emoji: '📚', tag: '学习', tone: 'muted', bg: 'var(--color-k-bg2)' };
+  return {
+    emoji: '📚',
+    tag: t('community.desktop.tags.study', { defaultValue: '学习' }),
+    tone: 'muted',
+    bg: 'var(--color-k-bg2)',
+  };
 };
 
 // --- Sub-components ---
@@ -190,10 +243,17 @@ const PostComposer = ({
   );
 };
 
-const CommunityItem = ({ item, t }: { item: any; t: any }) => {
+const CommunityItem = ({
+  item,
+  t,
+}: {
+  item: CommunityFeedItem;
+  t: TFunction;
+}) => {
   const likeActivity = useMutation(COMMUNITY.likeActivity);
   const unlikeActivity = useMutation(COMMUNITY.unlikeActivity);
-  const tone = useMemo(() => getActivityTone(item.module || ''), [item.module]);
+  const tone = useMemo(() => getActivityTone(item.module || '', t), [item.module, t]);
+  const images = item.images ?? [];
 
   const handleLike = async () => {
     try {
@@ -234,13 +294,13 @@ const CommunityItem = ({ item, t }: { item: any; t: any }) => {
           {item.body}
         </div>
 
-        {item.images && item.images.length > 0 && (
+        {images.length > 0 && (
           <div className={cn(
             "grid gap-2 mt-4 rounded-2xl overflow-hidden",
-            item.images.length === 1 ? "grid-cols-1" : "grid-cols-2"
+            images.length === 1 ? "grid-cols-1" : "grid-cols-2"
           )}>
-            {item.images.map((img: string, idx: number) => (
-              <div key={idx} className={cn("relative aspect-square bg-k-bg2", item.images.length === 1 && "aspect-video")}>
+            {images.map((img, idx) => (
+              <div key={idx} className={cn("relative aspect-square bg-k-bg2", images.length === 1 && "aspect-video")}>
                 <img src={img} className="w-full h-full object-cover" alt="" />
               </div>
             ))}

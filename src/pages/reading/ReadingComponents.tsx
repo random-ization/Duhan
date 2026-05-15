@@ -26,7 +26,8 @@ import type {
   NoteColor,
   ReaderNote,
   DraftNote,
-  SelectionToolbarState
+  SelectionToolbarState,
+  SentenceExplanationPayload
 } from './types';
 import { 
   getDictionaryMeaning, 
@@ -511,6 +512,130 @@ export const ReadingArticleNotesTab: React.FC<{
   </>
 );
 
+export const ReadingArticleExplainTab: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  explainingSentence: string | null;
+  sentenceExplanation: { id: string; data: SentenceExplanationPayload } | null;
+  explainLoading: boolean;
+  explainError: string | null;
+  saveAssetsMutation: any;
+}> = ({
+  t,
+  explainingSentence,
+  sentenceExplanation,
+  explainLoading,
+  explainError,
+  saveAssetsMutation,
+}) => {
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [savedAssets, setSavedAssets] = React.useState<any>(null);
+
+  const handleSave = async () => {
+    if (!sentenceExplanation) return;
+    setIsSaving(true);
+    try {
+      const result = await saveAssetsMutation({
+        explanationId: sentenceExplanation.id,
+        saveSentence: true,
+        createNotePage: true,
+        enqueueForReview: true,
+        source: 'reading_page_explain',
+      });
+      setSavedAssets(result);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <h3 className="mb-2 flex items-center gap-2 font-bold text-muted-foreground">
+          <BookOpen size={16} />{' '}
+          {t('readingArticle.explain.targetSentence', { defaultValue: 'Target Sentence' })}
+        </h3>
+        <p className="text-sm text-foreground">
+          {explainingSentence || t('readingArticle.explain.noSelection', { defaultValue: 'No sentence selected.' })}
+        </p>
+      </section>
+
+      {explainLoading ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-k-crimson border-t-transparent"></div>
+          <p className="text-sm font-bold text-k-ink">{t('readingArticle.explain.loading', { defaultValue: 'Analyzing sentence structure...' })}</p>
+        </div>
+      ) : explainError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 dark:border-rose-900 dark:bg-rose-950/50">
+          <p className="text-sm font-bold">{t('readingArticle.explain.error', { defaultValue: 'Explanation failed' })}</p>
+          <p className="mt-1 text-xs opacity-80">{explainError}</p>
+        </div>
+      ) : sentenceExplanation?.data ? (
+        <div className="space-y-4">
+          <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
+            <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+              <span className="font-k-serif text-[20px] font-medium text-k-crimson">💡</span>
+              {t('readingArticle.explain.translation', { defaultValue: 'Natural Translation' })}
+            </h3>
+            <p className="text-[14px] leading-[1.7] font-medium text-k-ink/80">
+              {sentenceExplanation.data.naturalTranslation || sentenceExplanation.data.overallMeaning}
+            </p>
+          </section>
+
+          {(sentenceExplanation.data.vocabulary?.length ?? 0) > 0 && (
+            <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
+              <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+                <span className="font-k-serif text-[20px] font-medium text-k-crimson">詞</span>
+                {t('readingArticle.explain.vocabulary', { defaultValue: 'Key Vocabulary' })}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {sentenceExplanation.data.vocabulary?.map((v: any, i: number) => (
+                  <div key={i} className="rounded-xl border border-k-line/10 bg-k-bg2 p-3 text-sm flex flex-col sm:flex-row gap-1 sm:gap-3 w-full">
+                    <span className="font-bold text-k-ink whitespace-nowrap">{v.surface}</span>
+                    <span className="text-k-sub">{v.meaning}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {(sentenceExplanation.data.grammar?.length ?? 0) > 0 && (
+            <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
+              <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+                <span className="font-k-serif text-[20px] font-medium text-k-crimson">法</span>
+                {t('readingArticle.explain.grammar', { defaultValue: 'Grammar Points' })}
+              </h3>
+              <div className="space-y-3">
+                {sentenceExplanation.data.grammar?.map((g: any, i: number) => (
+                  <div key={i} className="rounded-xl border border-k-line/10 bg-k-bg2 p-4">
+                    <div className="font-bold text-k-ink mb-1">{g.pattern}</div>
+                    <div className="text-sm text-k-sub leading-relaxed opacity-90">{g.explanation}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="pt-2 pb-6 flex justify-center">
+            <Button
+              onClick={handleSave}
+              loading={isSaving}
+              disabled={!!savedAssets}
+              className="w-full rounded-2xl bg-k-crimson hover:bg-k-crimson/90 text-white font-bold py-3 shadow-k-sh-sm transition-all"
+            >
+              {savedAssets 
+                ? t('readingArticle.explain.saved', { defaultValue: 'Saved to Notebook!' })
+                : t('readingArticle.explain.saveAll', { defaultValue: 'Save to Notebook & Review' })
+              }
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const ReadingArticleSidebar: React.FC<{
   panelTab: PanelTab;
   setPanelTab: React.Dispatch<React.SetStateAction<PanelTab>>;
@@ -543,6 +668,11 @@ export const ReadingArticleSidebar: React.FC<{
   focusNote: (noteId: string) => void;
   setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
   getNoteVisualState: (noteId: string) => NoteVisualState;
+  explainingSentence: string | null;
+  sentenceExplanation: { id: string; data: SentenceExplanationPayload } | null;
+  explainLoading: boolean;
+  explainError: string | null;
+  saveAssetsMutation: any;
 }> = ({
   panelTab,
   setPanelTab,
@@ -575,6 +705,11 @@ export const ReadingArticleSidebar: React.FC<{
   focusNote,
   setHoveredNoteId,
   getNoteVisualState,
+  explainingSentence,
+  sentenceExplanation,
+  explainLoading,
+  explainError,
+  saveAssetsMutation,
 }) => (
   <div className="space-y-3">
     <ContextualSection
@@ -619,6 +754,20 @@ export const ReadingArticleSidebar: React.FC<{
         >
           📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="auto"
+          onClick={() => setPanelTab('explain')}
+          className={cn(
+            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
+            panelTab === 'explain' 
+              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
+              : "text-k-sub hover:text-k-ink"
+          )}
+        >
+          📖 {t('readingArticle.tabs.explain', { defaultValue: 'Explain' })}
+        </Button>
       </div>
     </ContextualSection>
 
@@ -626,12 +775,16 @@ export const ReadingArticleSidebar: React.FC<{
       title={
         panelTab === 'ai'
           ? t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })
-          : t('readingArticle.notes.title', { defaultValue: 'Notes' })
+          : panelTab === 'notes'
+          ? t('readingArticle.notes.title', { defaultValue: 'Notes' })
+          : t('readingArticle.explain.title', { defaultValue: 'Sentence Analysis' })
       }
       badge={
-        <ContextualCountBadge
-          value={panelTab === 'ai' ? vocabulary.length + grammar.length : notes.length}
-        />
+        panelTab !== 'explain' ? (
+          <ContextualCountBadge
+            value={panelTab === 'ai' ? vocabulary.length + grammar.length : notes.length}
+          />
+        ) : undefined
       }
     >
       <div className="space-y-4">
@@ -648,7 +801,7 @@ export const ReadingArticleSidebar: React.FC<{
             savedWords={savedWords}
             grammar={grammar}
           />
-        ) : (
+        ) : panelTab === 'notes' ? (
           <ReadingArticleNotesTab
             t={t}
             activeWord={activeWord}
@@ -672,6 +825,15 @@ export const ReadingArticleSidebar: React.FC<{
             focusNote={focusNote}
             setHoveredNoteId={setHoveredNoteId}
             getNoteVisualState={getNoteVisualState}
+          />
+        ) : (
+          <ReadingArticleExplainTab
+            t={t}
+            explainingSentence={explainingSentence}
+            sentenceExplanation={sentenceExplanation}
+            explainLoading={explainLoading}
+            explainError={explainError}
+            saveAssetsMutation={saveAssetsMutation}
           />
         )}
       </div>
@@ -989,6 +1151,7 @@ export const ReadingSelectionToolbar: React.FC<{
   noteColor: NoteColor;
   setNoteColor: (color: NoteColor) => void;
   onLookupSelection: () => void;
+  onExplainSelection?: () => void;
   onSaveSelectionWord: (text: string) => Promise<void>;
   startNoteFromSelection: () => void;
   onClose: () => void;
@@ -998,6 +1161,7 @@ export const ReadingSelectionToolbar: React.FC<{
   noteColor,
   setNoteColor,
   onLookupSelection,
+  onExplainSelection,
   onSaveSelectionWord,
   startNoteFromSelection,
   onClose,
@@ -1021,10 +1185,12 @@ export const ReadingSelectionToolbar: React.FC<{
             defaultValue: 'Save to vocab book',
           }),
           lookup: t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' }),
+          explain: t('readingArticle.toolbar.explain', { defaultValue: 'Explain' }),
           close: t('readingArticle.toolbar.close', { defaultValue: 'Close' }),
         }}
         onAddNote={startNoteFromSelection}
         onLookup={onLookupSelection}
+        onExplain={onExplainSelection}
         onSaveToVocab={onSaveSelectionWord}
         onHighlight={color => {
           if (!color) return;

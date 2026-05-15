@@ -77,7 +77,7 @@ export default function DesktopReviewQuizPage({
   navigate,
   t: passedT,
 }: DesktopReviewQuizProps) {
-  const { t: localT } = useTranslation();
+  const { t: localT } = useTranslation('public');
   const t = passedT || localT;
 
   const [currentIndex, setCurrentIndex] = useState(0);

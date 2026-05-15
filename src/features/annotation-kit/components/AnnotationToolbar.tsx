@@ -16,6 +16,7 @@ interface AnnotationToolbarLabels {
   sentenceNote?: string;
   saveToVocab?: string;
   lookup?: string;
+  explain?: string;
   close?: string;
   saving?: string;
   saved?: string;
@@ -32,6 +33,7 @@ interface AnnotationToolbarProps {
   onHighlight: (color: AnnotationKitColor) => void;
   onColorChange?: (color: AnnotationKitColor) => void;
   onLookup?: () => void;
+  onExplain?: () => void;
   onClose: () => void;
   onSaveToVocab?: (text: string) => Promise<void>;
 }
@@ -64,6 +66,7 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
   onHighlight,
   onColorChange,
   onLookup,
+  onExplain,
   onClose,
   onSaveToVocab,
 }) => {
@@ -241,6 +244,21 @@ export const AnnotationToolbar: React.FC<AnnotationToolbarProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
             >
               {labels?.lookup || t('readingArticle.toolbar.lookup', { defaultValue: 'Lookup' })}
+            </Button>
+          </>
+        )}
+
+        {!isWordSelection && onExplain && (
+          <>
+            <div className="w-px h-4 bg-muted" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
+              onClick={onExplain}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-muted text-muted-foreground text-sm font-medium transition-colors"
+            >
+              {labels?.explain || t('readingArticle.toolbar.explain', { defaultValue: 'Explain' })}
             </Button>
           </>
         )}

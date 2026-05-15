@@ -53,7 +53,7 @@ function UnitModeSelectorWithProgress({
 
 export default function DesktopVocabHub() {
   const navigate = useLocalizedNavigate();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
 
   // Use localStorage to persist the selected course
   const [selectedCourse, setSelectedCourse] = useState<string>(() => {

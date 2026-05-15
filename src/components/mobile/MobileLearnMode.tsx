@@ -271,14 +271,17 @@ export function MobileLearnMode({ words, initialIndex = 0, onProgressChange, onC
     moveToNext();
   };
 
-  const promptText = questionLang === 'KOREAN' ? '下列单词的意思是？' : '下列意思对应的韩语是？';
+  const promptText =
+    questionLang === 'KOREAN'
+      ? t('vocab.learnPromptMeaning', { defaultValue: 'What does the following word mean?' })
+      : t('vocab.learnPromptKorean', { defaultValue: 'Which Korean word matches the following meaning?' });
   const promptWord = questionLang === 'KOREAN' ? korean : nativeText;
   const hintText =
     questionLang === 'KOREAN'
       ? pronunciation
         ? `“${pronunciation}”`
-        : '“请选择正确答案”'
-      : '“请选择正确答案”';
+        : `“${t('vocab.learnSelectCorrect', { defaultValue: 'Please choose the correct answer' })}”`
+      : `“${t('vocab.learnSelectCorrect', { defaultValue: 'Please choose the correct answer' })}”`;
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"

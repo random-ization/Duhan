@@ -37,7 +37,7 @@ function deterministicShuffle(items: string[]): string[] {
 }
 
 export default function DesktopTypingPage() {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
   const [gameState, setGameState] = useState<GameState>('lobby');
   const [mode, setMode] = useState<TypingMode>('sentence');
   const [selectedData, setSelectedData] = useState<TypingGameData | null>(null);

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import type { Institute } from '../types';
 import { resolveLearningEntryTarget } from '../utils/learningFlow';
-import { VOCAB, qRef } from '../utils/convexRefs';
+import { VOCAB, DAILY_TASK, qRef } from '../utils/convexRefs';
 import type { LearnerStatsDto } from '../../convex/learningStats';
+import type { DailyTaskPlanDto } from '../../convex/dailyTask/shared';
 
 type DashboardUserLike = {
   id?: string | null;
@@ -38,6 +39,7 @@ type DashboardSurfaceResult = {
       translation: string;
     } | null;
     stats: LearnerStatsDto | null;
+    dailyTaskPlan: DailyTaskPlanDto | null;
   };
   enableDesktopKsoftDashboard: boolean;
   lowPriorityQueriesReady: boolean;
@@ -130,6 +132,14 @@ export function useDashboardSurface({
     view === 'practice' || !user || !selectedInstitute ? 'skip' : { courseId: selectedInstitute }
   );
   const stats = useQuery(qRef<Record<string, never>, LearnerStatsDto>('userStats:getStats'));
+  const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language: currentLanguage } : 'skip');
+  const generateTodayPlan = useMutation(DAILY_TASK.generateTodayPlan);
+
+  useEffect(() => {
+    if (user && dailyTaskPlan && !dailyTaskPlan.id && lowPriorityQueriesReady) {
+      void generateTodayPlan({ language: currentLanguage });
+    }
+  }, [user, dailyTaskPlan, currentLanguage, generateTodayPlan, lowPriorityQueriesReady]);
 
   return {
     desktopCourseProps: {
@@ -137,6 +147,7 @@ export function useDashboardSurface({
       reviewSummary: reviewSummary ?? null,
       dailyPhrase: dailyPhrase ?? null,
       stats: stats ?? null,
+      dailyTaskPlan: dailyTaskPlan ?? null,
     },
     enableDesktopKsoftDashboard: import.meta.env.VITE_ENABLE_DESKTOP_KSOFT_DASHBOARD === '1',
     lowPriorityQueriesReady,

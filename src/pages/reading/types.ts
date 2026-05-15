@@ -1,6 +1,6 @@
 import type { AnnotationSelectionKind } from '../../features/annotation-kit/types';
 
-export type PanelTab = 'ai' | 'notes';
+export type PanelTab = 'ai' | 'notes' | 'explain';
 export type NoteVisualState = 'default' | 'selected' | 'hovered';
 
 export type VocabularyItem = {
@@ -42,6 +42,46 @@ export type ReadingAiResult = {
 
 export type ReadingTranslationResult = {
   translations: string[];
+};
+
+export type SentenceToken = {
+  surface: string;
+  lemma?: string;
+  partOfSpeech?: string;
+  start?: number;
+  end?: number;
+  length?: number;
+  wordPosition?: number;
+  sentencePosition?: number;
+};
+
+export type SentenceVocabularyItem = {
+  surface: string;
+  lemma?: string;
+  partOfSpeech?: string;
+  meaning?: string;
+  difficultyLevel?: string;
+  difficultyScore?: number;
+};
+
+export type SentenceGrammarItem = {
+  pattern: string;
+  explanation?: string;
+  reason?: string;
+  start?: number;
+  end?: number;
+};
+
+export type SentenceExplanationPayload = {
+  sentence: string;
+  normalizedText?: string;
+  summary?: string;
+  overallMeaning?: string;
+  naturalTranslation?: string;
+  tokens?: SentenceToken[];
+  vocabulary?: SentenceVocabularyItem[];
+  grammar?: SentenceGrammarItem[];
+  notes?: string[];
 };
 
 export type DictionaryFallbackResult = {

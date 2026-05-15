@@ -69,7 +69,7 @@ function formatDuration(seconds?: number): string {
 }
 
 export default function DesktopMediaHubPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('public');
   const navigate = useLocalizedNavigate();
   const [activeTab, setActiveTab] = useState('pod');
   const [selectedLevel, setSelectedLevel] = useState('all');

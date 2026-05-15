@@ -39,9 +39,22 @@ export const getWordByLemmaQuery = internalQuery({
 });
 
 export const getGrammarPointsForMatchingQuery = internalQuery({
-  args: {},
-  handler: async ctx => {
-    const all = await ctx.db.query('grammar_points').collect();
+  args: {
+    level: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 1500;
+    let query;
+    if (args.level) {
+      const level = args.level;
+      query = ctx.db.query('grammar_points').withIndex('by_level', q => q.eq('level', level));
+    } else {
+      query = ctx.db.query('grammar_points');
+    }
+
+    const all = await query.take(limit);
+
     return all
       .map(g => ({
         id: g._id,

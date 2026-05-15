@@ -1,4 +1,11 @@
-import { mutation, query } from './_generated/server';
+import { mutation, query, internalQuery } from './_generated/server';
+
+export const getFirstUser = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("users").first();
+  },
+});
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { v, ConvexError } from 'convex/values';
 import { MetadataJson, parsePhoneNumberWithError } from 'libphonenumber-js/core';

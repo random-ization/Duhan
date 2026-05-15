@@ -16,7 +16,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 //   Languages,
 //   Star,
 // } from 'lucide-react';
-import { AI, DICTIONARY, NEWS, VOCAB } from '../utils/convexRefs';
+import { AI, DICTIONARY, NEWS, VOCAB, SENTENCE_EXPLAINER } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTTS } from '../hooks/useTTS';
@@ -62,6 +62,8 @@ import {
   normalizePartOfSpeech,
   toTranslationErrorMessage,
 } from './reading/helpers';
+
+import type { SentenceExplanationPayload } from '../../convex/sentenceExplainer/shared';
 
 import type {
   NewsArticle,
@@ -164,6 +166,14 @@ export default function ReadingArticlePage() {
   const [speaking, setSpeaking] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [_mobileParagraphProgress, setMobileParagraphProgress] = useState(1);
+
+  // --- Sentence Explainer State ---
+  const [explainingSentence, setExplainingSentence] = useState<string | null>(null);
+  const [sentenceExplanation, setSentenceExplanation] = useState<{ id: string; data: SentenceExplanationPayload } | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [explainError, setExplainError] = useState<string | null>(null);
+  const explainSentenceAction = useAction(SENTENCE_EXPLAINER.explainSentence);
+  const saveAssetsMutation = useMutation(SENTENCE_EXPLAINER.saveAssets);
 
   const analyzeReadingArticle = useAction(AI.analyzeReadingArticle);
   const explainWordFallback = useAction(AI.explainWordFallback);
@@ -797,6 +807,34 @@ export default function ReadingArticlePage() {
     setSelectionToolbar(prev => ({ ...prev, visible: false }));
   };
 
+  const onExplainSelection = async () => {
+    const text = selectionToolbar.text.trim();
+    if (!text) return;
+    setExplainingSentence(text);
+    setPanelTab('explain');
+    setSelectionToolbar(prev => ({ ...prev, visible: false }));
+    setExplainLoading(true);
+    setExplainError(null);
+    setSentenceExplanation(null);
+    try {
+      const result = await explainSentenceAction({
+        sentence: text,
+        targetLanguage: translationLang,
+        source: 'reading_page',
+        sourceRefId: articleId,
+      });
+      if (result.success && result.explanationId && result.data) {
+        setSentenceExplanation({ id: result.explanationId, data: result.data });
+      } else {
+        setExplainError(result.error || 'Failed to explain sentence');
+      }
+    } catch (e) {
+      setExplainError(e instanceof Error ? e.message : 'Failed to explain sentence');
+    } finally {
+      setExplainLoading(false);
+    }
+  };
+
   const onDraftCommentChange = useCallback((value: string) => {
     setDraftNote(prev => (prev ? { ...prev, comment: value } : prev));
   }, []);
@@ -1009,6 +1047,11 @@ export default function ReadingArticlePage() {
         focusNote={focusNote}
         setHoveredNoteId={setHoveredNoteId}
         getNoteVisualState={getNoteVisualState}
+        explainingSentence={explainingSentence}
+        sentenceExplanation={sentenceExplanation}
+        explainLoading={explainLoading}
+        explainError={explainError}
+        saveAssetsMutation={saveAssetsMutation}
       />
     ),
     [
@@ -1043,6 +1086,11 @@ export default function ReadingArticlePage() {
       summary,
       t,
       vocabulary,
+      explainingSentence,
+      sentenceExplanation,
+      explainLoading,
+      explainError,
+      saveAssetsMutation,
     ]
   );
 
@@ -1130,6 +1178,7 @@ export default function ReadingArticlePage() {
           noteColor={noteColor}
           setNoteColor={setNoteColor}
           onLookupSelection={onLookupSelection}
+          onExplainSelection={onExplainSelection}
           onSaveSelectionWord={onSaveSelectionWord}
           startNoteFromSelection={startNoteFromSelection}
           setSelectionToolbar={setSelectionToolbar}
@@ -1158,6 +1207,15 @@ export default function ReadingArticlePage() {
           readingSidebarContent={readingSidebarContent}
           onWordClick={onWordClick}
           activeWord={activeWord}
+          selectionToolbar={selectionToolbar}
+          noteColor={noteColor}
+          setNoteColor={setNoteColor}
+          onLookupSelection={onLookupSelection}
+          onExplainSelection={onExplainSelection}
+          onSaveSelectionWord={onSaveSelectionWord}
+          startNoteFromSelection={startNoteFromSelection}
+          setSelectionToolbar={setSelectionToolbar}
+          contentRef={contentRef}
         />
       )}
     </Suspense>

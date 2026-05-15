@@ -86,7 +86,7 @@ export const getReviewAggregate = query({
       item => !item.scheduledFor || item.scheduledFor <= now
     ).length;
 
-    const [savedSentences, savedGrammar, savedWordRows] = await Promise.all([
+    const [savedSentences, savedGrammar, savedWordRows, legacyWordRows] = await Promise.all([
       ctx.db
         .query('user_saved_sentences')
         .withIndex('by_user_createdAt', q => q.eq('userId', userId))
@@ -99,6 +99,10 @@ export const getReviewAggregate = query({
         .query('user_vocab_progress')
         .withIndex('by_user_saved', q => q.eq('userId', userId).eq('savedByUser', true))
         .collect(),
+      ctx.db
+        .query('saved_words')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .collect(),
     ]);
 
     return {
@@ -106,7 +110,7 @@ export const getReviewAggregate = query({
       dueNoteCount,
       savedSentenceCount: savedSentences.length,
       savedGrammarCount: savedGrammar.length,
-      savedWordCount: savedWordRows.length,
+      savedWordCount: savedWordRows.length + legacyWordRows.length,
     };
   },
 });
@@ -120,7 +124,7 @@ export const getRecentSavedAssets = query({
     if (!userId) return [] as RecentAssetItem[];
 
     const limit = Math.min(args.limit ?? 12, 30);
-    const [sentences, grammar, words, notes] = await Promise.all([
+    const [sentences, grammar, words, notes, legacyWords] = await Promise.all([
       ctx.db
         .query('user_saved_sentences')
         .withIndex('by_user_createdAt', q => q.eq('userId', userId))
@@ -134,6 +138,11 @@ export const getRecentSavedAssets = query({
       getRecentWordAssets(ctx, userId, limit),
       ctx.db
         .query('note_review_queue')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .order('desc')
+        .take(limit),
+      ctx.db
+        .query('saved_words')
         .withIndex('by_user', q => q.eq('userId', userId))
         .order('desc')
         .take(limit),
@@ -180,7 +189,16 @@ export const getRecentSavedAssets = query({
       })
       .filter((item): item is RecentAssetItem => item !== null);
 
-    return [...sentenceItems, ...grammarItems, ...words, ...noteItems]
+    const legacyWordItems: RecentAssetItem[] = legacyWords.map(item => ({
+      id: String(item._id),
+      kind: 'word',
+      title: item.korean,
+      subtitle: item.english,
+      createdAt: item.createdAt,
+      source: 'legacy_saved_word',
+    }));
+
+    return [...sentenceItems, ...grammarItems, ...words, ...noteItems, ...legacyWordItems]
       .sort((left, right) => right.createdAt - left.createdAt)
       .slice(0, limit);
   },
@@ -205,30 +223,41 @@ export const getHomeSnapshot = query({
       };
     }
 
-    const [vocabProgress, reviewQueue, savedSentences, savedGrammar, savedWordRows, recent] =
-      await Promise.all([
-        ctx.db
-          .query('user_vocab_progress')
-          .withIndex('by_user', q => q.eq('userId', userId))
-          .collect(),
-        ctx.db
-          .query('note_review_queue')
-          .withIndex('by_user_status', q => q.eq('userId', userId).eq('status', 'queued'))
-          .collect(),
-        ctx.db
-          .query('user_saved_sentences')
-          .withIndex('by_user_createdAt', q => q.eq('userId', userId))
-          .collect(),
-        ctx.db
-          .query('user_grammar_saved')
-          .withIndex('by_user_createdAt', q => q.eq('userId', userId))
-          .collect(),
-        ctx.db
-          .query('user_vocab_progress')
-          .withIndex('by_user_saved', q => q.eq('userId', userId).eq('savedByUser', true))
-          .collect(),
-        getRecentWordAssets(ctx, userId, Math.min(args.recentLimit ?? 12, 30)),
-      ]);
+    const [
+      vocabProgress,
+      reviewQueue,
+      savedSentences,
+      savedGrammar,
+      savedWordRows,
+      legacyWordRows,
+      recent,
+    ] = await Promise.all([
+      ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('note_review_queue')
+        .withIndex('by_user_status', q => q.eq('userId', userId).eq('status', 'queued'))
+        .collect(),
+      ctx.db
+        .query('user_saved_sentences')
+        .withIndex('by_user_createdAt', q => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('user_grammar_saved')
+        .withIndex('by_user_createdAt', q => q.eq('userId', userId))
+        .collect(),
+      ctx.db
+        .query('user_vocab_progress')
+        .withIndex('by_user_saved', q => q.eq('userId', userId).eq('savedByUser', true))
+        .collect(),
+      ctx.db
+        .query('saved_words')
+        .withIndex('by_user', q => q.eq('userId', userId))
+        .collect(),
+      getRecentWordAssets(ctx, userId, Math.min(args.recentLimit ?? 12, 30)),
+    ]);
 
     const now = Date.now();
     const summary: ReviewAggregate = {
@@ -242,7 +271,7 @@ export const getHomeSnapshot = query({
         .length,
       savedSentenceCount: savedSentences.length,
       savedGrammarCount: savedGrammar.length,
-      savedWordCount: savedWordRows.length,
+      savedWordCount: savedWordRows.length + legacyWordRows.length,
     };
 
     return {

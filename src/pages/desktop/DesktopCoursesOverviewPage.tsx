@@ -177,7 +177,7 @@ function resolvePublisherKey(publisher: string): string {
 
 export const DesktopCoursesOverviewPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('public');
   const [searchParams, setSearchParams] = useSearchParams();
   const language = i18n.resolvedLanguage || i18n.language || 'en';
 

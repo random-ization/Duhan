@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from 'convex/react';
-import { VOCAB, qRef } from '../utils/convexRefs';
+import { VOCAB, DAILY_TASK, qRef } from '../utils/convexRefs';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningSelection } from '../contexts/LearningContext';
@@ -25,6 +25,7 @@ export default function CourseDashboard() {
   const reviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
   const dailyPhrase = useQuery(qRef<any, any>('vocab:getDailyPhrase'), { language: 'en' });
   const stats = useQuery(qRef<any, any>('userStats:getStats'));
+  const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language: currentLanguage } : 'skip');
 
   if (!instituteId) {
     if (activeCourseId) {
@@ -44,6 +45,7 @@ export default function CourseDashboard() {
         reviewSummary={reviewSummary ?? null}
         dailyPhrase={dailyPhrase ?? null}
         stats={stats ?? null}
+        dailyTaskPlan={dailyTaskPlan ?? null}
       />
     </Suspense>
   );
