@@ -66,6 +66,7 @@ import type * as http from '../http.js';
 import type * as id from '../id.js';
 import type * as importedContent from '../importedContent.js';
 import type * as institutes from '../institutes.js';
+import type * as jsonValidators from '../jsonValidators.js';
 import type * as kiwi from '../kiwi.js';
 import type * as kiwiCache from '../kiwiCache.js';
 import type * as leaderboard from '../leaderboard.js';
@@ -238,6 +239,7 @@ declare const fullApi: ApiFromModules<{
   id: typeof id;
   importedContent: typeof importedContent;
   institutes: typeof institutes;
+  jsonValidators: typeof jsonValidators;
   kiwi: typeof kiwi;
   kiwiCache: typeof kiwiCache;
   leaderboard: typeof leaderboard;
