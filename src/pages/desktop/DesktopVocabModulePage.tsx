@@ -1,12 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Button } from '../../components/ui/button';
 import { AppBreadcrumb } from '../../components/common/AppBreadcrumb';
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-  DialogPortal,
-} from '../../components/ui';
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../components/ui';
 import { VocabModuleSkeleton } from '../../components/common';
 import type { LearningSessionSnapshot } from '../../features/vocab/components/VocabQuiz';
 import type { VocabTestSessionSnapshot } from '../../features/vocab/components/VocabTest';
@@ -15,9 +10,7 @@ import type { VocabularyItem, Institute, User, Language } from '../../types';
 import type { LabelsBundle } from '../VocabBookPage';
 
 const FlashcardView = lazy(() => import('../../features/vocab/components/FlashcardView'));
-const VocabQuiz = lazy(() => import('../../features/vocab/components/VocabQuiz'));
 const VocabMatch = lazy(() => import('../../features/vocab/components/VocabMatch'));
-const VocabTest = lazy(() => import('../../features/vocab/components/VocabTest'));
 
 // --- Types ---
 
@@ -72,7 +65,10 @@ export interface DesktopVocabModulePageProps {
   setMasteredIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   flashcardResumeSnapshot: FlashcardSessionSnapshot | null;
   latestFlashcardSnapshotRef: React.MutableRefObject<FlashcardSessionSnapshot | null>;
-  persistLearningSnapshot: (mode: SessionMode, snapshot: FlashcardSessionSnapshot | LearningSessionSnapshot | VocabTestSessionSnapshot) => Promise<void>;
+  persistLearningSnapshot: (
+    mode: SessionMode,
+    snapshot: FlashcardSessionSnapshot | LearningSessionSnapshot | VocabTestSessionSnapshot
+  ) => Promise<void>;
   flushQueue: () => Promise<void>;
   completeSessionForMode: (mode: SessionMode) => Promise<void>;
 
@@ -81,7 +77,9 @@ export interface DesktopVocabModulePageProps {
     flashcardFront: 'KOREAN' | 'NATIVE';
     flashcardRatingMode: 'PASS_FAIL' | 'FOUR_BUTTONS';
   };
-  updateGlobalSettings: (settings: Partial<DesktopVocabModulePageProps['globalSettings']>) => Promise<void>;
+  updateGlobalSettings: (
+    settings: Partial<DesktopVocabModulePageProps['globalSettings']>
+  ) => Promise<void>;
   speakWord: (text: string) => void;
   toggleStar: (id: string) => void;
   starredIds: Set<string>;
@@ -111,7 +109,11 @@ export interface DesktopVocabModulePageProps {
   navigate: (path: string) => void;
   backPath: string;
 
-  resolveCourseBreadcrumbLabel: (course: Institute | undefined, language: string, instituteId: string | undefined) => string;
+  resolveCourseBreadcrumbLabel: (
+    course: Institute | undefined,
+    language: string,
+    instituteId: string | undefined
+  ) => string;
   getLabel: (labels: LabelsBundle, path: readonly string[]) => string | undefined;
   restartFromResumePrompt: () => Promise<void>;
   continueFromResumePrompt: () => void;
@@ -150,21 +152,21 @@ export default function DesktopVocabModulePage({
   requestOpenSessionMode,
   handleReview,
   gameWords,
-  learnOpen,
-  latestLearnSnapshotRef,
+  learnOpen: _learnOpen,
+  latestLearnSnapshotRef: _latestLearnSnapshotRef,
   setLearnOpen,
-  learnResumeSnapshot,
-  testOpen,
-  latestTestSnapshotRef,
-  setTestOpen,
-  testResumeSnapshot,
+  learnResumeSnapshot: _learnResumeSnapshot,
+  testOpen: _testOpen,
+  latestTestSnapshotRef: _latestTestSnapshotRef,
+  setTestOpen: _setTestOpen,
+  testResumeSnapshot: _testResumeSnapshot,
   resumeModePrompt,
   setResumeModePrompt,
   resumeCandidate,
   setResumeCandidate,
-  user,
-  navigate,
-  backPath,
+  user: _user,
+  navigate: _navigate,
+  backPath: _backPath,
 
   resolveCourseBreadcrumbLabel,
   getLabel,
@@ -178,14 +180,12 @@ export default function DesktopVocabModulePage({
   renderModeTabs,
   renderOverlays,
 }: DesktopVocabModulePageProps) {
-
   const renderFlashcardDeck = () => (
     <Suspense fallback={<VocabModuleSkeleton />}>
       <FlashcardView
         key={`${instituteId}:${selectedUnitId}`}
         words={filteredWords}
         language={language as Language}
-
         courseId={instituteId}
         progressKey={`${instituteId}:${selectedUnitId}`}
         resumeSnapshot={flashcardResumeSnapshot}
@@ -214,7 +214,7 @@ export default function DesktopVocabModulePage({
           void completeSessionForMode('FLASHCARD');
           setViewState((prev: ViewState) => ({ ...prev, flashcardComplete: true }));
           const newMastered = new Set(masteredIds);
-          stats.correct.forEach((w) => newMastered.add(w.id));
+          stats.correct.forEach(w => newMastered.add(w.id));
           setMasteredIds(newMastered);
         }}
         onSaveWord={word => {
@@ -307,7 +307,11 @@ export default function DesktopVocabModulePage({
             variant="ghost"
             size="auto"
             onClick={() => {
-              setViewState((prev: ViewState) => ({ ...prev, cardIndex: 0, flashcardComplete: false }));
+              setViewState((prev: ViewState) => ({
+                ...prev,
+                cardIndex: 0,
+                flashcardComplete: false,
+              }));
               setMasteredIds(new Set());
             }}
             className="mt-8 text-sm text-k-sub hover:text-k-crimson font-bold underline underline-offset-8 transition-colors"
@@ -325,7 +329,9 @@ export default function DesktopVocabModulePage({
         <VocabMatch
           key={`match-${selectedUnitId}-${gameWords.length}`}
           words={gameWords}
-          onComplete={(time: number, moves: number) => console.log('Match completed:', { time, moves })}
+          onComplete={(time: number, moves: number) =>
+            console.log('Match completed:', { time, moves })
+          }
         />
       </Suspense>
     </div>
@@ -341,8 +347,6 @@ export default function DesktopVocabModulePage({
       </>
     );
   };
-
-
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-6 bg-k-bg font-sans">
@@ -362,9 +366,7 @@ export default function DesktopVocabModulePage({
         {renderModeTabs()}
       </div>
 
-      <div className="w-full max-w-5xl flex flex-col items-center">
-        {renderContent()}
-      </div>
+      <div className="w-full max-w-5xl flex flex-col items-center">{renderContent()}</div>
 
       {renderOverlays()}
 

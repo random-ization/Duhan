@@ -5,6 +5,7 @@ import { evaluateCourseUnitAccess, getViewerEntitlementSnapshot } from './entitl
 import { toErrorMessage } from './errors';
 import { grammarLogger } from './logger';
 import type { Id } from './_generated/dataModel';
+import { createInitialFsrsState, fsrsStateToPrefixedFields } from './fsrsUtils';
 
 interface GrammarExample {
   kr: string;
@@ -916,6 +917,56 @@ export const create = mutation({
   },
 });
 
+/**
+ * Save a grammar point to the user's review queue.
+ * Can be called from grammar pages or any UI where the user wants to collect
+ * a grammar point for spaced-repetition review.
+ */
+export const saveGrammarToReview = mutation({
+  args: {
+    grammarId: v.id('grammar_points'),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const grammar = await ctx.db.get(args.grammarId);
+    if (!grammar) {
+      return { success: false, reason: 'grammar_not_found' as const };
+    }
+
+    const source = args.source?.trim() || 'grammar_page';
+    const grammarKey = grammar.searchKey || grammar.title;
+
+    // Check if already saved
+    const existing = await ctx.db
+      .query('user_grammar_saved')
+      .withIndex('by_user_grammar', q => q.eq('userId', userId).eq('grammarId', args.grammarId))
+      .first();
+
+    if (existing) {
+      return { success: true, savedId: existing._id, action: 'already_saved' as const };
+    }
+
+    const now = Date.now();
+    const fsrsFields = fsrsStateToPrefixedFields(createInitialFsrsState(now));
+    const savedId = await ctx.db.insert('user_grammar_saved', {
+      userId,
+      grammarId: args.grammarId,
+      grammarKey,
+      pattern: grammar.title,
+      explanation: grammar.summary,
+      source,
+      sourceRefId: args.sourceRefId,
+      ...fsrsFields,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true, savedId, action: 'saved' as const };
+  },
+});
+
 export const getByIdInternal = query({
   args: {
     grammarId: v.id('grammar_points'),
@@ -1370,7 +1421,56 @@ function parseSearchPatterns(patterns: string | string[] | undefined): string[] 
 export const updateSections = mutation({
   args: {
     id: v.id('grammar_points'),
-    sections: v.any(),
+    sections: v.object({
+      introduction: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+      core: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+      comparative: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+      cultural: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+      commonMistakes: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+      review: v.optional(
+        v.object({
+          zh: v.optional(v.string()),
+          en: v.optional(v.string()),
+          vi: v.optional(v.string()),
+          mn: v.optional(v.string()),
+        })
+      ),
+    }),
   },
   handler: async (ctx, args) => {
     // Force bypass validation by patching directly

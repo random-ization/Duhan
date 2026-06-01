@@ -1,7 +1,6 @@
 'use node';
 
-import { action, internalMutation, internalQuery } from '../_generated/server';
-import { api, internal } from '../_generated/api';
+import { action } from '../_generated/server';
 import type { ActionCtx } from '../_generated/server';
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
@@ -228,6 +227,8 @@ const upsertExplanationRecordMutation = makeFunctionReference<
     model?: string;
     cacheKey?: string;
     payload: SentenceExplanationPayload;
+    confidence?: number;
+    promptVersion?: string;
   },
   Id<'sentence_explanations'>
 >('sentenceExplainer/save:upsertExplanationRecord') as unknown as FunctionReference<
@@ -244,6 +245,8 @@ const upsertExplanationRecordMutation = makeFunctionReference<
     model?: string;
     cacheKey?: string;
     payload: SentenceExplanationPayload;
+    confidence?: number;
+    promptVersion?: string;
   },
   Id<'sentence_explanations'>
 >;
@@ -694,6 +697,7 @@ Rules:
         model: provider.model,
         cacheKey,
         payload,
+        promptVersion: SENTENCE_EXPLANATION_VERSION,
       });
 
       await ctx.runMutation(logUsageMutation, {

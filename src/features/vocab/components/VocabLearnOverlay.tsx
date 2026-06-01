@@ -51,7 +51,7 @@ export default function VocabLearnOverlay({
       }
       previousSidebarHiddenRef.current = null;
     };
-  }, [open, setSidebarHidden]);
+  }, [isFullscreen, open, setSidebarHidden]);
 
   useEffect(() => {
     if (!open || !isFullscreen || typeof document === 'undefined') return;
@@ -72,9 +72,13 @@ export default function VocabLearnOverlay({
           : 'rounded-[32px] border border-k-divider shadow-2xl shadow-black/5'
       }`}
     >
-      {headerContent !== undefined ? headerContent : (
+      {headerContent !== undefined ? (
+        headerContent
+      ) : (
         <div className="flex items-center justify-between px-6 py-4 border-b border-k-divider bg-k-card/80 backdrop-blur-md">
-          <div className="text-[18px] font-extrabold text-k-ink">{title || labels.learn || 'Learn'}</div>
+          <div className="text-[18px] font-extrabold text-k-ink">
+            {title || labels.learn || 'Learn'}
+          </div>
           <Button
             variant="ghost"
             size="auto"
@@ -88,7 +92,11 @@ export default function VocabLearnOverlay({
         </div>
       )}
 
-      <div className={isFullscreen ? 'flex-1 overflow-hidden relative' : 'flex-1 overflow-auto relative'}>
+      <div
+        className={
+          isFullscreen ? 'flex-1 overflow-hidden relative' : 'flex-1 overflow-auto relative'
+        }
+      >
         {children}
       </div>
     </div>

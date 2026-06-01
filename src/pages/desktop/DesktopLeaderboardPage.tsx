@@ -16,37 +16,40 @@ const LEAGUE_COLORS: Record<string, string> = {
 
 export default function DesktopLeaderboardPage() {
   const { t } = useTranslation('public');
-  const weeklyOverview = useQuery(LEADERBOARD.getWeeklyOverview, {});
-  const weeklyTop = useQuery(LEADERBOARD.getWeeklyTop, { limit: 30 });
+  // One combined query — same data, ~1/2 the server work vs the prior two-query setup.
+  const snapshot = useQuery(LEADERBOARD.getSnapshot, { topLimit: 30 });
 
-  const leagueTier = weeklyOverview?.leagueTierKey?.toLowerCase() || 'gold';
-  const leagueName = t(`leaderboard.desktop.leagueNames.${leagueTier}`, { defaultValue: 'Gold League' });
+  const leagueTier = snapshot?.leagueTierKey?.toLowerCase() || 'gold';
+  const leagueName = t(`leaderboard.desktop.leagueNames.${leagueTier}`, {
+    defaultValue: 'Gold League',
+  });
   const leagueColor = LEAGUE_COLORS[leagueTier] || LEAGUE_COLORS.gold;
-  const leagueSeal = weeklyOverview?.leagueSeal?.trim() || '金';
-  const seasonWeek = weeklyOverview?.weekIdentifier.split('-W')[1] || '1';
+  const leagueSeal = snapshot?.leagueSeal?.trim() || '金';
+  const seasonWeek = snapshot?.weekIdentifier.split('-W')[1] || '1';
   const totalSeasonWeeks = 52;
 
-  const promotionCutoff = weeklyOverview?.promotionCutoffRank ?? 10;
+  const promotionCutoff = snapshot?.promotionCutoffRank ?? 10;
 
   const [now] = useState(() => Date.now());
 
   const countdownLabel = useMemo(() => {
-    const weekEndsAt = weeklyOverview?.weekEndsAt;
+    const weekEndsAt = snapshot?.weekEndsAt;
     if (!weekEndsAt) return 'Loading...';
     const remaining = Math.max(0, Math.floor((weekEndsAt - now) / 1000));
     const days = Math.floor(remaining / 86400);
     const hours = Math.floor((remaining % 86400) / 3600);
     return t('leaderboard.desktop.weekLeft', { days, hours });
-  }, [weeklyOverview?.weekEndsAt, now, t]);
+  }, [snapshot?.weekEndsAt, now, t]);
 
-  const myRank = weeklyOverview?.myRank ?? null;
+  const myRank = snapshot?.myEntry?.rank ?? null;
+  const weeklyTop = snapshot?.top;
 
   const ranks = useMemo(() => {
     if (!weeklyTop || weeklyTop.length === 0) {
       return [];
     }
 
-    return weeklyTop.map((entry) => ({
+    return weeklyTop.map(entry => ({
       r: entry.rank,
       n: entry.name || 'Learner',
       xp: entry.currentWeekXp,
@@ -55,11 +58,13 @@ export default function DesktopLeaderboardPage() {
   }, [weeklyTop]);
 
   // 加载状态
-  if (!weeklyTop || weeklyOverview === undefined) {
+  if (snapshot === undefined) {
     return (
       <div className="flex items-center justify-center p-[80px]">
         <div className="text-center">
-          <div className="text-[18px] font-extrabold text-k-ink">{t('common.loading', 'Loading...')}</div>
+          <div className="text-[18px] font-extrabold text-k-ink">
+            {t('common.loading', 'Loading...')}
+          </div>
           <div className="mt-2 text-[12px] text-k-sub">{t('leaderboard.desktop.fetchingData')}</div>
         </div>
       </div>
@@ -98,18 +103,42 @@ export default function DesktopLeaderboardPage() {
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20 }}>
           <HanjaSeal c={leagueSeal} size={64} bg={leagueColor} round={14} />
           <div style={{ flex: 1 }}>
-            <DesignChip tone="ink" size="sm">{countdownLabel}</DesignChip>
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-k-ink)', letterSpacing: -0.6, marginTop: 8 }}>
+            <DesignChip tone="ink" size="sm">
+              {countdownLabel}
+            </DesignChip>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: 'var(--color-k-ink)',
+                letterSpacing: -0.6,
+                marginTop: 8,
+              }}
+            >
               {leagueName}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--color-k-ink2)', marginTop: 4, fontWeight: 600 }}>
-              {t('leaderboard.desktop.promotionCutoff', { count: promotionCutoff })} · {t('leaderboard.desktop.relegationZone')}
+            <div
+              style={{ fontSize: 12, color: 'var(--color-k-ink2)', marginTop: 4, fontWeight: 600 }}
+            >
+              {t('leaderboard.desktop.promotionCutoff', { count: promotionCutoff })} ·{' '}
+              {t('leaderboard.desktop.relegationZone')}
             </div>
           </div>
           {myRank && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: 'var(--color-k-sub)', fontWeight: 800 }}>{t('leaderboard.desktop.myRank')}</div>
-              <div style={{ fontFamily: 'var(--font-k-serif)', fontSize: 40, fontWeight: 500, color: 'var(--color-k-crimson)', letterSpacing: -1, lineHeight: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-k-sub)', fontWeight: 800 }}>
+                {t('leaderboard.desktop.myRank')}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-k-serif)',
+                  fontSize: 40,
+                  fontWeight: 500,
+                  color: 'var(--color-k-crimson)',
+                  letterSpacing: -1,
+                  lineHeight: 1,
+                }}
+              >
                 #{myRank}
               </div>
             </div>
@@ -118,12 +147,25 @@ export default function DesktopLeaderboardPage() {
       </DesktopCard>
 
       {/* Top 3 podium */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 14, marginBottom: 22, alignItems: 'flex-end' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1.2fr 1fr',
+          gap: 14,
+          marginBottom: 22,
+          alignItems: 'flex-end',
+        }}
+      >
         {[top3[1], top3[0], top3[2]].map((p, i) => {
           if (!p) return null;
           const pos = [2, 1, 3][i];
           const h = pos === 1 ? 200 : pos === 2 ? 170 : 150;
-          const tone = pos === 1 ? LEAGUE_COLORS.gold : pos === 2 ? LEAGUE_COLORS.silver : LEAGUE_COLORS.bronze;
+          const tone =
+            pos === 1
+              ? LEAGUE_COLORS.gold
+              : pos === 2
+                ? LEAGUE_COLORS.silver
+                : LEAGUE_COLORS.bronze;
           const emoji = ['🥈', '🥇', '🥉'][i];
 
           return (
@@ -146,10 +188,20 @@ export default function DesktopLeaderboardPage() {
               >
                 {emoji}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-k-ink)', marginTop: 8 }}>
+              <div
+                style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-k-ink)', marginTop: 8 }}
+              >
                 {p.n}
               </div>
-              <div style={{ fontFamily: 'var(--font-k-serif)', fontSize: 16, color: 'var(--color-k-crimson)', fontWeight: 500, marginTop: 2 }}>
+              <div
+                style={{
+                  fontFamily: 'var(--font-k-serif)',
+                  fontSize: 16,
+                  color: 'var(--color-k-crimson)',
+                  fontWeight: 500,
+                  marginTop: 2,
+                }}
+              >
                 {p.xp.toLocaleString()} XP
               </div>
               <DesktopCard
@@ -163,7 +215,16 @@ export default function DesktopLeaderboardPage() {
                   boxShadow: 'none',
                 }}
               >
-                <span style={{ fontFamily: 'var(--font-k-serif)', fontSize: 80, color: 'var(--color-k-ink)', fontWeight: 500, letterSpacing: -3, opacity: 0.85 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-k-serif)',
+                    fontSize: 80,
+                    color: 'var(--color-k-ink)',
+                    fontWeight: 500,
+                    letterSpacing: -3,
+                    opacity: 0.85,
+                  }}
+                >
                   {pos}
                 </span>
               </DesktopCard>
@@ -171,7 +232,6 @@ export default function DesktopLeaderboardPage() {
           );
         })}
       </div>
-
 
       {/* Full table */}
 
@@ -191,7 +251,15 @@ export default function DesktopLeaderboardPage() {
                 background: p.me ? 'var(--color-k-butter)40' : 'transparent',
               }}
             >
-              <div style={{ width: 36, fontSize: 13, fontWeight: 800, color: p.me ? 'var(--color-k-crimson)' : 'var(--color-k-sub)', fontFamily: 'var(--font-k-serif)' }}>
+              <div
+                style={{
+                  width: 36,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: p.me ? 'var(--color-k-crimson)' : 'var(--color-k-sub)',
+                  fontFamily: 'var(--font-k-serif)',
+                }}
+              >
                 #{p.r}
               </div>
               <div
@@ -210,13 +278,29 @@ export default function DesktopLeaderboardPage() {
               >
                 {p.n.charAt(0)}
               </div>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: p.me ? 800 : 700, color: 'var(--color-k-ink)' }}>
+              <div
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  fontWeight: p.me ? 800 : 700,
+                  color: 'var(--color-k-ink)',
+                }}
+              >
                 {p.n}
               </div>
               <DesignChip tone={isPromotion ? 'mint' : 'muted'} size="sm">
                 {isPromotion ? t('leaderboard.desktop.promote') : t('leaderboard.desktop.stay')}
               </DesignChip>
-              <div style={{ width: 80, textAlign: 'right', fontFamily: 'var(--font-k-serif)', fontSize: 14, color: 'var(--color-k-crimson)', fontWeight: 500 }}>
+              <div
+                style={{
+                  width: 80,
+                  textAlign: 'right',
+                  fontFamily: 'var(--font-k-serif)',
+                  fontSize: 14,
+                  color: 'var(--color-k-crimson)',
+                  fontWeight: 500,
+                }}
+              >
                 {p.xp.toLocaleString()}
               </div>
             </div>
@@ -229,8 +313,11 @@ export default function DesktopLeaderboardPage() {
   const right = (
     <div className="w-[320px] shrink-0 pl-[22px]">
       <DRail kanji="季" title={t('leaderboard.desktop.seasonProgress')} pad={14}>
-        <div style={{ fontSize: 11, color: 'var(--color-k-sub)', fontWeight: 700, marginBottom: 10 }}>
-          {t('leaderboard.desktop.weekLabel', { count: Number(seasonWeek) })} · {seasonWeek}/{totalSeasonWeeks}
+        <div
+          style={{ fontSize: 11, color: 'var(--color-k-sub)', fontWeight: 700, marginBottom: 10 }}
+        >
+          {t('leaderboard.desktop.weekLabel', { count: Number(seasonWeek) })} · {seasonWeek}/
+          {totalSeasonWeeks}
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {Array.from({ length: totalSeasonWeeks }).map((_, i) => (
@@ -240,7 +327,8 @@ export default function DesktopLeaderboardPage() {
                 flex: 1,
                 height: 8,
                 borderRadius: 4,
-                background: i < Number(seasonWeek) ? 'var(--color-k-crimson)' : 'var(--color-k-line2)',
+                background:
+                  i < Number(seasonWeek) ? 'var(--color-k-crimson)' : 'var(--color-k-line2)',
               }}
             />
           ))}
@@ -248,10 +336,14 @@ export default function DesktopLeaderboardPage() {
       </DRail>
 
       <DRail kanji="禮" title={t('leaderboard.desktop.rewards')} pad={14}>
-        <div style={{ fontSize: 12, color: 'var(--color-k-ink2)', fontWeight: 600, lineHeight: 1.6 }}>
+        <div
+          style={{ fontSize: 12, color: 'var(--color-k-ink2)', fontWeight: 600, lineHeight: 1.6 }}
+        >
           <div>🥇 {t('leaderboard.desktop.rewardsList.firstPlace')}</div>
           <div style={{ marginTop: 6 }}>🥈 {t('leaderboard.desktop.rewardsList.topThree')}</div>
-          <div style={{ marginTop: 6 }}>⬆ {t('leaderboard.desktop.rewardsList.promotion', { count: promotionCutoff })}</div>
+          <div style={{ marginTop: 6 }}>
+            ⬆ {t('leaderboard.desktop.rewardsList.promotion', { count: promotionCutoff })}
+          </div>
         </div>
       </DRail>
     </div>

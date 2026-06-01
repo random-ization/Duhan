@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { QA_TOPICS } from '../../utils/convexRefs';
 import { cn } from '../../lib/utils';
-import { TOPIC_TONES, TOPIC_ICONS } from './TopicChip';
+import { TOPIC_ICONS } from './TopicChip';
 
 interface TopicFilterProps {
   value: string | null;
@@ -24,9 +24,7 @@ export function TopicFilter({ value, onChange, className }: TopicFilterProps) {
         onClick={() => onChange(null)}
         className={cn(
           'px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-150',
-          !value
-            ? 'bg-k-ink text-k-card'
-            : 'bg-k-bg2 text-k-sub hover:text-k-ink'
+          !value ? 'bg-k-ink text-k-card' : 'bg-k-bg2 text-k-sub hover:text-k-ink'
         )}
       >
         {t('qa.allTopics', { defaultValue: 'All Topics' })}
@@ -41,9 +39,7 @@ export function TopicFilter({ value, onChange, className }: TopicFilterProps) {
             onClick={() => onChange(isActive ? null : topic.slug)}
             className={cn(
               'px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-150',
-              isActive
-                ? 'bg-k-ink text-k-card'
-                : 'bg-k-bg2 text-k-sub hover:text-k-ink'
+              isActive ? 'bg-k-ink text-k-card' : 'bg-k-bg2 text-k-sub hover:text-k-ink'
             )}
           >
             {icon} {t(`qa.topics.${topic.slug}`, { defaultValue: topic.slug })}

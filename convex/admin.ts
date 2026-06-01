@@ -1207,7 +1207,9 @@ export const getAiUsageStats = query({
     } catch (error) {
       // In local dev, hot reloads can invalidate a pagination cursor mid-scan.
       // Return whatever was aggregated so the admin dashboard still renders.
-      adminLogger.warn('getAiUsageStats pagination degraded', { error: error instanceof Error ? error.message : String(error) });
+      adminLogger.warn('getAiUsageStats pagination degraded', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     const daily = [...dailyMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -1427,7 +1429,8 @@ export const backfillAndroidMobileData = mutation({
       if (derivedUnitCount <= 0) continue;
 
       const nextMinutes = derivedUnitCount * minutesPerUnit;
-      const previousMinutesRaw = (institute as { estimatedTotalMinutes?: unknown }).estimatedTotalMinutes;
+      const previousMinutesRaw = (institute as { estimatedTotalMinutes?: unknown })
+        .estimatedTotalMinutes;
       const previousMinutes =
         typeof previousMinutesRaw === 'number' && Number.isFinite(previousMinutesRaw)
           ? Math.floor(previousMinutesRaw)
@@ -1453,7 +1456,10 @@ export const backfillAndroidMobileData = mutation({
     };
     const settingsPatchResults: Array<{ key: string; changed: boolean; existed: boolean }> = [];
 
-    const upsertSiteSetting = async (key: string, value: Record<string, string | number | boolean> | string[]) => {
+    const upsertSiteSetting = async (
+      key: string,
+      value: Record<string, string | number | boolean> | string[]
+    ) => {
       const existing = await ctx.db
         .query('site_settings')
         .withIndex('by_key', q => q.eq('key', key))
@@ -1520,7 +1526,7 @@ export const getRecentActivity = query({
 
 export const runDataAudit = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async ctx => {
     // await requireAdmin(ctx);
     interface AuditSection {
       total: number;
@@ -1544,13 +1550,13 @@ export const runDataAudit = query({
       lemmas: {
         total: 0,
         hitRate: 0,
-      }
+      },
     };
 
     // 1. Audit Grammar Points (Sampled)
-    const grammarPoints = await ctx.db.query("grammar_points").take(1000);
+    const grammarPoints = await ctx.db.query('grammar_points').take(1000);
     results.grammar.total = grammarPoints.length;
-    
+
     const patterns = new Set<string>();
     for (const gp of grammarPoints) {
       if (!gp.titleZh || !gp.summary || !gp.level) {
@@ -1564,15 +1570,15 @@ export const runDataAudit = query({
     }
 
     // 2. Audit Words (Sampled)
-    const words = await ctx.db.query("words").take(1000);
+    const words = await ctx.db.query('words').take(1000);
     results.words.total = words.length;
-    
+
     const lemmas = new Set<string>();
     for (const w of words) {
       if (!w.word || !w.meaning || !w.partOfSpeech) {
         results.words.missingFields++;
       }
-      
+
       const lemmaKey = `${w.word}_${w.partOfSpeech}`;
       if (lemmas.has(lemmaKey)) {
         results.words.duplicates++;
@@ -1582,28 +1588,38 @@ export const runDataAudit = query({
     }
 
     // 3. Lemma hit rate in existing explanations (sample)
-    const explanations = await ctx.db.query("sentence_explanations").take(20);
+    const explanations = await ctx.db.query('sentence_explanations').take(20);
     let totalTokens = 0;
     let hitTokens = 0;
-    
+
     // Check lemmas individually since we can't load the whole word table
     for (const exp of explanations) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload = exp.payload as any;
-      if (payload?.tokens) {
-        for (const token of payload.tokens) {
+      const payload = exp.payload;
+      const tokens =
+        payload && typeof payload === 'object' && !Array.isArray(payload)
+          ? (payload as Record<string, unknown>).tokens
+          : undefined;
+      if (Array.isArray(tokens)) {
+        for (const token of tokens) {
           totalTokens++;
-          if (token.lemma) {
-             const match = await ctx.db.query("words").withIndex("by_word", q => q.eq("word", token.lemma)).first();
-             if (match) hitTokens++;
+          const lemma =
+            token && typeof token === 'object' && !Array.isArray(token)
+              ? (token as Record<string, unknown>).lemma
+              : undefined;
+          if (typeof lemma === 'string' && lemma.trim()) {
+            const match = await ctx.db
+              .query('words')
+              .withIndex('by_word', q => q.eq('word', lemma))
+              .first();
+            if (match) hitTokens++;
           }
         }
       }
     }
-    
+
     results.lemmas.total = totalTokens;
     results.lemmas.hitRate = totalTokens > 0 ? hitTokens / totalTokens : 0;
 
     return results;
-  }
+  },
 });

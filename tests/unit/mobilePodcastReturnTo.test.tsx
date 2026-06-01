@@ -24,27 +24,18 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-import { MobilePodcastDashboard } from '../../src/components/mobile/MobilePodcastDashboard';
+import { MobilePodcastHubPage } from '../../src/components/mobile/MobilePodcastHubPage';
 
 const renderWithRouter = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="*" element={<MobilePodcastDashboard />} />
+        <Route path="*" element={<MobilePodcastHubPage />} />
       </Routes>
     </MemoryRouter>
   );
 
-const renderSubscriptionsWithRouter = (path: string) =>
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="*" element={<MobilePodcastDashboard view="subscriptions" />} />
-      </Routes>
-    </MemoryRouter>
-  );
-
-describe('MobilePodcastDashboard returnTo behavior', () => {
+describe('MobilePodcastHubPage returnTo behavior', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     useQueryMock.mockReset();
@@ -146,7 +137,7 @@ describe('MobilePodcastDashboard returnTo behavior', () => {
         },
       ]);
 
-    renderSubscriptionsWithRouter('/podcasts/subscriptions');
+    renderWithRouter('/podcasts/subscriptions');
 
     fireEvent.click(screen.getByRole('button', { name: /subscribed show/i }));
 

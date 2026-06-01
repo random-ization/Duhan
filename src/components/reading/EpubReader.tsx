@@ -12,6 +12,41 @@ import { cn } from '../../lib/utils';
 type ReaderTheme = 'light' | 'dark' | 'sepia';
 type ReaderFontSize = 'small' | 'medium' | 'large' | 'extra-large';
 type ReaderLineHeight = 'compact' | 'normal' | 'relaxed';
+type EpubRendition = {
+  display: (target?: string) => Promise<unknown>;
+  next: () => void;
+  prev: () => void;
+  on: (event: 'relocated' | 'rendered', callback: (payload: EpubLocation) => void) => void;
+  themes: {
+    register: (name: string, rules: Record<string, Record<string, string>>) => void;
+    select: (name: string) => void;
+    fontSize: (value: string) => void;
+    override: (property: string, value: string) => void;
+  };
+  hooks: {
+    content: {
+      register: (callback: (contents: EpubContents) => void) => void;
+    };
+  };
+};
+type EpubBook = {
+  ready: Promise<unknown>;
+  renderTo: (element: HTMLElement, options: Record<string, string | boolean>) => EpubRendition;
+  locations: {
+    generate: (chars: number) => Promise<unknown>;
+    length: () => number;
+    percentageFromCfi: (cfi: string) => number;
+  };
+  destroy: () => void;
+};
+type EpubLocation = {
+  start: {
+    cfi: string;
+  };
+};
+type EpubContents = {
+  document?: Document;
+};
 
 export const EpubReader: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -24,12 +59,12 @@ export const EpubReader: React.FC = () => {
 
   // epub.js refs
   const viewerRef = useRef<HTMLDivElement>(null);
-  const bookRef = useRef<any>(null);
+  const bookRef = useRef<EpubBook | null>(null);
   const generatedLocationsRef = useRef<string | null>(null);
   const saveProgressTimeoutRef = useRef<number | null>(null);
   const pendingProgressRef = useRef<{ cfi: string; percent: number } | null>(null);
   const lastSavedProgressRef = useRef<{ cfi: string; percent: number } | null>(null);
-  const [rendition, setRendition] = useState<any>(null);
+  const [rendition, setRendition] = useState<EpubRendition | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [readerSettings, setReaderSettings] = useState<{
@@ -127,7 +162,7 @@ export const EpubReader: React.FC = () => {
       .then(module => {
         if (!isMounted || !viewerRef.current || bookRef.current) return;
 
-        const createEpub = module.default;
+        const createEpub = module.default as (url: string) => EpubBook;
         const book = createEpub(epubUrl);
         bookRef.current = book;
 
@@ -162,7 +197,7 @@ export const EpubReader: React.FC = () => {
                   if (!isMounted) return;
                   logInfo('EPUB locations generated', { length: book.locations.length() });
                 })
-                .catch((_err: any) => {
+                .catch((_err: unknown) => {
                   generatedLocationsRef.current = null;
                   logError('EPUB locations generation error', _err);
                 });
@@ -178,14 +213,14 @@ export const EpubReader: React.FC = () => {
               globalThis.window.setTimeout(scheduleGenerateLocations, 300);
             }
           })
-          .catch((_err: any) => {
+          .catch((_err: unknown) => {
             logError('Failed to initialize EPUB reader', _err);
             if (isMounted) {
               setIsBooting(false);
             }
           });
 
-        rendition.on('relocated', (location: any) => {
+        rendition.on('relocated', location => {
           if (!isMounted) return;
           if (book.locations.length() > 0) {
             const percent = book.locations.percentageFromCfi(location.start.cfi);
@@ -256,7 +291,7 @@ export const EpubReader: React.FC = () => {
     rendition.themes.override('line-height', lineH);
 
     // Update injected styles in hooks if any
-    rendition.hooks.content.register((contents: any) => {
+    rendition.hooks.content.register(contents => {
       const doc = contents?.document as Document | undefined;
       if (!doc) return;
       const styleTag = doc.getElementById('epub-reader-custom-style') || doc.createElement('style');

@@ -1,5 +1,5 @@
 import type { PaginationOptions, PaginationResult } from 'convex/server';
-import type { Id } from '../../convex/_generated/dataModel';
+import type { Doc, Id } from '../../convex/_generated/dataModel';
 
 // Import types only to avoid runtime cycles
 import type { GrammarStatsDto, GrammarItemDto, UnitGrammarDto } from '../../convex/grammars';
@@ -14,6 +14,44 @@ import type {
 import type { LearnerStatsDto, CourseDashboardDto } from '../../convex/learningStats';
 import type { CommunityUserProfileDto } from '../../convex/userProfile';
 import type { DailyTaskPlanDto } from '../../convex/dailyTask/shared';
+import type {
+  ImportedContentListItem,
+  ImportedContentSentenceRecord,
+  ImportedContentStudyState,
+  ImportedContentWithSentences,
+} from '../../convex/importedContent';
+import type { ImportedContentUrlImportResult } from '../../convex/contentImport/shared';
+import type { DiagnosisQuestionDto } from '../../convex/onboarding/shared';
+import type {
+  OnboardingStateDto,
+  SubmitDiagnosisResult,
+  SubmitGoalsResult,
+} from '../../convex/onboarding';
+import type {
+  SentenceExplanationPayload,
+  SentenceGrammarItem,
+  SentenceVocabularyItem,
+} from '../../convex/sentenceExplainer/shared';
+import type {
+  SentenceQualityQueueItem,
+  SentenceQualityBulkReviewResult,
+  SentenceQualityCorrectionInput,
+  SentenceQualityQueueReasonFilter,
+  SentenceQualityReviewStats,
+  SentenceQualityReviewResult,
+} from '../../convex/sentenceExplainer/quality';
+import type {
+  TopikHotTopic,
+  TopikImprovementPlanRecord,
+  TopikImprovementPlanResult,
+  TopikMistakeBookResult,
+  TopikPredictionResult,
+  TopikScorePredictionRecord,
+  TopikWritingProgressResult,
+} from '../../convex/topikCoach/writing';
+import type { TopikCoachWeakPoint } from '../../convex/topikCoach/weakPoints';
+import type { WeeklyFocusApplyResult, WeeklyReportData } from '../../convex/weeklyReport';
+import type { DueReviewItem } from '../../convex/fsrsReview';
 
 export type NoArgs = Record<string, never>;
 
@@ -152,75 +190,210 @@ export const DAILY_TASK = {
     { taskId: string; completed: boolean; currentCount?: number },
     DailyTaskPlanDto
   >('dailyTask:updateTaskCompletion'),
+  scheduleTopikRewriteTask: mRef<
+    {
+      taskType: string;
+      promptPreview: string;
+      latestAttemptId: Id<'topik_writing_attempts'>;
+      revisionFocus?: string[];
+    },
+    DailyTaskPlanDto
+  >('dailyTask:scheduleTopikRewriteTask'),
+};
+
+export const IMPORTED_CONTENT = {
+  importTextContent: mRef<{ title: string; rawText: string }, Id<'imported_contents'>>(
+    'importedContent:importTextContent'
+  ),
+  updateContentTags: mRef<{ contentId: Id<'imported_contents'>; tags: string[] }, string[]>(
+    'importedContent:updateContentTags'
+  ),
+  updateContentFolder: mRef<
+    { contentId: Id<'imported_contents'>; folderName: string },
+    string | undefined
+  >('importedContent:updateContentFolder'),
+  importFromUrl: aRef<
+    {
+      url: string;
+      customTitle?: string;
+    },
+    ImportedContentUrlImportResult
+  >('contentImport:importFromUrl'),
+  listImportedContents: qRef<{ limit?: number }, ImportedContentListItem[]>(
+    'importedContent:listImportedContents'
+  ),
+  listStudyStates: qRef<{ limit?: number }, ImportedContentStudyState[]>(
+    'importedContent:listStudyStates'
+  ),
+  getImportedContentWithSentences: qRef<
+    { contentId: Id<'imported_contents'> },
+    ImportedContentWithSentences | null
+  >('importedContent:getImportedContentWithSentences'),
+  getImportedSentence: qRef<
+    { sentenceId: Id<'content_sentences'> },
+    ImportedContentSentenceRecord | null
+  >('importedContent:getImportedSentence'),
+};
+
+export const WEEKLY_REPORT = {
+  getWeeklyReport: qRef<{ weekOffset?: number }, WeeklyReportData | null>(
+    'weeklyReport:getWeeklyReport'
+  ),
+  applyWeeklyFocusToTodayPlan: mRef<
+    { weekOffset?: number; language?: string },
+    WeeklyFocusApplyResult
+  >('weeklyReport:applyWeeklyFocusToTodayPlan'),
 };
 
 export const ONBOARDING = {
-  getState: qRef<
-    Record<string, never>,
-    { profile: unknown | null; shouldTrigger: boolean; hasCompletedOnboarding: boolean; diagnosisCompleted: boolean }
-  >('onboarding:getState'),
+  getState: qRef<NoArgs, OnboardingStateDto>('onboarding:getState'),
+  getDiagnosisQuestions: qRef<{ language?: string }, DiagnosisQuestionDto[]>(
+    'onboarding:getDiagnosisQuestions'
+  ),
+  submitGoals: mRef<
+    {
+      preferredLanguage?: string;
+      currentLevel?: string;
+      targetLevel?: string;
+      targetExam?: string;
+      dailyMinutes?: number;
+      studyFocus?: string[];
+    },
+    SubmitGoalsResult
+  >('onboarding:submitGoals'),
+  submitDiagnosisResult: mRef<
+    {
+      language?: string;
+      answers: Array<{ questionId: string; optionId: string }>;
+    },
+    SubmitDiagnosisResult
+  >('onboarding:submitDiagnosisResult'),
+};
+
+export type SentenceExplanationResult = {
+  success: boolean;
+  source?: string;
+  sourceRefId?: string;
+  explanationId?: Id<'sentence_explanations'>;
+  cacheHit?: boolean;
+  data?: SentenceExplanationPayload;
+  error?: string;
+};
+
+export type SentenceSaveAssetsResult = {
+  success: boolean;
+  source?: string;
+  sourceRefId?: string;
+  quality?: {
+    confidence?: number;
+    promptVersion?: string;
+    provider?: string;
+    reviewStatus?: string;
+    source?: string;
+    sourceRefId?: string;
+  };
+  savedSentenceId?: Id<'user_saved_sentences'>;
+  notePageId?: Id<'note_pages'>;
+  savedWordCount?: number;
+  savedGrammarCount?: number;
+  recentWords?: Array<{
+    id: Id<'words'>;
+    word: string;
+    meaning: string;
+    reviewStatus?: string;
+    qualityReviewStatus?: string;
+    confidence?: number;
+    promptVersion?: string;
+    provider?: string;
+    source?: string;
+    sourceRefId?: string;
+  }>;
+};
+
+export type SentenceRemoveVocabularyAssetResult = {
+  success: true;
+  removed: boolean;
+};
+
+export type SentenceSavedState = {
+  hasSavedSentence: boolean;
+  savedGrammarCount: number;
+  savedWordCount: number;
+  notePageId: Id<'note_pages'> | null;
 };
 export const SENTENCE_EXPLAINER = {
   explainSentence: aRef<
     {
       sentence: string;
-      sentenceId?: string;
+      sentenceId?: Id<'content_sentences'>;
       targetLanguage?: string;
       source?: string;
       sourceRefId?: string;
       forceRefresh?: boolean;
     },
-    {
-      success: boolean;
-      source?: string;
-      sourceRefId?: string;
-      explanationId?: string;
-      cacheHit?: boolean;
-      data?: any;
-      error?: string;
-    }
+    SentenceExplanationResult
   >('sentenceExplainer/explain:explainSentence'),
   saveAssets: mRef<
     {
-      explanationId: string;
+      explanationId: Id<'sentence_explanations'>;
       saveSentence?: boolean;
-      selectedWords?: any[];
-      selectedGrammar?: any[];
+      selectedWords?: SentenceVocabularyItem[];
+      selectedGrammar?: SentenceGrammarItem[];
       createNotePage?: boolean;
       enqueueForReview?: boolean;
       noteTitle?: string;
       source?: string;
       sourceRefId?: string;
     },
-    {
-      success: boolean;
-      source?: string;
-      savedSentenceId?: string;
-      notePageId?: string;
-      savedWordCount?: number;
-      savedGrammarCount?: number;
-      recentWords?: any[];
-    }
+    SentenceSaveAssetsResult
   >('sentenceExplainer/save:saveAssets'),
+  removeSavedVocabularyAsset: mRef<
+    {
+      wordId: Id<'words'>;
+      source?: string;
+      sourceRefId?: string;
+    },
+    SentenceRemoveVocabularyAssetResult
+  >('sentenceExplainer/save:removeSavedVocabularyAsset'),
   getLatest: qRef<
     {
-      sentenceId?: string;
+      sentenceId?: Id<'content_sentences'>;
       textHash?: string;
       targetLanguage?: string;
     },
-    any
+    Doc<'sentence_explanations'> | null
   >('sentenceExplainer/query:getLatest'),
   getSavedState: qRef<
     {
-      explanationId: string;
+      explanationId: Id<'sentence_explanations'>;
     },
-    {
-      hasSavedSentence: boolean;
-      savedGrammarCount: number;
-      savedWordCount: number;
-      notePageId: string | null;
-    }
+    SentenceSavedState
   >('sentenceExplainer/query:getSavedState'),
+  getQualityReviewQueue: qRef<
+    { limit?: number; maxConfidence?: number; reason?: SentenceQualityQueueReasonFilter },
+    SentenceQualityQueueItem[]
+  >('sentenceExplainer/quality:getQualityReviewQueue'),
+  getQualityReviewStats: qRef<
+    { limit?: number; maxConfidence?: number },
+    SentenceQualityReviewStats | null
+  >('sentenceExplainer/quality:getQualityReviewStats'),
+  reviewQualityItem: mRef<
+    {
+      explanationId: Id<'sentence_explanations'>;
+      decision: 'human_reviewed' | 'rejected';
+      corrections?: SentenceQualityCorrectionInput;
+      reviewNote?: string;
+    },
+    SentenceQualityReviewResult
+  >('sentenceExplainer/quality:reviewQualityItem'),
+  bulkReviewQualityItems: mRef<
+    {
+      explanationIds: Id<'sentence_explanations'>[];
+      decision: 'human_reviewed' | 'rejected';
+      reviewNote?: string;
+    },
+    SentenceQualityBulkReviewResult
+  >('sentenceExplainer/quality:bulkReviewQualityItems'),
 };
 
 export const UNITS = {
@@ -355,6 +528,10 @@ export const GRAMMARS = {
     },
     { success: boolean; updated: number; errors: string[] }
   >('grammars:adminApplyTopikReviewDecisions'),
+  saveToReview: mRef<
+    { grammarId: string; source?: string; sourceRefId?: string },
+    { success: boolean; savedId?: string; action?: 'saved' | 'already_saved'; reason?: string }
+  >('grammars:saveGrammarToReview'),
 };
 
 /**
@@ -689,7 +866,13 @@ export const TOPIK = {
     PaginationResult<TopikExamDto>
   >('topik:getExams'),
   getUpcoming: qRef<NoArgs, TopikExamDto | null>('topik:getUpcoming'),
-  getLobbyStats: qRef<NoArgs, { upcomingExam: { round: number; date?: number; title: string } | null; weakAreas: Array<{ type: string; score: number; label: string; subLabel: string }> }>('topik:getLobbyStats'),
+  getLobbyStats: qRef<
+    NoArgs,
+    {
+      upcomingExam: { round: number; date?: number; title: string } | null;
+      weakAreas: Array<{ type: string; score: number; label: string; subLabel: string }>;
+    }
+  >('topik:getLobbyStats'),
   getExamById: qRef<{ examId: string }, TopikExamDto | null>('topik:getExamById'),
   getExamQuestions: qRef<{ examId: string }, TopikQuestionDto[]>('topik:getExamQuestions'),
   // Mutations
@@ -1023,10 +1206,9 @@ export const COMMUNITY = {
     { activityId: string; kind: 'event' | 'post' },
     { liked: boolean; likeCount: number }
   >('community:unlikeActivity'),
-  addComment: mRef<
-    { postId: Id<'community_posts'>; content: string },
-    Id<'community_comments'>
-  >('community:addComment'),
+  addComment: mRef<{ postId: Id<'community_posts'>; content: string }, Id<'community_comments'>>(
+    'community:addComment'
+  ),
   getComments: qRef<
     { postId: Id<'community_posts'> },
     Array<{
@@ -1049,60 +1231,48 @@ export const QA_FORUM = {
     { topicSlug?: string; sort?: 'recent' | 'unanswered' | 'top'; limit?: number },
     QAQuestionDto[]
   >('qaForum:listQuestions'),
-  getQuestion: qRef<
-    { questionId: Id<'qa_questions'> },
-    QAQuestionDetailDto | null
-  >('qaForum:getQuestion'),
-  createQuestion: mRef<
-    { title: string; content: string; topicSlug: string },
-    Id<'qa_questions'>
-  >('qaForum:createQuestion'),
-  createAnswer: mRef<
-    { questionId: Id<'qa_questions'>; content: string },
-    Id<'qa_answers'>
-  >('qaForum:createAnswer'),
-  incrementViewCount: mRef<
-    { questionId: Id<'qa_questions'> },
-    void
-  >('qaForum:incrementViewCount'),
+  getQuestion: qRef<{ questionId: Id<'qa_questions'> }, QAQuestionDetailDto | null>(
+    'qaForum:getQuestion'
+  ),
+  createQuestion: mRef<{ title: string; content: string; topicSlug: string }, Id<'qa_questions'>>(
+    'qaForum:createQuestion'
+  ),
+  createAnswer: mRef<{ questionId: Id<'qa_questions'>; content: string }, Id<'qa_answers'>>(
+    'qaForum:createAnswer'
+  ),
+  incrementViewCount: mRef<{ questionId: Id<'qa_questions'> }, void>('qaForum:incrementViewCount'),
   voteOnTarget: mRef<
     { target: 'question' | 'answer'; targetId: string; value: 1 | -1 },
     { ok: boolean }
   >('qaForum:voteOnTarget'),
-  acceptAnswer: mRef<
-    { answerId: Id<'qa_answers'> },
-    { accepted: boolean }
-  >('qaForum:acceptAnswer'),
+  acceptAnswer: mRef<{ answerId: Id<'qa_answers'> }, { accepted: boolean }>('qaForum:acceptAnswer'),
   editQuestion: mRef<
     { questionId: Id<'qa_questions'>; title: string; content: string; topicSlug: string },
     { ok: true }
   >('qaForum:editQuestion'),
-  editAnswer: mRef<
-    { answerId: Id<'qa_answers'>; content: string },
-    { ok: true }
-  >('qaForum:editAnswer'),
-  deleteQuestion: mRef<
-    { questionId: Id<'qa_questions'> },
-    { ok: true }
-  >('qaForum:deleteQuestion'),
-  deleteAnswer: mRef<
-    { answerId: Id<'qa_answers'> },
-    { ok: true }
-  >('qaForum:deleteAnswer'),
+  editAnswer: mRef<{ answerId: Id<'qa_answers'>; content: string }, { ok: true }>(
+    'qaForum:editAnswer'
+  ),
+  deleteQuestion: mRef<{ questionId: Id<'qa_questions'> }, { ok: true }>('qaForum:deleteQuestion'),
+  deleteAnswer: mRef<{ answerId: Id<'qa_answers'> }, { ok: true }>('qaForum:deleteAnswer'),
   searchQuestions: qRef<
     { searchQuery: string; topicSlug?: string; limit?: number },
     QAQuestionDto[]
   >('qaForum:searchQuestions'),
-  getMyVotes: qRef<
-    { targetIds: string[] },
-    Record<string, number>
-  >('qaForum:getMyVotes'),
+  getMyVotes: qRef<{ targetIds: string[] }, Record<string, number>>('qaForum:getMyVotes'),
 };
 
 export const QA_TOPICS = {
   listTopics: qRef<
     Record<string, never>,
-    Array<{ _id: string; slug: string; nameKey: string; icon: string; order: number; isActive: boolean }>
+    Array<{
+      _id: string;
+      slug: string;
+      nameKey: string;
+      icon: string;
+      order: number;
+      isActive: boolean;
+    }>
   >('qaTopics:listTopics'),
 };
 
@@ -1217,17 +1387,29 @@ export type RecentAnnotation = {
 };
 
 import type { NextBestAction } from '../../convex/recommendations';
-import type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
 import type {
-  NotificationDto,
-  NotificationPreferencesDto,
-} from '../../convex/notifications';
-import type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
+  WeakGrammarPattern,
+  WeakVocabCategory,
+  WritingErrorSummary,
+  CrossDimensionWeakPoint,
+} from '../../convex/weakPoints';
+import type { NotificationDto, NotificationPreferencesDto } from '../../convex/notifications';
+import type {
+  LeaderboardEntry,
+  LeaderboardSnapshot,
+  MyRankResult,
+  WeeklyOverview,
+} from '../../convex/leaderboard';
 import type { PartnershipDto, ActivePartnershipDto } from '../../convex/partnerships';
 import type { SearchAllResult } from '../../convex/search';
 
 export type { NextBestAction, NextBestActionKind } from '../../convex/recommendations';
-export type { WeakGrammarPattern, WeakVocabCategory } from '../../convex/weakPoints';
+export type {
+  WeakGrammarPattern,
+  WeakVocabCategory,
+  WritingErrorSummary,
+  CrossDimensionWeakPoint,
+} from '../../convex/weakPoints';
 export type {
   NotificationDto,
   NotificationKind,
@@ -1235,7 +1417,12 @@ export type {
   NotificationCategory,
   NotificationPriority,
 } from '../../convex/notifications';
-export type { LeaderboardEntry, MyRankResult, WeeklyOverview } from '../../convex/leaderboard';
+export type {
+  LeaderboardEntry,
+  LeaderboardSnapshot,
+  MyRankResult,
+  WeeklyOverview,
+} from '../../convex/leaderboard';
 export type {
   PartnershipDto,
   ActivePartnershipDto,
@@ -1266,6 +1453,102 @@ export const RECOMMENDATIONS = {
   getNextBestAction: qRef<{ localHour?: number }, NextBestAction | null>(
     'recommendations:getNextBestAction'
   ),
+  logInteraction: mRef<
+    {
+      actionKind: string;
+      module: string;
+      reasonCode: string;
+      interaction: string;
+      contentId?: string;
+      localHour?: number;
+      engagementMs?: number;
+    },
+    void
+  >('recommendations:logRecommendationInteraction'),
+  getStats: qRef<
+    NoArgs,
+    {
+      totalShown: number;
+      modules: Array<{
+        module: string;
+        shown: number;
+        clicked: number;
+        completed: number;
+        skipped: number;
+        clickRate: number;
+        avgEngagementMs: number;
+      }>;
+    } | null
+  >('recommendations:getRecommendationStats'),
+};
+
+export const READING_PROGRESS = {
+  getProgress: qRef<
+    { contentType: string; contentId: string },
+    Doc<'user_reading_progress'> | null
+  >('readingProgress:getProgress'),
+  getRecentReading: qRef<{ limit?: number }, Doc<'user_reading_progress'>[]>(
+    'readingProgress:getRecentReading'
+  ),
+  updateProgress: mRef<
+    {
+      contentType: string;
+      contentId: string;
+      lastSentenceId?: string;
+      lastSentenceIndex?: number;
+      completedSentenceCount?: number;
+      totalSentenceCount?: number;
+      readingTimeIncrement?: number;
+    },
+    Id<'user_reading_progress'>
+  >('readingProgress:updateProgress'),
+  incrementSavedCounts: mRef<
+    {
+      contentType: string;
+      contentId: string;
+      savedWordsDelta?: number;
+      savedSentencesDelta?: number;
+    },
+    void
+  >('readingProgress:incrementSavedCounts'),
+  markCompleted: mRef<{ contentType: string; contentId: string }, Id<'user_reading_progress'>>(
+    'readingProgress:markCompleted'
+  ),
+};
+
+export const AI_CONTENT_FEEDBACK = {
+  submitFeedback: mRef<
+    {
+      targetType: string;
+      targetId: string;
+      feedbackType: string;
+      comment?: string;
+    },
+    unknown
+  >('aiContentFeedback:submitFeedback'),
+};
+
+export const TOPIK_COACH = {
+  getScorePrediction: qRef<Record<string, never>, TopikScorePredictionRecord | null>(
+    'topikCoach/index:getScorePrediction'
+  ),
+  getImprovementPlan: qRef<Record<string, never>, TopikImprovementPlanRecord | null>(
+    'topikCoach/index:getImprovementPlan'
+  ),
+  getMistakeBook: qRef<{ limit?: number }, TopikMistakeBookResult | null>(
+    'topikCoach/index:getMistakeBook'
+  ),
+  getWeakPoints: qRef<{ limit?: number; daysBack?: number }, TopikCoachWeakPoint[]>(
+    'topikCoach/index:getWeakPoints'
+  ),
+  getHotTopics: qRef<Record<string, never>, TopikHotTopic[]>('topikCoach/index:getHotTopics'),
+  getWritingProgress: qRef<{ limit?: number }, TopikWritingProgressResult | null>(
+    'topikCoach/index:getWritingProgress'
+  ),
+  predictScore: mRef<Record<string, never>, TopikPredictionResult>('topikCoach/index:predictScore'),
+  generateImprovementPlan: mRef<{ targetLevel?: number }, TopikImprovementPlanResult>(
+    'topikCoach/index:generateImprovementPlan'
+  ),
 };
 
 export const WEAK_POINTS = {
@@ -1275,6 +1558,45 @@ export const WEAK_POINTS = {
   getWeakVocabCategories: qRef<{ limit?: number; language?: string }, WeakVocabCategory[]>(
     'weakPoints:getWeakVocabCategories'
   ),
+  getWritingErrorsByKagas: qRef<{ limit?: number; daysBack?: number }, WritingErrorSummary[]>(
+    'weakPoints:getWritingErrorsByKagas'
+  ),
+  getCrossDimensionWeakPoints: qRef<{ language?: string }, CrossDimensionWeakPoint[]>(
+    'weakPoints:getCrossDimensionWeakPoints'
+  ),
+};
+
+export const FSRS_REVIEW = {
+  getDueItems: qRef<{ kind?: 'sentence' | 'grammar' | 'all'; limit?: number }, DueReviewItem[]>(
+    'fsrsReview:getDueItems'
+  ),
+  getReviewSummary: qRef<
+    Record<string, never>,
+    { dueSentences: number; dueGrammar: number; totalSentences: number; totalGrammar: number }
+  >('fsrsReview:getReviewSummary'),
+  applyReviewResult: mRef<
+    {
+      itemId: string;
+      kind: 'sentence' | 'grammar';
+      newCardState: {
+        state: number;
+        due: number;
+        stability: number;
+        difficulty: number;
+        elapsed_days: number;
+        scheduled_days: number;
+        learning_steps: number;
+        reps: number;
+        lapses: number;
+        last_review?: number | null;
+      };
+    },
+    { success: boolean }
+  >('fsrsReview:applyReviewResult'),
+  initializeFsrsForExistingItems: mRef<
+    Record<string, never>,
+    { initialized: { sentences: number; grammar: number } }
+  >('fsrsReview:initializeFsrsForExistingItems'),
 };
 
 export const NOTIFICATIONS = {
@@ -1330,6 +1652,13 @@ export const LEADERBOARD = {
   getWeeklyTop: qRef<{ limit?: number }, LeaderboardEntry[]>('leaderboard:getWeeklyTop'),
   getMyRank: qRef<NoArgs, MyRankResult>('leaderboard:getMyRank'),
   getWeeklyOverview: qRef<NoArgs, WeeklyOverview>('leaderboard:getWeeklyOverview'),
+  /**
+   * Prefer this on pages that need top + my-rank + overview at the same time —
+   * it runs a single scan + single user batch instead of 3 separate ones.
+   */
+  getSnapshot: qRef<{ topLimit?: number }, LeaderboardSnapshot>(
+    'leaderboard:getLeaderboardSnapshot'
+  ),
 };
 
 export const SEARCH = {
@@ -1709,14 +2038,29 @@ export const NOTE_PAGES = {
 /**
  * TYPING PRACTICE REFS
  */
+export type TypingTextDto = Doc<'typing_texts'>;
+
+export type TypingUserStatsDto = {
+  totalTests: number;
+  averageWpm: number;
+  averageAccuracy: number;
+  highestWpm: number;
+  totalTime: number;
+  recentWpm: Array<{ wpm: number; date: number }>;
+  sessionsThisWeek: number;
+  lastPracticeMode: string | null;
+  lastCategoryId: string | null;
+  latestAccuracy: number | null;
+};
+
 export const TYPING = {
   listTexts: qRef<
     { type?: string; category?: string; onlyPublic?: boolean; paginationOpts: PaginationOptions },
-    PaginationResult<any>
+    PaginationResult<TypingTextDto>
   >('typing:listTexts'),
-  getText: qRef<{ id: Id<'typing_texts'> }, any>('typing:getText'),
+  getText: qRef<{ id: Id<'typing_texts'> }, TypingTextDto | null>('typing:getText'),
   listCategories: qRef<NoArgs, string[]>('typing:listCategories'),
-  getUserStats: qRef<NoArgs, any>('typing:getUserStats'),
+  getUserStats: qRef<NoArgs, TypingUserStatsDto | null>('typing:getUserStats'),
   saveRecord: mRef<
     {
       practiceMode: string;
@@ -1742,11 +2086,99 @@ export const USER_STATS = {
   getCourseDashboard: qRef<NoArgs, CourseDashboardDto>('userStats:getCourseDashboard'),
 };
 
+export type MyXpStats = {
+  currentWeekXp: number;
+  totalXp: number;
+};
+
+export const XP = {
+  getMyXpStats: qRef<NoArgs, MyXpStats | null>('xp:getMyXpStats'),
+};
+
 export const USERS = {
   updateCurrentCourse: mRef<
     { courseId: string; level?: number; unit?: number; module?: string },
     { success: boolean }
   >('users:updateCurrentCourse'),
+};
+
+/**
+ * ABILITY PROFILER REFS
+ */
+export type AbilityDimensions = {
+  vocabulary: number;
+  grammar: number;
+  reading: number;
+  writing: number;
+  listening: number;
+};
+
+export type AbilitySnapshot = {
+  _id: string;
+  overallScore: number;
+  dimensions: AbilityDimensions;
+  estimatedTopikLevel?: number;
+  takenAt: number;
+  dataCounts?: {
+    vocabItems: number;
+    grammarItems: number;
+    readingAttempts: number;
+    writingAttempts: number;
+    listeningAttempts: number;
+  };
+  trigger: string;
+};
+
+export type LiveAbilityScores = {
+  source: 'snapshot' | 'live_estimate';
+  overallScore: number;
+  dimensions: AbilityDimensions;
+  estimatedTopikLevel?: number;
+  takenAt: number;
+};
+
+export const ABILITY_PROFILER = {
+  getLatestSnapshot: qRef<NoArgs, AbilitySnapshot | null>('abilityProfiler:getLatestSnapshot'),
+  getSnapshotHistory: qRef<{ limit?: number }, AbilitySnapshot[]>(
+    'abilityProfiler:getSnapshotHistory'
+  ),
+  computeSnapshot: mRef<
+    { trigger?: string },
+    {
+      _id: string;
+      overallScore: number;
+      dimensions: AbilityDimensions;
+      estimatedTopikLevel: number;
+    }
+  >('abilityProfiler:computeSnapshot'),
+  getLiveAbilityScores: qRef<NoArgs, LiveAbilityScores | null>(
+    'abilityProfiler:getLiveAbilityScores'
+  ),
+};
+
+/**
+ * COMMUNITY INSIGHTS REFS
+ */
+export type CommunityInsightData = {
+  data: unknown;
+  sampleSize: number;
+  computedAt: number;
+} | null;
+
+export type CommunityStanding = {
+  totalWords: number;
+  masteredWords: number;
+  communityAvgWords: number;
+  communityActiveUsers: number;
+};
+
+export const COMMUNITY_INSIGHTS = {
+  getInsight: qRef<{ statType: string }, CommunityInsightData>('communityInsights:getInsight'),
+  getAllInsights: qRef<
+    NoArgs,
+    Record<string, { data: unknown; sampleSize: number; computedAt: number } | null>
+  >('communityInsights:getAllInsights'),
+  getMyStanding: qRef<NoArgs, CommunityStanding | null>('communityInsights:getMyStanding'),
 };
 
 /**
@@ -1758,3 +2190,114 @@ export const USERS = {
  */
 // Import from readingLibrary.ts instead
 export { READING_LIBRARY } from './convexRefs/readingLibrary';
+
+/**
+ * SPEAKING COACH REFS
+ */
+export type SpeakingSessionDto = {
+  _id: string;
+  mode: string;
+  targetText: string;
+  source?: string;
+  sourceRefId?: string;
+  attemptCount: number;
+  bestAccuracy?: number;
+  durationSec?: number;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type SyllableFeedback = {
+  target: string;
+  recognized: string;
+  correct: boolean;
+  phoneticRule?: string;
+};
+
+export type RecordAttemptResult = {
+  scoreId: string;
+  accuracy: number;
+  bestAccuracy: number;
+  attemptCount: number;
+  syllableFeedback: SyllableFeedback[];
+  issues: string[];
+};
+
+export type SpeakingProgressSummary = {
+  totalSessions: number;
+  totalMinutes: number;
+  avgAccuracy: number;
+  recentAvgAccuracy: number;
+  recentSessionCount: number;
+  modeBreakdown: Record<string, { count: number; avgAccuracy: number }>;
+};
+
+export const SPEAKING_COACH = {
+  createSession: mRef<
+    { mode: string; targetText: string; source?: string; sourceRefId?: string },
+    { sessionId: string }
+  >('speakingCoach:createSession'),
+  recordAttempt: mRef<
+    { sessionId: string; recognizedText: string; durationSec?: number },
+    RecordAttemptResult
+  >('speakingCoach:recordAttempt'),
+  completeSession: mRef<
+    { sessionId: string },
+    { sessionId: string; attemptCount: number; bestAccuracy?: number; durationSec: number }
+  >('speakingCoach:completeSession'),
+  getRecentSessions: qRef<{ limit?: number; mode?: string }, SpeakingSessionDto[]>(
+    'speakingCoach:getRecentSessions'
+  ),
+  getSessionDetail: qRef<
+    { sessionId: string },
+    (SpeakingSessionDto & { attempts: unknown[] }) | null
+  >('speakingCoach:getSessionDetail'),
+  getProgressSummary: qRef<NoArgs, SpeakingProgressSummary | null>(
+    'speakingCoach:getProgressSummary'
+  ),
+};
+
+/**
+ * SEMANTIC EMBEDDINGS REFS (BGE-M3)
+ */
+export type EmbeddingSearchResult = {
+  _id: string;
+  _score: number;
+  sourceTable: string;
+  sourceId: string;
+  text: string;
+};
+
+export type EmbeddingStats = {
+  total: number;
+  bySource: Record<string, number>;
+  model: string;
+  dimensions: number;
+};
+
+export const EMBEDDINGS = {
+  embedText: aRef<
+    { text: string; sourceTable: string; sourceId: string },
+    { embeddingId: string; cached: boolean }
+  >('embeddings:embedText'),
+  embedBatch: aRef<
+    { items: Array<{ text: string; sourceTable: string; sourceId: string }> },
+    { embedded: number; skipped: number }
+  >('embeddings:embedBatch'),
+  ensureEmbedding: aRef<
+    { text: string; sourceTable: string; sourceId: string },
+    { status: 'exists' | 'created' | 'skipped' }
+  >('embeddings:ensureEmbedding'),
+  searchSimilar: aRef<
+    { query: string; sourceTable?: string; limit?: number },
+    EmbeddingSearchResult[]
+  >('embeddings:searchSimilar'),
+  checkSimilarity: aRef<{ textA: string; textB: string }, { similarity: number }>(
+    'embeddings:checkSimilarity'
+  ),
+  getBySource: qRef<{ sourceTable: string; sourceId: string }, unknown | null>(
+    'embeddings:getBySource'
+  ),
+  getStats: qRef<NoArgs, EmbeddingStats>('embeddings:getStats'),
+};

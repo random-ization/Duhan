@@ -491,3 +491,171 @@ export function assertPremiumFeature(
     upgradeSource,
   });
 }
+
+// ── P2: Plan-based quota & paywall tracking ──────────────────────
+
+/**
+ * Get quota for a feature from the feature_entitlements table.
+ * Falls back to hardcoded limits if no table entry exists.
+ */
+export const getPlanQuota = query({
+  args: {
+    featureKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    const snapshot = await getViewerEntitlementSnapshot(ctx, userId);
+    const planKey = snapshot.plan;
+
+    // Try table-based entitlements first
+    const entitlement = await ctx.db
+      .query('feature_entitlements')
+      .withIndex('by_planKey', q => q.eq('planKey', planKey))
+      .filter(q => q.eq(q.field('featureKey'), args.featureKey))
+      .first();
+
+    if (entitlement) {
+      return {
+        featureKey: args.featureKey,
+        planKey,
+        dailyQuota: entitlement.dailyQuota ?? null,
+        monthlyQuota: entitlement.monthlyQuota ?? null,
+        unlimited: entitlement.unlimited,
+        source: 'table' as const,
+      };
+    }
+
+    // Fallback to hardcoded limits for known daily-quota features
+    type DailyQuotaFeature =
+      | 'vocab_new_words_daily'
+      | 'vocab_test_daily'
+      | 'media_play_daily'
+      | 'ai_credits_daily';
+    const dailyFeatures = new Set<string>([
+      'vocab_new_words_daily',
+      'vocab_test_daily',
+      'media_play_daily',
+      'ai_credits_daily',
+    ]);
+    const dailyLimit = dailyFeatures.has(args.featureKey)
+      ? getDailyLimitForFeature(planKey, args.featureKey as DailyQuotaFeature)
+      : null;
+
+    return {
+      featureKey: args.featureKey,
+      planKey,
+      dailyQuota: dailyLimit,
+      monthlyQuota: null,
+      unlimited: dailyLimit === null || dailyLimit === Infinity,
+      source: 'hardcoded' as const,
+    };
+  },
+});
+
+/**
+ * Record a paywall impression (shown when user hits a limit).
+ */
+export const recordPaywallImpression = mutation({
+  args: {
+    trigger: v.string(),
+    feature: v.string(),
+    planSuggested: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    return await ctx.db.insert('paywall_impressions', {
+      userId,
+      trigger: args.trigger,
+      feature: args.feature,
+      planSuggested: args.planSuggested,
+      converted: false,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Mark a paywall impression as converted (user upgraded).
+ */
+export const markPaywallConverted = mutation({
+  args: {
+    impressionId: v.id('paywall_impressions'),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    const impression = await ctx.db.get(args.impressionId);
+    if (!impression || impression.userId !== userId) return null;
+
+    await ctx.db.patch(args.impressionId, {
+      converted: true,
+      convertedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+/**
+ * Record AI cost attribution for a user action.
+ */
+export const recordAiCostAttribution = internalMutation({
+  args: {
+    userId: v.id('users'),
+    feature: v.string(),
+    costUsd: v.number(),
+    tokensUsed: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const today = new Date().toISOString().split('T')[0];
+
+    return await ctx.db.insert('ai_cost_attributions', {
+      userId: args.userId,
+      feature: args.feature,
+      costUsd: args.costUsd,
+      tokensUsed: args.tokensUsed,
+      date: today,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get AI cost summary for a user (for admin/profile view).
+ */
+export const getAiCostSummary = query({
+  args: {
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getOptionalAuthUserId(ctx);
+    if (!userId) return null;
+
+    const costs = await ctx.db
+      .query('ai_cost_attributions')
+      .withIndex('by_user_date', q => q.eq('userId', userId))
+      .order('desc')
+      .take(args.days ?? 30);
+
+    if (costs.length === 0) return { totalCostUsd: 0, totalTokens: 0, byFeature: {} };
+
+    const byFeature: Record<string, { costUsd: number; tokens: number; count: number }> = {};
+    let totalCostUsd = 0;
+    let totalTokens = 0;
+
+    for (const c of costs) {
+      totalCostUsd += c.costUsd;
+      totalTokens += c.tokensUsed ?? 0;
+      const f = byFeature[c.feature] || { costUsd: 0, tokens: 0, count: 0 };
+      f.costUsd += c.costUsd;
+      f.tokens += c.tokensUsed ?? 0;
+      f.count += 1;
+      byFeature[c.feature] = f;
+    }
+
+    return {
+      totalCostUsd: Math.round(totalCostUsd * 10000) / 10000,
+      totalTokens,
+      byFeature,
+    };
+  },
+});

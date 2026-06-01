@@ -62,7 +62,10 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
 
   return (
     <div className="max-w-xl space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <details className="group bg-card rounded-2xl border border-border shadow-sm overflow-hidden" open>
+      <details
+        className="group bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
+        open
+      >
         <summary className="font-bold text-foreground p-4 cursor-pointer list-none flex justify-between items-center transition-colors">
           {labels.changePassword}
           <ChevronDown className="w-5 h-5 transition-transform group-open:rotate-180 text-muted-foreground" />
@@ -110,7 +113,9 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
                 type="submit"
                 variant="default"
                 size="auto"
-                disabled={!currentPassword || !newPassword || !confirmPassword || isChangingPassword}
+                disabled={
+                  !currentPassword || !newPassword || !confirmPassword || isChangingPassword
+                }
                 loading={isChangingPassword}
                 loadingIconClassName="w-4 h-4"
                 className={`w-full py-3 px-4 rounded-xl font-bold transition-all ${
@@ -220,9 +225,9 @@ export const ProfileSecurityTab: React.FC<ProfileSecurityTabProps> = ({
                           await signIn(provider.id, { redirectTo: globalThis.location.href });
                         } catch {
                           error(
-                            (
-                              labels.profile?.connectFailed || `Failed to connect ${provider.label}`
-                            ).replace('{provider}', provider.label)
+                            (labels.profile?.connectFailed || `Failed to connect ${provider.label}`)
+                              .replace('{{provider}}', provider.label)
+                              .replace('{provider}', provider.label)
                           );
                         } finally {
                           setPendingProviderId(null);

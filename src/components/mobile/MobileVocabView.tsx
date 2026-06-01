@@ -141,7 +141,7 @@ export default function MobileVocabView({
   language,
   userId: _userId,
   initialMode,
-  onRequestTestMode,
+  onRequestTestMode: _onRequestTestMode,
   flashcardResume = null,
   learnResume = null,
   testResume = null,
@@ -574,11 +574,7 @@ export default function MobileVocabView({
               </div>
             }
           >
-            <VocabMatch
-              words={gameWords}
-              onComplete={() => {}}
-              onClose={closeFocusOverlay}
-            />
+            <VocabMatch words={gameWords} onComplete={() => {}} onClose={closeFocusOverlay} />
           </Suspense>
         </div>
       );
@@ -824,11 +820,11 @@ export default function MobileVocabView({
 
   if (focusOpen) {
     const focusHeader =
-      activeTab === 'flashcard' ? (
-        flashcardFocusHeader
-      ) : activeTab === 'learn' || activeTab === 'test' || activeTab === 'match' ? null : (
-        defaultFocusHeader
-      );
+      activeTab === 'flashcard'
+        ? flashcardFocusHeader
+        : activeTab === 'learn' || activeTab === 'test' || activeTab === 'match'
+          ? null
+          : defaultFocusHeader;
 
     return (
       <div
@@ -968,7 +964,9 @@ export default function MobileVocabView({
               </span>
               <ChevronDown size={20} color={KT.sub} strokeWidth={3} />
             </button>
-            <div style={{ fontSize: 13, color: KT.sub, marginTop: 4, fontFamily: KT.font }}>{scopeTitle}</div>
+            <div style={{ fontSize: 13, color: KT.sub, marginTop: 4, fontFamily: KT.font }}>
+              {scopeTitle}
+            </div>
           </div>
 
           {/* Actions: switch material + mastery ring */}

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getLabels } from '../../utils/i18n';
@@ -8,13 +8,11 @@ import { LearnerStatsDto } from '../../../convex/learningStats';
 import { useExamStats } from '../profile/hooks/useExamStats';
 import { ExamAttempt } from '../../types';
 import { Loading, UserAvatar } from '../../components/common';
-import { KT, Card, HanjaSeal, SectionHead } from '../../components/mobile/ksoft/ksoft';
+import { KT, Card, SectionHead } from '../../components/mobile/ksoft/ksoft';
 import { ProfileInfoTab } from '../profile/tabs/ProfileInfoTab';
-import type { SettingsSection } from '../profile/tabs/ProfileSettingsTab';
 import {
   User,
   Shield,
-  Settings,
   BarChart3,
   CreditCard,
   ChevronRight,
@@ -83,7 +81,6 @@ export const DesktopProfilePage: React.FC = () => {
 
   const { examsTaken, averageScore } = useExamStats(examAttempts ?? []);
 
-  const logoutMutation = useMutation(mRef('auth:logout'));
   const changePasswordMutation = useMutation(mRef('auth:changePassword'));
   const unlinkAuthProviderMutation = useMutation(mRef('auth:unlinkAuthProvider'));
   const getUploadUrlAction = useAction(
@@ -105,7 +102,14 @@ export const DesktopProfilePage: React.FC = () => {
   const displayName = user.name || t('profile.unnamed', { defaultValue: 'User' });
   const dayStreak = userStats?.streak ?? 0;
   const savedWordsCount = userStats?.totalWordsLearned ?? vocabBookCount?.count ?? 0;
-  const userIdDisplay = (user as any)._id?.slice(0, 8) || '—';
+  const userIdDisplay =
+    typeof user === 'object' &&
+    user !== null &&
+    '_id' in user &&
+    typeof user._id === 'string' &&
+    user._id.length > 0
+      ? user._id.slice(0, 8)
+      : '—';
   const isPremium = Boolean(viewerAccess?.isPremium);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -154,7 +158,7 @@ export const DesktopProfilePage: React.FC = () => {
         },
       });
       toast.success(t('avatarUpdated', { defaultValue: 'Avatar updated' }));
-    } catch (err) {
+    } catch (_err) {
       toast.error(t('profile.uploadAvatarFailed', { defaultValue: 'Failed to upload avatar' }));
     } finally {
       setIsUploadingAvatar(false);

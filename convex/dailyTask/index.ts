@@ -13,6 +13,7 @@ import type { GoalProfileDto } from '../onboarding/index';
 import {
   buildDailyTaskPlan,
   DAILY_TASK_VERSION,
+  resolveDailyTaskPath,
   type DailyTaskBuildSignals,
   type DailyTaskItemDto,
   type DailyTaskKind,
@@ -23,6 +24,16 @@ type DailyTaskReadCtx = QueryCtx & Pick<ActionCtx, 'runQuery'>;
 type DailyTaskWriteCtx = MutationCtx & Pick<ActionCtx, 'runQuery'>;
 type DailyTaskCtx = DailyTaskReadCtx | DailyTaskWriteCtx;
 
+function normalizePersistedTaskLinkPath(
+  task: Doc<'daily_task_plan'>['tasks'][number]
+): string | undefined {
+  const kind = task.kind as DailyTaskKind;
+  if (kind === 'vocab_20' && task.linkPath === '/review') {
+    return resolveDailyTaskPath(kind);
+  }
+  return task.linkPath;
+}
+
 function toPlanDto(doc: Doc<'daily_task_plan'>): DailyTaskPlanDto {
   return {
     id: String(doc._id),
@@ -31,6 +42,7 @@ function toPlanDto(doc: Doc<'daily_task_plan'>): DailyTaskPlanDto {
     goalProfileId: doc.goalProfileId ? String(doc.goalProfileId) : undefined,
     taskVersion: doc.taskVersion,
     source: doc.source,
+    rationale: doc.rationale,
     tasks: doc.tasks.map(task => ({
       taskId: task.taskId,
       kind: task.kind as DailyTaskKind,
@@ -39,7 +51,7 @@ function toPlanDto(doc: Doc<'daily_task_plan'>): DailyTaskPlanDto {
       targetCount: task.targetCount,
       currentCount: task.currentCount,
       completed: task.completed,
-      linkPath: task.linkPath,
+      linkPath: normalizePersistedTaskLinkPath(task),
       assetType: task.assetType,
       assetRefId: task.assetRefId,
       metadata: task.metadata,
@@ -78,6 +90,13 @@ async function getSignals(ctx: DailyTaskCtx, language?: string): Promise<DailyTa
     limit: 2,
     language,
   });
+  const writingWeaknesses = await ctx.runQuery(api.weakPoints.getWritingErrorsByKagas, {
+    limit: 2,
+    daysBack: 45,
+  });
+  const importedStudyStates = await ctx.runQuery(api.importedContent.listStudyStates, {
+    limit: 1,
+  });
   const userId = await getAuthUserId(ctx);
   const queuedNotes = await ctx.db
     .query('note_review_queue')
@@ -91,6 +110,25 @@ async function getSignals(ctx: DailyTaskCtx, language?: string): Promise<DailyTa
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayStartTs = todayStart.getTime();
+  const now = Date.now();
+  const dueSentences = await ctx.db
+    .query('user_saved_sentences')
+    .withIndex('by_user_due', q => q.eq('userId', userId).lte('fsrsDue', now))
+    .collect();
+  const dueGrammar = await ctx.db
+    .query('user_grammar_saved')
+    .withIndex('by_user_due', q => q.eq('userId', userId).lte('fsrsDue', now))
+    .collect();
+  const latestImported = importedStudyStates[0];
+  const importedContinuation =
+    latestImported?.nextSentenceId && latestImported.nextSentenceText
+      ? {
+          contentTitle: latestImported.title,
+          sentenceId: String(latestImported.nextSentenceId),
+          sentenceText: latestImported.nextSentenceText,
+          progressPercent: latestImported.progressPercent,
+        }
+      : undefined;
 
   return {
     language: language?.startsWith('zh')
@@ -102,6 +140,10 @@ async function getSignals(ctx: DailyTaskCtx, language?: string): Promise<DailyTa
           : 'en',
     reviewSummary,
     dueNoteCount: queuedNotes.length,
+    dueSentenceCount: dueSentences.length,
+    dueGrammarCount: dueGrammar.length,
+    importedContinuation,
+    writingWeaknesses,
     weakGrammarPatterns,
     weakVocabCategories,
     noteReviewDoneToday: doneNotes.filter(
@@ -162,6 +204,7 @@ async function upsertTodayPlan(
       goalProfileId: plan.goalProfileId as Id<'user_goal_profile'> | undefined,
       taskVersion: plan.taskVersion ?? DAILY_TASK_VERSION,
       source: plan.source,
+      rationale: plan.rationale,
       tasks,
       reviewSummary: plan.reviewSummary,
       generatedAt: plan.generatedAt,
@@ -180,6 +223,7 @@ async function upsertTodayPlan(
     goalProfileId: plan.goalProfileId as Id<'user_goal_profile'> | undefined,
     taskVersion: plan.taskVersion ?? DAILY_TASK_VERSION,
     source: plan.source,
+    rationale: plan.rationale,
     tasks,
     reviewSummary: plan.reviewSummary,
     generatedAt: plan.generatedAt,
@@ -265,6 +309,90 @@ export const updateTaskCompletion = mutation({
       status: completedAt ? 'completed' : 'ready',
       updatedAt: Date.now(),
       completedAt,
+    });
+
+    const updated = await ctx.db.get(persisted._id);
+    if (!updated) {
+      throw new ConvexError({ code: 'DAILY_TASK_PLAN_NOT_FOUND' });
+    }
+    return toPlanDto(updated);
+  },
+});
+
+export const scheduleTopikRewriteTask = mutation({
+  args: {
+    taskType: v.string(),
+    promptPreview: v.string(),
+    latestAttemptId: v.id('topik_writing_attempts'),
+    revisionFocus: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args): Promise<DailyTaskPlanDto> => {
+    const userId = await getAuthUserId(ctx);
+    const attempt = await ctx.db.get(args.latestAttemptId);
+    if (!attempt || attempt.userId !== userId) {
+      throw new ConvexError({
+        code: 'TOPIK_WRITING_ATTEMPT_NOT_FOUND',
+      });
+    }
+
+    const plan = await upsertTodayPlan(ctx as DailyTaskWriteCtx);
+    const persisted = await getPersistedPlanByDate(ctx, userId, plan.date);
+    if (!persisted) throw new ConvexError({ code: 'DAILY_TASK_PLAN_NOT_FOUND' });
+
+    const focus = (args.revisionFocus ?? [])
+      .map(item => item.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    const primaryFocus = focus[0] ?? '根据最近一次反馈重写同一道 TOPIK 写作题。';
+    const taskId = `topik-rewrite:${String(args.latestAttemptId)}`;
+    const linkPath = `/topik/writing-coach?rewriteTaskId=${encodeURIComponent(taskId)}`;
+    const nextTask: DailyTaskItemDto = {
+      taskId,
+      kind: 'topik_rewrite',
+      title: `同题重写 · Q${args.taskType}`,
+      description: `下一次重写焦点：${primaryFocus}`,
+      targetCount: 1,
+      currentCount: 0,
+      completed: false,
+      linkPath,
+      assetType: 'topik_rewrite',
+      assetRefId: String(args.latestAttemptId),
+      metadata: {
+        manual: true,
+        taskType: args.taskType,
+        promptPreview: args.promptPreview.slice(0, 120),
+        revisionFocus: focus.join('\n') || null,
+        rewardXp: 24,
+      },
+    };
+
+    const tasks = plan.tasks.some(task => task.taskId === taskId)
+      ? plan.tasks.map(task =>
+          task.taskId === taskId
+            ? { ...nextTask, currentCount: task.currentCount, completed: task.completed }
+            : task
+        )
+      : [...plan.tasks, nextTask];
+
+    await ctx.db.patch(persisted._id, {
+      tasks: tasks.map(task => ({
+        taskId: task.taskId,
+        kind: task.kind,
+        title: task.title,
+        description: task.description,
+        targetCount: task.targetCount,
+        currentCount: task.currentCount,
+        completed: task.completed,
+        linkPath: task.linkPath,
+        assetType: task.assetType,
+        assetRefId: task.assetRefId,
+        metadata: task.metadata,
+      })),
+      status: tasks.every(task => task.completed) ? 'completed' : 'ready',
+      updatedAt: Date.now(),
+      completedAt: tasks.every(task => task.completed)
+        ? (persisted.completedAt ?? Date.now())
+        : undefined,
     });
 
     const updated = await ctx.db.get(persisted._id);

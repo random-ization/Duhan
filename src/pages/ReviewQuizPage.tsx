@@ -5,6 +5,7 @@ import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { getLabels } from '../utils/i18n';
 import { VOCAB } from '../utils/convexRefs';
+import { resolveSafeReturnTo } from '../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Card as KsoftCard, KT, PageShell } from '../components/mobile/ksoft/ksoft';
@@ -12,6 +13,8 @@ import {
   KsoftEmptyState,
   KsoftImmersiveHeader,
 } from '../components/mobile/ksoft/KsoftMobilePrimitives';
+import AssetReviewSession, { type AssetReviewMode } from './review/AssetReviewSession';
+import { useAssetReviewFlow } from './review/useAssetReviewFlow';
 
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 const DesktopReviewQuizPage = lazy(() => import('./desktop/DesktopReviewQuizPage'));
@@ -30,6 +33,9 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
+const isAssetReviewMode = (value: string | null): value is AssetReviewMode =>
+  value === 'sentences' || value === 'grammar';
+
 const ReviewQuizPage: React.FC = () => {
   const navigate = useLocalizedNavigate();
   const { language } = useAuth();
@@ -38,10 +44,27 @@ const ReviewQuizPage: React.FC = () => {
   const labels = useMemo(() => getLabels(language), [language]);
   const [params] = useSearchParams();
 
-  const modeParam = (params.get('mode') ?? 'full') as ReviewMode;
+  const rawModeParam = params.get('mode') ?? 'full';
+  const assetMode: AssetReviewMode | null = isAssetReviewMode(rawModeParam) ? rawModeParam : null;
+  const modeParam = rawModeParam as ReviewMode;
   const mode: ReviewMode = modeParam === 'quick' || modeParam === 'weak' ? modeParam : 'full';
+  const returnActionPath = resolveSafeReturnTo(
+    params.get('returnTo'),
+    params.get('flow') === 'today' ? '/dashboard' : '/review'
+  );
+  const todayTaskId = params.get('flow') === 'today' ? params.get('taskId') : null;
+  const returnActionLabel =
+    params.get('flow') === 'today'
+      ? '回到今日之路'
+      : returnActionPath === '/dashboard/weekly-report'
+        ? '回到学习反馈'
+        : t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' });
 
   const reviewQueue = useQuery(VOCAB.getDueForReview);
+  const { assetItems, assetLoading, completeTodayTask, reviewAsset } = useAssetReviewFlow({
+    assetMode,
+    todayTaskId,
+  });
   const [now] = React.useState(() => Date.now());
 
   const dueItems = useMemo(() => {
@@ -92,6 +115,23 @@ const ReviewQuizPage: React.FC = () => {
 
   const loading = reviewQueue === undefined;
 
+  if (assetMode) {
+    return (
+      <AssetReviewSession
+        mode={assetMode}
+        items={assetItems}
+        loading={assetLoading}
+        isMobile={isMobile}
+        returnActionLabel={returnActionLabel}
+        returnActionPath={returnActionPath}
+        navigate={navigate}
+        onReviewAsset={reviewAsset}
+        onCompleteTodayTask={completeTodayTask}
+        t={t}
+      />
+    );
+  }
+
   if (isMobile) {
     return (
       <PageShell bg={`linear-gradient(180deg, ${KT.bg} 0%, ${KT.bg2} 100%)`}>
@@ -104,7 +144,7 @@ const ReviewQuizPage: React.FC = () => {
               : `${words.length} ${labels.wordsUnit ?? 'words'}`
           }
           seal="復"
-          onBack={() => navigate('/review')}
+          onBack={() => navigate(returnActionPath)}
         />
         <main style={{ padding: '2px 16px 112px' }}>
           {loading ? (
@@ -118,8 +158,8 @@ const ReviewQuizPage: React.FC = () => {
               title={t('reviewPage.queue.empty_due', {
                 defaultValue: 'No words due for review! Good job.',
               })}
-              actionLabel={t('reviewPage.dashboard.title', { defaultValue: 'Back to Review' })}
-              onAction={() => navigate('/review')}
+              actionLabel={returnActionLabel}
+              onAction={() => navigate(returnActionPath)}
             />
           ) : (
             <Suspense
@@ -142,7 +182,10 @@ const ReviewQuizPage: React.FC = () => {
                   autoTTS: true,
                   soundEffects: true,
                 }}
-                onComplete={() => navigate('/review')}
+                onComplete={() => {
+                  completeTodayTask(words.length);
+                  navigate(returnActionPath);
+                }}
               />
             </Suspense>
           )}
@@ -161,7 +204,10 @@ const ReviewQuizPage: React.FC = () => {
         dueItems={dueItems}
         mode={mode}
         language={language}
+        returnActionLabel={returnActionLabel}
+        returnActionPath={returnActionPath}
         navigate={navigate}
+        onCompleteReview={() => completeTodayTask(words.length)}
         t={t}
       />
     </Suspense>

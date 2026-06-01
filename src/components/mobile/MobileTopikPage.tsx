@@ -171,7 +171,7 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
           <button
             type="button"
             onClick={() =>
-              navigate(appendReturnToPath('/topik/history', searchParams.get('returnTo')))
+              navigate(appendReturnToPath('/topik?view=history', searchParams.get('returnTo')))
             }
             aria-label={t('dashboard.topik.history', { defaultValue: 'History' })}
             style={{
@@ -250,6 +250,48 @@ const MobileTopikPage: React.FC<MobileTopikPageProps> = ({ onSelectExam, topikEx
             </div>
           </div>
         )}
+      </div>
+
+      {/* Writing Coach (Mobile) */}
+      <div style={{ padding: '0 18px 12px' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/topik/writing-coach')}
+          style={{
+            width: '100%',
+            background: `linear-gradient(135deg, ${KT.ink} 0%, #444 100%)`,
+            borderRadius: 20,
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              background: 'rgba(255,255,255,0.15)',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: 22 }}>✨</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+              {t('dashboard.topik.writingCoachTitle', { defaultValue: 'TOPIK 写作教练' })}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+              {t('dashboard.topik.writingCoachDesc', { defaultValue: 'AI 实时批改及提分建议' })}
+            </div>
+          </div>
+          <div style={{ color: '#fff', fontSize: 18 }}>→</div>
+        </button>
       </div>
 
       {/* ── Stats Row ───────────────────────────────── */}

@@ -5,7 +5,7 @@ import {
   useCurrentLanguage,
   useLocalizedNavigate,
 } from '../hooks/useLocalizedNavigate';
-import { Sparkles, AlertCircle, Mail, Lock, User } from 'lucide-react';
+import { AlertCircle, Mail, Lock, User } from 'lucide-react';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { useAuth } from '../contexts/AuthContext';

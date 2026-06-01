@@ -433,7 +433,7 @@
     "notStarted": "Not Started",
     "continueReading": "Continue Reading",
     "unknownSource": "Unknown Source",
-    "levelNum": "${levelDisplay}级",
+    "levelNum": "{{levelDisplay}}级",
     "tenThousand": "Ten Thousand",
     "hanok": "Hanok",
     "village": "Village",
@@ -1394,8 +1394,12 @@
     "reading": "Reading",
     "grammar": "Grammar",
     "notebook": "Notebook",
+    "help": "Help & docs",
     "profile": "Profile",
     "typing": "Typing"
+  },
+  "helpCenter": {
+    "commandDescription": "Feature map, quick starts, FAQ, and learning paths"
   },
   "auth": {
     "loginFailed": "Authentication failed",
@@ -1812,7 +1816,9 @@
     "justNow": "just now",
     "minutesShort": "m",
     "hoursShort": "h",
-    "daysShort": "d"
+    "daysShort": "d",
+    "daysAgo": "{{count}} days ago",
+    "hoursAgo": "{{count}} hours ago"
   },
   "preview": "Preview",
   "markdownTip": "Formatting tips: Use # for headings (# H1, ## H2, ### H3), - or * for bullet lists, 1. for numbered lists, blank lines for paragraphs",
@@ -2183,7 +2189,9 @@
     "status": {
       "mastered": "Mastered",
       "learning": "Learning",
-      "notStarted": "Not Started"
+      "notStarted": "Not Started",
+      "dueCount": "{{count}} Due",
+      "masteredCount": "{{count}} Mastered"
     },
     "defaultPublisher": "Publisher"
   },
@@ -2284,7 +2292,9 @@
       "addVocab": "Add to Vocab",
       "error": "Error loading data",
       "noMeaning": "No meaning",
-      "favorite": "Favorite"
+      "favorite": "Favorite",
+      "off": "Off",
+      "on": "On"
     },
     "tools": {
       "topik_mock": "TOPIK Mock",
@@ -2521,7 +2531,9 @@
       "history": "History",
       "nextExamTitle": "Next exam target",
       "recentScore": "Recent score",
-      "weakAreasTitle": "Weak areas"
+      "weakAreasTitle": "Weak areas",
+      "maxScore": "Highest Score",
+      "title": "TOPIK\nExam"
     },
     "readingHub": {
       "title": "Reading Discovery",
@@ -2660,7 +2672,8 @@
       "enterMeaning": "Enter meaning...",
       "enterKorean": "Enter Korean...",
       "confirm": "Confirm",
-      "correctAnswer": "Correct Answer"
+      "correctAnswer": "Correct Answer",
+      "wrong": "Wrong"
     },
     "library": {
       "title": "Choose Textbook",
@@ -2680,7 +2693,7 @@
     },
     "summary": {
       "title": "Learning Overview",
-      "streak": "{count} day streak",
+      "streak": "{{count}} day streak",
       "progress": "Today's Progress",
       "minutes": "mins",
       "due": "Review",
@@ -2688,7 +2701,7 @@
       "completed": "✨ Goal Achieved!"
     },
     "listening": {
-      "title": "Unit {index} · Listening",
+      "title": "Unit {{index}} · Listening",
       "settings": "Listening Settings",
       "fontSize": "Font Size",
       "karaoke": "Karaoke Mode",
@@ -2699,7 +2712,7 @@
       "emptyDesc": "Please add audio and transcript in admin"
     },
     "reading": {
-      "title": "Unit {index} · Reading",
+      "title": "Unit {{index}} · Reading",
       "settings": "Reading Settings",
       "serif": "Serif Font",
       "note": "Note",
@@ -2715,7 +2728,7 @@
       "lesson": "Lesson",
       "completeLesson": "Complete Lesson",
       "learned": "Lesson completed!",
-      "grammarCount": "{count} grammar points",
+      "grammarCount": "{{count}} grammar points",
       "viewExplanation": "View detailed explanation",
       "aiGreeting": "Hi! I'm your AI tutor. Ask me any grammar questions!",
       "studyTool": "Study Tools",
@@ -2801,7 +2814,7 @@
       "notebook": "Notebook",
       "reviewStatus": "Review status",
       "vocabDueToday": "Vocab due today",
-      "minutesAgo": "${diffMin}m",
+      "minutesAgo": "{{diffMin}}m",
       "hoursAgo": "${Math.floor(diffMin / 60)}h",
       "modules": {
         "review": "复习",
@@ -2810,7 +2823,7 @@
         "topik": "TOPIK"
       },
       "greeting": "Hello",
-      "tasksLeftSummary": "还有 ${taskCount} 项任务待完成",
+      "tasksLeftSummary": "还有 {{taskCount}} 项任务待完成",
       "allDone": "今日任务已完成 ✓",
       "weeklyGoal": "Weekly Goal",
       "hours": "hours",
@@ -2830,8 +2843,8 @@
       "reviewCta": "Review",
       "noUpcomingReviews": "No reviews",
       "justNow": "刚刚",
-      "dayJoined": "${diffDay}天前",
-      "approxTime": "学习了 ${minutes} 分钟",
+      "dayJoined": "{{diffDay}}天前",
+      "approxTime": "学习了 {{minutes}} 分钟",
       "friendActivity": "学习伙伴",
       "noFriendActivity": "暂无在线伙伴",
       "vocabBook": "Hours",
@@ -2849,16 +2862,16 @@
       "logout": "Logout",
       "primaryAction": {
         "reviewEyebrow": "复习 · REVIEW",
-        "reviewTitle": "${dueNow} 张到期卡片",
-        "reviewSubtitle": "预计 ${estMin} 分钟 · FSRS 智能复习",
+        "reviewTitle": "{{count}} cards due",
+        "reviewSubtitle": "Est. {{minutes}} min · FSRS Review",
         "startReview": "开始复习 →",
         "challengeEyebrow": "今日挑战 · CHALLENGE",
         "continueChallenge": "继续挑战 →",
         "weakAreaEyebrow": "强化薄弱 · WEAK AREA",
-        "weakAreaTitle": "${weak.label} · ${weak.score} 分",
+        "weakAreaTitle": "{{label}} · {{score}} 分",
         "strengthen": "专项练习 →",
         "grammarEyebrow": "继续学习 · GRAMMAR",
-        "grammarTitle": "第 ${courseProgress.lastUnitIndex + 1} 单元",
+        "grammarTitle": "Unit {{unit}}",
         "continueLesson": "继续学习 →",
         "podcastEyebrow": "今日沉浸 · LISTEN",
         "podcastTitle": "今日播客推荐",
@@ -2878,6 +2891,14 @@
     "streakDays": "Days",
     "progress": {
       "title": "Progress"
+    },
+    "pos": {
+      "adj": "adj. Adjective",
+      "adv": "adv. Adverb",
+      "noun": "n. Noun",
+      "particle": "Particle",
+      "verb_i": "v.i. Intransitive Verb",
+      "verb_t": "v.t. Transitive Verb"
     }
   },
   "learningFlow": {
@@ -3621,7 +3642,7 @@
   },
   "learnerSummary": {
     "title": "Learning Summary",
-    "streak": "{count} day streak",
+    "streak": "{{count}} day streak",
     "progress": "Today's progress",
     "minutes": "min",
     "completed": "✨ Goal completed today!",
@@ -3864,6 +3885,7 @@
     "displayLanguage": "Display Language",
     "languageDesc": "Choose the language for the interface and learning materials.",
     "mobile": {
+      "helpCenterHint": "Learn what each DuHan feature does and where to start",
       "legalPrivacyHint": "View data and privacy details",
       "legalTermsHint": "View platform terms and rules",
       "legalRefundHint": "View subscription refund details",
@@ -4141,11 +4163,11 @@
     "filterReading": "Reading",
     "filterListening": "Listening",
     "searchPlaceholder": "Search by round or title...",
-    "round": "Round {round}",
-    "questionCount": "{count} questions",
-    "timeMinutes": "{minutes} min",
-    "bestScore": "Best: {score}",
-    "attempts": "{count} attempts",
+    "round": "Round {{round}}",
+    "questionCount": "{{count}} questions",
+    "timeMinutes": "{{minutes}} min",
+    "bestScore": "Best: {{score}}",
+    "attempts": "{{count}} attempts",
     "notStarted": "Not started",
     "noResults": "No exams match your filters",
     "clearFilters": "Clear filters"
@@ -4217,12 +4239,12 @@
     "trueFalseTitle": "Does the definition match?",
     "promptMeaning": "WHAT DOES THIS WORD MEAN?",
     "promptChooseKorean": "CHOOSE THE KOREAN WORD",
-    "answeredCount": "Answered {current}/{total}",
+    "answeredCount": "Answered {{current}}/{{total}}",
     "unansweredWarning": "Some questions are unanswered. Jumped to the first one.",
     "submitTest": "Submit test",
     "setupTitle": "Set up your test",
     "questions": "Questions",
-    "maxQuestions": "Max {count}",
+    "maxQuestions": "Max {{count}}",
     "answers": "Answers",
     "answerLanguageKorean": "Korean",
     "answerLanguageBoth": "Both",
@@ -4591,7 +4613,7 @@
       "description": "Strengthen your long-term memory with spaced repetition suited for you.",
       "estimatedTime": "Estimated time: ~{{min}} mins",
       "start": "Start Review",
-      "recommendedToday": "Recommended today: ${recommendedCount} words"
+      "recommendedToday": "Recommended today: {{recommendedCount}} words"
     },
     "dashboard": {
       "title": "Daily Review",
@@ -4848,7 +4870,7 @@
       "charsUnit": "chars",
       "remainingChars": "{{count}} left",
       "answerArea": "Answer Area",
-      "questionX": "Question ${evaluation.questionNumber}",
+      "questionX": "Question {{evaluation.questionNumber}}",
       "fillBlank": "Fill in the blank",
       "graphEssay": "Graph essay",
       "opinionEssay": "Opinion essay",
@@ -4865,19 +4887,19 @@
       "saved": "✓ Saved",
       "saveError": "Save Failed",
       "saveIdle": "Auto-save",
-      "mobileHeaderSubtitle": "Question ${activeQuestion} · ${answeredCount}/${questions.length} answered",
+      "mobileHeaderSubtitle": "Question {{activeQuestion}} · {{answeredCount}}/{{questions.length}} answered",
       "time": "Time",
       "progress": "Progress",
       "submitButton": "Submit",
       "submitConfirmTitle": "Submit Exam?",
-      "submitConfirmDesc": "Answered ${answeredCount}/${totalQuestions} questions. You cannot change your answers after submitting.",
+      "submitConfirmDesc": "Answered {{answeredCount}}/{{totalQuestions}} questions. You cannot change your answers after submitting.",
       "continueForm": "Continue",
       "submitting": "Submitting...",
       "confirmSubmit": "Confirm Submit",
       "exitConfirmTitle": "Exit Exam?",
       "exitConfirmDesc": "Exit Confirm Desc",
       "exiting": "Exiting...",
-      "maxLength": "Max ${maxLength} chars",
+      "maxLength": "Max {{maxLength}} chars",
       "wongojiAnswer": "Wongoji Answer",
       "desktopReminderAutosave": "Drafts auto-save while you work. Save state in the header and sidebar is read-only.",
       "desktopReminderFlow": "Questions 51-52 reward concise completion. Questions 53-54 reward structure and clarity.",
@@ -4899,8 +4921,8 @@
       "pending": "Pending",
       "quickChecks": "Quick checks",
       "submittedTitle": "Successfully Submitted!",
-      "submittedDesc": "Answered ${answeredCount} / ${questions.length} questions. Waiting for AI evaluation...",
-      "desktopQuestionMeta": "Question ${currentQuestion.number} · ${currentQuestionTypeLabel} · ${currentQuestion.score} pts",
+      "submittedDesc": "Answered {{answeredCount}} / {{questions.length}} questions. Waiting for AI evaluation...",
+      "desktopQuestionMeta": "Question {{currentQuestion.number}} · {{currentQuestionTypeLabel}} · {{currentQuestion.score}} pts",
       "collapseImage": "Collapse image",
       "expandImage": "Expand image",
       "examStatus": "Exam status",
@@ -4920,7 +4942,7 @@
       "retriggering": "Retrying...",
       "retriggerCooldown": "Retry in {{count}}s",
       "retrigger": "Retry Evaluation",
-      "maxScore": "Max ${maxScore}",
+      "maxScore": "Max {{maxScore}}",
       "scoreLabel": "Score:",
       "dimScores": "Dimension Scores",
       "originalText": "Your Original Answer",
@@ -4976,9 +4998,9 @@
     "editQuestion": "Edit question",
     "deleteQuestion": "Delete question",
     "report": "Report",
-    "openAuthorProfile": "View ${question.author.name}'s profile",
+    "openAuthorProfile": "View {{question.author.name}}'s profile",
     "answersZero": "No answers yet",
-    "answers": "${question.answers.length} answers",
+    "answers": "{{question.answers.length}} answers",
     "editQuestionDescription": "Update the title, topic, and details for this question.",
     "saveEdit": "Save changes",
     "deleteQuestionConfirm": "This will remove the full thread from the Q&A board.",

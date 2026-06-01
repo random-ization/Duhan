@@ -28,13 +28,29 @@ type PersistedSentenceToken = {
 
 const require = createRequire(import.meta.url);
 
-const DEFAULT_MODEL_URLS = [
+/**
+ * Model URL resolution priority:
+ * 1. KIWI_MODEL_URL / KIWI_MODEL_URLS env (R2 public URL recommended)
+ * 2. GitHub releases as fallback
+ *
+ * WASM binary resolution priority:
+ * 1. KIWI_WASM_URL env (R2 public URL recommended)
+ * 2. Local node_modules
+ * 3. unpkg CDN fallback
+ *
+ * R2 setup: upload both files to a public R2 bucket, then set:
+ *   KIWI_MODEL_URL=https://<r2-public-domain>/kiwi/kiwi_model_v0.22.1_base.tgz
+ *   KIWI_WASM_URL=https://<r2-public-domain>/kiwi/kiwi-wasm.wasm
+ */
+const FALLBACK_MODEL_URLS = [
   'https://github.com/bab2min/Kiwi/releases/download/v0.22.1/kiwi_model_v0.22.1_base.tgz',
   'https://github.com/bab2min/Kiwi/releases/download/v0.22.2/kiwi_model_v0.22.2_base.tgz',
 ];
 
+const FALLBACK_WASM_URL = 'https://unpkg.com/kiwi-nlp@0.22.1/dist/kiwi-wasm.wasm';
+
 const MODEL_VERSION = 'kiwi-cong-0.22.x';
-const MODEL_FETCH_TIMEOUT_MS = 20_000;
+const MODEL_FETCH_TIMEOUT_MS = 30_000; // 30s for R2/CDN downloads
 const MODEL_URL_ENV_KEYS = ['KIWI_MODEL_URL', 'KIWI_MODEL_URLS'];
 
 const getCachedTokenizationQuery = makeFunctionReference<
@@ -85,7 +101,7 @@ type CachedTokenize = {
 };
 
 const tokenizeCache = new Map<string, CachedTokenize>();
-const TOKENIZE_CACHE_LIMIT = 64;
+const TOKENIZE_CACHE_LIMIT = 256;
 
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
@@ -101,7 +117,11 @@ function resolveModelUrls(): string[] {
     .flatMap(value => value.split(/[,\n]/))
     .map(value => value.trim())
     .filter(Boolean);
-  return configured.length > 0 ? configured : DEFAULT_MODEL_URLS;
+  return configured.length > 0 ? configured : FALLBACK_MODEL_URLS;
+}
+
+function resolveWasmUrl(): string {
+  return process.env.KIWI_WASM_URL || FALLBACK_WASM_URL;
 }
 
 function persistablePartOfSpeech(tag?: string): string | undefined {
@@ -251,15 +271,16 @@ async function getWasmPath(): Promise<string> {
       log.info(`Using local Kiwi WASM: ${localWasm}`);
       return localWasm;
     }
-  } catch (e) {
+  } catch {
     // require.resolve might fail in bundled environments, which is expected
   }
 
-  // Fallback: download from CDN if not found locally
-  log.info('Downloading Kiwi WASM from CDN...');
-  const wasmUrl = 'https://unpkg.com/kiwi-nlp@0.22.1/dist/kiwi-wasm.wasm';
+  // Fallback: download from R2 or CDN
+  const wasmUrl = resolveWasmUrl();
+  log.info(`Downloading Kiwi WASM from: ${wasmUrl}`);
   const response = await fetch(wasmUrl);
-  if (!response.ok) throw new Error(`Failed to download Kiwi WASM from ${wasmUrl}: ${response.statusText}`);
+  if (!response.ok)
+    throw new Error(`Failed to download Kiwi WASM from ${wasmUrl}: ${response.statusText}`);
 
   const buffer = await response.arrayBuffer();
   fs.writeFileSync(wasmTmpPath, Buffer.from(buffer));
@@ -304,6 +325,99 @@ export async function tokenizeWithCache(text: string): Promise<TokenInfo[]> {
   const tokens = kiwi.tokenize(text);
   touchMemoryCache(text, tokens);
   return tokens;
+}
+
+/**
+ * Korean POS tag categories used by Kiwi.
+ * See: https://github.com/bab2min/Kiwi
+ */
+const POS_CATEGORIES = {
+  // Content words (실질 형태소)
+  NOUN: new Set(['NNG', 'NNP', 'NNB', 'NR', 'NP']),
+  VERB: new Set(['VV', 'VA', 'VX', 'VCP', 'VCN']),
+  ADVERB: new Set(['MAG', 'MAJ']),
+  ADJECTIVE: new Set(['MM']), // 관형사
+  INTERJECTION: new Set(['IC']),
+  // Functional morphemes (기능 형태소)
+  PARTICLE: new Set(['JKS', 'JKC', 'JKG', 'JKO', 'JKB', 'JKV', 'JKQ', 'JX', 'JC']),
+  ENDING: new Set(['EP', 'EF', 'EC', 'ETN', 'ETM']),
+  PREFIX: new Set(['XPN']),
+  SUFFIX: new Set(['XSN', 'XSV', 'XSA']),
+  // Other
+  PUNCTUATION: new Set(['SF', 'SP', 'SS', 'SE', 'SO', 'SW', 'SH', 'SL', 'SN']),
+} as const;
+
+export type StructuredTokenAnalysis = {
+  /** All content-word lemmas (nouns, verbs, adjectives, adverbs) */
+  lemmas: string[];
+  /** Particles/postpositions (조사) */
+  particles: string[];
+  /** Verb/adjective endings (어미) */
+  endings: string[];
+  /** Word stems (어간) — surface forms of verbs/adjectives */
+  stems: string[];
+  /** Full token list with POS tags for AI prompt injection */
+  tokenSummary: string;
+  /** Raw token count */
+  tokenCount: number;
+};
+
+/**
+ * Analyze a Korean sentence using Kiwi and return structured POS-grouped results.
+ * Useful for:
+ * - Injecting as "fact layer" into AI prompts to reduce hallucination
+ * - Validating AI-returned error positions against actual morphemes
+ * - Building vocabulary/grammar extraction pipelines
+ */
+export async function analyzeSentenceTokens(text: string): Promise<StructuredTokenAnalysis> {
+  const tokens = await tokenizeWithCache(text);
+
+  const lemmas: string[] = [];
+  const particles: string[] = [];
+  const endings: string[] = [];
+  const stems: string[] = [];
+  const summaryParts: string[] = [];
+
+  for (const token of tokens) {
+    const tag = token.tag || '';
+    const surface = token.str || '';
+
+    // Build summary line: "surface/TAG"
+    if (surface.trim()) {
+      summaryParts.push(`${surface}/${tag}`);
+    }
+
+    // Skip punctuation
+    if (POS_CATEGORIES.PUNCTUATION.has(tag)) continue;
+
+    // Categorize
+    if (
+      POS_CATEGORIES.NOUN.has(tag) ||
+      POS_CATEGORIES.ADVERB.has(tag) ||
+      POS_CATEGORIES.ADJECTIVE.has(tag) ||
+      POS_CATEGORIES.INTERJECTION.has(tag)
+    ) {
+      lemmas.push(surface);
+    } else if (POS_CATEGORIES.VERB.has(tag)) {
+      stems.push(surface);
+      lemmas.push(surface);
+    } else if (POS_CATEGORIES.PARTICLE.has(tag)) {
+      particles.push(surface);
+    } else if (POS_CATEGORIES.ENDING.has(tag)) {
+      endings.push(surface);
+    } else if (POS_CATEGORIES.SUFFIX.has(tag) || POS_CATEGORIES.PREFIX.has(tag)) {
+      lemmas.push(surface);
+    }
+  }
+
+  return {
+    lemmas: [...new Set(lemmas)],
+    particles: [...new Set(particles)],
+    endings: [...new Set(endings)],
+    stems: [...new Set(stems)],
+    tokenSummary: summaryParts.join(' '),
+    tokenCount: tokens.length,
+  };
 }
 
 export const warmModel = action({

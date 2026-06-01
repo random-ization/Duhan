@@ -91,7 +91,6 @@ export function normalizeStoragePublicUrl(
 
   try {
     const currentUrl = new URL(inputUrl);
-    const targetBase = cdnUrl.endsWith('/') ? cdnUrl.slice(0, -1) : cdnUrl;
     const endpointHost = `${spaces.bucket}.${getSpacesHost(spaces.endpoint)}`;
 
     const host = currentUrl.host.toLowerCase();
@@ -105,10 +104,10 @@ export function normalizeStoragePublicUrl(
     }
 
     // Convert legacy host to current CDN host
-    const objectKey = currentUrl.pathname.startsWith('/') 
-      ? currentUrl.pathname.slice(1) 
+    const objectKey = currentUrl.pathname.startsWith('/')
+      ? currentUrl.pathname.slice(1)
       : currentUrl.pathname;
-      
+
     return resolveStoragePublicUrl(objectKey);
   } catch {
     return inputUrl;

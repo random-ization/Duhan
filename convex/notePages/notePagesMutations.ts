@@ -9,6 +9,15 @@ import { getAuthUserId } from '../utils';
 import type { Doc } from '../_generated/dataModel';
 import { validatePageInput, validateUpdatePageInput } from './notePagesUtils';
 import type { BlockInput } from './notePagesTypes';
+import { LooseJsonDeepValueValidator, LooseJsonObjectLeafValidator } from '../jsonValidators';
+
+const BlockInputValidator = v.object({
+  blockKey: v.optional(v.string()),
+  blockType: v.string(),
+  content: LooseJsonDeepValueValidator,
+  props: v.optional(v.record(v.string(), LooseJsonObjectLeafValidator)),
+  sortOrder: v.number(),
+});
 
 // Create a notebook
 export const createNotebook = mutation({
@@ -45,7 +54,7 @@ export const createPage = mutation({
     title: v.string(),
     kind: v.string(),
     tags: v.array(v.string()),
-    blocks: v.array(v.any()),
+    blocks: v.array(BlockInputValidator),
     sourceModule: v.optional(v.string()),
     noteType: v.optional(v.string()),
     sortOrder: v.optional(v.number()),
@@ -102,7 +111,7 @@ export const updatePage = mutation({
     pageId: v.id('note_pages'),
     title: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
-    blocks: v.optional(v.array(v.any())),
+    blocks: v.optional(v.array(BlockInputValidator)),
     sortOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -239,13 +248,11 @@ export const togglePin = mutation({
 // Helper function to generate preview from blocks
 const generatePreview = (blocks: BlockInput[]): string => {
   if (!blocks || blocks.length === 0) return '';
-  
+
   const textBlocks = blocks
     .filter(block => block.content && typeof block.content === 'string')
     .map(block => block.content as string)
     .join(' ');
-  
-  return textBlocks.length > 200 
-    ? textBlocks.substring(0, 200) + '...' 
-    : textBlocks;
+
+  return textBlocks.length > 200 ? textBlocks.substring(0, 200) + '...' : textBlocks;
 };

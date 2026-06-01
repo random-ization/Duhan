@@ -438,7 +438,7 @@
     "notStarted": "未开始",
     "continueReading": "继续阅读",
     "unknownSource": "未知来源",
-    "levelNum": "${levelDisplay}级",
+    "levelNum": "{{levelDisplay}}级",
     "tenThousand": "万",
     "hanok": "韩屋",
     "village": "村庄",
@@ -1368,8 +1368,12 @@
     "reading": "阅读",
     "grammar": "语法",
     "notebook": "笔记本",
+    "help": "帮助与文档",
     "profile": "我的",
     "typing": "打字"
+  },
+  "helpCenter": {
+    "commandDescription": "功能地图、快速上手、常见问题和学习路径"
   },
   "auth": {
     "loginFailed": "登录失败",
@@ -1812,7 +1816,9 @@
     "justNow": "刚刚",
     "minutesShort": "分钟前",
     "hoursShort": "小时前",
-    "daysShort": "天前"
+    "daysShort": "天前",
+    "daysAgo": "{{count}} 天前",
+    "hoursAgo": "{{count}} 小时前"
   },
   "preview": "预览",
   "markdownTip": "格式提示：使用 # 表示标题（# H1，## H2，### H3），- 或 * 表示列表，1. 表示编号列表，空行表示段落",
@@ -2272,7 +2278,9 @@
       "addVocab": "加入生词本",
       "error": "加载失败",
       "noMeaning": "暂无释义",
-      "favorite": "收藏"
+      "favorite": "收藏",
+      "off": "关闭",
+      "on": "开启"
     },
     "tools": {
       "topik_mock": "TOPIK 模考",
@@ -2510,7 +2518,9 @@
       "history": "历史记录",
       "nextExamTitle": "下一次考试目标",
       "recentScore": "最近成绩",
-      "weakAreasTitle": "薄弱项"
+      "weakAreasTitle": "薄弱项",
+      "maxScore": "最高分",
+      "title": "TOPIK\n模拟考试"
     },
     "readingHub": {
       "title": "阅读发现",
@@ -2678,7 +2688,7 @@
     },
     "summary": {
       "title": "学习概览",
-      "streak": "已连续学习 {count} 天",
+      "streak": "已连续学习 {{count}} 天",
       "progress": "今日进度",
       "minutes": "分钟",
       "due": "复习",
@@ -2686,7 +2696,7 @@
       "completed": "✨ 今日目标已完成！"
     },
     "listening": {
-      "title": "第 {index} 课 · 听力",
+      "title": "第 {{index}} 课 · 听力",
       "settings": "听力设置",
       "fontSize": "字体大小",
       "karaoke": "卡拉OK模式",
@@ -2697,7 +2707,7 @@
       "emptyDesc": "请在管理后台添加音频和文稿"
     },
     "reading": {
-      "title": "第 {index} 课 · 阅读",
+      "title": "第 {{index}} 课 · 阅读",
       "settings": "阅读设置",
       "serif": "衬线字体",
       "note": "笔记",
@@ -2713,7 +2723,7 @@
       "lesson": "课",
       "completeLesson": "完成本课学习",
       "learned": "本课学习已完成！",
-      "grammarCount": "{count} 个语法点",
+      "grammarCount": "{{count}} 个语法点",
       "viewExplanation": "查看详细解释",
       "aiGreeting": "你好！我是你的AI助教。有什么语法问题想问我吗？",
       "studyTool": "学习工具",
@@ -2821,7 +2831,7 @@
         "topik": "TOPIK"
       },
       "greeting": "你好",
-      "tasksLeftSummary": "还有 ${taskCount} 项任务待完成",
+      "tasksLeftSummary": "还有 {{count}} 项任务待完成",
       "allDone": "今日任务已完成 ✓",
       "weeklyGoal": "本周目标",
       "hours": "小时",
@@ -2841,8 +2851,8 @@
       "reviewCta": "完成复习",
       "noUpcomingReviews": "暂无待复习",
       "justNow": "刚刚",
-      "dayJoined": "${diffDay}天前",
-      "approxTime": "学习了 ${minutes} 分钟",
+      "dayJoined": "{{count}}天前",
+      "approxTime": "学习了 {{count}} 分钟",
       "friendActivity": "学习伙伴",
       "noFriendActivity": "暂无在线伙伴",
       "vocabBook": "词书",
@@ -2860,16 +2870,16 @@
       "logout": "退出登录",
       "primaryAction": {
         "reviewEyebrow": "复习 · REVIEW",
-        "reviewTitle": "${dueNow} 张到期卡片",
-        "reviewSubtitle": "预计 ${estMin} 分钟 · FSRS 智能复习",
+        "reviewTitle": "{{count}} 张到期卡片",
+        "reviewSubtitle": "预计 {{minutes}} 分钟 · FSRS 智能复习",
         "startReview": "开始复习 →",
         "challengeEyebrow": "今日挑战 · CHALLENGE",
         "continueChallenge": "继续挑战 →",
         "weakAreaEyebrow": "强化薄弱 · WEAK AREA",
-        "weakAreaTitle": "${weak.label} · ${weak.score} 分",
+        "weakAreaTitle": "{{label}} · {{score}} 分",
         "strengthen": "专项练习 →",
         "grammarEyebrow": "继续学习 · GRAMMAR",
-        "grammarTitle": "第 ${courseProgress.lastUnitIndex + 1} 单元",
+        "grammarTitle": "第 {{unit}} 单元",
         "continueLesson": "继续学习 →",
         "podcastEyebrow": "今日沉浸 · LISTEN",
         "podcastTitle": "今日播客推荐",
@@ -3632,7 +3642,7 @@
   },
   "learnerSummary": {
     "title": "学习概览",
-    "streak": "已连续学习 {count} 天",
+    "streak": "已连续学习 {{count}} 天",
     "progress": "今日进度",
     "minutes": "分钟",
     "completed": "✨ 今日目标已达成！",
@@ -3875,6 +3885,7 @@
     "displayLanguage": "显示语言",
     "languageDesc": "选择界面和学习内容的语言。",
     "mobile": {
+      "helpCenterHint": "了解每个 DuHan 功能的用途，以及应该从哪里开始",
       "legalPrivacyHint": "查看数据与隐私说明",
       "legalTermsHint": "查看平台使用规则",
       "legalRefundHint": "查看订阅退款说明",
@@ -4152,11 +4163,11 @@
     "filterReading": "阅读",
     "filterListening": "听力",
     "searchPlaceholder": "搜索届数或标题...",
-    "round": "第 {round} 届",
-    "questionCount": "{count} 题",
-    "timeMinutes": "{minutes} 分钟",
-    "bestScore": "最高分: {score}",
-    "attempts": "{count} 次练习",
+    "round": "第 {{round}} 届",
+    "questionCount": "{{count}} 题",
+    "timeMinutes": "{{minutes}} 分钟",
+    "bestScore": "最高分: {{score}}",
+    "attempts": "{{count}} 次练习",
     "notStarted": "尚未开始",
     "noResults": "没有找到符合条件的考试",
     "clearFilters": "清除筛选"
@@ -4228,12 +4239,12 @@
     "trueFalseTitle": "判断释义是否匹配",
     "promptMeaning": "这个单词是什么意思？",
     "promptChooseKorean": "选出对应的韩语单词",
-    "answeredCount": "已作答 {current}/{total}",
+    "answeredCount": "已作答 {{current}}/{{total}}",
     "unansweredWarning": "还有未作答的题目，已跳转到第一题。",
     "submitTest": "提交测试",
     "setupTitle": "设置您的测试",
     "questions": "问题",
-    "maxQuestions": "最多 {count}",
+    "maxQuestions": "最多 {{count}}",
     "answers": "回答",
     "answerLanguageKorean": "韩语",
     "answerLanguageBoth": "两个都出现",
@@ -4602,7 +4613,7 @@
       "description": "通过为您量身定制的间隔重复系统，强化您的长期记忆。",
       "estimatedTime": "预计时间: ~{{min}} 分钟",
       "start": "开始复习",
-      "recommendedToday": "Recommended today: ${recommendedCount} words"
+      "recommendedToday": "Recommended today: {{recommendedCount}} words"
     },
     "dashboard": {
       "title": "每日复习",
@@ -4987,9 +4998,9 @@
     "editQuestion": "编辑问题",
     "deleteQuestion": "删除问题",
     "report": "举报",
-    "openAuthorProfile": "查看 ${question.author.name} 的资料",
+    "openAuthorProfile": "查看 {{question.author.name}} 的资料",
     "answersZero": "还没有回答",
-    "answers": "${question.answers.length} 条回答",
+    "answers": "{{question.answers.length}} 条回答",
     "editQuestionDescription": "更新这个问题的标题、主题和详情。",
     "saveEdit": "保存修改",
     "deleteQuestionConfirm": "这将从问答板块中移除整条讨论。",

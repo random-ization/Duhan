@@ -6,33 +6,28 @@ import { useTopikExams } from '../hooks/useTopikExams';
 import { useUserActions } from '../hooks/useUserActions';
 import { useQuery } from 'convex/react';
 import {
-  Target,
-  Clock,
   ArrowRight,
   Archive,
   History,
   Headphones,
   BookOpen,
   PenLine,
-  LayoutGrid,
+  Sparkles,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { DesktopCard } from '../components/desktop/ui/DesktopCard';
 import { HanjaSeal } from '../components/desktop/ui/HanjaSeal';
 import { DesignChip } from '../components/desktop/ui/DesignChip';
-import { KT } from '../theme/ksoftTokens';
 import BackButton from '../components/ui/BackButton';
 import { useTranslation } from 'react-i18next';
 import { qRef, TOPIK } from '../utils/convexRefs';
 import { api } from '../../convex/_generated/api';
 import { Annotation, ExamAttempt } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { Button } from '../components/ui';
 import { notify } from '../utils/notify';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
 import { getUpgradeBenefitCopy } from '../utils/upgradeCopy';
-import { formatTopikLabel } from '../utils/topik';
 import { appendReturnToPath, hasSafeReturnTo, resolveSafeReturnTo } from '../utils/navigation';
 import {
   ContextualCountBadge,
@@ -49,6 +44,18 @@ const MobileTopikPage = lazy(() => import('../components/mobile/MobileTopikPage'
 const LOCALE_PREFIXES = ['en', 'zh', 'vi', 'mn'];
 const LOBBY_HISTORY_LIMIT = 50;
 const FULL_HISTORY_LIMIT = 200;
+const TOPIK_HISTORY_VIEW = 'history';
+type TopikFilterType = 'READING' | 'LISTENING' | 'WRITING';
+const TOPIK_FILTERS: Array<{
+  id: TopikFilterType;
+  icon: typeof BookOpen;
+  labelKey: string;
+  tone: string;
+}> = [
+  { id: 'READING', icon: BookOpen, labelKey: 'dashboard.topik.reading', tone: 'indigo' },
+  { id: 'LISTENING', icon: Headphones, labelKey: 'dashboard.topik.listening', tone: 'crimson' },
+  { id: 'WRITING', icon: PenLine, labelKey: 'dashboard.topik.writing', tone: 'jade' },
+];
 
 const stripLocalePrefix = (pathname: string): string => {
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -69,13 +76,16 @@ const TopikPage: React.FC = () => {
   const { startUpgradeFlow, authLoading: upgradeFlowLoading } = useUpgradeFlow();
   const upgradeCopy = getUpgradeBenefitCopy(language);
   const [now] = React.useState(() => Date.now());
-  const [filterType, setFilterType] = useState<'READING' | 'LISTENING' | 'WRITING'>('READING');
+  const [filterType, setFilterType] = useState<TopikFilterType>('READING');
   const [expandedLockedExamId, setExpandedLockedExamId] = useState<string | null>(null);
   const { examId } = useParams();
   const pathWithoutLang = stripLocalePrefix(location.pathname);
-  const isHistoryRoute = pathWithoutLang === '/topik/history';
-  const needsLobbyInsights = Boolean(user && !isMobile && !examId && !isHistoryRoute);
-  const needsExamHistory = Boolean(user && (needsLobbyInsights || examId || isHistoryRoute));
+  const isHistoryView =
+    !examId &&
+    (pathWithoutLang === '/topik/history' ||
+      (pathWithoutLang === '/topik' && searchParams.get('view') === TOPIK_HISTORY_VIEW));
+  const needsLobbyInsights = Boolean(user && !isMobile && !examId && !isHistoryView);
+  const needsExamHistory = Boolean(user && (needsLobbyInsights || examId || isHistoryView));
   const historyLimit = needsLobbyInsights ? LOBBY_HISTORY_LIMIT : FULL_HISTORY_LIMIT;
   const examAttempts = useQuery(
     qRef<{ limit?: number }, ExamAttempt[]>('user:getExamAttempts'),
@@ -93,6 +103,7 @@ const TopikPage: React.FC = () => {
   }, [examAttempts, writingSessions]);
   const returnToParam = searchParams.get('returnTo');
   const linkReturnTo = hasSafeReturnTo(returnToParam) ? returnToParam : null;
+  const historyPath = appendReturnToPath('/topik?view=history', linkReturnTo);
   const topikBackPath = resolveSafeReturnTo(returnToParam, '/courses');
   const withReturnTo = useCallback(
     (path: string) => appendReturnToPath(path, linkReturnTo),
@@ -144,7 +155,7 @@ const TopikPage: React.FC = () => {
                     subtitle={
                       attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString() : 'N/A'
                     }
-                    onClick={() => navigate(withReturnTo('/topik/history'))}
+                    onClick={() => navigate(historyPath)}
                     trailing={
                       <div className="text-right">
                         <p className="text-xs font-black">
@@ -182,12 +193,12 @@ const TopikPage: React.FC = () => {
         {examHistory.length > 0 ? (
           <ContextualPrimaryActionButton
             label={t('topikLobby.viewAllHistory')}
-            onClick={() => navigate(withReturnTo('/topik/history'))}
+            onClick={() => navigate(historyPath)}
           />
         ) : null}
       </div>
     ),
-    [examHistory, navigate, t, withReturnTo]
+    [examHistory, historyPath, navigate, t]
   );
 
   useContextualSidebar({
@@ -195,7 +206,7 @@ const TopikPage: React.FC = () => {
     title: t('dashboard.topik.examHistory', { defaultValue: 'Exam history' }),
     subtitle: t('topikLobby.viewAllHistory', { defaultValue: 'View all history' }),
     content: topikContextualContent,
-    enabled: !isMobile && !examId && !isHistoryRoute,
+    enabled: !isMobile && !examId && !isHistoryView,
   });
   // We can't use useParams readily because existing routing might not rely on it
   // But usually /topik/:examId implies params.
@@ -221,7 +232,7 @@ const TopikPage: React.FC = () => {
   // If examId is present, show the actual exam module (or if TopikModule handles it)
   // For now, let's assume TopikModule handles the actual taking of the exam.
   // We will wrap it.
-  if (examId || isHistoryRoute) {
+  if (examId || isHistoryView) {
     return (
       <Suspense
         fallback={
@@ -243,7 +254,7 @@ const TopikPage: React.FC = () => {
           onShowUpgradePrompt={onShowUpgradePrompt}
           upgradePromptLoading={upgradeFlowLoading}
           onDeleteHistory={deleteExamAttempt}
-          initialView={isHistoryRoute ? 'HISTORY_LIST' : 'LIST'}
+          initialView={isHistoryView ? 'HISTORY_LIST' : 'LIST'}
         />
       </Suspense>
     );
@@ -314,24 +325,10 @@ const TopikPage: React.FC = () => {
         {/* Filters and Search Area */}
         <div className="mb-10 flex flex-wrap items-center justify-between gap-6">
           <div className="flex items-center gap-2 bg-k-card p-1.5 rounded-[20px] border border-k-line shadow-k-sh-sm">
-            {[
-              {
-                id: 'READING',
-                icon: BookOpen,
-                label: t('dashboard.topik.reading'),
-                tone: 'indigo',
-              },
-              {
-                id: 'LISTENING',
-                icon: Headphones,
-                label: t('dashboard.topik.listening'),
-                tone: 'crimson',
-              },
-              { id: 'WRITING', icon: PenLine, label: t('dashboard.topik.writing'), tone: 'jade' },
-            ].map(f => (
+            {TOPIK_FILTERS.map(f => (
               <button
                 key={f.id}
-                onClick={() => setFilterType(f.id as any)}
+                onClick={() => setFilterType(f.id)}
                 className={clsx(
                   'px-6 py-2.5 rounded-[15px] text-[13px] font-extrabold transition-all flex items-center gap-2.5 cursor-pointer',
                   filterType === f.id
@@ -339,7 +336,7 @@ const TopikPage: React.FC = () => {
                     : 'text-k-sub hover:text-k-ink hover:bg-k-bg2'
                 )}
               >
-                <f.icon size={16} /> {f.label}
+                <f.icon size={16} /> {t(f.labelKey)}
               </button>
             ))}
           </div>
@@ -369,6 +366,49 @@ const TopikPage: React.FC = () => {
             {filterType === 'WRITING' ? (
               writingExams.length === 0 ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  <DesktopCard
+                    pad={0}
+                    onClick={() => navigate(withReturnTo('/topik/writing-coach'))}
+                    className="group flex flex-col transition-all hover:shadow-k-sh-lg cursor-pointer border-2 border-k-jade/20 hover:border-k-jade overflow-hidden"
+                  >
+                    <div className="p-4 flex items-center gap-4 bg-k-jade text-k-bg relative overflow-hidden">
+                      <div
+                        className="absolute inset-0 opacity-10"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg,var(--color-k-bg) 0,var(--color-k-bg) 2px,transparent 2px,transparent 10px)',
+                        }}
+                      />
+                      <Sparkles size={20} className="z-10 text-k-butter" />
+                      <div className="text-[10px] font-black tracking-widest uppercase z-10 text-k-bg/80">
+                        {t('dashboard.topik.writingCoachLabel', { defaultValue: 'AI COACH' })}
+                      </div>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col gap-4">
+                      <div>
+                        <h4 className="font-extrabold text-[16px] tracking-tight text-k-ink group-hover:text-k-jade transition leading-snug">
+                          {t('dashboard.topik.writingCoachTitle', {
+                            defaultValue: 'TOPIK 写作教练',
+                          })}
+                        </h4>
+                        <p className="text-[12px] font-medium text-k-sub mt-1 leading-relaxed line-clamp-2">
+                          {t('dashboard.topik.writingCoachDesc', {
+                            defaultValue: 'AI 实时批改、深度解析及提分建议。',
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex justify-between items-center mt-auto">
+                        <DesignChip tone="mint" size="sm">
+                          {t('topikLobby.aiPowered', { defaultValue: 'AI POWERED' })}
+                        </DesignChip>
+                        <span className="bg-k-ink text-k-bg px-4 py-1.5 rounded-xl font-bold text-[11px] shadow-sm group-hover:scale-105 transition inline-flex items-center gap-1.5">
+                          {t('dashboard.topik.startCoach', { defaultValue: '立即开始' })}{' '}
+                          <ArrowRight size={14} />
+                        </span>
+                      </div>
+                    </div>
+                  </DesktopCard>
+
                   <DesktopCard
                     pad={0}
                     onClick={() =>
@@ -663,7 +703,7 @@ const TopikPage: React.FC = () => {
               <DesktopCard pad={0} className="overflow-hidden">
                 <div className="divide-y divide-k-line">
                   {lobbyStats?.weakAreas && lobbyStats.weakAreas.length > 0 ? (
-                    lobbyStats.weakAreas.map((area, idx) => (
+                    lobbyStats.weakAreas.map(area => (
                       <div key={area.type} className="p-5 hover:bg-k-bg/50 transition-colors group">
                         <div className="flex justify-between items-start mb-1">
                           <h5 className="text-[16px] font-extrabold text-k-ink group-hover:text-k-crimson transition">

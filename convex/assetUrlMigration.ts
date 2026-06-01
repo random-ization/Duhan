@@ -2,6 +2,7 @@ import { action, internalMutation, internalQuery, QueryCtx } from './_generated/
 import { paginationOptsValidator, makeFunctionReference } from 'convex/server';
 import { v } from 'convex/values';
 import { normalizeStoragePublicUrl } from './spacesConfig';
+import { LooseJsonValueValidator } from './jsonValidators';
 
 const TABLES = [
   'institutes',
@@ -180,7 +181,7 @@ export const applyLegacyAssetPatches = internalMutation({
     items: v.array(
       v.object({
         id: v.string(),
-        patch: v.any(),
+        patch: v.record(v.string(), LooseJsonValueValidator),
       })
     ),
   },

@@ -1,16 +1,7 @@
-import React, { useDeferredValue, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { remarkGrammarMasking } from '../../utils/grammarMaskingRemark';
-import {
-  GRAMMAR_MASK_TRANSLATION_TOKEN,
-  GRAMMAR_MASK_ANSWER_TOKEN,
-  GRAMMAR_MASK_TRANSLATION_START_TOKEN,
-  GRAMMAR_MASK_TRANSLATION_END_TOKEN,
-  GRAMMAR_MASK_ANSWER_START_TOKEN,
-  GRAMMAR_MASK_ANSWER_END_TOKEN,
-  stripGrammarMaskTokens,
-} from '../../utils/grammarDisplaySanitizer';
 import { useAction } from 'convex/react';
 import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
 import {
@@ -24,25 +15,20 @@ import {
   Sparkles,
   HelpCircle,
   CheckCircle2,
-  Languages,
   ChevronLeft,
-  ChevronRight,
-  Search,
   ChevronDown,
-  Send,
   Loader2,
+  MessageCircle,
+  Send,
+  X,
 } from 'lucide-react';
 import type { GrammarPointData } from '../../types';
 import { sanitizeGrammarDisplayText } from '../../utils/grammarDisplaySanitizer';
 import { getLocalizedContent } from '../../utils/languageUtils';
-import { aRef, mRef } from '../../utils/convexRefs';
-import type { Id } from '../../../convex/_generated/dataModel';
-import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
-import { cn } from '../../lib/utils';
-import { Button } from '../../components/ui/button';
+import { AI } from '../../utils/convexRefs';
+import { buildDesktopGrammarDisplayModel } from './desktopGrammarDisplayModel';
 
-// Red-eye mode wrapper – wraps an entire block and reveals on hover
+// 红眼模式包装器
 export function RedEyeBlock({
   enabled,
   children,
@@ -52,511 +38,118 @@ export function RedEyeBlock({
   children: React.ReactNode;
   className?: string;
 }) {
-  const [revealed, setRevealed] = React.useState(false);
-
   if (!enabled) return <>{children}</>;
   return (
     <span
       className={className}
       style={{
-        filter: revealed ? 'none' : 'blur(8px)',
-        userSelect: revealed ? 'auto' : 'none',
-        cursor: 'help',
+        filter: 'blur(8px)',
+        userSelect: 'none',
+        pointerEvents: 'none',
         display: 'inline-block',
         width: '100%',
-        transition: 'filter 0.2s ease',
-      }}
-      onMouseEnter={() => setRevealed(true)}
-      onMouseLeave={() => setRevealed(false)}
-    >
-      {children}
-    </span>
-  );
-}
-
-// Inline Red-eye mask – per-span click-to-reveal used inside markdown content
-const RedEyeMask: React.FC<{
-  enabled: boolean;
-  kind: 'translation' | 'answer';
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-}> = ({ enabled, kind, children, className, style }) => {
-  const [revealed, setRevealed] = React.useState(false);
-
-  if (!enabled) {
-    return (
-      <span data-grammar-mask={kind} className={className} style={style}>
-        {children}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      data-grammar-mask={kind}
-      role="button"
-      tabIndex={0}
-      className={className}
-      style={{
-        ...style,
-        display: 'inline-block',
-        cursor: 'pointer',
-        filter: revealed ? 'none' : 'blur(7px)',
-        userSelect: revealed ? 'auto' : 'none',
-        transition: 'filter 0.2s ease',
-      }}
-      onClick={() => setRevealed(prev => !prev)}
-      onPointerEnter={() => setRevealed(true)}
-      onPointerLeave={() => setRevealed(false)}
-      onMouseEnter={() => setRevealed(true)}
-      onMouseLeave={() => setRevealed(false)}
-      onFocus={() => setRevealed(true)}
-      onBlur={() => setRevealed(false)}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setRevealed(p => !p);
-        }
       }}
     >
       {children}
     </span>
   );
-};
-
-const LEADING_ANSWER_LABEL_RE =
-  /^(?:\*{1,2})?(?:参考答案|测验参考答案|示例答案|答案|reference answers?|answers?)(?:\*{1,2})?\s*[:：]/i;
-
-function extractTextContent(node: React.ReactNode): string {
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(extractTextContent).join('');
-  if (React.isValidElement(node))
-    return extractTextContent((node.props as { children?: React.ReactNode }).children);
-  return '';
 }
 
-function getStandaloneLineMaskKind(input: string): 'translation' | 'answer' | null {
-  const stripped = stripGrammarMaskTokens(input).trim();
-  if (stripped.length > 0) return null;
-  if (input.includes(GRAMMAR_MASK_TRANSLATION_TOKEN)) return 'translation';
-  if (input.includes(GRAMMAR_MASK_ANSWER_TOKEN)) return 'answer';
-  return null;
-}
-
-function getNodeMaskKind(node: unknown): 'translation' | 'answer' | null {
-  if (typeof node !== 'object' || node === null || Array.isArray(node)) return null;
-  const rec = node as Record<string, unknown>;
-  const props = rec.properties as Record<string, unknown> | undefined;
-  if (props) {
-    const d = props['data-grammar-mask'];
-    if (d === 'translation' || d === 'answer') return d;
-  }
-  const data = rec.data as Record<string, unknown> | undefined;
-  const hProps = data?.hProperties as Record<string, unknown> | undefined;
-  if (hProps) {
-    const h = hProps['data-grammar-mask'];
-    if (h === 'translation' || h === 'answer') return h;
-  }
-  return null;
-}
-
-function wrapMaskedInlineNode(
-  node: React.ReactNode,
-  maskKind: 'translation' | 'answer',
-  redEyeEnabled: boolean,
-  key: string
-): React.ReactNode {
-  return (
-    <RedEyeMask key={key} enabled={redEyeEnabled} kind={maskKind}>
-      {node}
-    </RedEyeMask>
-  );
-}
-
-function renderMaskedTextSegments(input: string, redEyeEnabled: boolean): React.ReactNode[] {
-  const segments: React.ReactNode[] = [];
-  let remaining = input;
-  let key = 0;
-
-  while (remaining.length > 0) {
-    const indices = [
-      { kind: 'translation-line', index: remaining.indexOf(GRAMMAR_MASK_TRANSLATION_TOKEN) },
-      { kind: 'answer-line', index: remaining.indexOf(GRAMMAR_MASK_ANSWER_TOKEN) },
-      {
-        kind: 'translation-inline',
-        index: remaining.indexOf(GRAMMAR_MASK_TRANSLATION_START_TOKEN),
-      },
-      { kind: 'answer-inline', index: remaining.indexOf(GRAMMAR_MASK_ANSWER_START_TOKEN) },
-    ].filter(item => item.index >= 0);
-
-    if (indices.length === 0) {
-      segments.push(stripGrammarMaskTokens(remaining));
-      break;
-    }
-
-    const next = indices.sort((a, b) => a.index - b.index)[0];
-    if (next.index > 0) segments.push(stripGrammarMaskTokens(remaining.slice(0, next.index)));
-
-    if (next.kind === 'translation-line' || next.kind === 'answer-line') {
-      const token =
-        next.kind === 'translation-line'
-          ? GRAMMAR_MASK_TRANSLATION_TOKEN
-          : GRAMMAR_MASK_ANSWER_TOKEN;
-      const maskKind: 'translation' | 'answer' =
-        next.kind === 'translation-line' ? 'translation' : 'answer';
-      const maskedContent = stripGrammarMaskTokens(remaining.slice(next.index + token.length));
-      segments.push(
-        <RedEyeMask key={`mask-${key++}`} enabled={redEyeEnabled} kind={maskKind}>
-          {maskedContent}
-        </RedEyeMask>
-      );
-      break;
-    }
-
-    const startToken =
-      next.kind === 'translation-inline'
-        ? GRAMMAR_MASK_TRANSLATION_START_TOKEN
-        : GRAMMAR_MASK_ANSWER_START_TOKEN;
-    const endToken =
-      next.kind === 'translation-inline'
-        ? GRAMMAR_MASK_TRANSLATION_END_TOKEN
-        : GRAMMAR_MASK_ANSWER_END_TOKEN;
-    const maskKind: 'translation' | 'answer' =
-      next.kind === 'translation-inline' ? 'translation' : 'answer';
-    const endIndex = remaining.indexOf(endToken, next.index + startToken.length);
-
-    if (endIndex < 0) {
-      segments.push(stripGrammarMaskTokens(remaining));
-      break;
-    }
-
-    const maskedContent = stripGrammarMaskTokens(
-      remaining.slice(next.index + startToken.length, endIndex)
-    );
-    segments.push(
-      <RedEyeMask key={`mask-${key++}`} enabled={redEyeEnabled} kind={maskKind}>
-        {maskedContent}
-      </RedEyeMask>
-    );
-    remaining = remaining.slice(endIndex + endToken.length);
-  }
-
-  return segments;
-}
-
-function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.ReactNode {
-  if (typeof node === 'string' || typeof node === 'number')
-    return renderMaskedTextSegments(String(node), redEyeEnabled);
-
-  if (Array.isArray(node)) {
-    const rendered: React.ReactNode[] = [];
-    let pendingMask: 'translation' | 'answer' | null = null;
-    node.forEach((child, index) => {
-      if (typeof child === 'string' || typeof child === 'number') {
-        const text = String(child);
-        const standaloneMaskKind = getStandaloneLineMaskKind(text);
-        if (standaloneMaskKind) {
-          pendingMask = standaloneMaskKind;
-          return;
-        }
-        const renderedChild = renderMaskedNode(child, redEyeEnabled);
-        if (pendingMask) {
-          rendered.push(
-            wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
-          );
-        } else {
-          rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
-        }
-        return;
-      }
-      const renderedChild = renderMaskedNode(child, redEyeEnabled);
-      if (pendingMask) {
-        rendered.push(
-          wrapMaskedInlineNode(renderedChild, pendingMask, redEyeEnabled, `masked-${index}`)
-        );
-      } else {
-        rendered.push(<React.Fragment key={`masked-${index}`}>{renderedChild}</React.Fragment>);
-      }
-    });
-    return rendered;
-  }
-
-  if (React.isValidElement(node)) {
-    const props = node.props as { children?: React.ReactNode };
-    return React.cloneElement(node, props, renderMaskedNode(props.children, redEyeEnabled));
-  }
-  return node;
-}
-
-function renderMaskedBlockContent(
-  children: React.ReactNode,
-  maskKind: 'translation' | 'answer' | null,
-  redEyeEnabled: boolean
-): React.ReactNode {
-  if (!maskKind || !redEyeEnabled) return renderMaskedNode(children, redEyeEnabled);
-  return (
-    <RedEyeMask enabled kind={maskKind} style={{ whiteSpace: 'normal' }}>
-      {renderMaskedNode(children, false)}
-    </RedEyeMask>
-  );
-}
-
-export const MarkdownRenderer: React.FC<{
-  content: string;
-  redEyeEnabled?: boolean;
-  t: TFunction;
-}> = ({ content, redEyeEnabled = false, t }) => {
-  if (!content) return null;
-
-  // DEBUG: Check if masking tokens exist in content after remarkGrammarMasking processes it
-  if (typeof window !== 'undefined' && (window as any).__REDEYE_DEBUG) {
-    console.log(
-      '[MarkdownRenderer] redEyeEnabled:',
-      redEyeEnabled,
-      'content has MASK_TRANSLATION:',
-      content.includes('@@GRAMMAR_MASK_TRANSLATION')
-    );
-  }
-
-  return (
-    <div className="grammar-prose prose prose-slate max-w-none prose-sm sm:prose-base dark:prose-invert">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkGrammarMasking]}
-        components={{
-          h1: ({ children }) => (
-            <h1 className="font-k-serif text-[32px] font-medium text-k-ink mb-6 mt-10 tracking-tight leading-tight">
-              {children}
-            </h1>
-          ),
-          h2: ({ children }) => (
-            <h2 className="flex items-center gap-3 border-b border-[#f0ede8] pb-3 font-bold text-k-ink mb-6 mt-12 tracking-tight">
-              <span className="w-1.5 h-6 bg-k-crimson rounded-full" />
-              <span className="text-[20px]">{children}</span>
-            </h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="mb-4 mt-8 text-[14px] font-extrabold uppercase tracking-[0.15em] text-k-sub">
-              {children}
-            </h3>
-          ),
-          p: ({ children, node }) => {
-            const nodeMaskKind = getNodeMaskKind(node);
-            return (
-              <p className="my-4 text-[15px] leading-[1.8] text-k-ink/80 font-medium">
-                {renderMaskedBlockContent(children, nodeMaskKind, redEyeEnabled)}
-              </p>
-            );
-          },
-          ul: ({ children }) => (
-            <ul className="my-6 list-disc space-y-2.5 pl-6 marker:text-k-crimson">{children}</ul>
-          ),
-          ol: ({ children }) => (
-            <ol className="my-6 list-decimal space-y-3 pl-6 marker:font-bold marker:text-k-crimson">
-              {children}
-            </ol>
-          ),
-          li: ({ children, node }) => {
-            const nodeMaskKind = getNodeMaskKind(node);
-            return (
-              <li className="text-[15px] leading-[1.8] text-k-ink/80">
-                {renderMaskedBlockContent(children, nodeMaskKind, redEyeEnabled)}
-              </li>
-            );
-          },
-          blockquote: ({ children }) => (
-            <blockquote className="my-8 rounded-[18px] border-l-4 border-l-k-crimson bg-[#faf8f5] px-6 py-5 not-italic shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.15em] text-k-crimson">
-                <Lightbulb size={14} />
-                {t('coursesOverview.desktop.grammar.learningNote')}
-              </div>
-              <div className="text-k-ink/80">{children}</div>
-            </blockquote>
-          ),
-          table: ({ children }) => (
-            <div className="my-8 overflow-x-auto rounded-[16px] border border-[#f0ede8] bg-white shadow-sm">
-              <table className="m-0 w-full border-separate border-spacing-0">{children}</table>
-            </div>
-          ),
-          thead: ({ children }) => <thead className="bg-[#faf8f5] text-k-sub">{children}</thead>,
-          th: ({ children }) => (
-            <th className="border-b border-r border-[#f0ede8] px-5 py-3.5 text-left text-[11px] font-extrabold uppercase tracking-[0.12em] last:border-r-0">
-              {children}
-            </th>
-          ),
-          td: ({ children }) => {
-            const rawText = extractTextContent(children);
-            const maskKind = rawText.trim().startsWith(GRAMMAR_MASK_TRANSLATION_TOKEN)
-              ? ('translation' as const)
-              : rawText.trim().startsWith(GRAMMAR_MASK_ANSWER_TOKEN)
-                ? ('answer' as const)
-                : null;
-            return (
-              <td className="border-b border-r border-[#f0ede8] px-5 py-4 align-top text-[13px] font-medium text-k-ink/80 last:border-r-0">
-                {renderMaskedBlockContent(children, maskKind, redEyeEnabled)}
-              </td>
-            );
-          },
-          strong: ({ children }) => (
-            <strong className="rounded-[4px] bg-k-crimson/5 px-1.5 py-0.5 font-bold text-k-crimson">
-              {children}
-            </strong>
-          ),
-          code: ({ inline, className, children, ...props }: any) => (
-            <code
-              className={cn(
-                'font-mono font-bold',
-                inline
-                  ? 'rounded-[4px] bg-[#f0ede8] px-1.5 py-0.5 text-[13px] text-k-ink'
-                  : 'block rounded-[12px] bg-k-ink text-[#faf8f5] p-4 text-[14px] my-6'
-              )}
-            >
-              {children}
-            </code>
-          ),
-          hr: () => <hr className="my-10 border-0 h-px bg-[#f0ede8]" />,
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
-};
-
-function DesktopAiGrammarCheck({
-  grammar,
-  language,
-  t,
+export function MarkdownRenderer({
+  content,
+  redEyeEnabled,
 }: {
-  grammar: GrammarPointData;
-  language: string;
-  t: TFunction;
+  content: string;
+  redEyeEnabled: boolean;
+  t?: unknown;
 }) {
-  const [practiceSentence, setPracticeSentence] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
-  const [result, setResult] = useState<{
-    isCorrect: boolean;
-    feedback: string;
-    correctedSentence: string;
-  } | null>(null);
+  const normalized = sanitizeGrammarDisplayText(content).trim();
+  if (!normalized) {
+    return null;
+  }
 
-  const checkAction = useAction(
-    aRef<
-      { sentence: string; context: string; language?: string },
-      { success?: boolean; data?: { nuance?: unknown; isCorrect?: unknown; corrected?: unknown } }
-    >('ai:analyzeSentence')
-  );
-
-  const summary =
-    getLocalizedContent(grammar, 'summary', language) || grammar.summary || grammar.title;
-
-  const handleCheck = useCallback(async () => {
-    const trimmed = practiceSentence.trim();
-    if (!trimmed) return;
-    setIsChecking(true);
-    setResult(null);
-    try {
-      const response = await checkAction({
-        sentence: trimmed,
-        context: `Grammar point: ${summary}`,
-        language: language as string,
-      });
-      const data = (response as Record<string, unknown>)?.data as
-        | Record<string, unknown>
-        | undefined;
-      setResult({
-        isCorrect: data?.isCorrect === true,
-        feedback: String(data?.nuance ?? ''),
-        correctedSentence: String(data?.corrected ?? ''),
-      });
-    } catch {
-      setResult({
-        isCorrect: false,
-        feedback: t('common.error', 'Analysis failed. Please try again.'),
-        correctedSentence: '',
-      });
-    } finally {
-      setIsChecking(false);
-    }
-  }, [practiceSentence, checkAction, summary, language, t]);
+  const components: Components = {
+    h1: ({ children }) => (
+      <h1 className="mt-8 mb-4 text-[28px] font-bold leading-tight text-stone-950">{children}</h1>
+    ),
+    h2: ({ children }) => (
+      <h2 className="mt-8 mb-3 border-b border-stone-200 pb-2 text-[20px] font-bold leading-tight text-stone-950">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }) => (
+      <h3 className="mt-6 mb-2 text-[16px] font-bold text-stone-950">{children}</h3>
+    ),
+    h4: ({ children }) => (
+      <h4 className="mt-4 mb-2 text-[14px] font-bold text-stone-700">{children}</h4>
+    ),
+    p: ({ children }) => <p className="my-3 text-[14px] leading-[2] text-stone-700">{children}</p>,
+    ul: ({ children }) => (
+      <ul className="my-3 list-disc space-y-1 pl-6 text-[14px] leading-[2] text-stone-700">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="my-3 list-decimal space-y-1 pl-6 text-[14px] leading-[2] text-stone-700">
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => (
+      <li className="pl-1 text-[14px] leading-[2] text-stone-700">{children}</li>
+    ),
+    hr: () => <hr className="my-6 h-px border-0 bg-stone-200" />,
+    strong: ({ children }) => <strong className="font-bold text-rose-700">{children}</strong>,
+    blockquote: ({ children }) => (
+      <blockquote className="my-4 rounded-[10px] border-l-[3px] border-rose-700 bg-rose-50/70 px-4 py-3">
+        {children}
+      </blockquote>
+    ),
+    table: ({ children }) => (
+      <div className="my-4 overflow-x-auto rounded-[10px] border border-stone-200">
+        <table className="m-0 w-full border-separate border-spacing-0 text-[13px]">
+          {children}
+        </table>
+      </div>
+    ),
+    thead: ({ children }) => <thead className="bg-stone-50">{children}</thead>,
+    tbody: ({ children }) => <tbody>{children}</tbody>,
+    th: ({ children }) => (
+      <th className="border-b border-r border-stone-200 px-4 py-2 text-left text-[12px] font-bold text-stone-500 last:border-r-0">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="border-b border-r border-stone-200 px-4 py-2 text-[13px] text-stone-700 last:border-r-0">
+        {children}
+      </td>
+    ),
+    code: ({ children, className, ...props }) => (
+      <code
+        className={`rounded-[4px] bg-rose-50 px-1.5 py-0.5 text-[12px] font-semibold text-rose-700 ${className ?? ''}`}
+        {...props}
+      >
+        {children}
+      </code>
+    ),
+    pre: ({ children }) => (
+      <pre className="my-4 overflow-x-auto rounded-[10px] bg-stone-50 p-4 text-[13px]">
+        {children}
+      </pre>
+    ),
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Sparkles size={18} className="text-k-crimson" />
-        <span className="text-[13px] font-black tracking-wider text-k-ink uppercase">
-          {t('coursesOverview.desktop.grammar.aiCheck', { defaultValue: 'AI Sentence Check' })}
-        </span>
-      </div>
-
-      <p className="text-[11px] font-bold text-k-sub/70 leading-relaxed max-w-lg">
-        {t('coursesOverview.desktop.grammar.aiCheckDesc', {
-          defaultValue: 'Write a Korean sentence using this grammar pattern to get AI feedback.',
-        })}
-      </p>
-
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={practiceSentence}
-          onChange={e => setPracticeSentence(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !isChecking) handleCheck();
-          }}
-          placeholder={t('coursesOverview.desktop.grammar.aiCheckPlaceholder', {
-            defaultValue: 'Type a Korean sentence...',
-          })}
-          className="flex-1 h-11 rounded-xl border border-k-line/40 px-4 text-[13px] font-bold outline-none transition-all focus:border-k-crimson/30 focus:ring-4 focus:ring-k-crimson/5 bg-white"
-        />
-        <button
-          onClick={handleCheck}
-          disabled={isChecking || !practiceSentence.trim()}
-          className="h-11 cursor-pointer rounded-xl bg-k-crimson px-5 text-white shadow-lg shadow-k-crimson/20 transition-all hover:bg-k-crimson/90 disabled:opacity-30 disabled:shadow-none"
-        >
-          {isChecking ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-        </button>
-      </div>
-
-      {result && (
-        <div
-          className={cn(
-            'mt-4 rounded-2xl p-5 border animate-in fade-in slide-in-from-top-2 duration-300',
-            result.isCorrect
-              ? 'bg-k-mint/10 border-k-mint/20 text-k-mint-deep'
-              : 'bg-k-crimson/5 border-k-crimson/10 text-k-crimson'
-          )}
-        >
-          <div className="flex items-center gap-2 mb-2 font-black text-[13px]">
-            {result.isCorrect ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-            {result.isCorrect
-              ? t('coursesOverview.desktop.grammar.aiCorrect', { defaultValue: 'Correct!' })
-              : t('coursesOverview.desktop.grammar.aiIncorrect', { defaultValue: 'Needs work' })}
-          </div>
-
-          {result.feedback && (
-            <div className="text-[12px] font-bold leading-relaxed opacity-90">
-              {result.feedback}
-            </div>
-          )}
-
-          {result.correctedSentence && (
-            <div className="mt-3 pt-3 border-t border-current/10">
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60 block mb-1">
-                {t('coursesOverview.desktop.grammar.aiSuggested', { defaultValue: 'Suggested' })}
-              </span>
-              <span className="text-[14px] font-bold font-k-serif">{result.correctedSentence}</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <RedEyeBlock enabled={redEyeEnabled}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {normalized}
+      </ReactMarkdown>
+    </RedEyeBlock>
   );
 }
 
 // 渲染构造规则，支持多种格式
 function renderConjugationRules(
-  rules: Record<string, string> | Record<string, string>[] | string[] | undefined,
-  t: TFunction
+  rules: Record<string, string> | Array<Record<string, string> | string> | undefined
 ) {
   if (!rules) return null;
 
@@ -565,7 +158,7 @@ function renderConjugationRules(
   if (Array.isArray(rules)) {
     rules.forEach((item, idx) => {
       if (typeof item === 'string') {
-        entries.push([`${t('coursesOverview.desktop.grammar.conjugationRules')} ${idx + 1}`, item]);
+        entries.push([`规则 ${idx + 1}`, item]);
       } else if (typeof item === 'object') {
         Object.entries(item).forEach(([key, value]) => {
           entries.push([key, String(value)]);
@@ -613,543 +206,902 @@ function renderConjugationRules(
   });
 }
 
+// 语法分类名称
+const unitNames: Record<number, string> = {
+  1: '基础助词',
+  2: '时态变化',
+  3: '条件假设',
+  4: '间接引语',
+  5: '使役被动',
+  6: '高级连接',
+  7: '推测与推断',
+  8: '假设与前提',
+  9: '让步与包含',
+  10: '机会与变化',
+  11: '引述与传闻',
+  12: '必要与经验',
+  13: '列举与顺序',
+  14: '标准与范围',
+  15: '助词与语气',
+};
+
+const MAX_AI_CONTEXT_MESSAGES = 8;
+
+interface AiPracticeMessage {
+  id: string;
+  role: 'assistant' | 'user';
+  content: string;
+  pending?: boolean;
+}
+
+const aiPracticeMarkdownComponents: Components = {
+  p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold text-stone-950">{children}</strong>,
+  em: ({ children }) => <em className="font-medium not-italic text-stone-800">{children}</em>,
+  ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
+  ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
+  li: ({ children }) => <li className="pl-1">{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="my-2 border-l-2 border-rose-700/50 pl-3 text-stone-600">
+      {children}
+    </blockquote>
+  ),
+  code: ({ children }) => (
+    <code className="rounded-[4px] bg-stone-100 px-1 py-0.5 text-[12px] font-semibold text-stone-800">
+      {children}
+    </code>
+  ),
+};
+
+function AiPracticeMarkdown({ content }: { content: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={aiPracticeMarkdownComponents}>
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+interface DesktopAiPracticeDialogProps {
+  grammar: GrammarPointData | null;
+  grammarTitle: string;
+  grammarSummary: string;
+  grammarExplanation: string;
+  language: string;
+  isOpen: boolean;
+  setIsOpen: (v: boolean) => void;
+}
+
+function DesktopAiPracticeDialog({
+  grammar,
+  grammarTitle,
+  grammarSummary,
+  grammarExplanation,
+  language,
+  isOpen,
+  setIsOpen,
+}: DesktopAiPracticeDialogProps) {
+  const askGrammarTutor = useAction(AI.grammarTutorChat);
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [messages, setMessages] = useState<AiPracticeMessage[]>([]);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!grammar) {
+      setMessages([]);
+      setInput('');
+      setIsSending(false);
+      return;
+    }
+
+    setMessages([
+      {
+        id: `assistant-init-${grammar.id}`,
+        role: 'assistant',
+        content: '输入一句包含当前语法点的韩语句子，我会检查是否自然，并给出更好的表达。',
+      },
+    ]);
+    setInput('');
+    setIsSending(false);
+  }, [grammar]);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [messages, isOpen]);
+
+  const sendMessage = async () => {
+    const userText = input.trim();
+    if (!grammar || userText.length === 0 || isSending) return;
+
+    const userMessage: AiPracticeMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: userText,
+    };
+    const pendingMessageId = `assistant-pending-${Date.now()}`;
+    const pendingMessage: AiPracticeMessage = {
+      id: pendingMessageId,
+      role: 'assistant',
+      content: '检查中...',
+      pending: true,
+    };
+    const conversationHistory = [
+      ...messages
+        .filter(message => !message.pending)
+        .map(message => ({
+          role: message.role,
+          content: message.content,
+        })),
+      { role: 'user' as const, content: userText },
+    ].slice(-MAX_AI_CONTEXT_MESSAGES);
+
+    setMessages(prev => [...prev, userMessage, pendingMessage]);
+    setInput('');
+    setIsSending(true);
+
+    try {
+      const response = await askGrammarTutor({
+        grammarTitle,
+        grammarSummary,
+        grammarExplanation,
+        language,
+        messages: conversationHistory,
+      });
+      const reply =
+        response?.success && response.reply ? response.reply : '暂时无法完成检查，请稍后再试。';
+
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === pendingMessageId ? { ...message, content: reply, pending: false } : message
+        )
+      );
+    } catch {
+      setMessages(prev =>
+        prev.map(message =>
+          message.id === pendingMessageId
+            ? { ...message, content: '暂时无法完成检查，请稍后再试。', pending: false }
+            : message
+        )
+      );
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="fixed bottom-[28px] right-[32px] z-40 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#c41230] text-white shadow-[0_14px_35px_rgba(196,18,48,0.32)] transition-transform hover:scale-[1.03]"
+        onClick={() => setIsOpen(true)}
+        aria-label="打开 AI 语法练习"
+      >
+        <MessageCircle size={22} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="fixed bottom-[96px] right-[32px] z-50 flex max-h-[calc(100vh-130px)] w-[430px] flex-col overflow-hidden rounded-[16px] border border-stone-200 bg-white shadow-[0_24px_70px_rgba(31,27,23,0.18)]"
+          role="dialog"
+          aria-modal="false"
+          aria-label="AI 语法练习"
+        >
+          <div className="flex items-start justify-between border-b border-stone-100 px-[18px] py-[16px]">
+            <div className="min-w-0">
+              <div className="text-[13px] font-extrabold text-stone-950">AI 语法练习</div>
+              <div className="mt-1 truncate text-[12px] font-semibold text-stone-500">
+                {grammarTitle}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ml-3 rounded-full p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-900"
+              onClick={() => setIsOpen(false)}
+              aria-label="关闭 AI 语法练习"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div
+            ref={listRef}
+            className="min-h-[260px] flex-1 space-y-3 overflow-y-auto bg-stone-50/70 px-[18px] py-[16px]"
+          >
+            {messages.map(message => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[82%] rounded-[12px] px-[14px] py-[10px] text-[13px] leading-6 ${
+                    message.role === 'user'
+                      ? 'bg-[#c41230] text-white'
+                      : 'border border-stone-200 bg-white text-stone-700'
+                  }`}
+                >
+                  {message.pending && <Loader2 size={13} className="mr-1 inline animate-spin" />}
+                  {message.role === 'assistant' ? (
+                    <AiPracticeMarkdown content={message.content} />
+                  ) : (
+                    <span className="whitespace-pre-wrap">{message.content}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-stone-100 p-[14px]">
+            <textarea
+              value={input}
+              onChange={event => setInput(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  void sendMessage();
+                }
+              }}
+              placeholder="输入韩语句子，按 Ctrl/⌘ + Enter 发送"
+              className="min-h-[86px] w-full resize-none rounded-[12px] border border-stone-200 bg-white px-3 py-2 text-[13px] leading-6 text-stone-800 outline-none transition-colors placeholder:text-stone-400 focus:border-[#c41230]"
+            />
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[10px] bg-[#c41230] px-4 py-2 text-[12px] font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={() => void sendMessage()}
+                disabled={input.trim().length === 0 || isSending}
+              >
+                {isSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                发送
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface DesktopGrammarModulePageProps {
   allCourseGrammar: GrammarPointData[];
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
   desktopSelectedGrammarId: string | null;
   setHasManualUnitSelection: (v: boolean) => void;
   setSelectedUnit: (u: number) => void;
   setSelectedGrammarId: (id: string | null) => void;
-  clearRecommendedDismissal: () => void;
   activeSelectedUnit: number;
   clampUnit: (u: number) => number;
-  instituteName: string;
-  instituteId: string;
   language: string;
-  t: TFunction;
-  selectedStatus: string;
-  statusLabel: string;
-  statusClass: string;
-  selectedProficiency: number;
   selectedTitle: string | null;
   desktopSelectedGrammar: GrammarPointData | null;
-  handleToggleStatus: (grammarId: string) => void;
   isGrammarLoading: boolean;
   isAiPanelOpen: boolean;
   setIsAiPanelOpen: (v: boolean) => void;
-  grammarListWithUpdates: GrammarPointData[];
-  currentIndex: number;
-  handleNext: () => void;
-  handlePrev: () => void;
   navigate: (path: string) => void;
 }
 
 export default function DesktopGrammarModulePage({
   allCourseGrammar,
-  searchQuery,
-  setSearchQuery,
   desktopSelectedGrammarId,
   setHasManualUnitSelection,
   setSelectedUnit,
   setSelectedGrammarId,
-  clearRecommendedDismissal,
   activeSelectedUnit,
   clampUnit,
-  instituteName,
-  instituteId,
   language,
-  t,
-  selectedStatus,
-  statusLabel,
-  statusClass,
-  selectedProficiency,
   selectedTitle,
   desktopSelectedGrammar,
-  handleToggleStatus,
   isGrammarLoading,
   isAiPanelOpen,
   setIsAiPanelOpen,
-  grammarListWithUpdates,
-  currentIndex,
-  handleNext,
-  handlePrev,
   navigate,
 }: DesktopGrammarModulePageProps) {
   const [redEyeMode, setRedEyeMode] = React.useState(false);
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
+  const [expandedUnits, setExpandedUnits] = useState<Set<number>>(
+    () => new Set([activeSelectedUnit])
+  );
 
-  const filteredGrammarByUnit = useMemo(() => {
-    const groups = new Map<number, GrammarPointData[]>();
-    if (!allCourseGrammar || allCourseGrammar.length === 0) return groups;
+  const unitsByCategory = useMemo(() => {
+    if (!allCourseGrammar || allCourseGrammar.length === 0) return [];
 
-    allCourseGrammar.forEach(grammar => {
-      const unitId = grammar.unitId || 1;
-      if (normalizedSearchQuery) {
-        const matchesSearch =
-          grammar.title.toLowerCase().includes(normalizedSearchQuery) ||
-          (grammar.titleZh || '').toLowerCase().includes(normalizedSearchQuery) ||
-          (grammar.summary || '').toLowerCase().includes(normalizedSearchQuery);
-        if (!matchesSearch) {
-          return;
-        }
-      }
-
-      const bucket = groups.get(unitId);
-      if (bucket) {
-        bucket.push(grammar);
-      } else {
-        groups.set(unitId, [grammar]);
-      }
+    const unitMap = new Map<number, GrammarPointData[]>();
+    allCourseGrammar.forEach(g => {
+      const uid = g.unitId || 1;
+      if (!unitMap.has(uid)) unitMap.set(uid, []);
+      unitMap.get(uid)!.push(g);
     });
 
-    return groups;
-  }, [allCourseGrammar, normalizedSearchQuery]);
-
-  // Grouped by unit statistics
-  const unitsByCategory = useMemo(() => {
-    return Array.from(filteredGrammarByUnit.entries())
-      .map(([unitId, grammars]) => ({
+    return Array.from(unitMap.entries())
+      .map(([unitId, items]) => ({
         unitId,
-        name: t(`coursesOverview.desktop.grammar.categories.${unitId}`, {
-          defaultValue: `Unit ${unitId}`,
-        }),
-        count: grammars.length,
+        name: unitNames[unitId] || `Unit ${unitId}`,
+        count: items.length,
+        items,
       }))
       .sort((a, b) => a.unitId - b.unitId);
-  }, [filteredGrammarByUnit, t]);
+  }, [allCourseGrammar]);
 
-  // Calculate total progress
+  // 计算总进度
   const totalMastered = useMemo(() => {
     if (!allCourseGrammar) return 0;
     return allCourseGrammar.filter(g => g.status === 'MASTERED').length;
   }, [allCourseGrammar]);
 
   const totalCount = allCourseGrammar?.length || 0;
+
   const g = desktopSelectedGrammar;
-  const completedBadgeLabel = t('grammar.status.completedBadge', { defaultValue: '已完成' });
-  const hasAltTitles = !!(g?.titleEn || g?.titleZh || g?.titleVi || g?.titleMn);
-  const hasAltSummaries = !!(g?.summaryEn || g?.summaryVi || g?.summaryMn);
-  const hasConjugationRules = g?.conjugationRules != null;
-  const conjugationRules = g?.conjugationRules as
-    | Record<string, string>
-    | Record<string, string>[]
-    | string[]
-    | undefined;
+  const display = buildDesktopGrammarDisplayModel(g, language);
+  const grammarTitle = selectedTitle || display.title;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-k-bg">
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="mx-auto w-full max-w-6xl px-6 py-10">
-          {/* --- Breadcrumb/Header --- */}
-          <div className="flex items-center gap-4 mb-6">
-            <button
-              onClick={() => navigate('/courses')}
-              className="w-8 h-8 rounded-full border border-k-line flex items-center justify-center text-k-sub hover:bg-k-bg2 transition-colors"
+    <div className="h-full min-h-0 overflow-hidden bg-[#f7f4ef]">
+      <div className="mx-auto h-full min-h-0 max-w-[1440px] px-[28px] py-[24px]">
+        <div className="grid h-full min-h-0 grid-cols-[292px_minmax(0,1fr)] items-stretch gap-[24px]">
+          {/* Left sidebar - 语法目录 */}
+          <div className="flex min-h-0 flex-col gap-[16px]">
+            <DesktopCard
+              pad={0}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              style={{ background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
             >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="w-px h-6 bg-k-line mx-2" />
-            <div className="text-[11px] font-black text-k-sub uppercase tracking-widest opacity-60">
-              {instituteName} · {t('courseDashboard.modules.grammar')}
+              <div
+                className="flex items-center border-b px-[16px] py-[14px]"
+                style={{ borderColor: '#f0ede8' }}
+              >
+                <span
+                  className="mr-1.5 font-k-serif text-[14px] font-medium"
+                  style={{ color: '#c41230' }}
+                >
+                  表
+                </span>
+                <span className="text-[12px] font-extrabold" style={{ color: '#1f1b17' }}>
+                  语法目录
+                </span>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto pb-[12px]">
+                {unitsByCategory.map((unit, i) => {
+                  const isActive = unit.unitId === activeSelectedUnit;
+                  const isExpanded = expandedUnits.has(unit.unitId);
+                  return (
+                    <div key={unit.unitId}>
+                      <div
+                        className="cursor-pointer border-l-[3px] px-[16px] py-[12px] transition-all"
+                        style={{
+                          borderBottom:
+                            !isExpanded && i < unitsByCategory.length - 1
+                              ? '1px solid #f0ede8'
+                              : 'none',
+                          background: isActive ? '#faf5f5' : 'transparent',
+                          borderLeftColor: isActive ? '#c41230' : 'transparent',
+                        }}
+                        onClick={() => {
+                          setExpandedUnits(prev => {
+                            const next = new Set(prev);
+                            if (next.has(unit.unitId)) {
+                              next.delete(unit.unitId);
+                            } else {
+                              next.add(unit.unitId);
+                            }
+                            return next;
+                          });
+                          setHasManualUnitSelection(true);
+                          setSelectedUnit(clampUnit(unit.unitId));
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div
+                            className="text-[12px]"
+                            style={{ color: '#1f1b17', fontWeight: isActive ? 800 : 600 }}
+                          >
+                            {unit.name}
+                          </div>
+                          <ChevronDown
+                            size={14}
+                            className="transition-transform"
+                            style={{
+                              color: '#999',
+                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            }}
+                          />
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-semibold" style={{ color: '#999' }}>
+                          {unit.count} 个语法点
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div
+                          style={{
+                            borderBottom:
+                              i < unitsByCategory.length - 1 ? '1px solid #f0ede8' : 'none',
+                          }}
+                        >
+                          {unit.items.map(item => {
+                            const isItemActive = item.id === desktopSelectedGrammarId;
+                            const itemTitle = sanitizeGrammarDisplayText(
+                              getLocalizedContent(item, 'title', language) || item.title
+                            );
+                            return (
+                              <div
+                                key={item.id}
+                                className="cursor-pointer px-[16px] py-[8px] pl-[28px] transition-all"
+                                style={{
+                                  background: isItemActive ? '#c41230' : 'transparent',
+                                }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setHasManualUnitSelection(true);
+                                  setSelectedUnit(clampUnit(unit.unitId));
+                                  setSelectedGrammarId(item.id);
+                                }}
+                              >
+                                <div
+                                  className="truncate text-[11px]"
+                                  style={{
+                                    color: isItemActive ? '#fff' : '#666',
+                                    fontWeight: isItemActive ? 700 : 500,
+                                  }}
+                                >
+                                  {itemTitle}
+                                </div>
+                                {item.status === 'MASTERED' && (
+                                  <span
+                                    className="text-[9px] font-bold"
+                                    style={{
+                                      color: isItemActive ? 'rgba(255,255,255,0.7)' : '#10b981',
+                                    }}
+                                  >
+                                    ✓ 已掌握
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </DesktopCard>
+
+            {/* Progress card */}
+            <div className="shrink-0 rounded-[14px] p-[20px]" style={{ background: '#1f1b17' }}>
+              <div className="text-[10px] font-bold" style={{ color: 'rgba(250,248,245,0.5)' }}>
+                MY PROGRESS
+              </div>
+              <div
+                className="mt-2 font-k-serif text-[28px] font-medium"
+                style={{ color: '#faf8f5' }}
+              >
+                {totalMastered} / {totalCount}
+              </div>
+              <div className="mt-1 text-[11px]" style={{ color: 'rgba(250,248,245,0.6)' }}>
+                掌握率 {totalCount > 0 ? Math.round((totalMastered / totalCount) * 100) : 0}%
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] items-start gap-8">
-            {/* Left sidebar - Grammar directory */}
-            <aside className="space-y-6 sticky top-0">
-              <DesktopCard pad={0} className="overflow-hidden">
-                <div className="p-4 border-b border-k-line flex items-center gap-2">
-                  <span className="font-k-serif text-sm text-k-crimson font-medium">表</span>
-                  <span className="text-[12px] font-black text-k-ink uppercase tracking-wider">
-                    {t('grammarModule.catalog', { defaultValue: 'Grammar Catalog' })}
-                  </span>
+          {/* Right content */}
+          <div className="min-h-0 overflow-y-auto pr-[6px]">
+            {isGrammarLoading ? (
+              <DesktopCard
+                pad={60}
+                style={{
+                  background: '#fff',
+                  textAlign: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                }}
+              >
+                <div className="animate-pulse" style={{ color: '#999' }}>
+                  加载中...
                 </div>
+              </DesktopCard>
+            ) : g ? (
+              <div className="mx-auto max-w-[940px] space-y-[18px] pb-[32px]">
+                {/* Main grammar card */}
+                <DesktopCard
+                  pad={36}
+                  className="relative overflow-hidden border border-stone-100"
+                  style={{ background: '#fff', boxShadow: '0 18px 45px rgba(31,27,23,0.06)' }}
+                >
+                  <button
+                    type="button"
+                    className="absolute left-[24px] top-[24px] cursor-pointer rounded-full p-2 transition-colors hover:bg-stone-100"
+                    style={{ color: '#1f1b17' }}
+                    onClick={() => navigate('/courses')}
+                    aria-label="Back to courses"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
 
-                <div className="p-3 bg-k-bg2/30 border-b border-k-line">
-                  <div className="relative">
-                    <Search
-                      size={14}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-k-sub"
-                    />
-                    <input
-                      type="text"
-                      placeholder={t('coursesOverview.desktop.grammar.quickFilter')}
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full h-8 pl-8 pr-3 rounded-lg bg-white border border-k-line/20 text-[11px] font-bold outline-none focus:ring-2 focus:ring-k-crimson/10 transition-all"
-                    />
+                  {/* Share button */}
+                  <button
+                    className="absolute right-[24px] top-[24px] cursor-pointer rounded-full p-2 transition-colors hover:bg-stone-100"
+                    style={{ color: '#999' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#1f1b17')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#999')}
+                  >
+                    <Share2 size={16} />
+                  </button>
+
+                  {/* Unit badge */}
+                  <div className="mb-4">
+                    <span
+                      className="inline-block rounded-[6px] px-[10px] py-[4px] text-[11px] font-bold"
+                      style={{ background: '#c41230', color: '#fff' }}
+                    >
+                      {unitNames[activeSelectedUnit] || `Unit ${activeSelectedUnit}`} · UNIT{' '}
+                      {activeSelectedUnit}
+                    </span>
                   </div>
-                </div>
 
-                <div className="max-h-[600px] overflow-y-auto hide-scrollbar divide-y divide-k-line">
-                  {unitsByCategory.map(unit => {
-                    const points = filteredGrammarByUnit.get(unit.unitId) ?? [];
+                  {/* Grammar title */}
+                  <div
+                    className="max-w-[760px] font-k-serif text-[48px] font-medium leading-[1.12]"
+                    style={{ color: '#1f1b17' }}
+                  >
+                    {grammarTitle}
+                  </div>
 
-                    if (points.length === 0 && normalizedSearchQuery) return null;
+                  {/* Summary */}
+                  <div
+                    className="mt-3 max-w-[680px] text-[15px] font-semibold leading-7"
+                    style={{ color: '#625a52' }}
+                  >
+                    {display.summary}
+                  </div>
 
-                    return (
-                      <div key={unit.unitId}>
-                        <div className="px-4 py-2 bg-k-bg2/50 text-[10px] font-black text-k-sub uppercase tracking-widest border-b border-k-line/10">
-                          {unit.name}
-                        </div>
-                        {points.map(point => (
+                  {/* Multi-language summaries */}
+                  {display.altSummaries.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {display.altSummaries.map(summaryLine => (
+                        <RedEyeBlock key={summaryLine.label} enabled={redEyeMode}>
+                          <div className="text-[12px]" style={{ color: '#bbb' }}>
+                            {summaryLine.label}: {summaryLine.text}
+                          </div>
+                        </RedEyeBlock>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Controls */}
+                  <div className="mt-5 flex items-center gap-3 border-b border-stone-100 pb-[26px]">
+                    <button
+                      className="cursor-pointer rounded-[8px] border px-[12px] py-[6px] text-[11px] font-bold transition-all"
+                      style={{
+                        background: redEyeMode ? '#c41230' : '#faf8f5',
+                        borderColor: redEyeMode ? '#c41230' : '#e8e5e0',
+                        color: redEyeMode ? '#fff' : '#999',
+                      }}
+                      onClick={() => setRedEyeMode(!redEyeMode)}
+                    >
+                      {redEyeMode ? (
+                        <EyeOff size={14} className="mr-1 inline" />
+                      ) : (
+                        <Eye size={14} className="mr-1 inline" />
+                      )}
+                      {redEyeMode ? '关闭红眼' : '红眼模式'}
+                    </button>
+                  </div>
+
+                  {/* Conjugation Rules */}
+                  {display.conjugationRules && (
+                    <div className="mt-[28px] rounded-[12px] border border-stone-200 bg-stone-50/80 p-[24px]">
+                      <div className="mb-4 text-[11px] font-extrabold" style={{ color: '#999' }}>
+                        构造规则 · CONSTRUCTIONS
+                      </div>
+                      <div className="grid grid-cols-2 gap-[28px]">
+                        {renderConjugationRules(display.conjugationRules)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Examples */}
+                  {display.examples.length > 0 && (
+                    <div className="mt-[28px]">
+                      <div className="mb-4 text-[11px] font-extrabold" style={{ color: '#999' }}>
+                        例句 · EXAMPLES ({display.examples.length})
+                      </div>
+                      <div className="space-y-[12px]">
+                        {display.examples.map((example, i) => (
                           <div
-                            key={point.id}
-                            className={cn(
-                              'px-4 py-3.5 cursor-pointer border-l-[3px] transition-all',
-                              desktopSelectedGrammarId === point.id
-                                ? 'bg-k-crimson/5 border-k-crimson'
-                                : 'border-transparent hover:bg-k-bg2/30'
-                            )}
-                            onClick={() => {
-                              clearRecommendedDismissal();
-                              setHasManualUnitSelection(true);
-                              setSelectedUnit(unit.unitId);
-                              setSelectedGrammarId(point.id);
-                            }}
+                            key={i}
+                            className="rounded-[12px] border border-stone-200 bg-white px-[22px] py-[18px] shadow-[0_1px_0_rgba(31,27,23,0.03)]"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start justify-between">
                               <div
-                                className={cn(
-                                  'text-[13px] font-black',
-                                  desktopSelectedGrammarId === point.id
-                                    ? 'text-k-ink'
-                                    : 'text-k-ink2/80'
-                                )}
+                                className="font-k-serif text-[18px] font-medium leading-[1.7]"
+                                style={{ color: '#1f1b17' }}
                               >
-                                {point.title}
+                                {example.kr}
                               </div>
-                              {point.status === 'MASTERED' ? (
-                                <span className="rounded-full bg-k-mint/20 px-2 py-0.5 text-[9px] font-black tracking-[0.08em] text-k-mint-deep">
-                                  {completedBadgeLabel}
-                                </span>
-                              ) : null}
+                              {example.hasAudio && (
+                                <button
+                                  className="ml-3 cursor-pointer rounded-full p-2 transition-colors hover:bg-slate-100"
+                                  style={{ color: '#999' }}
+                                >
+                                  <Volume2 size={16} />
+                                </button>
+                              )}
                             </div>
-                            <div className="text-[10px] font-bold text-k-sub mt-1">
-                              {point.status === 'MASTERED'
-                                ? t('status.mastered')
-                                : t('status.learning')}
-                            </div>
+                            {example.cn && (
+                              <RedEyeBlock enabled={redEyeMode}>
+                                <div
+                                  className="mt-2 text-[12px] font-semibold"
+                                  style={{ color: '#999' }}
+                                >
+                                  {example.cn}
+                                </div>
+                              </RedEyeBlock>
+                            )}
+                            {example.en && (
+                              <RedEyeBlock enabled={redEyeMode}>
+                                <div className="mt-1 text-[11px]" style={{ color: '#bbb' }}>
+                                  EN: {example.en}
+                                </div>
+                              </RedEyeBlock>
+                            )}
                           </div>
                         ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </DesktopCard>
-
-              {/* Progress card */}
-              <DesktopCard className="bg-k-ink text-k-bg p-5">
-                <div className="text-[10px] font-black tracking-widest uppercase opacity-60 mb-2">
-                  {t('coursesOverview.desktop.grammar.myProgress')}
-                </div>
-                <div className="text-2xl font-black mb-1">
-                  {totalMastered} / {totalCount}
-                </div>
-                <div className="text-[11px] font-bold opacity-70">
-                  {t('coursesOverview.desktop.grammar.masteryRate')}{' '}
-                  {totalCount > 0 ? Math.round((totalMastered / totalCount) * 100) : 0}%
-                </div>
-              </DesktopCard>
-            </aside>
-
-            {/* Right content */}
-            <div className="space-y-6">
-              {isGrammarLoading ? (
-                <DesktopCard className="p-20 text-center">
-                  <div className="animate-pulse text-k-sub font-bold">{t('common.loading')}</div>
-                </DesktopCard>
-              ) : g ? (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  {/* Main grammar card */}
-                  <DesktopCard className="p-8 relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="px-2 py-0.5 bg-k-crimson text-white text-[10px] font-black rounded uppercase tracking-widest">
-                        Unit {g.unitId || activeSelectedUnit} ·{' '}
-                        {t(
-                          `coursesOverview.desktop.grammar.categories.${g.unitId || activeSelectedUnit}`,
-                          { defaultValue: `Unit ${g.unitId || activeSelectedUnit}` }
-                        )}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-k-sub font-bold text-[11px]"
-                        >
-                          {t('community.desktop.share', 'Share')} ↗
-                        </Button>
-                      </div>
                     </div>
+                  )}
 
-                    <h2 className="font-k-serif text-[48px] font-medium text-k-ink leading-tight tracking-tight mb-2">
-                      {selectedTitle || g.title}
-                    </h2>
-
-                    {/* Multi-language titles */}
-                    {(g.titleEn || g.titleZh || g.titleVi || g.titleMn) && (
-                      <div className="mt-2 flex flex-wrap gap-4">
-                        {g.titleZh && g.titleZh !== g.title && (
-                          <div className="flex items-center gap-1.5 text-k-sub/70">
-                            <Languages size={14} className="opacity-50" />
-                            <span className="text-[12px] font-bold">ZH: {g.titleZh}</span>
+                  {/* Sections */}
+                  {g.sections && (
+                    <div className="mt-[28px] space-y-[18px]">
+                      {display.sections.introduction.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Lightbulb size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              简介 · INTRODUCTION
+                            </span>
                           </div>
-                        )}
-                        {g.titleEn && (
-                          <div className="flex items-center gap-1.5 text-k-sub/70">
-                            <Languages size={14} className="opacity-50" />
-                            <span className="text-[12px] font-bold">EN: {g.titleEn}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Summary */}
-                    <div className="mt-4 p-5 bg-k-bg2/40 rounded-2xl border border-k-line/10">
-                      <div className="text-[11px] font-black text-k-crimson uppercase tracking-[2px] mb-2">
-                        {t('common.summary', 'Summary')}
-                      </div>
-                      <div className="text-[15px] font-bold text-k-ink/80 leading-relaxed">
-                        {sanitizeGrammarDisplayText(
-                          getLocalizedContent(g, 'summary', language) || g.summary || ''
-                        )}
-                      </div>
-
-                      {/* Multi-language summaries */}
-                      {(g.summaryEn || g.summaryVi || g.summaryMn) && (
-                        <div className="mt-4 space-y-2 pt-4 border-t border-k-line/20">
-                          {g.summaryEn && (
-                            <RedEyeBlock enabled={redEyeMode}>
-                              <div className="text-[12px] font-bold text-k-sub/60">
-                                EN: {g.summaryEn}
-                              </div>
-                            </RedEyeBlock>
+                          <MarkdownRenderer
+                            content={display.sections.introduction.zh}
+                            redEyeEnabled={false}
+                          />
+                          {display.sections.introduction.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.introduction.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
                           )}
-                          {g.summaryZh && g.summaryZh !== g.summary && (
-                            <RedEyeBlock enabled={redEyeMode}>
-                              <div className="text-[12px] font-bold text-k-sub/60">
-                                ZH: {g.summaryZh}
-                              </div>
-                            </RedEyeBlock>
+                        </div>
+                      )}
+
+                      {display.sections.core.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <BookOpen size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              核心要点 · CORE USAGE
+                            </span>
+                          </div>
+                          <MarkdownRenderer
+                            content={display.sections.core.zh}
+                            redEyeEnabled={false}
+                          />
+                          {display.sections.core.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.core.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {display.sections.comparative.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Sparkles size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              对比分析 · COMPARATIVE
+                            </span>
+                          </div>
+                          <MarkdownRenderer
+                            content={display.sections.comparative.zh}
+                            redEyeEnabled={redEyeMode}
+                          />
+                          {display.sections.comparative.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.comparative.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {display.sections.cultural.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <HelpCircle size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              文化注释 · CULTURAL NOTES
+                            </span>
+                          </div>
+                          <MarkdownRenderer
+                            content={display.sections.cultural.zh}
+                            redEyeEnabled={false}
+                          />
+                          {display.sections.cultural.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.cultural.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {display.sections.commonMistakes.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <AlertTriangle size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              常见错误 · COMMON MISTAKES
+                            </span>
+                          </div>
+                          <MarkdownRenderer
+                            content={display.sections.commonMistakes.zh}
+                            redEyeEnabled={redEyeMode}
+                          />
+                          {display.sections.commonMistakes.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.commonMistakes.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {display.sections.review.zh && (
+                        <div className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[20px] shadow-[0_1px_0_rgba(31,27,23,0.03)]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <CheckCircle2 size={16} style={{ color: '#c41230' }} />
+                            <span
+                              className="text-[12px] font-extrabold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              复习要点 · REVIEW
+                            </span>
+                          </div>
+                          <MarkdownRenderer
+                            content={display.sections.review.zh}
+                            redEyeEnabled={false}
+                          />
+                          {display.sections.review.en && (
+                            <MarkdownRenderer
+                              content={`EN: ${display.sections.review.en}`}
+                              redEyeEnabled={redEyeMode}
+                            />
                           )}
                         </div>
                       )}
                     </div>
+                  )}
 
-                    {/* Controls */}
-                    <div className="mt-6 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="cursor-pointer rounded-[10px] border px-[14px] py-[8px] text-[12px] font-black transition-all flex items-center gap-2"
-                          style={{
-                            background: redEyeMode ? '#c41230' : '#fff',
-                            borderColor: redEyeMode ? '#c41230' : '#e8e5e0',
-                            color: redEyeMode ? '#fff' : '#666',
-                          }}
-                          onClick={() => setRedEyeMode(!redEyeMode)}
-                        >
-                          {redEyeMode ? <EyeOff size={16} /> : <Eye size={16} />}
-                          {redEyeMode
-                            ? t('coursesOverview.desktop.grammar.redEyeOff')
-                            : t('coursesOverview.desktop.grammar.redEyeMode')}
-                        </button>
-
-                        <button
-                          className={cn(
-                            'px-4 py-2 rounded-[10px] text-[12px] font-black uppercase tracking-widest transition-all',
-                            selectedStatus === 'MASTERED'
-                              ? 'bg-k-mint text-white'
-                              : 'bg-k-bg2 text-k-sub border border-k-line'
-                          )}
-                          onClick={() => g && handleToggleStatus(g.id)}
-                        >
-                          {selectedStatus === 'MASTERED'
-                            ? t('status.mastered')
-                            : t('coursesOverview.desktop.grammar.markMastered')}
-                        </button>
+                  {/* Explanation */}
+                  {display.explanation && (
+                    <div className="mt-[32px]">
+                      <div className="mb-2 text-[11px] font-extrabold" style={{ color: '#999' }}>
+                        详细解释 · EXPLANATION
                       </div>
+                      <div className="rounded-[12px] border border-stone-200 bg-stone-50/80 px-[24px] py-[18px]">
+                        <MarkdownRenderer
+                          content={display.explanation}
+                          redEyeEnabled={redEyeMode}
+                        />
+                      </div>
+                      {display.explanationEn && (
+                        <RedEyeBlock enabled={redEyeMode}>
+                          <div className="mt-2 rounded-[12px] border border-stone-200 bg-stone-50/80 px-[24px] py-[18px]">
+                            <div className="mb-1 text-[11px] font-bold" style={{ color: '#999' }}>
+                              ENGLISH
+                            </div>
+                            <MarkdownRenderer
+                              content={display.explanationEn}
+                              redEyeEnabled={false}
+                            />
+                          </div>
+                        </RedEyeBlock>
+                      )}
+                    </div>
+                  )}
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handlePrev}
-                          disabled={currentIndex <= 0}
-                          className="w-10 h-10 rounded-xl border border-k-line flex items-center justify-center text-k-sub hover:bg-k-bg2 transition-colors disabled:opacity-30"
-                        >
-                          <ChevronLeft size={20} />
-                        </button>
-                        <button
-                          onClick={handleNext}
-                          disabled={currentIndex >= (grammarListWithUpdates?.length || 0) - 1}
-                          className="w-10 h-10 rounded-xl border border-k-line flex items-center justify-center text-k-sub hover:bg-k-bg2 transition-colors disabled:opacity-30"
-                        >
-                          <ChevronRight size={20} />
-                        </button>
+                  {/* Custom Note */}
+                  {display.customNote && (
+                    <div className="mt-[24px]">
+                      <div className="mb-2 text-[11px] font-extrabold" style={{ color: '#999' }}>
+                        补充说明 · CUSTOM NOTE
+                      </div>
+                      <div className="rounded-[12px] border border-dashed border-stone-300 px-[24px] py-[18px]">
+                        <MarkdownRenderer content={display.customNote} redEyeEnabled={false} />
                       </div>
                     </div>
-                  </DesktopCard>
+                  )}
 
-                  {/* AI Check Section */}
-                  <DesktopCard className="p-8 border-2 border-k-mint/20 bg-k-mint/5">
-                    <DesktopAiGrammarCheck grammar={g} language={language} t={t} />
-                  </DesktopCard>
-
-                  {/* Detail Sections */}
-                  <div className="space-y-6 pb-20">
-                    {/* Render sections if they exist in G (similar to Overview) */}
-                    {g.sections && (
-                      <div className="space-y-6">
-                        {[
-                          {
-                            id: 'introduction',
-                            icon: Lightbulb,
-                            label: 'INTRODUCTION',
-                            tKey: 'introduction',
-                          },
-                          { id: 'core', icon: BookOpen, label: 'CORE USAGE', tKey: 'coreUsage' },
-                          {
-                            id: 'comparative',
-                            icon: Sparkles,
-                            label: 'COMPARATIVE',
-                            tKey: 'comparative',
-                          },
-                          {
-                            id: 'cultural',
-                            icon: HelpCircle,
-                            label: 'CULTURAL NOTES',
-                            tKey: 'culturalNotes',
-                          },
-                          {
-                            id: 'commonMistakes',
-                            icon: AlertTriangle,
-                            label: 'COMMON MISTAKES',
-                            tKey: 'commonMistakes',
-                          },
-                          { id: 'review', icon: CheckCircle2, label: 'REVIEW', tKey: 'review' },
-                        ].map(sec => {
-                          const content = (g.sections as any)?.[sec.id];
-                          if (!content?.zh && !content?.en) return null;
-                          return (
-                            <div
-                              key={sec.id}
-                              className="rounded-[18px] border border-k-line bg-white px-8 py-7 shadow-sm"
-                            >
-                              <div className="mb-4 flex items-center gap-2.5">
-                                <sec.icon size={18} className="text-k-crimson" />
-                                <span className="text-[12px] font-black tracking-[1.5px] text-k-ink uppercase">
-                                  {t(`coursesOverview.desktop.grammar.${sec.tKey}`)} · {sec.label}
-                                </span>
-                              </div>
-                              {content.zh && (
-                                <MarkdownRenderer
-                                  content={content.zh}
-                                  redEyeEnabled={redEyeMode}
-                                  t={t}
-                                />
-                              )}
-                              {content.en && (
-                                <RedEyeBlock enabled={redEyeMode}>
-                                  <div className="mt-6 pt-6 border-t border-dashed border-k-line">
-                                    <MarkdownRenderer
-                                      content={`EN: ${content.en}`}
-                                      redEyeEnabled={redEyeMode}
-                                      t={t}
-                                    />
-                                  </div>
-                                </RedEyeBlock>
-                              )}
-                            </div>
-                          );
-                        })}
+                  {/* Quiz Items */}
+                  {display.quizItems.length > 0 && (
+                    <div className="mt-[32px]">
+                      <div className="mb-4 text-[11px] font-extrabold" style={{ color: '#999' }}>
+                        练习题 · QUIZ ({display.quizItems.length} 题)
                       </div>
-                    )}
-
-                    {/* Conjugation Rules */}
-                    {hasConjugationRules && (
-                      <div className="bg-k-bg2/40 rounded-[22px] p-8 border border-k-line/20">
-                        <div className="text-[11px] font-black text-k-sub uppercase tracking-[2px] mb-6">
-                          {t('coursesOverview.desktop.grammar.conjugationRules')} · CONSTRUCTIONS
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                          {renderConjugationRules(conjugationRules, t)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Explanation (Legacy fallback) */}
-                    {!g.sections && g.explanation && (
-                      <div className="rounded-[18px] border border-k-line bg-white px-8 py-7 shadow-sm">
-                        <div className="mb-4 flex items-center gap-2.5">
-                          <Lightbulb size={18} className="text-k-crimson" />
-                          <span className="text-[12px] font-black tracking-[1.5px] text-k-ink uppercase">
-                            {t('coursesOverview.desktop.grammar.explanation')} · EXPLANATION
-                          </span>
-                        </div>
-                        <MarkdownRenderer
-                          content={g.explanation}
-                          redEyeEnabled={redEyeMode}
-                          t={t}
-                        />
-                        {g.explanationEn && (
-                          <RedEyeBlock enabled={redEyeMode}>
-                            <div className="mt-6 pt-6 border-t border-dashed border-k-line">
-                              <MarkdownRenderer
-                                content={`EN: ${g.explanationEn}`}
-                                redEyeEnabled={redEyeMode}
-                                t={t}
-                              />
-                            </div>
-                          </RedEyeBlock>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Examples */}
-                    {g.examples && g.examples.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="text-[11px] font-black text-k-sub uppercase tracking-[2px] mb-4">
-                          {t('coursesOverview.desktop.grammar.examples')} · EXAMPLES
-                        </div>
-                        {g.examples.map((e, i) => (
+                      <div className="space-y-[12px]">
+                        {display.quizItems.map((quizItem, i) => (
                           <div
                             key={i}
-                            className="group p-6 rounded-[20px] border border-k-line hover:border-k-crimson/20 bg-white transition-all shadow-sm"
+                            className="rounded-[12px] border border-stone-200 bg-white px-[24px] py-[18px] shadow-[0_1px_0_rgba(31,27,23,0.03)]"
                           >
-                            <div className="font-k-serif text-[20px] text-k-ink leading-relaxed">
-                              {e.kr}
+                            <div
+                              className="mb-2 text-[12px] font-bold"
+                              style={{ color: '#1f1b17' }}
+                            >
+                              题目 {i + 1}
                             </div>
-                            {(e.cn || e.en) && (
-                              <div className="mt-3 flex flex-col gap-1.5 border-t border-k-line/10 pt-3">
-                                {e.cn && (
-                                  <RedEyeBlock enabled={redEyeMode}>
-                                    <div className="text-[13px] font-bold text-k-sub">{e.cn}</div>
-                                  </RedEyeBlock>
-                                )}
-                                {e.en && (
-                                  <RedEyeBlock enabled={redEyeMode}>
-                                    <div className="text-[11px] font-bold text-k-sub/50">
-                                      EN: {e.en}
-                                    </div>
-                                  </RedEyeBlock>
-                                )}
-                              </div>
+                            <div
+                              className="text-[13px] leading-[1.8]"
+                              style={{ color: '#444', whiteSpace: 'pre-wrap' }}
+                            >
+                              {quizItem.prompt}
+                            </div>
+                            {quizItem.answer && (
+                              <RedEyeBlock enabled={redEyeMode}>
+                                <div className="mt-3 rounded-[8px] bg-stone-50 px-[16px] py-[12px]">
+                                  <div className="text-[11px] font-bold" style={{ color: '#999' }}>
+                                    答案
+                                  </div>
+                                  <div
+                                    className="mt-1 text-[13px]"
+                                    style={{ color: '#c41230', whiteSpace: 'pre-wrap' }}
+                                  >
+                                    {quizItem.answer}
+                                  </div>
+                                </div>
+                              </RedEyeBlock>
                             )}
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-[600px] flex-col items-center justify-center text-k-sub font-bold gap-4 bg-white rounded-3xl border border-k-line/20">
-                  <div className="text-6xl opacity-20">📭</div>
-                  <div className="text-[14px] uppercase tracking-widest">
-                    {t('coursesOverview.desktop.grammar.selectGrammar')}
-                  </div>
-                </div>
-              )}
-            </div>
+                    </div>
+                  )}
+                </DesktopCard>
+                <DesktopAiPracticeDialog
+                  grammar={g}
+                  grammarTitle={grammarTitle}
+                  grammarSummary={display.summary}
+                  grammarExplanation={display.explanation}
+                  language={language}
+                  isOpen={isAiPanelOpen}
+                  setIsOpen={setIsAiPanelOpen}
+                />
+              </div>
+            ) : (
+              <DesktopCard
+                pad={60}
+                style={{
+                  background: '#fff',
+                  textAlign: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                }}
+              >
+                <div style={{ color: '#999' }}>请从左侧目录选择一个语法点</div>
+              </DesktopCard>
+            )}
           </div>
         </div>
       </div>

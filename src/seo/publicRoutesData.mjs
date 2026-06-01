@@ -215,6 +215,40 @@ export const PUBLIC_ROUTES = [
     },
   },
   {
+    path: '/help',
+    indexable: true,
+    publishedAt: '2026-05-19',
+    updatedAt: '2026-05-19',
+    meta: {
+      title: 'Help Center and Feature Guide - DuHan',
+      description:
+        'Learn what each DuHan Korean learning feature does, where to start, and how to use courses, vocabulary, grammar, TOPIK, media, notes, and community tools.',
+      keywords:
+        'DuHan help center, Korean learning app guide, TOPIK help, vocabulary guide, grammar guide, Korean study tools',
+      ogImage: '/logo.png',
+    },
+    metaByLang: {
+      zh: {
+        title: '帮助与文档中心 - DuHan',
+        description:
+          '了解 DuHan 每个韩语学习功能的用途、从哪里开始，以及如何使用课程、词汇、语法、TOPIK、媒体、笔记和社区工具。',
+        keywords: 'DuHan 帮助中心, 韩语学习功能指南, TOPIK 帮助, 词汇指南, 语法指南',
+      },
+      vi: {
+        title: 'Trung tâm trợ giúp và hướng dẫn tính năng - DuHan',
+        description:
+          'Tìm hiểu từng tính năng DuHan dùng để làm gì, nên bắt đầu từ đâu và cách dùng khóa học, từ vựng, ngữ pháp, TOPIK, media, ghi chú và cộng đồng.',
+        keywords: 'trung tâm trợ giúp DuHan, hướng dẫn học tiếng Hàn, TOPIK, từ vựng, ngữ pháp',
+      },
+      mn: {
+        title: 'Тусламж ба функцийн гарын авлага - DuHan',
+        description:
+          'DuHan-ийн курс, үгсийн сан, дүрэм, TOPIK, медиа, тэмдэглэл, community хэрэгслүүд юунд хэрэгтэйг болон хаанаас эхлэхийг мэдэж аваарай.',
+        keywords: 'DuHan тусламж, солонгос хэл сурах гарын авлага, TOPIK, үгсийн сан, дүрэм',
+      },
+    },
+  },
+  {
     path: '/learn/topik-guide',
     indexable: true,
     indexLanguages: ['en', 'zh', 'vi', 'mn'],

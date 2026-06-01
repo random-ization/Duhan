@@ -20,11 +20,18 @@ import { Button } from '../ui';
 import { Card, PageShell } from './ksoft/ksoft';
 import { usePricingPlans } from '../../hooks/usePricingPlans';
 
+type BillingInterval = 'MONTHLY' | 'ANNUAL' | 'LIFETIME';
+const BILLING_TABS: Array<{ key: BillingInterval; labelKey: string }> = [
+  { key: 'MONTHLY', labelKey: 'plan.monthly' },
+  { key: 'ANNUAL', labelKey: 'plan.annual' },
+  { key: 'LIFETIME', labelKey: 'plan.lifetime' },
+];
+
 export const MobileSubscriptionPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('ANNUAL');
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('ANNUAL');
   const [loading, setLoading] = useState(false);
   const { plans, region } = usePricingPlans(i18n.language);
   const baseLang = (i18n.language || 'en').split('-')[0];
@@ -60,10 +67,11 @@ export const MobileSubscriptionPage: React.FC = () => {
         appOrigin: globalThis.location.origin,
       };
       const { checkoutUrl } = await runConvexActionWithRetry(
-        () => callAuthenticatedConvexAction<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>(
-          'lemonsqueezy:createCheckout', 
-          checkoutArgs
-        ),
+        () =>
+          callAuthenticatedConvexAction<LemonSqueezyCheckoutRequest, LemonSqueezyCheckoutResult>(
+            'lemonsqueezy:createCheckout',
+            checkoutArgs
+          ),
         undefined,
         { retries: 1 }
       );
@@ -88,7 +96,7 @@ export const MobileSubscriptionPage: React.FC = () => {
       {/* Header Area */}
       <header className="px-6 pt-6 pb-4">
         <div className="flex justify-between items-center mb-10">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 rounded-xl bg-white border border-k-ink/5 shadow-sm flex items-center justify-center"
           >
@@ -102,7 +110,9 @@ export const MobileSubscriptionPage: React.FC = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-k-crimson/10 rounded-full mb-4">
             <Star size={10} className="text-k-crimson fill-k-crimson" />
-            <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">{pageCopy.heroBadge}</span>
+            <span className="text-[10px] font-black text-k-crimson uppercase tracking-widest">
+              {pageCopy.heroBadge}
+            </span>
           </div>
           <h1 className="font-k-serif text-[32px] font-black text-k-ink leading-tight mb-3">
             {pageCopy.heroTitle}
@@ -118,26 +128,27 @@ export const MobileSubscriptionPage: React.FC = () => {
         {/* Billing Toggle (Physical) */}
         <div className="mb-10 flex justify-center">
           <div className="relative flex w-full max-w-[320px] items-center p-1 bg-k-ink/5 rounded-2xl border-2 border-k-ink/5">
-            {[
-              { key: 'MONTHLY', label: t('plan.monthly') },
-              { key: 'ANNUAL', label: t('plan.annual') },
-              { key: 'LIFETIME', label: t('plan.lifetime') },
-            ].map((tab) => (
+            {BILLING_TABS.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setBillingInterval(tab.key as any)}
+                onClick={() => setBillingInterval(tab.key)}
                 className={`relative flex-1 py-3.5 rounded-xl text-[12px] font-black transition-all duration-300 z-10 ${
                   billingInterval === tab.key ? 'text-k-bg' : 'text-k-sub'
                 }`}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
-            <div 
+            <div
               className="absolute top-1 bottom-1 bg-k-ink rounded-xl transition-all duration-300 shadow-lg"
               style={{
                 width: 'calc(33.33% - 4px)',
-                left: billingInterval === 'MONTHLY' ? '4px' : billingInterval === 'ANNUAL' ? 'calc(33.33% + 2px)' : 'calc(66.66% + 0px)'
+                left:
+                  billingInterval === 'MONTHLY'
+                    ? '4px'
+                    : billingInterval === 'ANNUAL'
+                      ? 'calc(33.33% + 2px)'
+                      : 'calc(66.66% + 0px)',
               }}
             />
           </div>
@@ -166,10 +177,18 @@ export const MobileSubscriptionPage: React.FC = () => {
         {/* Features Card */}
         <Card pad={32} className="mb-12 border-2 border-k-ink/5 shadow-pop">
           <div className="flex items-center gap-4 mb-8">
-            <img src="/logo.svg" alt="Duhan Logo" width={42} height={42} className="rounded-[10px]" />
+            <img
+              src="/logo.svg"
+              alt="Duhan Logo"
+              width={42}
+              height={42}
+              className="rounded-[10px]"
+            />
             <div>
               <h3 className="text-[17px] font-black text-k-ink">Pro Features</h3>
-              <p className="text-[12px] text-k-sub font-medium">Unlocks the full learning platform</p>
+              <p className="text-[12px] text-k-sub font-medium">
+                Unlocks the full learning platform
+              </p>
             </div>
           </div>
           <ul className="space-y-5">
@@ -178,7 +197,10 @@ export const MobileSubscriptionPage: React.FC = () => {
                 <div className="mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-k-ink/5 text-k-crimson shrink-0">
                   <Check size={10} strokeWidth={4} />
                 </div>
-                <span className="text-[14px] font-medium text-k-ink leading-tight" dangerouslySetInnerHTML={{ __html: f }} />
+                <span
+                  className="text-[14px] font-medium text-k-ink leading-tight"
+                  dangerouslySetInnerHTML={{ __html: f }}
+                />
               </li>
             ))}
           </ul>
@@ -187,7 +209,7 @@ export const MobileSubscriptionPage: React.FC = () => {
         {/* Detailed Comparison Link */}
         <div className="text-center">
           <p className="text-[13px] text-k-sub font-medium mb-4">{pageCopy.comparisonSubtitle}</p>
-          <button 
+          <button
             onClick={() => navigate(buildPricingDetailsPath({ source: 'mobile_subscription' }))}
             className="inline-flex items-center gap-2 text-[14px] font-black text-k-ink border-b-2 border-k-ink/20 pb-1"
           >

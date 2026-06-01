@@ -21,6 +21,11 @@ type ChatMessage = {
   content: string;
   pending?: boolean;
 };
+type MarkdownCodeProps = React.HTMLAttributes<HTMLElement> & {
+  inline?: boolean;
+  children?: React.ReactNode;
+  className?: string;
+};
 
 interface GrammarAuxiliaryPaneProps {
   grammar: GrammarPointData | null;
@@ -61,7 +66,9 @@ const TutorMarkdownMessage: React.FC<{ content: string }> = ({ content }) => {
             </h3>
           ),
           p: ({ children }) => <p className="my-3 whitespace-pre-wrap">{children}</p>,
-          ul: ({ children }) => <ul className="my-3 list-disc space-y-2 pl-5 marker:text-blue-500">{children}</ul>,
+          ul: ({ children }) => (
+            <ul className="my-3 list-disc space-y-2 pl-5 marker:text-blue-500">{children}</ul>
+          ),
           ol: ({ children }) => (
             <ol className="my-3 list-decimal space-y-2 pl-5 marker:font-semibold marker:text-blue-600">
               {children}
@@ -73,7 +80,7 @@ const TutorMarkdownMessage: React.FC<{ content: string }> = ({ content }) => {
               {children}
             </blockquote>
           ),
-          code: ({ inline, className, children, ...props }: any) => (
+          code: ({ inline, className, children, ...props }: MarkdownCodeProps) => (
             <code
               className={
                 inline
@@ -259,7 +266,13 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
 
   if (!grammar) {
     return (
-      <aside className={embedded ? 'w-full min-w-0 flex flex-col' : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'}>
+      <aside
+        className={
+          embedded
+            ? 'w-full min-w-0 flex flex-col'
+            : 'w-[320px] min-h-0 shrink-0 h-full border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950'
+        }
+      >
         <Card className="h-full min-h-0 border-0 rounded-none shadow-none">
           <CardContent className="h-full flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400">
             <Sparkles className="h-10 w-10 mb-3" />
@@ -288,9 +301,7 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
         }`}
       >
         {!embedded && (
-          <CardHeader
-            className="shrink-0 pb-4 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-950"
-          >
+          <CardHeader className="shrink-0 pb-4 border-b border-slate-200 dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 inline-flex items-center justify-center dark:bg-blue-500/15 dark:text-blue-200">
@@ -310,7 +321,9 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
           </CardHeader>
         )}
 
-        <CardContent className={`flex-1 min-h-0 p-0 flex flex-col ${embedded ? 'bg-transparent' : ''}`}>
+        <CardContent
+          className={`flex-1 min-h-0 p-0 flex flex-col ${embedded ? 'bg-transparent' : ''}`}
+        >
           <div
             ref={listRef}
             className={`flex-1 min-h-0 overflow-y-auto space-y-3 ${
@@ -342,7 +355,9 @@ const GrammarAuxiliaryPane: React.FC<GrammarAuxiliaryPaneProps> = ({
                     {isUser ? (
                       <div className="whitespace-pre-wrap">{message.content}</div>
                     ) : message.pending ? (
-                      <div className="text-sm text-slate-500 dark:text-slate-400">{message.content}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {message.content}
+                      </div>
                     ) : embedded ? (
                       <TutorMarkdownMessage content={message.content} />
                     ) : (

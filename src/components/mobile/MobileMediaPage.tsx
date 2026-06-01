@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { qRef, NoArgs } from '../../utils/convexRefs';
-import { Play, Clock, Search, Headphones } from 'lucide-react';
+import { Play, Search, Headphones } from 'lucide-react';
 import { formatSafeDateLabel } from '../../utils/dateLabel';
 import { KT, Chip, Card, SectionHead, type ChipTone } from './ksoft/ksoft';
 import { buildPodcastPlayerPath } from '../../utils/podcastRoutes';

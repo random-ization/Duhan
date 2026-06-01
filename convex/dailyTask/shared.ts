@@ -10,12 +10,17 @@ import {
   type SupportedLanguage,
 } from '../dailyChallenges';
 import type { GoalProfileDto } from '../onboarding/index';
-import type { WeakGrammarPattern, WeakVocabCategory } from '../weakPoints';
+import type { WeakGrammarPattern, WeakVocabCategory, WritingErrorSummary } from '../weakPoints';
 import type { VocabReviewSummaryDto } from '../vocab';
 
 export const DAILY_TASK_VERSION = 'p0-v1';
 
-export type DailyTaskKind = DailyChallengeKind | 'note_review';
+export type DailyTaskKind =
+  | DailyChallengeKind
+  | 'note_review'
+  | 'sentence_review'
+  | 'grammar_review'
+  | 'topik_rewrite';
 export type DailyTaskPlanStatus = 'ready' | 'completed';
 
 export type DailyTaskItemDto = {
@@ -35,6 +40,8 @@ export type DailyTaskItemDto = {
 export type DailyTaskReviewSummaryDto = {
   dueVocabCount?: number;
   dueNoteCount?: number;
+  dueSentenceCount?: number;
+  dueGrammarCount?: number;
   weakPointSummary?: string;
 };
 
@@ -45,6 +52,7 @@ export type DailyTaskPlanDto = {
   goalProfileId?: string;
   taskVersion?: string;
   source?: string;
+  rationale?: string;
   tasks: DailyTaskItemDto[];
   reviewSummary?: DailyTaskReviewSummaryDto;
   generatedAt: number;
@@ -57,6 +65,15 @@ export type DailyTaskBuildSignals = {
   language: SupportedLanguage;
   reviewSummary: VocabReviewSummaryDto;
   dueNoteCount: number;
+  dueSentenceCount: number;
+  dueGrammarCount: number;
+  importedContinuation?: {
+    contentTitle: string;
+    sentenceId: string;
+    sentenceText: string;
+    progressPercent: number;
+  };
+  writingWeaknesses: WritingErrorSummary[];
   weakGrammarPatterns: WeakGrammarPattern[];
   weakVocabCategories: WeakVocabCategory[];
   noteReviewDoneToday: number;
@@ -70,11 +87,53 @@ function findTemplateByKind(kind: DailyChallengeKind) {
 }
 
 export function resolveDailyTaskPath(kind: DailyTaskKind): string {
-  if (kind === 'vocab_20') return '/review';
+  if (kind === 'vocab_20') return '/review/quiz?mode=full';
   if (kind === 'grammar_drill') return '/course/topik-grammar/grammar';
   if (kind === 'listening_10min') return '/media?tab=podcasts';
   if (kind === 'typing_wpm') return '/typing';
+  if (kind === 'sentence_review') return '/review/quiz?mode=sentences';
+  if (kind === 'grammar_review') return '/review/quiz?mode=grammar';
+  if (kind === 'topik_rewrite') return '/topik/writing-coach';
   return '/notebook';
+}
+
+function priorityWeightForKind(args: {
+  kind: DailyTaskKind;
+  primaryKind: DailyChallengeKind;
+  profile: GoalProfileDto | null;
+  signals: DailyTaskBuildSignals;
+}): number {
+  let weight = args.kind === args.primaryKind ? 80 : 50;
+
+  if (args.signals.importedContinuation && args.kind === 'grammar_drill') {
+    weight += 35;
+  }
+
+  if (
+    args.profile?.targetExam?.toUpperCase().includes('TOPIK') &&
+    args.signals.writingWeaknesses.length > 0 &&
+    (args.kind === 'typing_wpm' || args.kind === 'grammar_drill')
+  ) {
+    weight += 30;
+  }
+
+  if (args.kind === 'note_review' && args.signals.dueNoteCount > 0) {
+    weight += 15;
+  }
+
+  if (args.kind === 'sentence_review' && args.signals.dueSentenceCount > 0) {
+    weight += 28;
+  }
+
+  if (args.kind === 'grammar_review' && args.signals.dueGrammarCount > 0) {
+    weight += 26;
+  }
+
+  if (args.kind === 'vocab_20' && (args.signals.reviewSummary.dueNow ?? 0) > 0) {
+    weight += 12;
+  }
+
+  return weight;
 }
 
 function localizeChallengeText(
@@ -129,6 +188,60 @@ function localizeNoteReviewText(language: SupportedLanguage, targetCount: number
   };
 }
 
+function localizeSavedAssetReviewText(
+  language: SupportedLanguage,
+  kind: 'sentence_review' | 'grammar_review',
+  targetCount: number
+) {
+  if (kind === 'sentence_review') {
+    if (language === 'zh') {
+      return {
+        title: `复习 ${targetCount} 条保存句子`,
+        description: '用间隔复习巩固最近保存的例句和表达。',
+      };
+    }
+    if (language === 'vi') {
+      return {
+        title: `Ôn ${targetCount} câu đã lưu`,
+        description: 'Củng cố các câu và cách diễn đạt đã lưu gần đây.',
+      };
+    }
+    if (language === 'mn') {
+      return {
+        title: `${targetCount} хадгалсан өгүүлбэр давтах`,
+        description: 'Сүүлийн хадгалсан өгүүлбэр, хэллэгээ зайтай давтлагаар бататга.',
+      };
+    }
+    return {
+      title: `Review ${targetCount} saved sentences`,
+      description: 'Reinforce recently saved example sentences and expressions.',
+    };
+  }
+
+  if (language === 'zh') {
+    return {
+      title: `复习 ${targetCount} 个保存语法`,
+      description: '优先处理今天到期的语法卡片。',
+    };
+  }
+  if (language === 'vi') {
+    return {
+      title: `Ôn ${targetCount} ngữ pháp đã lưu`,
+      description: 'Ưu tiên các thẻ ngữ pháp đến hạn hôm nay.',
+    };
+  }
+  if (language === 'mn') {
+    return {
+      title: `${targetCount} хадгалсан дүрэм давтах`,
+      description: 'Өнөөдөр хугацаатай дүрмийн картуудаа түрүүлж давт.',
+    };
+  }
+  return {
+    title: `Review ${targetCount} saved grammar cards`,
+    description: 'Prioritize grammar cards due for review today.',
+  };
+}
+
 function inferAdditionalKinds(profile: GoalProfileDto | null): DailyChallengeKind[] {
   const focus = (profile?.studyFocus ?? []).map(item => item.toLowerCase());
   const additional: DailyChallengeKind[] = [];
@@ -154,6 +267,39 @@ function inferAdditionalKinds(profile: GoalProfileDto | null): DailyChallengeKin
   }
 
   return Array.from(new Set(additional));
+}
+
+function buildDailyTaskRationale(args: {
+  language: SupportedLanguage;
+  profile: GoalProfileDto | null;
+}): string | undefined {
+  if (!args.profile) {
+    return undefined;
+  }
+
+  const focusText =
+    args.profile.studyFocus.length > 0 ? args.profile.studyFocus.join(' / ') : undefined;
+  const levelText =
+    args.profile.currentLevel ?? args.profile.targetLevel ?? args.profile.targetExam;
+  const diagnosisSummary = args.profile.diagnosisSummary;
+
+  if (args.language === 'zh') {
+    if (diagnosisSummary && focusText) {
+      return `今日任务依据你的目标（${focusText}）和诊断结果生成：${diagnosisSummary}`;
+    }
+    if (diagnosisSummary) {
+      return `今日任务依据你的诊断结果生成：${diagnosisSummary}`;
+    }
+    return levelText ? `今日任务会优先匹配你的 ${levelText} 学习目标。` : undefined;
+  }
+
+  if (diagnosisSummary && focusText) {
+    return `Today's tasks are based on your goals (${focusText}) and diagnosis: ${diagnosisSummary}`;
+  }
+  if (diagnosisSummary) {
+    return `Today's tasks are based on your diagnosis: ${diagnosisSummary}`;
+  }
+  return levelText ? `Today's tasks are tuned to your ${levelText} goal.` : undefined;
 }
 
 export function summarizeWeakPoints(args: {
@@ -208,6 +354,9 @@ export async function deriveDailyTaskCurrentCount(
   if (kind === 'note_review') {
     return signals.noteReviewDoneToday;
   }
+  if (kind === 'sentence_review' || kind === 'grammar_review' || kind === 'topik_rewrite') {
+    return 0;
+  }
   return deriveDailyChallengeCurrentCount(ctx, userId, kind, todayStart);
 }
 
@@ -229,11 +378,42 @@ export async function buildDailyTaskPlan(args: {
   const additionalKinds = inferAdditionalKinds(args.profile).filter(kind => kind !== primaryKind);
 
   const kinds: DailyTaskKind[] = [primaryKind, ...additionalKinds];
+  const hasTopikWeakness =
+    (args.profile?.targetExam ?? '').toUpperCase().includes('TOPIK') &&
+    args.signals.writingWeaknesses.length > 0;
+  if (args.signals.importedContinuation) {
+    kinds.push('grammar_drill');
+  }
+  if (hasTopikWeakness) {
+    kinds.push('typing_wpm');
+  }
   if (args.signals.dueNoteCount > 0) {
     kinds.push('note_review');
   }
+  if (args.signals.dueSentenceCount > 0) {
+    kinds.push('sentence_review');
+  }
+  if (args.signals.dueGrammarCount > 0) {
+    kinds.push('grammar_review');
+  }
 
-  const uniqueKinds = Array.from(new Set(kinds)).slice(0, 3);
+  const uniqueKinds = Array.from(new Set(kinds))
+    .sort((left, right) => {
+      const leftWeight = priorityWeightForKind({
+        kind: left,
+        primaryKind,
+        profile: args.profile,
+        signals: args.signals,
+      });
+      const rightWeight = priorityWeightForKind({
+        kind: right,
+        primaryKind,
+        profile: args.profile,
+        signals: args.signals,
+      });
+      return rightWeight - leftWeight;
+    })
+    .slice(0, 4);
   const persistedTasks = new Map(
     (args.persistedPlan?.tasks ?? []).map(task => [task.taskId, task] as const)
   );
@@ -265,7 +445,87 @@ export async function buildDailyTaskPlan(args: {
       continue;
     }
 
+    if (kind === 'sentence_review' || kind === 'grammar_review') {
+      const dueCount =
+        kind === 'sentence_review' ? args.signals.dueSentenceCount : args.signals.dueGrammarCount;
+      const targetCount = Math.max(1, Math.min(3, dueCount));
+      const currentCount = Math.max(persistedTask?.currentCount ?? 0, 0);
+      const completed = !!persistedTask?.completed || currentCount >= targetCount;
+      const copy = localizeSavedAssetReviewText(language, kind, targetCount);
+      tasks.push({
+        taskId,
+        kind,
+        title: copy.title,
+        description: copy.description,
+        targetCount,
+        currentCount,
+        completed,
+        linkPath: resolveDailyTaskPath(kind),
+        assetType: kind === 'sentence_review' ? 'saved_sentence' : 'saved_grammar',
+        metadata: { rewardXp: kind === 'sentence_review' ? 18 : 16 },
+      });
+      continue;
+    }
+
+    if (kind === 'topik_rewrite') {
+      continue;
+    }
+
     const localized = localizeChallengeText(kind, language);
+    const topWeakness = args.signals.writingWeaknesses[0];
+    if (hasTopikWeakness && topWeakness && kind === 'typing_wpm') {
+      const currentCount = Math.max(persistedTask?.currentCount ?? 0, 0);
+      const targetCount = 1;
+      tasks.push({
+        taskId,
+        kind,
+        title:
+          language === 'zh'
+            ? `TOPIK 写作弱点修复 · ${topWeakness.labelZh}`
+            : `TOPIK Writing Fix · ${topWeakness.labelKo}`,
+        description:
+          language === 'zh'
+            ? `最近高频错误：${topWeakness.labelZh}，进入写作教练做定向修正。`
+            : `Most frequent weakness: ${topWeakness.labelKo}. Open writing coach for focused fixes.`,
+        targetCount,
+        currentCount,
+        completed: !!persistedTask?.completed || currentCount >= targetCount,
+        linkPath: '/topik/writing-coach',
+        assetType: 'topik_weakness',
+        assetRefId: topWeakness.kagasType,
+        metadata: {
+          rewardXp: localized.rewardXp,
+          weaknessCount: topWeakness.count,
+          highSeverityCount: topWeakness.highSeverityCount,
+        },
+      });
+      continue;
+    }
+
+    const taskTitle =
+      args.signals.importedContinuation && kind === 'grammar_drill'
+        ? language === 'zh'
+          ? '继续句子解释与保存'
+          : 'Continue Sentence Explainer'
+        : localized.title;
+    const taskDescription =
+      args.signals.importedContinuation && kind === 'grammar_drill'
+        ? language === 'zh'
+          ? `继续《${args.signals.importedContinuation.contentTitle}》并处理下一句：${args.signals.importedContinuation.sentenceText}`
+          : `Continue imported content and process the next sentence.`
+        : localized.description;
+    const taskLinkPath =
+      args.signals.importedContinuation && kind === 'grammar_drill'
+        ? `/learning/sentence/${args.signals.importedContinuation.sentenceId}`
+        : resolveDailyTaskPath(kind);
+    const taskAssetType =
+      args.signals.importedContinuation && kind === 'grammar_drill'
+        ? 'content_sentence'
+        : undefined;
+    const taskAssetRefId =
+      args.signals.importedContinuation && kind === 'grammar_drill'
+        ? args.signals.importedContinuation.sentenceId
+        : undefined;
     const currentCount = Math.max(
       await deriveDailyTaskCurrentCount(args.ctx, args.userId, kind, todayStart, args.signals),
       persistedTask?.currentCount ?? 0
@@ -275,15 +535,23 @@ export async function buildDailyTaskPlan(args: {
     tasks.push({
       taskId,
       kind,
-      title: localized.title,
-      description: localized.description,
+      title: taskTitle,
+      description: taskDescription,
       targetCount,
       currentCount,
       completed,
-      linkPath: resolveDailyTaskPath(kind),
+      linkPath: taskLinkPath,
+      assetType: taskAssetType,
+      assetRefId: taskAssetRefId,
       metadata: { rewardXp: localized.rewardXp },
     });
   }
+
+  const existingTaskIds = new Set(tasks.map(task => task.taskId));
+  const manualTasks = (args.persistedPlan?.tasks ?? []).filter(
+    task => task.metadata?.manual === true && !existingTaskIds.has(task.taskId)
+  );
+  tasks.push(...manualTasks);
 
   const allCompleted = tasks.length > 0 && tasks.every(task => task.completed);
   return {
@@ -293,10 +561,13 @@ export async function buildDailyTaskPlan(args: {
     goalProfileId: args.profile?.id,
     taskVersion: DAILY_TASK_VERSION,
     source: args.profile ? 'user_goal_profile' : 'fallback',
+    rationale: buildDailyTaskRationale({ language, profile: args.profile }),
     tasks,
     reviewSummary: {
       dueVocabCount: args.signals.reviewSummary.dueNow,
       dueNoteCount: args.signals.dueNoteCount,
+      dueSentenceCount: args.signals.dueSentenceCount,
+      dueGrammarCount: args.signals.dueGrammarCount,
       weakPointSummary: summarizeWeakPoints({
         language,
         weakGrammarPatterns: args.signals.weakGrammarPatterns,

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import {
   BookOpen,
   ArrowLeft,
   Bell,
   Flame,
+  Zap,
   MoreHorizontal,
   Search,
   ShieldAlert,
@@ -21,7 +22,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGlobalSettings } from '../../hooks/useGlobalSettings';
-import { NOTIFICATIONS, qRef, type NotificationDto } from '../../utils/convexRefs';
+import { NOTIFICATIONS, XP, qRef, type NotificationDto } from '../../utils/convexRefs';
 import { notify } from '../../utils/notify';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { UserAvatar } from '../common';
@@ -33,6 +34,21 @@ import { KT } from './ksoft/ksoft';
 import { MobileSearchSheet } from './MobileSearchSheet';
 
 type HeaderStats = Pick<LearnerStatsDto, 'streak'>;
+
+const STREAK_HIDDEN_PATH_PREFIXES = [
+  '/pricing',
+  '/subscription',
+  '/payment',
+  '/profile',
+  '/onboarding',
+  '/admin',
+  '/help',
+  '/auth',
+];
+
+function shouldShowStreak(pathWithoutLang: string): boolean {
+  return !STREAK_HIDDEN_PATH_PREFIXES.some(prefix => pathWithoutLang.startsWith(prefix));
+}
 
 const FONT_SCALE_OPTIONS = [
   { setting: 'compact', cssScale: 0.95 },
@@ -60,6 +76,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     qRef<Record<string, never>, HeaderStats | null>('userStats:getStats'),
     user ? {} : 'skip'
   );
+  const xpStats = useQuery(XP.getMyXpStats, user ? {} : 'skip');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -79,7 +96,9 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     if (typeof window === 'undefined') return 1;
     const saved = safeGetLocalStorageItem('mobile_font_scale_index');
     const parsed = saved ? Number(saved) : 1;
-    return Number.isInteger(parsed) && parsed >= 0 && parsed < FONT_SCALE_OPTIONS.length ? parsed : 1;
+    return Number.isInteger(parsed) && parsed >= 0 && parsed < FONT_SCALE_OPTIONS.length
+      ? parsed
+      : 1;
   });
   const [pendingFontScaleIndex, setPendingFontScaleIndex] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -111,8 +130,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
       pathWithoutLang.startsWith('/notebook') ||
       pathWithoutLang.startsWith('/topik') ||
       pathWithoutLang.startsWith('/typing') ||
-      pathWithoutLang.startsWith('/vocab-book') ||
-      pathWithoutLang.startsWith('/vocabbook')
+      pathWithoutLang.startsWith('/vocab-book')
     ) {
       return '/courses';
     }
@@ -174,9 +192,11 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     if (storedSettings?.fontScale !== undefined) return;
     if (fallbackFontScaleIndex === 1) return;
     fontScaleMigrationAttemptedRef.current = true;
-    void updateSettings({ fontScale: FONT_SCALE_OPTIONS[fallbackFontScaleIndex].setting }).catch(() => {
-      fontScaleMigrationAttemptedRef.current = false;
-    });
+    void updateSettings({ fontScale: FONT_SCALE_OPTIONS[fallbackFontScaleIndex].setting }).catch(
+      () => {
+        fontScaleMigrationAttemptedRef.current = false;
+      }
+    );
   }, [fallbackFontScaleIndex, globalSettingsLoading, storedSettings?.fontScale, updateSettings]);
 
   const toggleFavorite = () => {
@@ -304,41 +324,91 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
     flexShrink: 0,
   };
 
-  const renderRightAction = () => {
-    if (routeUiConfig.headerType === 'dashboard') {
-      return (
-        <div
+  const showStreak = !!user && shouldShowStreak(pathWithoutLang);
+  const streakBadge = showStreak ? (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '7px 11px',
+        borderRadius: 20,
+        background: 'rgba(162,59,46,0.10)',
+        border: `1px solid rgba(162,59,46,0.18)`,
+      }}
+      aria-label={t('common.streakDays', { defaultValue: 'Day streak' })}
+    >
+      <Flame size={14} style={{ color: KT.crimson }} />
+      <span
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          color: KT.crimson,
+          fontFamily: KT.font,
+        }}
+      >
+        {stats?.streak ?? 0}
+      </span>
+    </div>
+  ) : null;
+
+  const xpBadge =
+    showStreak && xpStats ? (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '7px 11px',
+          borderRadius: 20,
+          background: 'rgba(217,159,21,0.12)',
+          border: `1px solid rgba(217,159,21,0.22)`,
+        }}
+        aria-label={t('common.totalXp', { defaultValue: 'Total XP' })}
+      >
+        <Zap size={14} style={{ color: '#B07A0A' }} />
+        <span
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: '7px 11px',
-            borderRadius: 20,
-            background: 'rgba(162,59,46,0.10)',
-            border: `1px solid rgba(162,59,46,0.18)`,
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#B07A0A',
+            fontFamily: KT.font,
           }}
         >
-          <Flame size={14} style={{ color: KT.crimson }} />
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 800,
-              color: KT.crimson,
-              fontFamily: KT.font,
-            }}
-          >
-            {stats?.streak ?? 0}
-          </span>
-        </div>
-      );
+          {xpStats.totalXp}
+        </span>
+      </div>
+    ) : null;
+
+  const statsCluster =
+    streakBadge || xpBadge ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {xpBadge}
+        {streakBadge}
+      </div>
+    ) : null;
+
+  const wrapWithStreak = (action: ReactElement) =>
+    statsCluster ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {statsCluster}
+        {action}
+      </div>
+    ) : (
+      action
+    );
+
+  const renderRightAction = () => {
+    if (routeUiConfig.headerType === 'dashboard') {
+      return statsCluster ?? <div style={{ width: 38 }} />;
     }
 
     if (routeUiConfig.headerType === 'section') {
-      if (routeUiConfig.headerAction === 'none') {
-        return <div style={{ width: 38 }} />;
-      }
-      if (routeUiConfig.headerAction === 'filter' && !pathWithoutLang.startsWith('/media')) {
-        return <div style={{ width: 38 }} />;
+      const hideAction =
+        routeUiConfig.headerAction === 'none' ||
+        (routeUiConfig.headerAction === 'filter' && !pathWithoutLang.startsWith('/media'));
+      if (hideAction) {
+        return statsCluster ?? <div style={{ width: 38 }} />;
       }
       const Icon = routeUiConfig.headerAction === 'search' ? Search : SlidersHorizontal;
       const ariaLabel =
@@ -347,7 +417,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
           : pathWithoutLang.startsWith('/media')
             ? t('common.switchTab', { defaultValue: 'Switch tab' })
             : t('common.filter', { defaultValue: 'Filter' });
-      return (
+      return wrapWithStreak(
         <button
           type="button"
           onClick={() => handlePrimaryAction(routeUiConfig.headerAction)}
@@ -359,7 +429,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
       );
     }
 
-    return (
+    return wrapWithStreak(
       <div style={{ position: 'relative' }}>
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
@@ -491,7 +561,7 @@ export function MobileHeader({ routeUiConfig, pathWithoutLang }: Readonly<Mobile
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <UserAvatar 
+                <UserAvatar
                   user={user}
                   className="w-[44px] h-[44px] rounded-[14px] border-2 border-k-card shadow-k-sh"
                   fallbackClassName="text-[18px]"

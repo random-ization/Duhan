@@ -22,7 +22,7 @@ export function SearchBar({ value, onChange, className }: SearchBarProps) {
   useEffect(() => {
     const timer = setTimeout(() => onChange(local.trim()), 300);
     return () => clearTimeout(timer);
-  }, [local]);
+  }, [local, onChange]);
 
   return (
     <div className={cn('relative', className)}>
@@ -41,7 +41,10 @@ export function SearchBar({ value, onChange, className }: SearchBarProps) {
       {local && (
         <button
           type="button"
-          onClick={() => { setLocal(''); onChange(''); }}
+          onClick={() => {
+            setLocal('');
+            onChange('');
+          }}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-k-sub hover:text-k-ink"
         >
           <X size={14} />

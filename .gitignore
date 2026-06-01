@@ -48,6 +48,7 @@ playwright-report/
 coverage/
 
 # Local generated reports and tool caches
+.codegraph/
 .android-sdk/
 Library/
 docs/reports/
@@ -57,6 +58,8 @@ scratch/
 patch_logo_icon.py
 tsc_output.txt
 lint_output.txt
+test_stdout.txt
+tests_report.txt
 *.keystore
 
 # Claude IDE/Tool internal worktrees

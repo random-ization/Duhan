@@ -1,0 +1,91 @@
+# Hangyeol Sentence Explainer Evaluation Config
+# Run: npx promptfoo eval --config eval/promptfoo.yaml
+# View: npx promptfoo view
+
+description: "Korean Sentence Explainer Quality Evaluation"
+
+providers:
+  # Primary provider (Mimo)
+  - id: openai:mimo-v2-flash
+    label: "Mimo Flash"
+    config:
+      apiBaseUrl: "${MIMO_API_BASE_URL:-https://api.xiaomimimo.com/v1}"
+      apiKey: "${MIMO_API_KEY}"
+      response_format:
+        type: json_object
+
+  # Fallback provider (OpenAI)
+  - id: openai:gpt-4o-mini
+    label: "GPT-4o Mini"
+    config:
+      apiKey: "${OPENAI_API_KEY}"
+      response_format:
+        type: json_object
+
+prompts:
+  - id: sentence_explainer_v1
+    raw: |
+      [{"role": "system", "content": "You are a Korean sentence explainer for language learners.\nReturn strict JSON only.\nAll explanatory text must be in 简体中文 (Simplified Chinese).\nUse the provided tokenization and candidate hints to explain the sentence accurately.\nOutput format:\n{\n  \"summary\": \"1 short sentence\",\n  \"overallMeaning\": \"overall meaning in output language\",\n  \"naturalTranslation\": \"natural translation in output language\",\n  \"notes\": [\"practical learner note\"],\n  \"vocabulary\": [\n    {\n      \"surface\": \"한국어 토큰\",\n      \"lemma\": \"base form if useful\",\n      \"partOfSpeech\": \"POS\",\n      \"meaning\": \"meaning in output language\",\n      \"difficultyLevel\": \"optional level label\"\n    }\n  ],\n  \"grammar\": [\n    {\n      \"pattern\": \"grammar pattern or expression\",\n      \"explanation\": \"why it matters in this sentence\",\n      \"reason\": \"short reason\"\n    }\n  ]\n}\nRules:\n- Keep vocabulary to 4-8 learning-relevant items.\n- Prefer real expressions appearing in the sentence.\n- Keep grammar to 2-5 items.\n- Do not repeat the entire sentence in summary.\n- Never output markdown."}, {"role": "user", "content": "{{sentence_input}}"}]
+
+tests: file://sentences.yaml
+
+defaultTest:
+  assert:
+    # JSON structure must be valid
+    - type: is-json
+
+    # Must contain required top-level fields
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const required = ['summary', 'naturalTranslation', 'vocabulary', 'grammar'];
+        const missing = required.filter(f => !output[f]);
+        return missing.length === 0 ? { pass: true } : { pass: false, reason: `Missing fields: ${missing.join(', ')}` };
+
+    # Vocabulary count must be 2-12 items
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const count = (output.vocabulary || []).length;
+        return count >= 2 && count <= 12
+          ? { pass: true }
+          : { pass: false, reason: `Vocabulary count ${count} not in range [2, 12]` };
+
+    # Grammar count must be 1-8 items
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const count = (output.grammar || []).length;
+        return count >= 1 && count <= 8
+          ? { pass: true }
+          : { pass: false, reason: `Grammar count ${count} not in range [1, 8]` };
+
+    # Each vocabulary item must have surface + meaning
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const invalid = (output.vocabulary || []).filter(v => !v.surface || !v.meaning);
+        return invalid.length === 0
+          ? { pass: true }
+          : { pass: false, reason: `${invalid.length} vocab items missing surface or meaning` };
+
+    # Each grammar item must have pattern + explanation
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const invalid = (output.grammar || []).filter(g => !g.pattern || !g.explanation);
+        return invalid.length === 0
+          ? { pass: true }
+          : { pass: false, reason: `${invalid.length} grammar items missing pattern or explanation` };
+
+    # naturalTranslation should be in Chinese (contains CJK characters)
+    - type: javascript
+      value: |
+        const output = JSON.parse(output);
+        const translation = output.naturalTranslation || '';
+        const hasChinese = /[一-鿿]/.test(translation);
+        return hasChinese
+          ? { pass: true }
+          : { pass: false, reason: 'naturalTranslation does not contain Chinese characters' };
+
+outputPath: eval/results/

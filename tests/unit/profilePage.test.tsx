@@ -13,6 +13,10 @@ vi.mock('../../src/hooks/useLocalizedNavigate', () => ({
   useLocalizedNavigate: () => navigateMock,
 }));
 
+vi.mock('../../src/hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
+
 vi.mock('../../src/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: {
@@ -143,6 +147,18 @@ vi.mock('../../src/components/profile/AchievementGallery', () => ({
   AchievementGallery: () => <div>achievement-gallery</div>,
 }));
 
+vi.mock('../../src/components/mobile/MobileProfilePage', () => ({
+  MobileProfilePage: () => <div>mobile-profile-page</div>,
+}));
+
+vi.mock('../../src/pages/desktop/DesktopDashboardPage', () => ({
+  default: () => <div>desktop-dashboard-page</div>,
+}));
+
+vi.mock('../../src/pages/desktop/DesktopProfilePage', () => ({
+  DesktopProfilePage: () => <div>desktop-profile-page</div>,
+}));
+
 const baseHubData = (): ProfileHubData => ({
   identity: {
     displayName: 'Ryan',
@@ -258,5 +274,19 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Settings Center')).toBeInTheDocument();
     expect(screen.getByText('settings-tab')).toBeInTheDocument();
     expect(screen.queryByText('Continue review')).not.toBeInTheDocument();
+  });
+
+  it('renders the dedicated desktop profile surface instead of the dashboard shell', async () => {
+    renderPage('/en/profile');
+
+    expect(await screen.findByText('desktop-profile-page')).toBeInTheDocument();
+    expect(screen.queryByText('desktop-dashboard-page')).not.toBeInTheDocument();
+  });
+
+  it('canonicalizes hidden desktop profile subroutes back to /profile', async () => {
+    renderPage('/en/profile/settings/language?returnTo=%2Fdashboard&tab=settings&section=language');
+
+    expect(await screen.findByText('desktop-profile-page')).toBeInTheDocument();
+    expect(navigateMock).toHaveBeenCalledWith('/profile?returnTo=%2Fdashboard', { replace: true });
   });
 });

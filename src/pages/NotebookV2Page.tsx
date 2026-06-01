@@ -2,39 +2,11 @@ import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'rea
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Filter,
-  Folder,
-  Grid3X3,
-  Home,
-  List,
-  Loader2,
-  Maximize2,
-  Minimize2,
-  Search,
-  Pin,
-  PinOff,
-  Plus,
-  Table,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { CheckCircle2, Folder, Grid3X3, Home } from 'lucide-react';
 import type { JSONContent } from '@tiptap/core';
 import type { Id } from '../../convex/_generated/dataModel';
 import { NOTE_PAGES } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
-import {
-  Button,
-  Input,
-  Select,
-  Sheet,
-  SheetContent,
-  SheetOverlay,
-  SheetPortal,
-  SheetTitle,
-} from '../components/ui';
 import { useContextualSidebar } from '../hooks/useContextualSidebar';
 import { sanitizeHtml } from '../utils/sanitize';
 import { appendReturnToPath } from '../utils/navigation';
@@ -46,10 +18,8 @@ import {
   ContextualSection,
 } from '../components/layout/contextualSidebarBlocks';
 
-const OfficialTiptapEditor = lazy(() => import('../components/notebook/OfficialTiptapEditor'));
 const DesktopNotebookV2Page = lazy(() => import('./desktop/DesktopNotebookV2Page'));
 const LazyMobileNotebookPage = lazy(() =>
-
   import('../components/mobile/MobileNotebookPage').then(module => ({
     default: module.MobileNotebookPage,
   }))
@@ -464,7 +434,6 @@ export default function NotebookV2Page() {
   const [selectedPageId, setSelectedPageId] = useState<Id<'note_pages'> | null>(null);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [insightQueryReady, setInsightQueryReady] = useState(
     () => typeof globalThis.window === 'undefined'
   );
@@ -476,11 +445,6 @@ export default function NotebookV2Page() {
   const [editorDoc, setEditorDoc] = useState<JSONContent>(EMPTY_DOC);
   const [saveState, setSaveState] = useState<SaveState>('saved');
 
-  const editorFallback = (
-    <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-border bg-muted/50">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-    </div>
-  );
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const hydratedPageIdRef = useRef<Id<'note_pages'> | null>(null);
@@ -505,10 +469,10 @@ export default function NotebookV2Page() {
       NOTE_PAGES.search,
       insightQueryReady
         ? {
-          query: query.trim(),
-          notebookId: activeNotebookId || undefined,
-          limit: 500,
-        }
+            query: query.trim(),
+            notebookId: activeNotebookId || undefined,
+            limit: 500,
+          }
         : 'skip'
     )
   );
@@ -522,7 +486,6 @@ export default function NotebookV2Page() {
   const updatePage = useMutation(NOTE_PAGES.updatePage);
   const saveBlocks = useMutation(NOTE_PAGES.saveBlocks);
   const saveEditorDoc = useMutation(NOTE_PAGES.saveEditorDoc);
-  const togglePin = useMutation(NOTE_PAGES.togglePin);
   const archivePage = useMutation(NOTE_PAGES.archivePage);
   const hydrateEditorFromPayload = React.useCallback((payload: PagePayload) => {
     const pageId = payload.page.id;
@@ -652,14 +615,14 @@ export default function NotebookV2Page() {
             pageId: selectedPageId,
             upsertBlocks: nextNoteText
               ? [
-                {
-                  blockKey: 'note',
-                  blockType: 'paragraph',
-                  content: { text: nextNoteText },
-                  props: { source: 'notebook' },
-                  sortOrder: 1,
-                },
-              ]
+                  {
+                    blockKey: 'note',
+                    blockType: 'paragraph',
+                    content: { text: nextNoteText },
+                    props: { source: 'notebook' },
+                    sortOrder: 1,
+                  },
+                ]
               : undefined,
             deleteBlockKeys: nextNoteText ? undefined : ['note'],
           });
@@ -816,14 +779,14 @@ export default function NotebookV2Page() {
           pageId: selectedPageId,
           upsertBlocks: nextNoteText
             ? [
-              {
-                blockKey: 'note',
-                blockType: 'paragraph',
-                content: { text: nextNoteText },
-                props: { source: 'notebook' },
-                sortOrder: 1,
-              },
-            ]
+                {
+                  blockKey: 'note',
+                  blockType: 'paragraph',
+                  content: { text: nextNoteText },
+                  props: { source: 'notebook' },
+                  sortOrder: 1,
+                },
+              ]
             : undefined,
           deleteBlockKeys: nextNoteText ? undefined : ['note'],
         });

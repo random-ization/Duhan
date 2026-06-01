@@ -1932,8 +1932,8 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   const formatLessonLabel = useCallback(
     (idx: number) => {
       const template = labels.dashboard?.reading?.lesson;
-      if (template && template.includes('{idx}')) {
-        return template.replace('{idx}', idx.toString());
+      if (template && (template.includes('{idx}') || template.includes('{{idx}}'))) {
+        return template.replace('{{idx}}', idx.toString()).replace('{idx}', idx.toString());
       }
       if (template && template.trim().length > 0) {
         return `${template} ${idx}`;
@@ -2465,19 +2465,20 @@ const ReadingModule: React.FC<ReadingModuleProps> = ({
   };
 
   // Send AI message
+  // NOTE: Free-form AI chat is not yet wired to a backend action. Sentence-level
+  // explanations are available via the Sentence Explainer (convex/sentenceExplainer/explain.ts).
+  // Until a chat action exists we surface an honest placeholder rather than a fake answer.
   const sendAiMessage = () => {
     if (!aiInput.trim()) return;
     setAiMessages(prev => [...prev, { role: 'user', content: aiInput }]);
-    // Mock AI response
-    setTimeout(() => {
-      setAiMessages(prev => [
-        ...prev,
-        {
-          role: 'ai',
-          content: `About "${aiInput}": great question! In Korean, this grammar point is used to express... (AI sample response)`,
-        },
-      ]);
-    }, 500);
+    setAiMessages(prev => [
+      ...prev,
+      {
+        role: 'ai',
+        content:
+          'AI chat is still being connected to a real model. For sentence-level help, use the sentence explainer button at the end of a sentence.',
+      },
+    ]);
     setAiInput('');
   };
 

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { ChevronLeft, CheckCircle } from 'lucide-react';
@@ -16,9 +16,33 @@ const FlashcardView = lazy(() => import('../features/vocab/components/FlashcardV
 const VocabQuiz = lazy(() => import('../features/vocab/components/VocabQuiz'));
 const VocabMatch = lazy(() => import('../features/vocab/components/VocabMatch'));
 const VocabTest = lazy(() => import('../features/vocab/components/VocabTest'));
-const VocabLearnOverlay = lazy(() => import('../features/vocab/components/VocabLearnOverlay'));
 
 export type PracticeMode = 'flashcard' | 'learn' | 'test' | 'match';
+type VocabBookQueryCategory = 'ALL' | 'UNLEARNED' | 'DUE' | 'MASTERED';
+
+const normalizeVocabBookCategory = (value: string | null): VocabBookQueryCategory => {
+  const normalized = (value || 'DUE').toUpperCase();
+  if (
+    normalized === 'ALL' ||
+    normalized === 'UNLEARNED' ||
+    normalized === 'DUE' ||
+    normalized === 'MASTERED'
+  ) {
+    return normalized;
+  }
+  return 'DUE';
+};
+
+type PracticeSessionResults = {
+  correct: unknown[];
+  incorrect: unknown[];
+};
+
+const isPracticeSessionResults = (value: unknown): value is PracticeSessionResults => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.correct) && Array.isArray(candidate.incorrect);
+};
 
 const normalizePartOfSpeech = (value: string | undefined): PartOfSpeech | undefined => {
   switch (value) {
@@ -35,27 +59,27 @@ const normalizePartOfSpeech = (value: string | undefined): PartOfSpeech | undefi
 };
 
 export default function VocabBookPracticePage() {
-  const { language, user } = useAuth();
+  const { language } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { speak } = useTTS();
   const [isFinished, setIsFinished] = useState(false);
-  const [sessionResults, setSessionResults] = useState<{ correct: any[], incorrect: any[] } | null>(null);
-  
+  const [sessionResults, setSessionResults] = useState<PracticeSessionResults | null>(null);
+
   const labels = useMemo(() => getLabels(language), [language]);
-  
+
   // Extract params
   const mode = (searchParams.get('mode') || 'flashcard') as PracticeMode;
   const courseId = searchParams.get('courseId') || undefined;
   const all = searchParams.get('all') === 'true';
-  const categoryParam = (searchParams.get('category') || 'DUE').toUpperCase();
+  const categoryParam = normalizeVocabBookCategory(searchParams.get('category'));
   const unit = searchParams.get('unit') ? Number(searchParams.get('unit')) : undefined;
-  
+
   // Data fetching
   const vocabBookPage = useQuery(VOCAB.getVocabBookPage, {
     includeMastered: true,
     savedByUserOnly: !courseId && !all,
-    category: categoryParam as any,
+    category: categoryParam,
     courseId: courseId,
     unit: unit,
     limit: 200,
@@ -83,8 +107,8 @@ export default function VocabBookPracticePage() {
     navigate(-1);
   };
 
-  const handleComplete = (results?: any) => {
-    if (results) setSessionResults(results);
+  const handleComplete = (results?: unknown) => {
+    if (isPracticeSessionResults(results)) setSessionResults(results);
     setIsFinished(true);
   };
 
@@ -100,25 +124,43 @@ export default function VocabBookPracticePage() {
         <p className="text-k-sub font-bold mb-8">
           {labels.vocab?.matchDesc || 'Session completed successfully.'}
         </p>
-        
+
         {sessionResults && (
           <div className="grid grid-cols-2 gap-4 mb-10 w-full max-w-xs">
             <div className="bg-k-mint-deep/5 border border-k-mint-deep/10 p-4 rounded-2xl">
-              <div className="text-2xl font-black text-k-mint-deep">{sessionResults.correct.length}</div>
-              <div className="text-xs font-bold text-k-sub uppercase tracking-wider">{labels.vocab?.remembered || 'Known'}</div>
+              <div className="text-2xl font-black text-k-mint-deep">
+                {sessionResults.correct.length}
+              </div>
+              <div className="text-xs font-bold text-k-sub uppercase tracking-wider">
+                {labels.vocab?.remembered || 'Known'}
+              </div>
             </div>
             <div className="bg-k-pink-deep/5 border border-k-pink-deep/10 p-4 rounded-2xl">
-              <div className="text-2xl font-black text-k-pink-deep">{sessionResults.incorrect.length}</div>
-              <div className="text-xs font-bold text-k-sub uppercase tracking-wider">{labels.vocab?.forgot || 'Forgot'}</div>
+              <div className="text-2xl font-black text-k-pink-deep">
+                {sessionResults.incorrect.length}
+              </div>
+              <div className="text-xs font-bold text-k-sub uppercase tracking-wider">
+                {labels.vocab?.forgot || 'Forgot'}
+              </div>
             </div>
           </div>
         )}
 
         <div className="flex gap-4">
-          <Button onClick={() => { setIsFinished(false); setSessionResults(null); }} variant="outline" className="rounded-2xl px-8 py-3 font-bold">
+          <Button
+            onClick={() => {
+              setIsFinished(false);
+              setSessionResults(null);
+            }}
+            variant="outline"
+            className="rounded-2xl px-8 py-3 font-bold"
+          >
             {labels.vocab?.restart || 'Restart'}
           </Button>
-          <Button onClick={handleBack} className="rounded-2xl px-10 py-3 font-black bg-k-ink text-k-card hover:bg-k-ink/90 shadow-lg">
+          <Button
+            onClick={handleBack}
+            className="rounded-2xl px-10 py-3 font-black bg-k-ink text-k-card hover:bg-k-ink/90 shadow-lg"
+          >
             {labels.common?.back || 'Finish'}
           </Button>
         </div>
@@ -172,19 +214,17 @@ export default function VocabBookPracticePage() {
           <VocabTest
             words={words}
             language={language as Language}
-            scopeTitle={all ? (labels.vocab?.allVocab || 'All Vocabulary') : (labels.vocab?.myVocab || 'My Vocabulary')}
+            scopeTitle={
+              all
+                ? labels.vocab?.allVocab || 'All Vocabulary'
+                : labels.vocab?.myVocab || 'My Vocabulary'
+            }
             onClose={handleBack}
             onComplete={handleComplete}
           />
         );
       case 'match':
-        return (
-          <VocabMatch
-            words={words}
-            onClose={handleBack}
-            onComplete={handleComplete}
-          />
-        );
+        return <VocabMatch words={words} onClose={handleBack} onComplete={handleComplete} />;
       default:
         return <div>Invalid Mode</div>;
     }
@@ -212,15 +252,15 @@ export default function VocabBookPracticePage() {
     const isFlashcard = mode === 'flashcard' && !isFinished;
 
     return (
-      <div 
+      <div
         className={`w-full overflow-hidden flex flex-col min-h-[650px] ${
-          isFlashcard 
-            ? 'bg-transparent h-screen' 
+          isFlashcard
+            ? 'bg-transparent h-screen'
             : 'bg-[#FDFCFB]/80 rounded-[40px] border border-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)]'
         }`}
         style={{ overscrollBehaviorX: 'none' }}
       >
-         {renderInnerContent()}
+        {renderInnerContent()}
       </div>
     );
   };
@@ -235,7 +275,7 @@ export default function VocabBookPracticePage() {
             { label: mode.charAt(0).toUpperCase() + mode.slice(1) },
           ]}
         />
-        
+
         <div className="flex items-center gap-6">
           <Button
             variant="ghost"
@@ -255,9 +295,7 @@ export default function VocabBookPracticePage() {
       </div>
 
       <div className="w-full max-w-7xl flex flex-col items-center h-full">
-        <Suspense fallback={<VocabModuleSkeleton />}>
-          {renderContent()}
-        </Suspense>
+        <Suspense fallback={<VocabModuleSkeleton />}>{renderContent()}</Suspense>
       </div>
     </div>
   );

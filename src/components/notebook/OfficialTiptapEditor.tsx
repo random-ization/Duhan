@@ -44,6 +44,11 @@ const EMPTY_DOC: JSONContent = {
   content: [{ type: 'paragraph' }],
 };
 
+type NotebookEditor = NonNullable<ReturnType<typeof useEditor>>;
+type NotebookEditorUpdate = {
+  editor: NotebookEditor;
+};
+
 type SlashState = {
   query: string;
   from: number;
@@ -276,19 +281,13 @@ export const OfficialTiptapEditor: React.FC<OfficialTiptapEditorProps> = ({
           'notion-editor-content min-h-[460px] px-14 py-10 text-[15px] text-foreground focus:outline-none',
       },
     },
-    onUpdate: ({ editor: nextEditor }: any) => {
+    onUpdate: ({ editor: nextEditor }: NotebookEditorUpdate) => {
       onChange(nextEditor.getJSON());
-      const match = getSlashMatch(
-        nextEditor as NonNullable<ReturnType<typeof useEditor>>,
-        wrapperRef.current
-      );
+      const match = getSlashMatch(nextEditor, wrapperRef.current);
       setSlashState(match);
     },
-    onSelectionUpdate: ({ editor: nextEditor }: any) => {
-      const match = getSlashMatch(
-        nextEditor as NonNullable<ReturnType<typeof useEditor>>,
-        wrapperRef.current
-      );
+    onSelectionUpdate: ({ editor: nextEditor }: NotebookEditorUpdate) => {
+      const match = getSlashMatch(nextEditor, wrapperRef.current);
       setSlashState(match);
     },
   });

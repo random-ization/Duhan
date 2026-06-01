@@ -67,7 +67,12 @@
         "zh": "Chinese",
         "vi": "Vietnamese",
         "mn": "Mongolian",
-        "ja": "Japanese"
+        "ja": "Japanese",
+        "answer": "Answer",
+        "question": "Question",
+        "questions": "questions",
+        "quiz": "Quiz",
+        "selectGrammar": "Please select a grammar point from the left directory"
       },
       "errors": {
         "invalidExtension": "Please select an EPUB file (.epub).",
@@ -117,7 +122,29 @@
     },
     "mobile": {
       "publishedUploads": "Published uploads",
-      "privateUploads": "Only visible to you"
+      "privateUploads": "Only visible to you",
+      "articlesToday": "{{count}} articles updated today",
+      "globalInsights": "Global Insights",
+      "swipeHint": "Swipe left/right to browse"
+    },
+    "featured": {
+      "newsDesc": "AI curated news from authority media. Read, learn, and grow your vocabulary.",
+      "newsTitle": "Daily Korean News Feed"
+    },
+    "news": {
+      "empty": "Check back later for new articles.",
+      "loadError": "Unable to load news at the moment.",
+      "title": "Real-time News",
+      "updated": "Updated hourly"
+    },
+    "noContent": "No story content available",
+    "pictureBooks": {
+      "openCard": "Open picture book {{title}}",
+      "title": "Picture Books",
+      "viewAll": "View All"
+    },
+    "readingHub": {
+      "mobileSubtitle": "Curated news, stories, and picture books for immersive learning."
     }
   },
   "common": {
@@ -127,7 +154,22 @@
     "add": "Add",
     "all": "All",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "appName": "Duhan Korean",
+    "back": "Back",
+    "exams": "Exams",
+    "items": "items",
+    "learnChar": "Learn",
+    "loading": "Loading...",
+    "masteredChar": "Mastered",
+    "minutes": "min",
+    "recently": "Recently Played",
+    "retry": "Retry",
+    "search": "Search",
+    "start": "Start",
+    "streak": "Active Days",
+    "viewAll": "View All",
+    "vocabChar": "Vocab"
   },
   "admin": {
     "epubReview": {
@@ -265,7 +307,9 @@
       "notifications": "Notifications",
       "language": "Language",
       "help": "Help & Feedback",
-      "logout": "Logout"
+      "logout": "Logout",
+      "now": "NOW",
+      "participate": "Participate"
     },
     "dictionary": {
       "label": "Dictionary",
@@ -280,6 +324,34 @@
       "controller": {
         "exit": "Exit"
       }
+    },
+    "common": {
+      "continueLearning": "Continue Learning"
+    },
+    "mobile": {
+      "exploreLabel": "Immersive Hub",
+      "exploreTitle": "Recommended Channels",
+      "mainActions": "Study Station",
+      "quickMediaSubtitle": "Switch to podcasts, videos, and reading content anytime.",
+      "quickNotebookSubtitle": "Review errors and bridge knowledge gaps.",
+      "quickPracticeSubtitle": "Typing practice, notebook drills, and targeted exercise.",
+      "quickReviewSubtitle": "Clear due vocab and keep muscle memory sharp.",
+      "shortcutsTitle": "Core Shortcuts",
+      "streakShort": "Consecutive Days"
+    },
+    "mobileFocus": {
+      "choose": "Depart Today: Pick a learning module",
+      "continue": "Resume Journey: Continue where you left off"
+    },
+    "podcast": {
+      "community": "Trending",
+      "editorPicks": "Editor's Picks"
+    },
+    "summary": {
+      "title": "Daily Goal Progress"
+    },
+    "textbook": {
+      "default": "Textbook"
     }
   },
   "community": {
@@ -306,12 +378,22 @@
         "questions": "questions",
         "question": "Question",
         "answer": "Answer",
-        "selectGrammar": "Please select a grammar point from the left directory"
+        "selectGrammar": "Please select a grammar point from the left directory",
+        "grammar": "Grammar",
+        "listening": "Listening",
+        "milestone": "Milestone",
+        "study": "Study",
+        "topik": "TOPIK"
       },
       "mediaHub": {
         "completedContent": "Completed content",
         "topikScore": "TOPIK Score {{score}}",
         "submittedExam": "Submitted exam"
+      },
+      "events": {
+        "completedContent": "completed learning content",
+        "submittedExam": "submitted an exam",
+        "topikScore": "TOPIK Mock Exam Score {{score}}"
       }
     }
   },
@@ -1045,5 +1127,76 @@
     "column": "Column",
     "mobileHint": "Scroll sideways if needed",
     "perLine": "{{count}} chars per line · Wongoji"
+  },
+  "coursesLibrary": {
+    "items": "Units",
+    "loadError": "Failed to load textbook list.",
+    "otherPublisher": "Other Publishers",
+    "results": "Search Results",
+    "searchPlaceholder": "Search textbooks, levels, or publishers...",
+    "textbook": "Textbook Content"
+  },
+  "learningFlow": {
+    "mobileHub": {
+      "grammar": {
+        "description": "Sentence patterns, detailed explanations, and structure analysis."
+      },
+      "listening": {
+        "description": "Textbook audio, listening scripts, and comprehension exercises."
+      },
+      "materialPickerSummary": "{{module}} · {{count}} textbooks in total",
+      "materialPickerTitle": "Select Textbook",
+      "noMaterialSelected": "None selected",
+      "paths": "Learning Paths",
+      "pickMaterial": "Start Path",
+      "progressLabel": "Current Progress",
+      "reading": {
+        "description": "Paragraph reading, article exercises, and instant dictionary search."
+      },
+      "resumeFromUnit": "Resume from Unit {{unit}}",
+      "selectMaterialCta": "Select Textbook",
+      "selectMaterialHint": "Please select a textbook to start this learning path.",
+      "subtitle": "Pick a skill first, then dive into the most suitable textbook.",
+      "title": "Choose Your Study Focus Today",
+      "vocabulary": {
+        "description": "Vocabulary cards, learning modes, and active recall drills."
+      }
+    }
+  },
+  "media": {
+    "videoCountLabel": "{{count}} Lessons"
+  },
+  "nav": {
+    "learn": "Courses",
+    "media": "Media Hub",
+    "podcasts": "Podcasts",
+    "practice": "Practice",
+    "reading": "Reading",
+    "videos": "Videos"
+  },
+  "podcast": {
+    "filterOptions": {
+      "all": "All",
+      "beginner": "Beginner",
+      "daily": "Daily",
+      "intermediate": "Intermediate",
+      "news": "News"
+    },
+    "history": "History",
+    "mySubscriptions": "My Subscriptions",
+    "nowPlaying": "Now Playing",
+    "searchPlaceholder": "Search podcasts or content...",
+    "title": "Podcast Hub",
+    "trendingThisWeek": "Trending This Week"
+  },
+  "practice": {
+    "mobileSkillLabel": {
+      "notebook": "Notebook Review",
+      "spelling": "Spelling Practice",
+      "typing": "Typing Training"
+    },
+    "mobileSubtitle": "Track every bit of your progress",
+    "mobileTitle": "Build Your Language Mastery",
+    "recommended": "Recommended for You"
   }
 }

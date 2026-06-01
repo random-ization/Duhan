@@ -92,7 +92,7 @@ export const listNotebooks = query({
       .collect();
 
     const notebookMap = new Map<string, NotebookInfo>();
-    
+
     for (const page of pages) {
       const metadata = normalizeMetadata(page.metadata);
       if (metadata.kind === 'notebook_container') {
@@ -122,7 +122,7 @@ export const listNotebooks = query({
     }
 
     const notebooks = Array.from(notebookMap.values());
-    
+
     if (!args.includeEmpty) {
       return notebooks.filter(nb => nb.count > 0);
     }
@@ -177,7 +177,7 @@ export const search = query({
 
     const limit = Math.max(1, Math.min(args.limit ?? MAX_SEARCH_LIMIT, MAX_SEARCH_LIMIT));
     const query = args.query.toLowerCase().trim();
-    
+
     if (!query) {
       return { pages: [], facets: [], hasMore: false };
     }
@@ -195,34 +195,32 @@ export const search = query({
         const pageTags = page.tags || [];
         if (!args.tags.some(tag => pageTags.includes(tag))) return false;
       }
-      
+
       const titleMatch = page.title.toLowerCase().includes(query);
-      const contentMatch = typeof page.previewText === 'string' && 
-        page.previewText.toLowerCase().includes(query);
-      
+      const contentMatch =
+        typeof page.previewText === 'string' && page.previewText.toLowerCase().includes(query);
+
       return titleMatch || contentMatch;
     });
 
-    const results = filteredPages
-      .slice(0, limit)
-      .map(page => {
-        const metadata = normalizeMetadata(page.metadata);
-        const snippet = generateSnippet(page.previewText, args.query);
-        return {
-          id: page._id,
-          parentPageId: page.parentPageId,
-          notebookKey: metadata.notebookKey,
-          title: page.title,
-          icon: page.icon,
-          snippet,
-          tags: page.tags || [],
-          kind: metadata.kind || 'longform_page',
-          pinned: metadata.pinned || false,
-          sortOrder: normalizeSortOrder(page.sortOrder, 0),
-          createdAt: page.createdAt,
-          updatedAt: page.updatedAt,
-        };
-      });
+    const results = filteredPages.slice(0, limit).map(page => {
+      const metadata = normalizeMetadata(page.metadata);
+      const snippet = generateSnippet(page.previewText, args.query);
+      return {
+        id: page._id,
+        parentPageId: page.parentPageId,
+        notebookKey: metadata.notebookKey,
+        title: page.title,
+        icon: page.icon,
+        snippet,
+        tags: page.tags || [],
+        kind: metadata.kind || 'longform_page',
+        pinned: metadata.pinned || false,
+        sortOrder: normalizeSortOrder(page.sortOrder, 0),
+        createdAt: page.createdAt,
+        updatedAt: page.updatedAt,
+      };
+    });
 
     // Generate facets
     const facetMap = new Map<string, number>();
@@ -284,16 +282,16 @@ export const listFacets = query({
     // Apply filters similar to search but without the query text first for facet calculation
     const filteredPages = pages.filter(page => {
       if (page.isArchived) return false;
-      
-      const metadata = normalizeMetadata(page.metadata);
+
       if (args.notebookId && page.parentPageId !== args.notebookId) return false;
       if (args.updatedAfter && page.updatedAt < args.updatedAfter) return false;
       if (args.updatedBefore && page.updatedAt > args.updatedBefore) return false;
-      if (args.hasNote !== undefined && (!!page.hasNote) !== args.hasNote) return false;
-      if (args.hasHighlight !== undefined && (!!page.hasHighlight) !== args.hasHighlight) return false;
-      
-      // We don't apply sourceModules/noteTypes/statuses/query here 
-      // because facets usually show counts across ALL available options 
+      if (args.hasNote !== undefined && !!page.hasNote !== args.hasNote) return false;
+      if (args.hasHighlight !== undefined && !!page.hasHighlight !== args.hasHighlight)
+        return false;
+
+      // We don't apply sourceModules/noteTypes/statuses/query here
+      // because facets usually show counts across ALL available options
       // within the current broad context (like a notebook).
       return true;
     });
@@ -388,7 +386,7 @@ export const listReviewQueue = query({
 // List note templates
 export const listTemplates = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async ctx => {
     const userId = await getOptionalAuthUserId(ctx);
     if (!userId) return [];
 

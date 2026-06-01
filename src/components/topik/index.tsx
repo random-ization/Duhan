@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { TopikExam, Language, ExamAttempt, Annotation } from '../../types';
+import { TopikExam, Language, ExamAttempt, Annotation, TextbookContent } from '../../types';
 import { ExamList } from './ExamList';
 import { ExamSession } from './ExamSession';
 import { ExamResultView, ExamReviewView, ExamCoverView } from './ExamViews';
@@ -41,7 +41,7 @@ interface TopikModuleProps {
   onSaveHistory: (attempt: ExamAttempt) => void;
   annotations: Annotation[];
   onSaveAnnotation: (annotation: Annotation) => void;
-  canAccessContent?: (content: any) => boolean;
+  canAccessContent?: (content: TextbookContent | TopikExam) => boolean;
   onShowUpgradePrompt?: () => void;
   upgradePromptLoading?: boolean;
   onDeleteHistory?: (id: string) => void;
@@ -49,6 +49,7 @@ interface TopikModuleProps {
 }
 
 type TopikView = 'LIST' | 'HISTORY_LIST' | 'COVER' | 'EXAM' | 'RESULT' | 'REVIEW';
+const TOPIK_HISTORY_VIEW = 'history';
 
 const getPathWithoutLanguage = (pathname: string): string => {
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -66,7 +67,7 @@ const routeForView = (
 ): string | null => {
   let path: string | null = null;
   if (view === 'LIST') path = '/topik';
-  if (view === 'HISTORY_LIST') path = '/topik/history';
+  if (view === 'HISTORY_LIST') path = `/topik?view=${TOPIK_HISTORY_VIEW}`;
   if (!path && !examId) return null;
   if (!path && view === 'COVER') path = `/topik/${examId}`;
   if (!path && view === 'EXAM') path = `/topik/${examId}/exam`;
@@ -203,7 +204,7 @@ const TopikViewRenderer = ({
   onSelectExam: (exam: TopikExam) => void;
   onToggleHistory: () => void;
   onReviewAttempt: (attempt?: ExamAttempt) => void;
-  canAccessContent?: (content: any) => boolean;
+  canAccessContent?: (content: TextbookContent | TopikExam) => boolean;
   onShowUpgradePrompt?: () => void;
   upgradePromptLoading?: boolean;
   onDeleteHistory?: (id: string) => void;
@@ -426,6 +427,11 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
   const examSessionIdRef = useRef<string | null>(null);
   const pathWithoutLang = getPathWithoutLanguage(location.pathname);
   const isHistoryPath = pathWithoutLang === '/topik/history';
+  const isHistoryQuery =
+    !examId &&
+    pathWithoutLang === '/topik' &&
+    new URLSearchParams(location.search).get('view') === TOPIK_HISTORY_VIEW;
+  const isHistoryView = isHistoryPath || isHistoryQuery;
   const returnToPath = getSafeReturnTo(location.search);
 
   // Custom handleSetView that also updates URL
@@ -522,14 +528,26 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
 
   // Sync URL params with view on mount
   useEffect(() => {
-    if (isHistoryPath && !examId) {
-      setCurrentExam(null);
-      setUserAnswers({});
-      setTimerActive(false);
-      setExamResult(null);
-      setView('HISTORY_LIST');
-      setSidebarHidden(false);
-      return;
+    if (!examId) {
+      if (isHistoryView) {
+        setCurrentExam(null);
+        setUserAnswers({});
+        setTimerActive(false);
+        setExamResult(null);
+        setView('HISTORY_LIST');
+        setSidebarHidden(false);
+        return;
+      }
+
+      if (view === 'HISTORY_LIST') {
+        setCurrentExam(null);
+        setUserAnswers({});
+        setTimerActive(false);
+        setExamResult(null);
+        setView('LIST');
+        setSidebarHidden(false);
+        return;
+      }
     }
 
     if (examId && !currentExam) {
@@ -549,7 +567,7 @@ export const TopikModule: React.FC<TopikModuleProps> = ({
     currentExam,
     view,
     selectExamFromUrl,
-    isHistoryPath,
+    isHistoryView,
     initialView,
     setSidebarHidden,
   ]);

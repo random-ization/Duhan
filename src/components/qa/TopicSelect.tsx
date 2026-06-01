@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from 'convex/react';
 import { QA_TOPICS } from '../../utils/convexRefs';
 import { TopicChip } from './TopicChip';
@@ -12,7 +11,6 @@ interface TopicSelectProps {
 }
 
 export function TopicSelect({ value, onChange, className }: TopicSelectProps) {
-  const { t } = useTranslation();
   const topics = useQuery(QA_TOPICS.listTopics, {});
 
   if (!topics) return null;

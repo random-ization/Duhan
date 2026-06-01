@@ -77,443 +77,525 @@
   },
   "readingDiscovery": {
     "library": {
-      "title": "Classic Reading",
-      "subtitle": "One rotating Wikipedia spotlight, plus your private EPUB uploads, drafts, and share entry points.",
-      "privateLabel": "Private EPUB Library",
-      "privateTitle": "Visible only to you, with share links for invited readers",
-      "privateLogin": "Sign in to see your private EPUB library and create share links.",
-      "privateEmpty": "No private EPUBs yet. Upload your first book from the button above.",
-      "myUploads": "My Uploads",
-      "uploadCta": "Upload EPUB",
-      "myUploadsSubtitle": "Drafts, processing jobs, rejected submissions, and published EPUBs.",
-      "emptyMyUploads": "You have not uploaded any EPUBs yet.",
-      "chapterCount": "{{count}} chapters",
-      "wordCount": "{{count}} words",
-      "openReader": "Open Reader",
-      "submitForReview": "Submit for Review",
-      "shareLink": "Share Link",
-      "copyShareLink": "Copy Share Link",
-      "stopSharing": "Stop Sharing",
-      "shareShort": "Share",
-      "stopShareShort": "Stop",
-      "shareCopied": "Share link copied",
-      "shareFailed": "Unable to share this book right now.",
-      "shareDisabled": "Share link disabled",
-      "shareDisableFailed": "Unable to disable sharing right now.",
-      "wikipediaSpotlight": "Wikipedia Spotlight",
-      "wikipediaTitle": "Featured archive pick",
+      "title": "Đọc hiểu cổ điển",
+      "subtitle": "Một tiêu điểm Wikipedia thay đổi luân phiên, cùng tính năng tải lên tệp EPUB cá nhân, các bản nháp và lối tắt chia sẻ.",
+      "privateLabel": "Thư viện EPUB cá nhân",
+      "privateTitle": "Chỉ hiển thị với bạn, kèm liên kết chia sẻ cho người đọc được mời",
+      "privateLogin": "Đăng nhập để xem thư viện EPUB riêng tư của bạn và tạo các liên kết chia sẻ.",
+      "privateEmpty": "Chưa có tệp EPUB cá nhân nào. Hãy tải lên cuốn sách đầu tiên của bạn bằng nút phía trên.",
+      "myUploads": "Tệp tải lên của tôi",
+      "uploadCta": "Tải tệp EPUB lên",
+      "myUploadsSubtitle": "Bản nháp, tác vụ đang xử lý, bài nộp bị từ chối và tệp EPUB đã xuất bản.",
+      "emptyMyUploads": "Bạn chưa tải lên bất kỳ tệp EPUB nào.",
+      "chapterCount": "{{count}} chương",
+      "wordCount": "{{count}} từ",
+      "openReader": "Mở trình đọc",
+      "submitForReview": "Nộp để xem xét",
+      "shareLink": "Chia sẻ liên kết",
+      "copyShareLink": "Sao chép liên kết chia sẻ",
+      "stopSharing": "Dừng chia sẻ",
+      "shareShort": "Chia sẻ màn hình",
+      "stopShareShort": "Dừng",
+      "shareCopied": "Đã sao chép liên kết chia sẻ",
+      "shareFailed": "Không thể chia sẻ cuốn sách này vào lúc này.",
+      "shareDisabled": "Đã vô hiệu hóa liên kết chia sẻ",
+      "shareDisableFailed": "Không thể tắt chia sẻ vào lúc này.",
+      "wikipediaSpotlight": "Tiêu điểm Wikipedia",
+      "wikipediaTitle": "Lưu trữ chọn lọc nổi bật",
       "wikipediaSourceFallback": "Wikipedia",
-      "featuredToday": "Featured today",
-      "read": "Read",
-      "wikipediaEmpty": "No Wikipedia spotlight is available yet.",
-      "communityLabel": "Community EPUB Library",
-      "communityTitle": "Reader-ready uploads",
-      "communityEmpty": "No community EPUBs are published yet. Upload the first one from the button above.",
-      "communityEmptyMobile": "No EPUBs published yet.",
-      "descriptionFallback": "Open the reader to browse the chapter list and start reading.",
+      "featuredToday": "Nổi bật hôm nay",
+      "read": "Đọc",
+      "wikipediaEmpty": "Chưa có tiêu điểm Wikipedia nào.",
+      "communityLabel": "Thư viện EPUB cộng đồng",
+      "communityTitle": "Nội dung tải lên đã sẵn sàng đọc",
+      "communityEmpty": "Chưa có tệp EPUB cộng đồng nào được xuất bản. Hãy tải lên tệp đầu tiên bằng nút phía trên.",
+      "communityEmptyMobile": "Chưa có tệp EPUB nào được xuất bản.",
+      "descriptionFallback": "Mở trình đọc để duyệt danh sách chương và bắt đầu đọc.",
       "status": {
-        "draftUploaded": "Draft uploaded",
-        "processing": "Processing",
-        "readyForReview": "Ready for review",
-        "inReview": "In review",
-        "published": "Published",
-        "rejected": "Rejected",
-        "processingFailed": "Processing failed"
+        "draftUploaded": "Đã tải lên bản nháp",
+        "processing": "Xử lý",
+        "readyForReview": "Sẵn sàng để ôn tập",
+        "inReview": "Đang ôn tập",
+        "published": "Đã xuất bản",
+        "rejected": "Đã từ chối",
+        "processingFailed": "Xử lý thất bại"
       }
     },
     "upload": {
-      "title": "Upload EPUB",
-      "subtitle": "Upload an EPUB and we'll parse chapters, build the reader, and queue it for review.",
-      "action": "Upload",
-      "supportedFormat": "Supported format: EPUB. The file will be parsed after upload and saved as a draft.",
-      "fileLabel": "EPUB File",
-      "uploading": "Uploading {{progress}}%",
-      "chooseFile": "Choose an EPUB file",
-      "maxSize": "Up to 100MB",
-      "titleLabel": "Title",
-      "authorLabel": "Author",
-      "descriptionLabel": "Description",
-      "languageLabel": "Language",
-      "tagsLabel": "Tags",
-      "tagsPlaceholder": "Add tags",
-      "submit": "Upload Book",
+      "title": "Tải tệp EPUB lên",
+      "subtitle": "Tải lên tệp EPUB và chúng tôi sẽ phân tích các chương, xây dựng trình đọc và đưa vào hàng đợi để xem xét.",
+      "action": "Tải lên",
+      "supportedFormat": "Định dạng được hỗ trợ: EPUB. Tệp sẽ được phân tích sau khi tải lên và được lưu dưới dạng nháp.",
+      "fileLabel": "Tệp EPUB",
+      "uploading": "Đang tải lên {{progress}}%",
+      "chooseFile": "Chọn một tệp EPUB",
+      "maxSize": "Tối đa 100MB",
+      "titleLabel": "Tiêu đề",
+      "authorLabel": "Tác giả",
+      "descriptionLabel": "Mô tả",
+      "languageLabel": "Ngôn ngữ:",
+      "tagsLabel": "Thẻ",
+      "tagsPlaceholder": "Thêm thẻ",
+      "submit": "Tải sách lên",
       "languages": {
-        "en": "English",
-        "ko": "Korean",
-        "zh": "Chinese",
-        "vi": "Vietnamese",
-        "mn": "Mongolian",
-        "ja": "Japanese"
+        "en": "Tiếng Anh",
+        "ko": "Tiếng Hàn",
+        "zh": "Tiếng Trung",
+        "vi": "Tiếng Việt",
+        "mn": "Tiếng Mông Cổ",
+        "ja": "Tiếng Nhật",
+        "answer": "Đáp án",
+        "question": "Câu hỏi",
+        "questions": "câu hỏi",
+        "quiz": "Bài trắc nghiệm ngắn",
+        "selectGrammar": "Vui lòng chọn một điểm ngữ pháp từ danh mục bên trái"
       },
       "errors": {
-        "invalidExtension": "Please select an EPUB file (.epub).",
-        "unsupportedType": "Only EPUB files are supported.",
-        "emptyFile": "The selected file is empty.",
-        "fileTooLarge": "EPUB files must be smaller than 100MB.",
-        "fileRequired": "Please select an EPUB file.",
-        "titleAuthorRequired": "Title and author are required.",
-        "uploadFailed": "Failed to upload EPUB."
+        "invalidExtension": "Vui lòng chọn một tệp EPUB (.epub).",
+        "unsupportedType": "Chỉ hỗ trợ các tệp định dạng EPUB.",
+        "emptyFile": "Tệp đã chọn trống.",
+        "fileTooLarge": "Các tệp EPUB phải có dung lượng nhỏ hơn 100MB.",
+        "fileRequired": "Vui lòng chọn một tệp EPUB.",
+        "titleAuthorRequired": "Yêu cầu nhập tiêu đề và tác giả.",
+        "uploadFailed": "Tải lên tệp EPUB thất bại."
       }
     },
     "reader": {
-      "notFoundTitle": "Book not found",
-      "notFoundBody": "This EPUB is unavailable or you do not have access to it.",
-      "backToReading": "Back to Reading",
-      "chapterProgress": "Chapter {{current}} / {{total}}",
-      "completion": "{{percent}}% complete",
-      "contents": "Contents",
-      "previewMode": "Preview mode. You can read {{count}} chapters on the free plan.",
-      "chapterLocked": "Chapter Locked",
-      "chapterLockedBody": "This chapter is outside the free preview. Upgrade to unlock the full book.",
-      "chapterLabel": "Chapter {{number}}",
-      "minRead": "~{{count}} min read",
-      "chapterUnavailable": "This chapter is unavailable.",
+      "notFoundTitle": "Không tìm thấy sách",
+      "notFoundBody": "Sách EPUB này không khả dụng hoặc bạn không có quyền truy cập.",
+      "backToReading": "Quay lại bài đọc",
+      "chapterProgress": "Chương {{current}} / {{total}}",
+      "completion": "Đã hoàn thành {{percent}}%",
+      "contents": "Mục lục",
+      "previewMode": "Chế độ xem trước. Bạn có thể đọc {{count}} chương với gói miễn phí.",
+      "chapterLocked": "Chương đã bị khóa",
+      "chapterLockedBody": "Chương này nằm ngoài phạm vi xem trước miễn phí. Hãy nâng cấp để mở khóa toàn bộ cuốn sách.",
+      "chapterLabel": "Chương {{number}}",
+      "minRead": "~{{count}} phút đọc",
+      "chapterUnavailable": "Chương này không khả dụng.",
       "settings": {
-        "title": "Reader Settings",
-        "fontSize": "Font size",
-        "theme": "Theme",
-        "lineHeight": "Line height",
+        "title": "Cài đặt trình đọc",
+        "fontSize": "Cỡ chữ",
+        "theme": "Giao diện",
+        "lineHeight": "Chiều cao dòng",
         "fontSizes": {
-          "small": "Small",
-          "medium": "Medium",
-          "large": "Large",
-          "extra-large": "Extra Large"
+          "small": "Nhỏ",
+          "medium": "Trung bình",
+          "large": "Lớn",
+          "extra-large": "Cực lớn"
         },
         "themes": {
-          "light": "Light",
+          "light": "Sáng",
           "sepia": "Sepia",
-          "dark": "Dark"
+          "dark": "Tối"
         },
         "lineHeights": {
-          "compact": "Compact",
-          "normal": "Normal",
-          "relaxed": "Relaxed"
+          "compact": "Thu gọn",
+          "normal": "Bình thường",
+          "relaxed": "Thư giãn"
         }
       }
     },
     "mobile": {
-      "publishedUploads": "Published uploads",
-      "privateUploads": "Only visible to you"
+      "publishedUploads": "Nội dung tải lên đã xuất bản",
+      "privateUploads": "Chỉ hiển thị với bạn",
+      "articlesToday": "Hôm nay cập nhật {{count}} bài viết",
+      "globalInsights": "Động thái toàn cầu",
+      "swipeHint": "Vuốt sang trái/phải để duyệt"
+    },
+    "featured": {
+      "newsDesc": "Tin tức tuyển chọn từ truyền thông uy tín bằng AI. Đọc, học và mở rộng từ vựng của bạn.",
+      "newsTitle": "Bản tin tiếng Hàn hàng ngày"
+    },
+    "news": {
+      "empty": "Vui lòng quay lại sau để xem bài viết mới.",
+      "loadError": "Tạm thời không thể tải tin tức.",
+      "title": "Tin tức thời gian thực",
+      "updated": "Cập nhật mỗi giờ"
+    },
+    "noContent": "Tạm thời không có nội dung câu chuyện",
+    "pictureBooks": {
+      "openCard": "Mở truyện tranh {{title}}",
+      "title": "Truyện tranh câu chuyện",
+      "viewAll": "Xem tất cả truyện tranh"
+    },
+    "readingHub": {
+      "mobileSubtitle": "Tuyển chọn tin tức, câu chuyện và truyện tranh để bạn đắm chìm trong việc học."
     }
   },
   "common": {
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "close": "Close",
-    "add": "Add",
-    "all": "All",
-    "previous": "Previous",
-    "next": "Next"
+    "cancel": "Hủy",
+    "delete": "Delete (Xóa)",
+    "close": "Đóng",
+    "add": "Thêm",
+    "all": "Tất cả",
+    "previous": "Trước",
+    "next": "Tiếp theo",
+    "appName": "Duhan Tiếng Hàn",
+    "back": "Quay lại",
+    "exams": "Đề thi",
+    "items": "mục",
+    "learnChar": "Học",
+    "loading": "Đang tải...",
+    "masteredChar": "Thông thạo",
+    "minutes": "phút",
+    "recently": "Gần đây",
+    "retry": "Thử lại",
+    "search": "Tìm kiếm",
+    "start": "Bắt đầu",
+    "streak": "Số ngày học liên tiếp",
+    "viewAll": "Tất cả",
+    "vocabChar": "Từ vựng"
   },
   "admin": {
     "epubReview": {
-      "title": "EPUB Library Review",
-      "subtitle": "Moderate community EPUB uploads and publish them into the reading library.",
-      "filterTitle": "Status Filter",
-      "empty": "No books found for this status.",
-      "unknownOwner": "Unknown",
-      "selectTitle": "Select a book to review",
-      "selectBody": "Pick a submission from the list to inspect metadata, chapter previews, and moderation actions.",
-      "chapterCount": "{{count}} chapters",
-      "noDescription": "No description provided.",
-      "owner": "Owner",
-      "language": "Language",
-      "words": "Words",
-      "reviewNote": "Review Note",
-      "reviewNotePlaceholder": "Optional approval note, or required rejection reason.",
-      "chapterPreview": "Chapter Preview",
-      "noParsedChapters": "No parsed chapters are available yet.",
-      "wordCount": "{{count}} words",
-      "noPreview": "No preview available.",
+      "title": "Đánh giá thư viện EPUB",
+      "subtitle": "EPUB cộng đồng vừa phải tải lên và xuất bản chúng vào thư viện đọc.",
+      "filterTitle": "Bộ lọc trạng thái",
+      "empty": "Không tìm thấy sách nào cho trạng thái này.",
+      "unknownOwner": "Không xác định",
+      "selectTitle": "Chọn một cuốn sách để đánh giá",
+      "selectBody": "Chọn một nội dung gửi từ danh sách để kiểm tra siêu dữ liệu, xem trước chương và hành động kiểm duyệt.",
+      "chapterCount": "{{count}} chương",
+      "noDescription": "Không có mô tả được cung cấp",
+      "owner": "Chủ sở hữu",
+      "language": "Ngôn ngữ:",
+      "words": "Từ",
+      "reviewNote": "Xem lại ghi chú",
+      "reviewNotePlaceholder": "Ghi chú phê duyệt tùy chọn hoặc lý do từ chối bắt buộc.",
+      "chapterPreview": "CHAPTER PREVIEW",
+      "noParsedChapters": "Chưa có chương được phân tích cú pháp nào.",
+      "wordCount": "{{count}} từ",
+      "noPreview": "Không có xem thử.",
       "summary": {
-        "ready": "Ready",
-        "processing": "Processing",
-        "published": "Published",
-        "failed": "Failed"
+        "ready": "Sẵn sàng",
+        "processing": "Xử lý",
+        "published": "Đã xuất bản",
+        "failed": "Không thành công"
       },
       "status": {
-        "allBooks": "All Books",
-        "processing": "Processing",
-        "readyForReview": "Ready for Review",
-        "inReview": "In Review",
-        "published": "Published",
-        "rejected": "Rejected",
-        "processingFailed": "Processing Failed"
+        "allBooks": "Tất cả sách",
+        "processing": "Xử lý",
+        "readyForReview": "Sẵn sàng để đánh giá",
+        "inReview": "Đang xem xét",
+        "published": "Đã xuất bản",
+        "rejected": "Đã từ chối",
+        "processingFailed": "Lỗi thực hiện"
       },
       "actions": {
-        "approve": "Approve",
-        "reject": "Reject",
-        "retry": "Retry Processing"
+        "approve": "Phê duyệt",
+        "reject": "Từ chối",
+        "retry": "Thử xử lý lại"
       }
     }
   },
   "courseDashboard": {
     "modules": {
-      "vocabulary": "Vocabulary",
-      "grammar": "Grammar",
-      "listening": "Listening",
-      "reading": "Reading"
+      "vocabulary": "Từ vựng",
+      "grammar": "ngữ pháp",
+      "listening": "Kỹ năng",
+      "reading": "Đọc hiểu"
     }
   },
   "dashboard": {
     "desktop": {
-      "greeting": "Hello, {{name}}",
-      "welcomeBack": "Welcome back, {{name}}",
-      "todayPath": "Today's Path",
-      "todayPathDescription": "TODAY'S PATH · {{minutes}} min",
-      "weeklyGoal": "Weekly Goal",
-      "hours": "hours",
+      "greeting": "Xin chào [name],",
+      "welcomeBack": "{{name}} thân mến, chào mừng bạn quay trở lại",
+      "todayPath": "Lộ trình hôm nay",
+      "todayPathDescription": "LỘ TRÌNH HÔM NAY · {{minutes}} phút",
+      "weeklyGoal": "Mục tiêu hàng tuần",
+      "hours": "giờ",
       "loading": "Loading...",
-      "start": "Start",
-      "items": "items",
+      "start": "Bắt đầu",
+      "items": "sản phẩm",
       "vocabChar": "Vocab",
       "masteredChar": "Mastered",
       "learnChar": "Learn",
-      "tasksLeft": "{{count}} tasks",
-      "approxTime": "~{{count}} min",
-      "tenThousand": "10k",
-      "weeklyActivity": "Last 7 Days",
-      "viewAll": "View all",
-      "dailyChallenge": "Daily Challenge",
-      "incorrectBook": "Mistake Notebook",
-      "daysActivity": "{{count}} Days Activity",
-      "streak": "Streak",
-      "consecutiveDays": "consecutive days",
-      "friendActivity": "Learning Partners",
-      "communityCta": "Community",
-      "noFriendActivity": "Follow friends to see their activity here",
-      "upcomingReviews": "Upcoming Reviews",
-      "reviewCta": "Review",
-      "noUpcomingReviews": "No upcoming reviews",
-      "tasksLeftSummary": "{{count}} tasks left today",
-      "allDone": "All done today ✓",
+      "tasksLeft": "{{count}} tác vụ",
+      "approxTime": "@count min",
+      "tenThousand": "10K+",
+      "weeklyActivity": "7 ngày trước",
+      "viewAll": "Xem tất cả",
+      "dailyChallenge": "thử thách hàng ngày",
+      "incorrectBook": "Sổ tay ghi chép sai",
+      "daysActivity": "Hoạt động {{count}} ngày",
+      "streak": "Dải, sọc, vân",
+      "consecutiveDays": "ngày liên tục (điều kiện về thời gian xếp dỡ hàng, thuê tàu)",
+      "friendActivity": "Đối tác học tập",
+      "communityCta": "Cộng đồng",
+      "noFriendActivity": "Theo dõi bạn bè để xem hoạt động của họ tại đây",
+      "upcomingReviews": "Đánh giá sắp tới",
+      "reviewCta": "Xem xét lại",
+      "noUpcomingReviews": "Không có đánh giá sắp tới",
+      "tasksLeftSummary": "Hôm nay còn {{count}} nhiệm vụ",
+      "allDone": "Tất cả đã hoàn thành hôm nay ✓",
       "modules": {
-        "review": "Review",
-        "grammar": "Grammar",
-        "listening": "Listening",
+        "review": "Xem xét lại",
+        "grammar": "ngữ pháp",
+        "listening": "Kỹ năng",
         "topik": "TOPIK"
       },
       "primaryAction": {
-        "reviewEyebrow": "REVIEW · 复习",
-        "reviewTitle": "{{count}} cards due now",
-        "reviewSubtitle": "About {{minutes}} min · FSRS smart review",
-        "startReview": "Start review →",
-        "challengeEyebrow": "DAILY CHALLENGE · 挑战",
-        "continueChallenge": "Continue challenge →",
-        "weakAreaEyebrow": "WEAK AREA · 弱项",
+        "reviewEyebrow": "ĐÁNH GIÁ · 复习",
+        "reviewTitle": "{{count}} thẻ sắp hết hạn",
+        "reviewSubtitle": "Khoảng {{minutes}} phút · Đánh giá thông minh FSRS",
+        "startReview": "Bắt đầu Đánh giá",
+        "challengeEyebrow": "thử thách hàng ngày",
+        "continueChallenge": "Tiếp tục thử thách →",
+        "weakAreaEyebrow": "KHU VỰC YẾU · 弱项",
         "weakAreaTitle": "{{label}} · {{score}}%",
-        "strengthen": "Strengthen →",
-        "grammarEyebrow": "GRAMMAR · 语法",
-        "grammarTitle": "Unit {{unit}}",
-        "continueLesson": "Continue lesson →",
-        "podcastEyebrow": "LISTEN · 沉浸",
-        "podcastTitle": "Today's podcast pick",
-        "podcastSubtitle": "10 minutes of listening every day",
-        "openPodcast": "Open podcast →"
+        "strengthen": "tăng cường",
+        "grammarEyebrow": "NGỮ PHÁP · 语法",
+        "grammarTitle": "Đơn vị/ Unit",
+        "continueLesson": "Tiếp tục bài học →",
+        "podcastEyebrow": "LẮNG NGHE · 沉浸",
+        "podcastTitle": "Lựa chọn podcast hôm nay",
+        "podcastSubtitle": "10 phút nghe mỗi ngày",
+        "openPodcast": "Mở podcast →"
       },
       "insights": {
-        "title": "30-day Insights",
-        "retention": "Retention",
-        "activeDays": "Active days",
-        "reviews": "Reviews"
+        "title": "Thông tin chi tiết về 30 ngày",
+        "retention": "Giữ",
+        "activeDays": "Ngày hoạt động",
+        "reviews": "Nhận xét"
       },
       "topikCountdown": {
         "title": "TOPIK",
-        "lobby": "Lobby",
-        "daysLeft": "days left",
-        "noUpcoming": "No exam scheduled",
-        "weakAreasLabel": "Weak areas",
-        "noWeakAreas": "Complete a mock exam to see your weak areas"
+        "lobby": "Sảnh",
+        "daysLeft": "ngày còn lại",
+        "noUpcoming": "Không có kỳ thi nào được lên lịch",
+        "weakAreasLabel": "Khu vực yếu",
+        "noWeakAreas": "Hoàn thành một bài kiểm tra thử để xem các điểm yếu của bạn"
       },
-      "dailyPhrase": "Phrase of the Day",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago",
-      "justNow": "Just now",
-      "dayJoined": "Days joined",
-      "level": "Level",
-      "myResources": "My Resources",
-      "vocabBook": "Vocab Book",
+      "dailyPhrase": "Cụm từ trong ngày",
+      "minutesAgo": "{{count}}phút trước",
+      "hoursAgo": "{{count}}giờ trước",
+      "justNow": "Ngay bây giờ",
+      "dayJoined": "Ngày tham gia:",
+      "level": "Trình độ",
+      "myResources": "Tài nguyên Của tôi",
+      "vocabBook": "Sách từ vựng",
       "notebook": "Notebook",
-      "achievements": "Achievements",
-      "history": "History",
-      "settings": "Settings",
-      "subscription": "Subscription",
-      "notifications": "Notifications",
-      "language": "Language",
-      "help": "Help & Feedback",
-      "logout": "Logout"
+      "achievements": "Thành tựu",
+      "history": "Lịch sử",
+      "settings": "Cài đặt",
+      "subscription": "Gói đăng ký",
+      "notifications": "Thông báo",
+      "language": "Ngôn ngữ:",
+      "help": "Giúp đỡ & Phản hồi",
+      "logout": "Thoát",
+      "now": "BÂY GIỜ",
+      "participate": "Tham gia"
     },
     "dictionary": {
-      "label": "Dictionary",
-      "placeholder": "Search Korean word...",
-      "searching": "Searching...",
-      "noResults": "No results found",
-      "error": "Something went wrong",
-      "sense": "Sense"
+      "label": "Từ điển",
+      "placeholder": "Tìm kiếm từ tiếng Hàn...",
+      "searching": "Tìm kiếm...",
+      "noResults": "Không tìm thấy kết quả",
+      "error": "Đã xảy ra sự cố",
+      "sense": "Giác quan"
     },
     "topik": {
-      "writing": "TOPIK Writing",
+      "writing": "Viết Topik",
       "controller": {
-        "exit": "Exit"
+        "exit": "Thoát"
       }
+    },
+    "common": {
+      "continueLearning": "Tiếp tục học"
+    },
+    "mobile": {
+      "exploreLabel": "Trải nghiệm nhập vai",
+      "exploreTitle": "Kênh đề xuất",
+      "mainActions": "Trạm học tập",
+      "quickMediaSubtitle": "Chuyển đổi sang podcast, video và nội dung đọc bất cứ lúc nào.",
+      "quickNotebookSubtitle": "Ghi lại lỗi sai và bù đắp lỗ hổng kiến thức.",
+      "quickPracticeSubtitle": "Luyện gõ chữ, ôn tập sổ tay và luyện tập chuyên sâu.",
+      "quickReviewSubtitle": "Ôn tập các từ vựng đến hạn, duy trì trí nhớ phản xạ.",
+      "shortcutsTitle": "Phím tắt cốt lõi",
+      "streakShort": "Số ngày liên tiếp"
+    },
+    "mobileFocus": {
+      "choose": "Khởi hành hôm nay: Chọn một phân hệ học tập",
+      "continue": "Tiếp tục hành trình: Tiếp tục từ tiến độ trước đó"
+    },
+    "podcast": {
+      "community": "Bảng xếp hạng hot",
+      "editorPicks": "Biên tập viên đề xuất"
+    },
+    "summary": {
+      "title": "Tiến độ mục tiêu hôm nay"
+    },
+    "textbook": {
+      "default": "Giáo trình"
     }
   },
   "community": {
     "desktop": {
-      "title": "Community Activity",
-      "composerPlaceholder": "Share your learning...",
-      "studyCard": "Study Card",
-      "publish": "Publish",
+      "title": "Hoạt động cộng đồng",
+      "composerPlaceholder": "Chia sẻ kiến thức của bạn...",
+      "studyCard": "Thẻ học tập",
+      "publish": "Xuất bản",
       "filters": {
-        "all": "All",
-        "following": "Following",
-        "milestones": "Milestones",
+        "all": "Tất cả",
+        "following": "Sau khi chuyển giao",
+        "milestones": "Các cột mốc",
         "qa": "Q&A",
-        "resources": "Resources"
+        "resources": "Nguồn Tài Nguyên"
       },
-      "noActivity": "No activity yet",
-      "like": "Like",
-      "comment": "Comment",
-      "share": "Share",
-      "linkCopied": "Link copied to clipboard",
-      "shareFailed": "Sharing unavailable",
+      "noActivity": "Chưa có hoạt động nào",
+      "like": "Thích",
+      "comment": "Bình luận",
+      "share": "Chia sẻ màn hình",
+      "linkCopied": "Đã sao chép liên kết vào bộ nhớ đệm",
+      "shareFailed": "Không thể chia sẻ",
       "tags": {
-        "vocab": "Vocab",
+        "vocab": "Từ vựng",
         "questions": "questions",
         "question": "Question",
         "answer": "Answer",
-        "selectGrammar": "Please select a grammar point from the left directory"
+        "selectGrammar": "Please select a grammar point from the left directory",
+        "grammar": "Ngữ pháp",
+        "listening": "Luyện nghe",
+        "milestone": "Cột mốc",
+        "study": "Học tập",
+        "topik": "TOPIK"
       },
       "mediaHub": {
         "completedContent": "Completed content",
         "topikScore": "TOPIK Score {{score}}",
         "submittedExam": "Submitted exam"
+      },
+      "events": {
+        "completedContent": "đã hoàn thành nội dung học",
+        "submittedExam": "đã nộp bài thi",
+        "topikScore": "Điểm thi thử TOPIK {{score}}"
       }
     }
   },
   "leaderboard": {
     "desktop": {
-      "title": "Leaderboard",
-      "weeklyOverview": "Weekly Overview",
-      "weekLeft": "{{days}}d {{hours}}h left",
-      "myRank": "My Rank",
-      "promotionCutoff": "Top {{count}} promote",
-      "relegationZone": "Bottom 10 relegate",
+      "title": "Bảng xếp hạng",
+      "weeklyOverview": "Tổng quan hàng tuần",
+      "weekLeft": "còn {{days}} ngày {{hours}} giờ",
+      "myRank": "Hạng của tôi",
+      "promotionCutoff": "Thăng hạng Top {{count}}",
+      "relegationZone": "10 người cuối bảng sẽ bị xuống hạng",
       "leagueNames": {
-        "bronze": "Bronze League",
-        "silver": "Silver League",
-        "gold": "Gold League",
-        "diamond": "Diamond League"
+        "bronze": "Hạng Đồng",
+        "silver": "Hạng Bạc",
+        "gold": "Giải Vàng",
+        "diamond": "Giải Kim cương"
       },
-      "rankLabel": "Rank",
-      "promote": "Promote",
-      "stay": "Stay",
-      "seasonProgress": "Season Progress",
-      "weekLabel": "Week {{count}}",
-      "rewards": "Weekly Rewards",
-      "fetchingData": "Fetching leaderboard data",
+      "rankLabel": "Thứ hạng",
+      "promote": "Thăng hạng",
+      "stay": "Ở lại",
+      "seasonProgress": "Tiến độ mùa giải",
+      "weekLabel": "Tuần {{count}}",
+      "rewards": "Phần thưởng tuần",
+      "fetchingData": "Đang tải dữ liệu bảng xếp hạng...",
       "rewardsList": {
-        "firstPlace": "#1 — Diamond Badge + Limited Avatar Frame",
-        "topThree": "#2-3 — Diamond Badge",
-        "promotion": "#4-{{count}} — Promote"
+        "firstPlace": "#1 — Huy hiệu Kim cương + Khung ảnh đại diện giới hạn",
+        "topThree": "#2-3 — Huy hiệu Kim cương",
+        "promotion": "#4-{{count}} — Thăng hạng"
       }
     }
   },
   "coursesOverview": {
     "desktop": {
-      "currentJourney": "Current Journey",
-      "learningJourney": "Learning Journey",
+      "currentJourney": "Hành trình hiện tại",
+      "learningJourney": "Hành Trình Học Tập v3",
       "learningTools": {
-        "title": "Learning Tools",
-        "flashcards": "Flashcards",
-        "reviewStatus": "{{count}} cards due",
-        "grammar": "Grammar",
-        "masteryStatus": "{{count}} mastered",
-        "typing": "Typing",
-        "notebook": "Notebook"
+        "title": "Dụng cụ học tập:",
+        "flashcards": "Thẻ ghi nhớ",
+        "reviewStatus": "{{count}} thẻ đến hạn",
+        "grammar": "ngữ pháp",
+        "masteryStatus": "{{count}} thành thạo",
+        "typing": "Đang gõ",
+        "notebook": "Sổ tay"
       },
       "tabs": {
-        "mine": "My Courses",
-        "grammar": "Grammar",
-        "vocabulary": "Vocabulary",
-        "typing": "Typing",
+        "mine": "Khóa học của tôi",
+        "grammar": "ngữ pháp",
+        "vocabulary": "Từ vựng",
+        "typing": "Đang gõ",
         "topik": "TOPIK"
       },
       "grammar": {
-        "categories": "Categories",
-        "myProgress": "My Progress",
-        "masteryRate": "Mastery Rate",
-        "redEyeMode": "Recite Mode",
-        "redEyeOff": "Normal Mode",
-        "introduction": "Introduction",
-        "coreUsage": "Core Usage",
-        "comparative": "Comparison",
-        "culturalNotes": "Cultural Notes",
-        "commonMistakes": "Common Mistakes",
-        "review": "Review",
-        "explanation": "Explanation",
-        "conjugationRules": "Conjugation",
-        "examples": "Examples"
+        "categories": "Thể loại",
+        "myProgress": "Tiến trình của tôi",
+        "masteryRate": "Tỷ lệ thành thạo",
+        "redEyeMode": "Chế độ đọc thuộc lòng",
+        "redEyeOff": "Chế độ bình thường",
+        "introduction": "Giới thiệu",
+        "coreUsage": "Sử dụng cốt lõi",
+        "comparative": "So sánh",
+        "culturalNotes": "Ghi chú văn hóa",
+        "commonMistakes": "Những sai lầm phổ biến",
+        "review": "Xem xét lại",
+        "explanation": "Giải thích",
+        "conjugationRules": "(sự) tiếp hợp",
+        "examples": "Ví dụ thực hiện sáng chế"
       },
       "vocabulary": {
-        "dueToday": "Due Today",
-        "availableToLearn": "Available to Learn",
-        "studiedToday": "Studied Today",
-        "mastered": "Mastered",
-        "toLearn": "New",
-        "myWordbooks": "My Wordbooks",
+        "dueToday": "Hết hạn trong hôm nay",
+        "availableToLearn": "Sẵn sàng để học",
+        "studiedToday": "Học hôm nay",
+        "mastered": "Làm chủ",
+        "toLearn": "Mới",
+        "myWordbooks": "Sách từ vựng của tôi",
         "modes": {
-          "title": "Practice Modes",
+          "title": "Chế độ thực hành",
           "flashcard": "Flashcard",
-          "learn": "Learn",
-          "test": "Test",
-          "match": "Match"
+          "learn": "Học",
+          "test": "Phép thử",
+          "match": "Phù hợp"
         },
-        "forecast": "Forecast",
-        "totalProgress": "Total Progress",
-        "startReview": "Start Review",
-        "startLearning": "Start Learning"
+        "forecast": "Dự báo",
+        "totalProgress": "0265=Quá trình Chung",
+        "startReview": "Bắt đầu Đánh giá",
+        "startLearning": "Bắt đầu học"
       },
       "typing": {
-        "avgSpeed": "Avg Speed",
-        "accuracy": "Accuracy",
-        "totalTests": "Total Tests",
-        "highestSpeed": "Top Speed",
-        "practicePrompt": "Start typing the text above...",
-        "fullMode": "Full Mode"
+        "avgSpeed": "Tốc độ t.bình",
+        "accuracy": "Thành công",
+        "totalTests": "Tổng số đề thi",
+        "highestSpeed": "vận tốc cực đại",
+        "practicePrompt": "Bắt đầu nhập văn bản ở trên...",
+        "fullMode": "Chế độ đầy đủ"
       },
       "topik": {
-        "mockExam": "Mock Exam",
-        "predictedScore": "Predicted Score",
-        "targetLevel": "Target Level",
-        "startExam": "Start Exam",
-        "recentAttempts": "Recent Records",
-        "questions": "Questions"
+        "mockExam": "Kiểm tra mô phỏng",
+        "predictedScore": "Điểm dự đoán",
+        "targetLevel": "Mức mục tiêu",
+        "startExam": "Bắt đầu kiểm tra",
+        "recentAttempts": "Bản ghi gần đây",
+        "questions": "Câu hỏi"
       },
       "notebook": {
-        "title": "Notebook",
-        "noteCount": "{{count}} notes",
-        "all": "All",
-        "newNote": "New Note",
-        "loadingNotes": "Loading notes...",
-        "today": "Today",
-        "yesterday": "Yesterday",
-        "noContent": "No content",
-        "noNotes": "Your notebook is empty",
-        "startJourney": "Highlights from your reading will appear here.",
-        "createFirstNote": "Create First Note",
+        "title": "Sổ tay",
+        "noteCount": "{{count}} ghi chú",
+        "all": "Tất cả",
+        "newNote": "Thêm ghi chú",
+        "loadingNotes": "Đang tải ghi chú...",
+        "today": "Hôm nay",
+        "yesterday": "Hôm qua",
+        "noContent": "Không có nội dung",
+        "noNotes": "Sổ ghi chép của bạn trống",
+        "startJourney": "Điểm nổi bật từ bài đọc của bạn sẽ xuất hiện ở đây.",
+        "createFirstNote": "Tạo ghi chú đầu tiên",
         "types": {
-          "grammar": "Grammar",
-          "vocab": "Vocab",
-          "mistakes": "Mistakes",
-          "reflections": "Reflections",
-          "default": "Default"
+          "grammar": "ngữ pháp",
+          "vocab": "Từ vựng",
+          "mistakes": "những sai lầm ",
+          "reflections": "Bài thu hoạch",
+          "default": "Mặc định"
         }
       }
     },
     "mobile": {
       "hanjaTag": "學",
-      "latin": "LEARN",
+      "latin": "Nghiên cứu",
       "title": "배우다",
       "subtitle": "Học tiếng Hàn có hệ thống",
       "tabs": {
@@ -562,56 +644,56 @@
   "notes": {
     "v2": {
       "source": {
-        "manual": "Manual",
+        "manual": "Thủ công",
         "topik": "TOPIK",
-        "reading": "Reading",
-        "vocab": "Vocab",
-        "grammar": "Grammar",
-        "dictionary": "Dictionary",
-        "practice": "Practice"
+        "reading": "Đọc hiểu",
+        "vocab": "Từ vựng",
+        "grammar": "ngữ pháp",
+        "dictionary": "Từ điển",
+        "practice": "Luyện tập"
       },
       "cardType": {
-        "vocab": "Vocab",
-        "grammar": "Grammar",
-        "mistake": "Mistake",
-        "quoteCard": "Quote Note",
-        "note": "Note"
+        "vocab": "Từ vựng",
+        "grammar": "ngữ pháp",
+        "mistake": "Lỗi sai",
+        "quoteCard": "Ghi chú trích dẫn",
+        "note": "Ghi chú"
       },
       "status": {
-        "reviewed": "Reviewed",
-        "queued": "Queued"
+        "reviewed": "Đã ôn tập",
+        "queued": "Đã đưa vào hàng đợi"
       },
       "page": {
-        "newNoteTitle": "New Note"
+        "newNoteTitle": "Thêm ghi chú"
       },
       "confirm": {
-        "deletePage": "Delete this note? It will be moved out of your active notebook."
+        "deletePage": "Xóa ghi chú này? Ghi chú này sẽ được chuyển ra khỏi sổ tay đang hoạt động của bạn."
       },
-      "recentHighlights": "Recent Highlights",
+      "recentHighlights": "Phần tô sáng gần đây",
       "scope": {
-        "reading": "Reading",
+        "reading": "Đọc hiểu",
         "topik": "TOPIK",
-        "book": "Book",
+        "book": "Sách",
         "podcast": "Podcast"
       }
     }
   },
   "epub": {
     "upload": {
-      "title": "Import Private Library",
-      "description": "Upload EPUB books to parse chapters automatically for an immersive reading experience. Books stay in your private library.",
+      "title": "Nhập thư viện riêng",
+      "description": "Tải lên sách EPUB để tự động phân tích các chương để có trải nghiệm đọc phong phú. Sách ở trong thư viện riêng của bạn.",
       "features": {
         "parsing": {
-          "title": "Smart Parsing",
-          "desc": "System automatically identifies book structure and table of contents."
+          "title": "Phân tích cú pháp thông minh",
+          "desc": "Hệ thống tự động xác định cấu trúc sổ sách và mục lục."
         },
         "reader": {
-          "title": "Custom Reader",
-          "desc": "Support multiple themes, font sizes, and layout adjustments."
+          "title": "Trình đọc tùy chỉnh",
+          "desc": "Hỗ trợ nhiều chủ đề, kích thước phông chữ và điều chỉnh bố cục."
         },
         "sync": {
-          "title": "Cross-device Sync",
-          "desc": "Seamlessly sync reading progress across all devices."
+          "title": "Đồng bộ hóa thiết bị chéo",
+          "desc": "Đồng bộ hóa liền mạch tiến trình đọc trên tất cả các thiết bị."
         }
       }
     }
@@ -619,322 +701,322 @@
   "landing": {
     "v2": {
       "nav": {
-        "features": "Features",
-        "loop": "Daily Path",
-        "modules": "Modules",
-        "community": "Community",
-        "pricing": "Pricing",
-        "faq": "FAQ",
-        "login": "Login",
-        "register": "Sign up"
+        "features": "Tính năng",
+        "loop": "Lộ trình hàng ngày",
+        "modules": "Học phần",
+        "community": "Cộng đồng",
+        "pricing": "Bảng giá",
+        "faq": "Câu hỏi thường gặp",
+        "login": "Đăng nhập",
+        "register": "Đăng ký"
       },
       "hero": {
         "phone": {
           "s1": {
-            "t": "Morning Review",
-            "s": "18 cards due · Done"
+            "t": "Đánh giá buổi sáng",
+            "s": "18 thẻ đến hạn · Hoàn tất"
           },
           "s2": {
-            "t": "New Lesson · L24 Alleyway",
-            "s": "In progress · 8 min"
+            "t": "Bài học mới · Kiệt L24",
+            "s": "Đang tiến hành · 8 phút"
           },
           "s3": {
-            "t": "Podcast Clip",
-            "s": "Korean Alley Walk · 6 min"
+            "t": "Đoạn podcast",
+            "s": "Korean Alley Walk · 6 phút"
           },
           "s4": {
-            "t": "Bedtime Reading",
-            "s": "Short Story · Memories"
+            "t": "Đọc trước khi đi ngủ",
+            "s": "Truyện ngắn · Ký ức"
           },
-          "date": "May 11th",
-          "greet": "Hello, Haeun",
-          "sub": "Daily path ready · 4 steps ~22 min"
+          "date": "Ngày 11 tháng 5",
+          "greet": "Xin chào, Haeun",
+          "sub": "Đường đi hàng ngày đã sẵn sàng · 4 bước ~22 phút"
         },
-        "eyebrow": "v3.0 released · New learning path and community",
+        "eyebrow": "Phiên bản 3.0 đã được phát hành · Lộ trình học tập và cộng đồng mới",
         "titleKo": "讀韓",
-        "titlePre": "Make Korean ",
-        "titleUnderlined": "your routine",
-        "ctaPrimary": "Start learning for free →",
-        "ctaSecondary": "Watch 90s demo",
-        "meta1": "Active learners",
-        "meta2": "Daily reviews",
-        "meta3": "App Store rating",
+        "titlePre": "Make Korean",
+        "titleUnderlined": "thói quen của bạn",
+        "ctaPrimary": "Bắt đầu học miễn phí →",
+        "ctaSecondary": "Xem bản demo thập niên 90",
+        "meta1": "Học viên hoạt động",
+        "meta2": "Đánh giá hàng ngày",
+        "meta3": "Xếp hạng trên App Store",
         "chip1": {
-          "t": "Streak",
-          "v": "47 Days"
+          "t": "Dải, sọc, vân",
+          "v": "47 Ngày"
         },
         "chip2": {
-          "t": "Today's New",
+          "t": "Mới hôm nay",
           "v": "12 / 15"
         },
         "chip3": {
-          "t": "TOPIK II",
-          "v": "Level 5 · 87%"
+          "t": "Topik II",
+          "v": "Cấp 5 · 87%"
         },
         "sub": "A daily curated path · Vocab, grammar, TOPIK, media, podcasts, reading, and community interlinked · Powered by FSRS memory model."
       },
       "logos": {
-        "v1": "Immersive reading",
-        "v2": "Media listening",
-        "v3": "FSRS smart reviews",
-        "v4": "Native community",
-        "v5": "Cross-platform sync"
+        "v1": "Đắm chìm trong việc đọc sách",
+        "v2": "Nghe phương tiện truyền thông",
+        "v3": "Đánh giá thông minh FSRS",
+        "v4": "Cộng đồng bản địa",
+        "v5": "Đa nền tảng"
       },
       "features": {
         "t1": {
-          "title": "Daily Learning Path",
-          "pill": "/ Auto-generated @ 7:00 AM · ~22 min"
+          "title": "Lộ trình học tập hàng ngày",
+          "pill": "/ Tự động tạo lúc 7:00 sáng · ~22 phút"
         },
         "t2": {
-          "title": "Vocab Book + 4 Modes",
-          "desc": "Flashcards, Learn, Test, Match — 4 ways to master a word.",
-          "pill": "/ TOPIK I + II · 9,300 words"
+          "title": "Sách từ vựng + 4 chế độ",
+          "desc": "Flashcards, Learn, Test, Match — 4 cách để thành thạo một từ.",
+          "pill": "/ Topik I + II · 9.300 từ"
         },
         "t3": {
-          "title": "Grammar Library",
-          "desc": "Every grammar with context sentences + exam questions.",
-          "pill": "/ 480 Core Grammars"
+          "title": "Thư viện ngữ pháp",
+          "desc": "Mỗi ngữ pháp với câu ngữ cảnh + câu hỏi thi.",
+          "pill": "/ 480 Ngữ pháp chính"
         },
         "t4": {
-          "title": "TOPIK Preparation",
-          "desc": "Past exams / Mocks / AI Writing score + Speed control.",
-          "pill": "/ TOPIK II avg improvement +1.4 levels"
+          "title": "Chuẩn bị Topik",
+          "desc": "Các bài kiểm tra trước đây/Điểm Mock / AI Writing + Kiểm soát tốc độ.",
+          "pill": "/ Topik II cải thiện trung bình +1,4 cấp độ"
         },
         "t6": {
-          "title": "Native Community",
-          "desc": "Ask native speakers for the most natural translations and explanations.",
-          "pill": "/ 1.2k+ Active groups"
+          "title": "Cộng đồng bản địa",
+          "desc": "Hỏi người bản ngữ về các bản dịch và giải thích tự nhiên nhất.",
+          "pill": "/ 1.2k+ Nhóm hoạt động"
         },
         "t5": {
-          "title": "Immersive Media & Reading",
-          "pill": "/ 4,800+ Study materials · Weekly updates"
+          "title": "Truyền thông & Đọc sách nhập vai",
+          "pill": "/4.800+ Tài liệu học tập · Cập nhật hàng tuần"
         },
-        "title": "All-in-one Korean Toolkit"
+        "title": "Bộ công cụ tiếng Hàn tất cả trong một"
       },
       "loop": {
         "s1": {
-          "label": "STEP 1 · MORNING",
-          "title": "Review Due Cards",
-          "desc": "FSRS algorithm decides what you review today · ~7 mins.",
-          "preview": "18 Cards · 7 Min"
+          "label": "BƯỚC 1 · BUỔI SÁNG",
+          "title": "Xem xét thẻ đến hạn",
+          "desc": "Thuật toán FSRS quyết định những gì bạn đánh giá hôm nay · ~7 phút.",
+          "preview": "18 lá · 7 phút"
         },
         "s2": {
-          "label": "STEP 2 · LESSON",
-          "title": "New Content",
-          "desc": "Textbook + Listening + Quiz · Capture any segment into cards.",
-          "preview": "L24 · 8 Min"
+          "label": "BƯỚC 2 · BÀI HỌC",
+          "title": "New content",
+          "desc": "Sách giáo khoa + Nghe + Bài kiểm tra · Ghi lại bất kỳ phân đoạn nào vào thẻ.",
+          "preview": "L24 · 8 phút"
         },
         "s3": {
-          "label": "STEP 3 · COMMUTE",
-          "title": "Listening Immersion",
-          "desc": "Real podcasts or K-drama clips · Bilingual subs.",
-          "preview": "Podcast 6 Min"
+          "label": "BƯỚC 3 · CHUYẾN XE ĐI LÀM",
+          "title": "Lắng nghe",
+          "desc": "Podcast thực hoặc clip K-drama · Phụ đề song ngữ.",
+          "preview": "Podcast 6 phút"
         },
         "s4": {
-          "label": "STEP 4 · BEDTIME",
-          "title": "Reading Session",
-          "desc": "Auto-matched difficulty · Consolidation through reading.",
-          "preview": "Story 4 Min"
+          "label": "BƯỚC 4 · GIỜ ĐI NGỦ",
+          "title": "Buổi đọc",
+          "desc": "Độ khó tự động khớp · Củng cố thông qua việc đọc.",
+          "preview": "Câu chuyện 4 Tối thiểu"
         },
-        "title": "Four steps to master Korean"
+        "title": "Bốn bước để thành thạo tiếng Hàn"
       },
       "modules": {
-        "title": "Modules built for long-term learning",
+        "title": "Các học phần được thiết kế để ghi nhớ lâu dài",
         "m1": {
-          "title": "Vocab · 4 Modes",
-          "tag1": "FSRS Algorithm",
-          "tag2": "4 Practice Modes",
-          "tag3": "Context Association",
-          "tag4": "Book Filter",
-          "link": "Learn about Vocab →"
+          "title": "Từ vựng · 4 chế độ",
+          "tag1": "Thuật toán FSRS",
+          "tag2": "4 Chế độ thực hành",
+          "tag3": "Liên kết ngữ cảnh",
+          "tag4": "Bộ lọc sách",
+          "link": "Tìm hiểu về Vocab →"
         },
         "m2": {
-          "title": "TOPIK · Mocks + AI",
-          "tag1": "10 Years of Exams",
-          "tag2": "1:1 Mock Environment",
-          "tag3": "AI Writing Feedback",
-          "tag4": "Score Prediction",
-          "link": "Learn about TOPIK →"
+          "title": "TOPIK · Thi thử + AI",
+          "tag1": "Đề thi 10 năm qua",
+          "tag2": "Môi trường thi thử 1:1",
+          "tag3": "Phản hồi kỹ năng viết từ AI",
+          "tag4": "Dự đoán điểm số",
+          "link": "Tìm hiểu về TOPIK →"
         },
         "m3": {
-          "title": "Media Hub · Listening",
-          "tag1": "4,800+ Clips",
-          "tag2": "Bilingual Subs",
-          "tag3": "Tap to Save",
-          "tag4": "Difficulty Match",
-          "link": "Learn about Immersion →"
+          "title": "Trung tâm phương tiện · Luyện nghe",
+          "tag1": "4.800+ Clip",
+          "tag2": "Phụ đề song ngữ",
+          "tag3": "Nhấn để lưu",
+          "tag4": "Độ khó phù hợp",
+          "link": "Tìm hiểu về Phương pháp Nhập vai →"
         },
         "m4": {
-          "title": "Graded Reading · AI",
-          "tag1": "Levels 1–6",
-          "tag2": "Picture Books",
-          "tag3": "Quick Lookup",
-          "tag4": "Note Capture",
-          "link": "Learn about Reading →"
+          "title": "Đọc theo cấp độ · AI",
+          "tag1": "Cấp 1–6",
+          "tag2": "Sách tranh",
+          "tag3": "Tra cứu nhanh",
+          "tag4": "Ghi lại ghi chú",
+          "link": "Tìm hiểu về Đọc hiểu →"
         }
       },
       "community": {
         "s1": {
-          "l": "Study Partners",
-          "s": "Grow Together"
+          "l": "Đối tác nghiên cứu",
+          "s": "Cùng nhau phát triển"
         },
         "s2": {
-          "l": "Shared Wordbooks",
-          "s": "Resource Sharing"
+          "l": "Sách từ vựng được chia sẻ",
+          "s": "Tác vụ chia sẻ tài nguyên"
         },
         "s3": {
-          "l": "Learning Tips",
-          "s": "Experience Sharing"
+          "l": "Mẹo học tập",
+          "s": "Chia sẻ bài học kinh nghiệm"
         },
         "s4": {
-          "l": "Streak Days",
-          "s": "Milestone Tracking"
+          "l": "Số Ngày Có Chuỗi",
+          "s": "Theo dõi cột mốc"
         },
-        "title": "Don't study alone, go further together"
+        "title": "Đừng học một mình, hãy cùng nhau tiến xa hơn"
       },
       "pricing": {
-        "perMonth": "/ mo",
-        "perQuarter": "/ quarter",
-        "perYear": "/ year",
-        "lifetime": "/ lifetime",
-        "tabMonthly": "Monthly",
-        "tabQuarterly": "Quarterly",
-        "tabAnnual": "Annual",
+        "perMonth": "/ tháng",
+        "perQuarter": "/ quý",
+        "perYear": "/ năm",
+        "lifetime": "/ trọn đời",
+        "tabMonthly": "Hàng tháng",
+        "tabQuarterly": "Theo quý",
+        "tabAnnual": "Hàng năm",
         "pro": {
-          "f1": "<b>Unlimited</b> new words + FSRS",
-          "f2": "All textbooks + TOPIK <b>Levels 1-6</b>",
-          "f3": "Full media library + <b>Smart scripts</b>",
-          "f4": "<b>AI Writing diagnosis</b> + Speed control",
-          "f5": "Unlimited <b>community resources</b>",
-          "f6": "<b>Real-time sync</b> across all devices",
-          "title": "Full Access · Plus",
-          "desc": "Best for serious learners · Unlock all AI features",
-          "cta": "Start Full Access Now"
+          "f1": "<b>Không giới hạn</b> từ mới + FSRS",
+          "f2": "Tất cả giáo trình + TOPIK <b>Cấp độ 1-6</b>",
+          "f3": "Thư viện nội dung đầy đủ + <b>Bản chép lời thông minh</b>",
+          "f4": "<b>Chẩn đoán viết bằng AI</b> + Điều khiển tốc độ",
+          "f5": "Không giới hạn <b>tài nguyên cộng đồng</b>",
+          "f6": "<b>Đồng bộ hóa thời gian thực</b> trên mọi thiết bị",
+          "title": "Quyền truy cập đầy đủ · Plus",
+          "desc": "Tốt nhất cho người học nghiêm túc · Mở khóa mọi tính năng AI",
+          "cta": "Bắt đầu truy cập đầy đủ ngay"
         },
-        "title": "Pick a plan, start learning",
+        "title": "Chọn một gói, bắt đầu học",
         "free": {
-          "title": "Starter · Free",
-          "desc": "Entry level · Start your Korean journey",
-          "unit": "/ Forever",
-          "f1": "<b>5 new words</b> per day",
-          "f2": "<b>30 review cards</b> limit/day",
-          "f3": "<b>Basic courses</b> (L1–L2) trial",
-          "f4": "Media library <b>preview mode</b>",
-          "f5": "TOPIK past exams (Sample)",
-          "f6": "Basic AI writing diagnosis",
-          "cta": "Start for Free"
+          "title": "Bắt đầu · Miễn phí",
+          "desc": "Cấp độ nhập môn · Bắt đầu hành trình tiếng Hàn của bạn",
+          "unit": "/ Trọn đời",
+          "f1": "<b>5 từ mới</b> mỗi ngày",
+          "f2": "Giới hạn <b>30 thẻ ôn tập</b>/ngày",
+          "f3": "Dùng thử <b>khóa học cơ bản</b> (L1–L2)",
+          "f4": "Chế độ <b>xem trước</b> thư viện phương tiện",
+          "f5": "Đề thi TOPIK các kỳ trước (Mẫu)",
+          "f6": "Chẩn đoán viết bằng AI cơ bản",
+          "cta": "Bắt đầu miễn phí"
         },
-        "popular": "Popular"
+        "popular": "Phổ biến"
       },
       "testimonials": {
-        "title": "What Duhan learners are saying",
+        "title": "Học viên Duhan đang nói gì",
         "t1": {
-          "tag1": "Used for 11 months",
-          "tag2": "Reached TOPIK 5",
+          "tag1": "Đã dùng được 11 tháng",
+          "tag2": "Đã đạt TOPIK 5",
           "name": "Haeun",
-          "meta": "Designer · Hangzhou"
+          "meta": "Nhà thiết kế · Hàng Châu"
         },
         "t2": {
-          "tag1": "Learning via Drama",
-          "tag2": "3 Months",
+          "tag1": "Học qua phim truyền hình",
+          "tag2": "3 tháng",
           "name": "Xiao Ke",
-          "meta": "Junior Student"
+          "meta": "Học viên sơ cấp"
         },
         "t3": {
-          "tag1": "Native Assistant",
+          "tag1": "Trợ lý bản xứ",
           "name": "Minji",
-          "meta": "Seoul · Native"
+          "meta": "Seoul · Bản xứ"
         }
       },
       "faq": {
-        "title": "FAQ",
-        "q1": "Is it suitable for beginners?",
-        "q2": "What is the FSRS algorithm?",
-        "q3": "Pro vs Elite differences?",
-        "q4": "Can I study offline?",
-        "q5": "Is there a student discount?",
-        "q6": "Can I get a refund?"
+        "title": "Câu hỏi thường gặp",
+        "q1": "MT5 có phù hợp cho người mới bắt đầu không?",
+        "q2": "Thuật toán FSRS là gì?",
+        "q3": "Sự khác biệt giữa Pro và Elite?",
+        "q4": "Tôi có thể học ngoại tuyến không?",
+        "q5": "Có giảm giá cho sinh viên không?",
+        "q6": "Tôi có thể được hoàn tiền không?"
       },
       "finalCta": {
         "titlePre": "Make Korean",
-        "titleMid": "part of your",
-        "titlePost": "daily life today",
-        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
-        "ctaPrimary": "Start for Free →",
-        "ctaSecondary": "Download App"
+        "titleMid": "một phần của",
+        "titlePost": "cuộc sống hàng ngày ngày hôm nay",
+        "sub": "Đăng ký sau 30 giây · 7 ngày dùng thử miễn phí Plus · Không yêu cầu thẻ tín dụng",
+        "ctaPrimary": "Bắt đầu miễn phí",
+        "ctaSecondary": "Tải ứng dụng"
       },
       "footer": {
         "col1": {
-          "head": "Product",
-          "l1": "Overview",
-          "l3": "TOPIK prep",
-          "l4": "Media hub",
-          "l5": "Graded reading",
-          "l6": "Community"
+          "head": "Sản phẩm",
+          "l1": "Tổng quan",
+          "l3": "Chuẩn bị Topik",
+          "l4": "hub Media",
+          "l5": "Đo ̣ c đươ ̣ c phân loa",
+          "l6": "Cộng đồng"
         },
         "col2": {
-          "head": "Learn",
-          "l1": "Guides",
-          "l2": "Grammar wiki",
-          "l3": "Exam blog",
-          "l4": "Daily Korean"
+          "head": "Học",
+          "l1": "Đường căn",
+          "l2": "Wiki ngữ pháp",
+          "l3": "Blog thi",
+          "l4": "Tiếng Hàn hàng ngày"
         },
         "col3": {
-          "head": "Company",
-          "l1": "About Duhan",
-          "l5": "Contact"
+          "head": "Công ty",
+          "l1": "Giới thiệu về Duhan",
+          "l5": "Danh bạ"
         },
         "col4": {
-          "head": "Support",
-          "l1": "Help Center",
-          "l2": "Refund Policy",
-          "l3": "Privacy",
+          "head": "Hỗ trợ",
+          "l1": "Trung tâm Trợ giúp",
+          "l2": "Chính sách Hoàn tiền",
+          "l3": "Quyền riêng tư",
           "l4": "Terms"
         },
-        "tag1": "Duhan · Make Korean your routine.",
-        "tag2": "From vocab to TOPIK Level 6, all in one.",
-        "copy": "Duhan · All rights reserved."
+        "tag1": "Duhan · Hãy biến tiếng Hàn thành thói quen của bạn.",
+        "tag2": "Từ từ vựng đến Topik Cấp độ 6, tất cả trong một.",
+        "copy": "Duhan · Bảo lưu mọi quyền."
       }
     }
   },
   "topikWriting": {
-    "roundLabel": "Session {{count}}",
-    "defaultDescription": "Please complete the writing based on the prompt.",
-    "fetchingExam": "Fetching prompt...",
-    "noChallenge": "No challenges today",
-    "answerArea": "Answer Area",
-    "wordCount": "{{count}} words written",
-    "placeholder": "Start your Korean writing here...",
-    "template": "Paragraph Templates",
-    "save": "Save Draft",
-    "submit": "Submit for AI Score",
-    "aiFeedback": "AI Real-time Feedback",
-    "contentScore": "Content",
-    "grammarScore": "Grammar",
-    "vocabScore": "Vocab",
-    "structureScore": "Structure",
-    "aiFeedbackNote": "After submission, AI will provide detailed feedback, grammar corrections, and expression suggestions.",
-    "gradingCriteria": "Grading Criteria",
-    "criteria1": "Does the content meet the requirements and is it rich?",
-    "criteria2": "Did you use a variety of vocabulary and grammar?",
-    "criteria3": "Is the article structure logical and coherent?",
+    "roundLabel": "Kỳ thi {{count}}",
+    "defaultDescription": "Vui lòng hoàn thành bài viết dựa trên gợi ý.",
+    "fetchingExam": "Đang tải đề bài...",
+    "noChallenge": "Hôm nay không có thử thách nào",
+    "answerArea": "Vùng trả lời",
+    "wordCount": "đã viết {{count}} từ",
+    "placeholder": "Bắt đầu viết tiếng Hàn của bạn tại đây...",
+    "template": "Mẫu đoạn văn",
+    "save": "Lưu bản nháp",
+    "submit": "Nộp để chấm điểm bằng AI",
+    "aiFeedback": "Phản hồi thời gian thực từ AI",
+    "contentScore": "Nội dung",
+    "grammarScore": "ngữ pháp",
+    "vocabScore": "Từ vựng",
+    "structureScore": "Cấu trúc",
+    "aiFeedbackNote": "Sau khi nộp bài, AI sẽ cung cấp phản hồi chi tiết, sửa lỗi ngữ pháp và gợi ý cách diễn đạt.",
+    "gradingCriteria": "Tiêu chí chấm điểm",
+    "criteria1": "Nội dung có đáp ứng đúng yêu cầu và phong phú không?",
+    "criteria2": "Bạn có sử dụng từ vựng và ngữ pháp đa dạng không?",
+    "criteria3": "Cấu trúc bài viết có logic và mạch lạc không?",
     "session": {
-      "fillBlank": "Fill-in response",
-      "graphEssay": "Graph essay",
-      "opinionEssay": "Opinion essay",
-      "answerPlaceholder": "Type your answer here...",
-      "characterCount": "{{count}} chars",
-      "remainingChars": "{{count}} left",
-      "fillBlankPaperTitle": "Fill in answers (㉠ / ㉡)",
-      "fillBlankOneSentence": "One sentence per blank recommended",
-      "fillBlankHint": "Please complete both ㉠ and ㉡ with natural full sentences.",
-      "fillBlankA": "Fill ㉠ here",
-      "fillBlankB": "Fill ㉡ here",
-      "charsUnit": "chars",
-      "mobileHeaderSubtitle": "Question {{active}} · {{answered}} / {{total}} answered",
-      "progress": "Progress",
-      "points": "pts",
-      "submitButton": "Submit",
+      "fillBlank": "Phản hồi điền vào chỗ trống",
+      "graphEssay": "Viết bài luận biểu đồ",
+      "opinionEssay": "Bài luận nêu ý kiến",
+      "answerPlaceholder": "Nhập câu trả lời của bạn tại đây...",
+      "characterCount": "{{count}} ký tự",
+      "remainingChars": "còn lại {{count}}",
+      "fillBlankPaperTitle": "Điền câu trả lời (㉠ / ㉡)",
+      "fillBlankOneSentence": "Khuyên dùng một câu cho mỗi chỗ trống",
+      "fillBlankHint": "Vui lòng hoàn thành cả ㉠ và ㉡ bằng các câu đầy đủ và tự nhiên.",
+      "fillBlankA": "Điền ㉠ vào đây",
+      "fillBlankB": "Điền ㉡ vào đây",
+      "charsUnit": "ký tự",
+      "mobileHeaderSubtitle": "Câu hỏi {{active}} · Đã trả lời {{answered}} / {{total}}",
+      "progress": "Tiến độ",
+      "points": "điểm",
+      "submitButton": "Nộp",
       "desktopEyebrow": "Phòng viết",
       "questionX": "Câu {{num}}",
       "desktopQuestionMeta": "Câu {{num}} · {{type}} · {{score}} điểm",
@@ -1001,7 +1083,7 @@
       "q54Instruction": "Dựa vào chủ đề dưới đây, viết một bài nghị luận (400-700 ký tự).",
       "submitFailed": "Hiện không thể nộp bài thi viết này."
     },
-    "title": "TOPIK II Writing",
+    "title": "Viết TOPIK II",
     "report": {
       "title": "Báo cáo chấm viết",
       "subtitle": "Kết quả chấm AI cho bài viết TOPIK II",
@@ -1045,5 +1127,76 @@
     "column": "Cột",
     "mobileHint": "Có thể cuộn ngang nếu cần",
     "perLine": "{{count}} ký tự mỗi dòng · Wongoji"
+  },
+  "coursesLibrary": {
+    "items": "Bài học",
+    "loadError": "Không thể tải danh sách giáo trình.",
+    "otherPublisher": "Nhà xuất bản khác",
+    "results": "Kết quả tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm giáo trình, trình độ hoặc nhà xuất bản...",
+    "textbook": "Nội dung giáo trình"
+  },
+  "learningFlow": {
+    "mobileHub": {
+      "grammar": {
+        "description": "Mẫu câu, giải thích chi tiết và phân tích cấu trúc câu."
+      },
+      "listening": {
+        "description": "Âm thanh giáo trình, bản thảo nghe và bài tập hiểu."
+      },
+      "materialPickerSummary": "{{module}} · Tổng cộng {{count}} giáo trình",
+      "materialPickerTitle": "Chọn giáo trình",
+      "noMaterialSelected": "Chưa chọn",
+      "paths": "Lộ trình học tập",
+      "pickMaterial": "Bắt đầu lộ trình",
+      "progressLabel": "Tiến độ hiện tại",
+      "reading": {
+        "description": "Đọc đoạn văn, thực hành bài viết và công cụ tra từ tức thì."
+      },
+      "resumeFromUnit": "Tiếp tục từ bài {{unit}}",
+      "selectMaterialCta": "Chọn giáo trình",
+      "selectMaterialHint": "Vui lòng chọn giáo trình để bắt đầu lộ trình học tập này.",
+      "subtitle": "Trước tiên hãy chọn một kỹ năng, sau đó bắt đầu với giáo trình phù hợp nhất.",
+      "title": "Chọn trọng tâm học tập của bạn hôm nay",
+      "vocabulary": {
+        "description": "Thẻ từ vựng, chế độ học và luyện tập chủ động gợi nhớ."
+      }
+    }
+  },
+  "media": {
+    "videoCountLabel": "{{count}} bài học"
+  },
+  "nav": {
+    "learn": "Lộ trình khóa học",
+    "media": "Trung tâm truyền thông",
+    "podcasts": "Trung tâm podcast",
+    "practice": "Luyện tập tổng hợp",
+    "reading": "Đọc và khám phá",
+    "videos": "Video nổi bật"
+  },
+  "podcast": {
+    "filterOptions": {
+      "all": "Tất cả",
+      "beginner": "Sơ cấp",
+      "daily": "Thường nhật",
+      "intermediate": "Trung cấp",
+      "news": "Tin tức"
+    },
+    "history": "Lịch sử nghe",
+    "mySubscriptions": "Đăng ký của tôi",
+    "nowPlaying": "Đang phát",
+    "searchPlaceholder": "Tìm kiếm podcast hoặc nội dung...",
+    "title": "Trung tâm podcast",
+    "trendingThisWeek": "Đề xuất hot tuần này"
+  },
+  "practice": {
+    "mobileSkillLabel": {
+      "notebook": "Ôn tập sổ tay",
+      "spelling": "Luyện tập chính tả",
+      "typing": "Luyện gõ chữ"
+    },
+    "mobileSubtitle": "Ghi lại từng bước tiến bộ của bạn",
+    "mobileTitle": "Xây dựng năng lực ngôn ngữ của bạn",
+    "recommended": "Gợi ý cho bạn"
   }
 }

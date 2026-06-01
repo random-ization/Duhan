@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw, Trophy, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getLabels } from '../../../utils/i18n';
@@ -105,7 +105,7 @@ function sortLeaderboard(entries: readonly LeaderboardEntry[]): LeaderboardEntry
 export default function VocabMatch({ words, onComplete, onClose }: VocabMatchProps) {
   const { language, user } = useAuth();
   const labels = getLabels(language);
-  const playerName = user?.name?.trim() || (labels.common?.you || 'You');
+  const playerName = user?.name?.trim() || labels.common?.you || 'You';
 
   const [cards, setCards] = useState<MatchCard[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -121,7 +121,9 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
   const [timeCount, setTimeCount] = useState(2);
   const [shuffleCount, setShuffleCount] = useState(1);
   const [hintedCardIds, setHintedCardIds] = useState<readonly string[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => getLeaderboardFromStorage());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
+    getLeaderboardFromStorage()
+  );
 
   const wordsKey = words.map(w => w.id).join(',');
   const wordsKeyRef = useRef(wordsKey);
@@ -210,7 +212,7 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
       persistLeaderboard(next);
       hasPersistedResultRef.current = true;
     });
-  }, [gameState, leaderboard, moves, playerName, score, timer]);
+  }, [gameState, leaderboard, moves, playerName, score, timer, wordsKey]);
 
   const handleSuccessfulMatch = useCallback(
     (firstId: string, secondId: string, currentMoves: number) => {
@@ -387,10 +389,9 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
             <RefreshCw size={18} />
           </div>
           <p style={{ fontSize: 13, fontWeight: 700, color: KT.sub }}>
-            {(labels.vocab?.minWordsMatch || 'Need at least {count} words to start matching').replace(
-              '{count}',
-              String(TOTAL_PAIRS)
-            )}
+            {(
+              labels.vocab?.minWordsMatch || 'Need at least {count} words to start matching'
+            ).replace('{count}', String(TOTAL_PAIRS))}
           </p>
         </div>
       </div>
@@ -425,9 +426,15 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
           >
             <Trophy size={30} />
           </div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: KT.ink }}>{labels.vocab?.matchTitle || 'Great Job!'}</div>
-          <div style={{ fontSize: 11, color: KT.sub, marginTop: 2 }}>{labels.vocab?.matchDesc || 'Master of words'}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 10 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: KT.ink }}>
+            {labels.vocab?.matchTitle || 'Great Job!'}
+          </div>
+          <div style={{ fontSize: 11, color: KT.sub, marginTop: 2 }}>
+            {labels.vocab?.matchDesc || 'Master of words'}
+          </div>
+          <div
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 10 }}
+          >
             <StatCard label={labels.vocab?.time || 'Time'} value={formatTime(timer)} />
             <StatCard label={labels.vocab?.moves || 'Moves'} value={String(moves)} />
             <StatCard label="Score" value={String(score)} />
@@ -495,8 +502,12 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
           <X size={16} />
         </button>
         <div style={{ flex: 1, textAlign: 'center', marginLeft: 6 }}>
-          <div style={{ fontSize: 10, color: KT.sub, fontWeight: 800, letterSpacing: 1.1 }}>小游戏 · 戱</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: KT.ink, marginTop: 1 }}>词汇连连看</div>
+          <div style={{ fontSize: 10, color: KT.sub, fontWeight: 800, letterSpacing: 1.1 }}>
+            小游戏 · 戱
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: KT.ink, marginTop: 1 }}>
+            词汇连连看
+          </div>
         </div>
         <div
           style={{
@@ -538,9 +549,7 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
         </div>
       </div>
 
-      <div 
-        className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5 px-3.5 pb-2"
-      >
+      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5 px-3.5 pb-2">
         {cards.map(card => (
           <MatchButton
             key={card.id}
@@ -553,7 +562,14 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
         ))}
       </div>
 
-      <div style={{ padding: '0 14px 8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+      <div
+        style={{
+          padding: '0 14px 8px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 6,
+        }}
+      >
         <BoosterButton icon="☀" label="提示" count={hintCount} onClick={useHint} />
         <BoosterButton icon="⏱" label="延时" count={timeCount} onClick={useTimeBoost} />
         <BoosterButton icon="🔀" label="洗牌" count={shuffleCount} onClick={useShuffleBoost} />
@@ -568,7 +584,17 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
             padding: '8px 10px',
           }}
         >
-          <div style={{ fontSize: 10, color: KT.sub, fontWeight: 800, letterSpacing: 1.1, textAlign: 'center' }}>今日排行榜</div>
+          <div
+            style={{
+              fontSize: 10,
+              color: KT.sub,
+              fontWeight: 800,
+              letterSpacing: 1.1,
+              textAlign: 'center',
+            }}
+          >
+            今日排行榜
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, marginTop: 5 }}>
             {liveBoard.map((entry, index) => (
               <div
@@ -594,7 +620,9 @@ export default function VocabMatch({ words, onComplete, onClose }: VocabMatchPro
         </div>
       </div>
 
-      <div style={{ padding: '0 14px calc(env(safe-area-inset-bottom) + 8px)', textAlign: 'center' }}>
+      <div
+        style={{ padding: '0 14px calc(env(safe-area-inset-bottom) + 8px)', textAlign: 'center' }}
+      >
         <button
           type="button"
           onClick={initializeCards}
@@ -630,7 +658,15 @@ function StatCard({ label, value }: { readonly label: string; readonly value: st
   );
 }
 
-function HudCard({ hanja, label, value }: { readonly hanja: string; readonly label: string; readonly value: string }) {
+function HudCard({
+  hanja,
+  label,
+  value,
+}: {
+  readonly hanja: string;
+  readonly label: string;
+  readonly value: string;
+}) {
   return (
     <div
       style={{

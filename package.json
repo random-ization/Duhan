@@ -33,6 +33,8 @@
     "backfill:android-mobile-data": "node scripts/backfillAndroidMobileData.mjs",
     "import:topik:grammar:bilingual": "node scripts/importTopikGrammarBilingual.mjs",
     "import:topik:writing:sqlite": "node scripts/importTopikWritingFromSqlite.mjs",
+    "eval": "npx promptfoo eval --config eval/promptfoo.yaml",
+    "eval:view": "npx promptfoo view",
     "test": "vitest",
     "test:run": "vitest run",
     "test:run:json": "mkdir -p docs/reports/testing && vitest run --reporter=json --outputFile=docs/reports/testing/vitest-report.json",

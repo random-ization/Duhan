@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { aRef } from '../utils/convexRefs';
 import { useCurrentLanguage, useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { KT, HanjaSeal } from '../components/mobile/ksoft/ksoft';
+import { KT } from '../components/mobile/ksoft/ksoft';
 import { motion } from 'framer-motion';
 
 const getErrorMessage = (error: unknown): string | undefined => {
@@ -47,32 +47,50 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white overflow-hidden" style={{ fontFamily: KT.font }}>
+    <div
+      className="min-h-screen flex flex-col md:flex-row bg-white overflow-hidden"
+      style={{ fontFamily: KT.font }}
+    >
       {/* Left Side: Immersive Hero (Consistent with Auth Page) */}
-      <div 
+      <div
         className="hidden md:flex w-1/2 flex-col justify-between p-16 relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${KT.crimson} 0%, ${KT.indigo} 100%)` }}
       >
-        <div 
+        <div
           className="absolute right-0 top-0 font-sans font-black pointer-events-none select-none opacity-[0.08]"
-          style={{ fontSize: '600px', lineHeight: 0.8, transform: 'translate(20%, -10%)', color: '#fff' }}
+          style={{
+            fontSize: '600px',
+            lineHeight: 0.8,
+            transform: 'translate(20%, -10%)',
+            color: '#fff',
+          }}
         >
           韩
         </div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-4">
-            <img src="/logo.svg" alt="Duhan Logo" width={56} height={56} className="rounded-[14px]" />
+            <img
+              src="/logo.svg"
+              alt="Duhan Logo"
+              width={56}
+              height={56}
+              className="rounded-[14px]"
+            />
             <div>
               <div className="text-2xl font-black text-white tracking-tight">Duhan</div>
-              <div className="text-xs font-medium text-white/60 tracking-widest mt-0.5">讀韓 · 重新认识韩语</div>
+              <div className="text-xs font-medium text-white/60 tracking-widest mt-0.5">
+                讀韓 · 重新认识韩语
+              </div>
             </div>
           </div>
         </div>
 
         <div className="relative z-10">
           <h1 className="text-[64px] font-black text-white leading-tight tracking-tight">
-            找回您的<br/>学习之旅
+            找回您的
+            <br />
+            学习之旅
           </h1>
           <p className="mt-8 text-lg font-medium text-white/70 leading-relaxed max-w-md">
             别担心，我们会协助您重设密码。完成验证后即可继续您的韩语进阶之路。
@@ -83,7 +101,7 @@ const ForgotPasswordPage: React.FC = () => {
       {/* Right Side: Reset Form */}
       <div className="w-full md:w-1/2 min-h-screen flex flex-col items-center justify-center p-8 md:p-24 overflow-y-auto bg-white">
         <div className="w-full max-w-md">
-          <button 
+          <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-2 text-k-sub hover:text-k-ink font-bold transition mb-12"
           >
@@ -93,20 +111,16 @@ const ForgotPasswordPage: React.FC = () => {
 
           <div className="mb-10">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-[32px] font-black tracking-tight text-k-ink">
-                忘记密码
-              </h2>
+              <h2 className="text-[32px] font-black tracking-tight text-k-ink">忘记密码</h2>
               <span className="text-[26px] font-serif text-k-crimson opacity-80">
                 비밀번호 찾기
               </span>
             </div>
-            <p className="mt-2 text-k-sub font-medium">
-              输入您的注册邮箱，我们将向您发送重置链接
-            </p>
+            <p className="mt-2 text-k-sub font-medium">输入您的注册邮箱，我们将向您发送重置链接</p>
           </div>
 
           {submitted ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="p-8 rounded-[32px] bg-k-bg border-2 border-k-line text-center"
@@ -129,9 +143,14 @@ const ForgotPasswordPage: React.FC = () => {
           ) : (
             <form onSubmit={onSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-black text-k-sub uppercase tracking-widest px-1">注册邮箱</label>
+                <label className="text-xs font-black text-k-sub uppercase tracking-widest px-1">
+                  注册邮箱
+                </label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink" size={18} />
+                  <Mail
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-k-sub transition group-focus-within:text-k-ink"
+                    size={18}
+                  />
                   <input
                     type="email"
                     required
@@ -162,7 +181,8 @@ const ForgotPasswordPage: React.FC = () => {
           )}
 
           <div className="mt-12 text-center text-[13px] font-medium text-k-sub leading-relaxed">
-            遇到问题？请联系 <button className="text-k-ink font-bold underline underline-offset-2">技术支持</button>
+            遇到问题？请联系{' '}
+            <button className="text-k-ink font-bold underline underline-offset-2">技术支持</button>
           </div>
         </div>
       </div>

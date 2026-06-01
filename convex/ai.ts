@@ -24,6 +24,7 @@ import {
   type ChatProviderConfig,
 } from './aiProviders';
 import { aiLogger } from './logger';
+import { analyzeSentenceTokens } from './kiwi';
 
 assertProductionRuntimeEnv();
 
@@ -2027,6 +2028,23 @@ export const analyzeReadingArticle = action({
       return null;
     }
 
+    // Pre-analyze with Kiwi for morphological “fact layer”
+    let kiwiFactLayer = '';
+    try {
+      // Analyze a representative sample (first ~500 chars) to avoid excessive processing
+      const sampleText = trimmedBody.slice(0, 500);
+      const analysis = await analyzeSentenceTokens(sampleText);
+      kiwiFactLayer = `
+[형태소 분석 참고 (Kiwi NLP)]
+핵심 어휘: ${analysis.lemmas.slice(0, 15).join(', ')}
+조사: ${analysis.particles.slice(0, 10).join(', ')}
+어미: ${analysis.endings.slice(0, 8).join(', ')}
+용언 어간: ${analysis.stems.slice(0, 8).join(', ')}
+** vocabulary 中的 term 必须从上述”핵심 어휘”或”용언 어간”中选取，不要虚构文中不存在的词汇。`;
+    } catch {
+      // Kiwi analysis is optional — gracefully degrade
+    }
+
     try {
       const { completion, provider } = await runChatCompletionWithFallback(
         ({ client, provider }) =>
@@ -2042,22 +2060,22 @@ export const analyzeReadingArticle = action({
 输出语言：${responseLanguageLabel}
 返回格式：
 {
-  "summary": "string",
-  "vocabulary": [
-    { "term": "string", "meaning": "string", "level": "TOPIK level label" }
+  “summary”: “string”,
+  “vocabulary”: [
+    { “term”: “string”, “meaning”: “string”, “level”: “TOPIK level label” }
   ],
-  "grammar": [
-    { "pattern": "string", "explanation": "string", "example": "string" }
+  “grammar”: [
+    { “pattern”: “string”, “explanation”: “string”, “example”: “string” }
   ]
 }
 
 规则：
-1. summary 必须是 1~2 句，且必须“概括”而不是复述原文。
+1. summary 必须是 1~2 句，且必须”概括”而不是复述原文。
 2. summary 禁止逐句翻译全文，不要按原文顺序罗列信息；总长度控制在 120 字以内（中文）或约 2 句（其他语言）。
 3. 可保留最多 1 个关键数字事实（如金额/人数），其余信息应合并表达。
-4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 "TOPIK 3-4"。
+4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 “TOPIK 3-4”。
 5. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
-6. 只返回 JSON，不要任何额外文本。`,
+6. 只返回 JSON，不要任何额外文本。${kiwiFactLayer}`,
                   },
                   {
                     role: 'user',
@@ -2342,7 +2360,9 @@ type TopikWritingMaterialFallbackResult = {
   errorCode?: string;
 };
 
-function normalizeTopikWritingQuestionType(raw: string): 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY' {
+function normalizeTopikWritingQuestionType(
+  raw: string
+): 'FILL_BLANK' | 'GRAPH_ESSAY' | 'OPINION_ESSAY' {
   const normalized = raw.trim().toUpperCase();
   if (normalized === 'GRAPH_ESSAY') return 'GRAPH_ESSAY';
   if (normalized === 'OPINION_ESSAY') return 'OPINION_ESSAY';
@@ -2354,7 +2374,8 @@ function buildDefaultTopikWritingMaterial(
   language: SupportedTranslationLanguage
 ): TopikWritingMaterialFallbackItem {
   const type = normalizeTopikWritingQuestionType(question.questionType);
-  const scoreHint = typeof question.score === 'number' && question.score > 0 ? question.score : undefined;
+  const scoreHint =
+    typeof question.score === 'number' && question.score > 0 ? question.score : undefined;
 
   if (language === 'en') {
     if (type === 'GRAPH_ESSAY') {
@@ -2376,7 +2397,8 @@ function buildDefaultTopikWritingMaterial(
     return {
       number: question.number,
       instruction: `Complete the blank naturally in Korean based on the prompt.${scoreHint ? ` (${scoreHint} pts)` : ''}`,
-      contextBox: 'Focus on grammar fit, coherence, and tone consistency with surrounding sentences.',
+      contextBox:
+        'Focus on grammar fit, coherence, and tone consistency with surrounding sentences.',
     };
   }
 

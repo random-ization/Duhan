@@ -47,7 +47,10 @@ vi.mock('../../src/contexts/LayoutContext', () => ({
 
 const updateStatusMock = vi.fn(async () => ({ status: 'MASTERED', proficiency: 100 }));
 const updateLearningProgressMock = vi.fn(async () => ({}));
-const askGrammarTutorMock = vi.fn(async () => ({ success: true, reply: 'ok' }));
+const askGrammarTutorMock = vi.fn(async () => ({
+  success: true,
+  reply: '你的句子 **语法正确**。\n\n1. **语义清晰**：表达自然。',
+}));
 
 const grammarList = [
   {
@@ -140,10 +143,24 @@ describe('GrammarModulePage AI panel persistence', () => {
     });
   });
 
-  it('renders the AI Sentence Check section', async () => {
+  it('renders the floating AI grammar practice entry', async () => {
     renderPage();
 
-    expect(await screen.findByText('AI Sentence Check')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '打开 AI 语法练习' })).toBeInTheDocument();
+  });
+
+  it('renders AI grammar practice markdown as formatted text', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: '打开 AI 语法练习' }));
+    fireEvent.change(screen.getByPlaceholderText('输入韩语句子，按 Ctrl/⌘ + Enter 发送'), {
+      target: { value: '내일은 비가 올 텐데 우산을 가져가세요.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '发送' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'AI 语法练习' });
+    expect(await screen.findByText('语法正确')).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('**');
   });
 
   it('routes desktop switch textbook to the course library', async () => {

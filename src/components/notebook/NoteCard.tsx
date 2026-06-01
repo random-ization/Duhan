@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, GraduationCap, XCircle, FileText } from 'lucide-react';
+import { BookOpen, GraduationCap, XCircle, FileText, type LucideIcon } from 'lucide-react';
 import { m as motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sanitizeHtml } from '../../utils/sanitize';
@@ -7,7 +7,7 @@ import { sanitizeHtml } from '../../utils/sanitize';
 // Type icons mapping
 const TYPE_CONFIG: Record<
   string,
-  { icon: React.ComponentType<any>; color: string; bgColor: string; labelKey: string }
+  { icon: LucideIcon; color: string; bgColor: string; labelKey: string }
 > = {
   VOCAB: {
     icon: BookOpen,

@@ -7,7 +7,6 @@ import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
 import { Button } from '../../components/ui';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
-import type { Id } from '../../../convex/_generated/dataModel';
 import type { SearchItem } from '../NotebookV2Page';
 
 type NotebookCardTone = 'butter' | 'pink' | 'crimson' | 'lilac' | 'sky';
@@ -83,13 +82,6 @@ export default function DesktopNotebookV2Page() {
 
   const recentAnnotations = useQuery(ANNOTATIONS.getRecent, { limit: 6 });
   const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
-
-  const scopeToneMap: Record<string, string> = {
-    READING_ARTICLE: 'var(--color-k-pink)',
-    TOPIK_REVIEW: 'var(--color-k-lilac)',
-    READING_BOOK: 'var(--color-k-mint)',
-    PODCAST: 'var(--color-k-butter)',
-  };
 
   // 创建新笔记
   const createNote = useMutation(NOTE_PAGES.createPage);

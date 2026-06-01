@@ -380,7 +380,7 @@ const QuestionPrompt: React.FC<QuestionPromptProps> = ({
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg font-black text-sm">
             {t('topikWriting.session.questionX', {
-              num: question.number,
+              questionNumber: question.number,
               defaultValue: `Question ${question.number}`,
             })}
           </div>
@@ -1234,7 +1234,10 @@ const WritingSessionBody: React.FC<{
         </div>
 
         <aside className="min-h-0 overflow-y-auto">
-          <DRail title={t('topikWriting.session.examStatus', { defaultValue: 'Exam status' })} pad={12}>
+          <DRail
+            title={t('topikWriting.session.examStatus', { defaultValue: 'Exam status' })}
+            pad={12}
+          >
             <div className="space-y-2">
               <div
                 className="rounded-[10px] border px-3 py-2"
@@ -1309,7 +1312,7 @@ const WritingSessionBody: React.FC<{
                   >
                     <div className="text-[13px] font-black">
                       {t('topikWriting.session.questionX', {
-                        num: question.number,
+                        questionNumber: question.number,
                         defaultValue: `Question ${question.number}`,
                       })}
                     </div>

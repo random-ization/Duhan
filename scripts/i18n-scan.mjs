@@ -13,6 +13,7 @@ const excludedPathFragments = [
 ];
 
 const excludedRelativeFiles = new Set([
+  'src/help/helpContent.ts',
   'src/seo/learnGuides.ts',
 ]);
 

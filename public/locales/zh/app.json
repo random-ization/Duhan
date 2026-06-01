@@ -411,7 +411,12 @@
       "notifications": "通知设置",
       "language": "语言设置",
       "help": "帮助与反馈",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "learnChar": "学",
+      "loading": "加载中...",
+      "masteredChar": "通",
+      "notebook": "笔记本",
+      "vocabChar": "词"
     },
     "topik": {
       "writing": "TOPIK 写作",
@@ -445,12 +450,21 @@
         "listening": "听力",
         "topik": "TOPIK",
         "milestone": "里程碑",
-        "study": "学习"
+        "study": "学习",
+        "answer": "解答",
+        "question": "提问",
+        "questions": "个提问",
+        "selectGrammar": "请从左侧目录选择一个语法点"
       },
       "events": {
         "completedContent": "完成了学习内容",
         "topikScore": "TOPIK 模拟考分数 {{score}}",
         "submittedExam": "提交了考试"
+      },
+      "mediaHub": {
+        "completedContent": "已学完内容",
+        "submittedExam": "已提交考卷",
+        "topikScore": "TOPIK 模拟考分数 {{score}}"
       }
     }
   },
@@ -809,7 +823,8 @@
         "chip3": {
           "t": "TOPIK II",
           "v": "5 级 · 87%"
-        }
+        },
+        "sub": "每日推荐路径 · 词汇、语法、TOPIK、媒体、播客、阅读与社区互通 · 基于 FSRS 记忆算法。"
       },
       "logos": {
         "v1": "真实语境沉浸阅读",

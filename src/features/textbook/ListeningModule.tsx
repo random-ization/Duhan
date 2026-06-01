@@ -359,7 +359,7 @@ function getListeningUiText(labels: ListeningLabels): ListeningUiText {
 }
 
 function getListeningUnitOptionLabel(template: string, index: number) {
-  return template.replace('{index}', String(index));
+  return template.replace('{{index}}', String(index)).replace('{index}', String(index));
 }
 
 function getPopoverPosition(rect: DOMRect, popoverWidth: number, popoverHeight: number) {

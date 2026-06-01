@@ -95,6 +95,15 @@ export function GlobalCommandPalette({ openRequestKey = 0 }: Readonly<GlobalComm
         keywords: ['exam', 'mock', 'reading', 'listening'],
       },
       {
+        id: 'topik-writing-coach',
+        label: t('dashboard.topik.writingCoachTitle', { defaultValue: 'TOPIK Writing Coach' }),
+        description: t('dashboard.topik.writingCoachDesc', {
+          defaultValue: 'AI feedback, detailed analysis, and score improvement guidance.',
+        }),
+        path: '/topik/writing-coach',
+        keywords: ['topik', 'writing', 'essay', 'coach', 'ai'],
+      },
+      {
         id: 'typing',
         label: t('sidebar.typing', { defaultValue: 'Typing' }),
         description: t('typing.subtitle', { defaultValue: 'Speed + accuracy drills' }),
@@ -114,6 +123,33 @@ export function GlobalCommandPalette({ openRequestKey = 0 }: Readonly<GlobalComm
         description: t('dashboard.notes.subtitle', { defaultValue: 'Study notes and mistakes' }),
         path: '/notebook',
         keywords: ['notes', 'mistakes'],
+      },
+      {
+        id: 'learning-feedback',
+        label: t('dashboard.feedback.title', { defaultValue: 'Learning Feedback' }),
+        description: t('dashboard.feedback.subtitle', {
+          defaultValue: 'Weekly report, ability profile, and review assets',
+        }),
+        path: '/dashboard/weekly-report',
+        keywords: ['feedback', 'weekly', 'report', 'ability', 'review'],
+      },
+      {
+        id: 'text-import',
+        label: t('textImport.title', { defaultValue: 'Text Import' }),
+        description: t('textImport.subtitle', {
+          defaultValue: 'Paste Korean text and turn it into a study session',
+        }),
+        path: '/learning/text-import',
+        keywords: ['import', 'text', 'reading', 'sentences', 'ai'],
+      },
+      {
+        id: 'help-center',
+        label: t('nav.help', { defaultValue: 'Help & docs' }),
+        description: t('helpCenter.commandDescription', {
+          defaultValue: 'Feature map, quick starts, FAQ, and learning paths',
+        }),
+        path: '/help',
+        keywords: ['help', 'docs', 'guide', 'faq', 'topik', 'vocab', 'grammar', 'media', 'profile'],
       },
       {
         id: 'profile',

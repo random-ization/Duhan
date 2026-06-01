@@ -102,7 +102,10 @@ const BEAD_TONES: Array<'mint' | 'butter' | 'pink' | 'lilac' | 'sky'> = [
 
 const UNIT_BEADS: LucideIcon[] = [BookOpen, PenLine, Clock3, Compass, GraduationCap, Sparkles];
 
-const getDefaultUnitTitle = (unitNumber: number, t: (k: string, o?: any) => string): string => {
+const getDefaultUnitTitle = (
+  unitNumber: number,
+  t: (k: string, o?: Record<string, unknown>) => string
+): string => {
   return t('coursesOverview.mobile.unitLabel', { defaultValue: 'Unit' }) + ' ' + unitNumber;
 };
 
@@ -183,6 +186,13 @@ const MobileCoursesOverview: React.FC = () => {
         s: t('coursesOverview.mobile.tools.pronunciationSub', { defaultValue: '跟读与辨音' }),
         tone: 'lilac',
         action: { kind: 'path', path: buildVocabBookModePath('match') },
+      },
+      {
+        k: '文',
+        l: '文本导入',
+        s: '粘贴韩语内容学习',
+        tone: 'lilac',
+        action: { kind: 'path', path: '/learning/text-import' },
       },
     ],
     [t]

@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import type { TFunction } from 'i18next';
 import {
   ArrowLeft,
   Volume2,
   Languages,
   Type,
-//   ChevronRight,
+  //   ChevronRight,
   Layout,
   Bookmark,
   Share2,
-  Clock
+  Clock,
 } from 'lucide-react';
 import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { cn } from '../../lib/utils';
 import { ReadingSelectionToolbar } from '../reading/ReadingComponents';
-import type { SelectionToolbarState, NoteColor } from '../reading/types';
+import type { SelectionToolbarState, NoteColor, NewsArticle } from '../reading/types';
+import type { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+
+type DesktopReadingArticle = NewsArticle & {
+  imageUrl?: string;
+  section?: string;
+};
 
 type DesktopReadingArticleProps = {
-  t: any;
-  navigate: any;
-  resolvedArticle: any;
-  difficultyLabel: any;
+  t: TFunction;
+  navigate: ReturnType<typeof useLocalizedNavigate>;
+  resolvedArticle: DesktopReadingArticle;
+  difficultyLabel: (level: NewsArticle['difficultyLevel'], t: TFunction) => string;
   sourceDisplayLabel: string;
   increaseFontSize: () => void;
   toggleSpeak: () => void;
@@ -31,7 +38,7 @@ type DesktopReadingArticleProps = {
   translations: string[];
   wordCount: number;
   publishedDateLabel: string;
-  readingSidebarContent: any;
+  readingSidebarContent: React.ReactNode;
   onWordClick: (word: string) => void;
   activeWord: string;
   selectionToolbar: SelectionToolbarState;
@@ -135,8 +142,12 @@ export default function DesktopReadingArticlePage({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-0.5">
-            <div className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">READING · ARTICLE</div>
-            <DesignChip tone="butter" size="sm">{level}</DesignChip>
+            <div className="text-[10px] font-black uppercase tracking-widest text-k-crimson font-k-serif">
+              READING · ARTICLE
+            </div>
+            <DesignChip tone="butter" size="sm">
+              {level}
+            </DesignChip>
           </div>
           <div className="text-[14px] font-black text-k-ink truncate">{title}</div>
         </div>
@@ -145,20 +156,26 @@ export default function DesktopReadingArticlePage({
           <button
             onClick={toggleSpeak}
             className={cn(
-              "h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all",
-              speaking ? "bg-k-crimson text-white" : "hover:bg-k-line text-k-ink"
+              'h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all',
+              speaking ? 'bg-k-crimson text-white' : 'hover:bg-k-line text-k-ink'
             )}
           >
-            <Volume2 size={16} /> {speaking ? t('readingArticle.controls.speaking', { defaultValue: 'Speaking...' }) : t('readingArticle.controls.speak', { defaultValue: 'Speak' })}
+            <Volume2 size={16} />{' '}
+            {speaking
+              ? t('readingArticle.controls.speaking', { defaultValue: 'Speaking...' })
+              : t('readingArticle.controls.speak', { defaultValue: 'Speak' })}
           </button>
           <button
             onClick={onToggleTranslation}
             className={cn(
-              "h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all",
-              translationEnabled ? "bg-k-ink text-white" : "hover:bg-k-line text-k-ink"
+              'h-10 px-4 rounded-xl flex items-center gap-2 text-[12px] font-extrabold transition-all',
+              translationEnabled ? 'bg-k-ink text-white' : 'hover:bg-k-line text-k-ink'
             )}
           >
-            <Languages size={16} /> {translationEnabled ? t('readingArticle.controls.hideTranslation', { defaultValue: 'Hide translation' }) : t('readingArticle.controls.showTranslation', { defaultValue: 'Show translation' })}
+            <Languages size={16} />{' '}
+            {translationEnabled
+              ? t('readingArticle.controls.hideTranslation', { defaultValue: 'Hide translation' })
+              : t('readingArticle.controls.showTranslation', { defaultValue: 'Show translation' })}
           </button>
           <button
             onClick={increaseFontSize}
@@ -173,23 +190,39 @@ export default function DesktopReadingArticlePage({
         </div>
 
         {/* Scroll Progress Bar */}
-        <div className="absolute bottom-[-1px] left-0 h-[2px] bg-k-crimson transition-all duration-150" style={{ width: `${scrollProgress}%` }} />
+        <div
+          className="absolute bottom-[-1px] left-0 h-[2px] bg-k-crimson transition-all duration-150"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </header>
 
       <main className="max-w-[1280px] mx-auto px-8 py-12 grid grid-cols-[1fr_340px] gap-12">
         {/* Main Content */}
-        <article ref={contentRef} className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <article
+          ref={contentRef}
+          className="animate-in fade-in slide-in-from-bottom-8 duration-700"
+        >
           <div className="relative aspect-[21/9] rounded-[32px] overflow-hidden mb-12 shadow-k-sh-lg border border-k-line/5 bg-k-card">
             {resolvedArticle?.imageUrl ? (
-              <img src={resolvedArticle.imageUrl} className="w-full h-full object-cover opacity-80" alt="" />
+              <img
+                src={resolvedArticle.imageUrl}
+                className="w-full h-full object-cover opacity-80"
+                alt=""
+              />
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-k-pink/40 to-k-butter/40" />
             )}
-            <div className="absolute inset-0 grid place-items-center opacity-10 font-k-serif text-[120px]">新</div>
+            <div className="absolute inset-0 grid place-items-center opacity-10 font-k-serif text-[120px]">
+              新
+            </div>
             <div className="absolute inset-0 bg-black/5" />
             <div className="absolute bottom-8 left-10 right-10">
               <div className="flex items-center gap-3 mb-3">
-                <DesignChip tone="ink" size="sm" className="bg-k-ink/80 text-white border-none backdrop-blur-md">
+                <DesignChip
+                  tone="ink"
+                  size="sm"
+                  className="bg-k-ink/80 text-white border-none backdrop-blur-md"
+                >
                   {category} · {readTime} min
                 </DesignChip>
                 <span className="text-[11px] font-bold text-white/80 flex items-center gap-1.5 backdrop-blur-md bg-black/20 px-2 py-0.5 rounded-lg">
@@ -204,7 +237,8 @@ export default function DesktopReadingArticlePage({
 
           <div className="bg-k-card/30 rounded-[40px] p-12 border border-k-line/5 shadow-k-sh-sm">
             <div className="flex items-center gap-2 mb-10 text-[11px] font-black text-k-sub uppercase tracking-[2px]">
-              <Layout size={14} className="text-k-crimson" /> {t('readingArticle.startReading', { defaultValue: 'START READING' })}
+              <Layout size={14} className="text-k-crimson" />{' '}
+              {t('readingArticle.startReading', { defaultValue: 'START READING' })}
             </div>
 
             <div className="space-y-8">
@@ -226,8 +260,8 @@ export default function DesktopReadingArticlePage({
                           key={idx}
                           onClick={() => onWordClick(cleanWord)}
                           className={cn(
-                            "cursor-pointer rounded-md px-0.5 transition-all hover:bg-k-butter/40",
-                            isActive ? "bg-k-butter font-bold shadow-sm" : ""
+                            'cursor-pointer rounded-md px-0.5 transition-all hover:bg-k-butter/40',
+                            isActive ? 'bg-k-butter font-bold shadow-sm' : ''
                           )}
                         >
                           {segment}
@@ -250,11 +284,14 @@ export default function DesktopReadingArticlePage({
                   <Share2 size={18} />
                 </div>
                 <span className="text-[12px] font-bold text-k-sub">
-                  {sourceDisplayLabel} · {wordCount} {t('readingArticle.meta.wordCount', { defaultValue: 'words' })}
+                  {sourceDisplayLabel} · {wordCount}{' '}
+                  {t('readingArticle.meta.wordCount', { defaultValue: 'words' })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[12px] font-bold text-k-sub mr-2">阅读进度 {Math.round(scrollProgress)}%</span>
+                <span className="text-[12px] font-bold text-k-sub mr-2">
+                  阅读进度 {Math.round(scrollProgress)}%
+                </span>
                 <button className="px-6 py-2.5 bg-k-ink text-k-bg rounded-xl text-[13px] font-black hover:bg-k-crimson transition-all">
                   {t('readingArticle.markAsRead', { defaultValue: 'Mark as Read' })}
                 </button>
@@ -268,7 +305,9 @@ export default function DesktopReadingArticlePage({
           {readingSidebarContent}
 
           <div className="mt-8 p-6 rounded-[24px] bg-k-ink text-k-bg shadow-k-sh-lg flex flex-col gap-4">
-            <div className="text-[11px] font-black uppercase tracking-widest text-k-butter">AI 学习助手</div>
+            <div className="text-[11px] font-black uppercase tracking-widest text-k-butter">
+              AI 学习助手
+            </div>
             <p className="text-[12px] font-medium leading-relaxed opacity-80">
               对这篇文章有任何疑问？点击单词可查看 AI 释义，或在侧边栏开启深度解析。
             </p>
@@ -288,7 +327,9 @@ export default function DesktopReadingArticlePage({
         onExplainSelection={onExplainSelection}
         onSaveSelectionWord={onSaveSelectionWord}
         startNoteFromSelection={startNoteFromSelection}
-        onClose={() => setSelectionToolbar((prev: SelectionToolbarState) => ({ ...prev, visible: false }))}
+        onClose={() =>
+          setSelectionToolbar((prev: SelectionToolbarState) => ({ ...prev, visible: false }))
+        }
       />
     </div>
   );

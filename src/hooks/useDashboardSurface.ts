@@ -12,7 +12,6 @@ type DashboardUserLike = {
 } | null;
 
 type DashboardSurfaceArgs = {
-  searchParams: URLSearchParams;
   language: string | undefined;
   selectedInstitute?: string | null;
   selectedLevel?: number | null;
@@ -41,19 +40,15 @@ type DashboardSurfaceResult = {
     stats: LearnerStatsDto | null;
     dailyTaskPlan: DailyTaskPlanDto | null;
   };
-  enableDesktopKsoftDashboard: boolean;
   lowPriorityQueriesReady: boolean;
   mobileProps: {
     learningEntryTarget: { instituteId: string; level: number } | null;
     institutes: Institute[] | undefined;
     institutesLoading: boolean;
   };
-  shouldRedirectToCourses: boolean;
-  view: 'learn' | 'practice';
 };
 
 export function useDashboardSurface({
-  searchParams,
   language,
   selectedInstitute,
   selectedLevel,
@@ -64,8 +59,6 @@ export function useDashboardSurface({
     () => typeof globalThis.window === 'undefined'
   );
 
-  const view = searchParams.get('view') === 'practice' ? 'practice' : 'learn';
-  const shouldRedirectToCourses = view === 'practice';
   const currentLanguage = language || 'en';
 
   useEffect(() => {
@@ -118,7 +111,10 @@ export function useDashboardSurface({
     >('vocab:getDailyPhrase'),
     lowPriorityQueriesReady ? { language: currentLanguage } : 'skip'
   );
-  const reviewSummary = useQuery(VOCAB.getReviewSummary, user && lowPriorityQueriesReady ? {} : 'skip');
+  const reviewSummary = useQuery(
+    VOCAB.getReviewSummary,
+    user && lowPriorityQueriesReady ? {} : 'skip'
+  );
   const courseProgress = useQuery(
     qRef<
       { courseId: string },
@@ -129,10 +125,13 @@ export function useDashboardSurface({
         lastUnitIndex?: number;
       } | null
     >('progress:getCourseProgress'),
-    view === 'practice' || !user || !selectedInstitute ? 'skip' : { courseId: selectedInstitute }
+    !user || !selectedInstitute ? 'skip' : { courseId: selectedInstitute }
   );
   const stats = useQuery(qRef<Record<string, never>, LearnerStatsDto>('userStats:getStats'));
-  const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language: currentLanguage } : 'skip');
+  const dailyTaskPlan = useQuery(
+    DAILY_TASK.getTodayPlan,
+    user ? { language: currentLanguage } : 'skip'
+  );
   const generateTodayPlan = useMutation(DAILY_TASK.generateTodayPlan);
 
   useEffect(() => {
@@ -149,14 +148,11 @@ export function useDashboardSurface({
       stats: stats ?? null,
       dailyTaskPlan: dailyTaskPlan ?? null,
     },
-    enableDesktopKsoftDashboard: import.meta.env.VITE_ENABLE_DESKTOP_KSOFT_DASHBOARD === '1',
     lowPriorityQueriesReady,
     mobileProps: {
       learningEntryTarget,
       institutes,
       institutesLoading: institutes === undefined,
     },
-    shouldRedirectToCourses,
-    view,
   };
 }

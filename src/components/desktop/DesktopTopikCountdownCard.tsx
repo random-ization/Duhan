@@ -37,10 +37,10 @@ const TYPE_TONES: Record<string, 'pink' | 'mint' | 'butter' | 'lilac' | 'sky'> =
 export function DesktopTopikCountdownCard({ upcomingExam, weakAreas }: Props) {
   const { t } = useTranslation();
   const navigate = useLocalizedNavigate();
-  
+
   // Use state to track current time, updated via effect
   const [now, setNow] = useState(() => Date.now());
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(Date.now());
@@ -119,6 +119,29 @@ export function DesktopTopikCountdownCard({ upcomingExam, weakAreas }: Props) {
           })}
         </div>
       )}
+
+      {/* Quick link to Writing Coach */}
+      <div className="mt-4 pt-3 border-t border-k-line">
+        <button
+          onClick={() => navigate('/topik/writing-coach')}
+          className="flex w-full items-center justify-between group/coach"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-k-jade/10 text-k-jade group-hover/coach:bg-k-jade group-hover/coach:text-k-bg transition-colors">
+              <span className="font-k-serif text-[12px] font-bold">筆</span>
+            </div>
+            <div className="text-left">
+              <div className="text-[12px] font-black text-k-ink group-hover/coach:text-k-jade transition-colors">
+                AI 写作教练
+              </div>
+              <div className="text-[9px] font-bold text-k-sub uppercase tracking-wider">
+                Real-time Feedback
+              </div>
+            </div>
+          </div>
+          <span className="text-k-sub group-hover/coach:text-k-jade transition-colors">→</span>
+        </button>
+      </div>
     </DRail>
   );
 }

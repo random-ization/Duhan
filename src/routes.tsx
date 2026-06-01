@@ -32,18 +32,18 @@ const ListeningFeaturePage = lazy(() => import('./pages/features/ListeningFeatur
 const ReadingFeaturePage = lazy(() => import('./pages/features/ReadingFeaturePage'));
 const LearnHubPage = lazy(() => import('./pages/LearnHubPage'));
 const LearnGuidePage = lazy(() => import('./pages/LearnGuidePage'));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
-const MobilePreviewPage = lazy(() => import('./pages/MobilePreviewPage'));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const CourseDashboard = lazy(() => import('./pages/CourseDashboard'));
+const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'));
 const ModulePage = lazy(() => import('./pages/ModulePage'));
 const CoursesOverview = lazy(() => import('./pages/CoursesOverview'));
-const ReviewDashboardPage = lazy(() => import('./pages/ReviewDashboardPage'));
+const PracticeHubPage = lazy(() => import('./pages/PracticeHubPage'));
 const ReviewQuizPage = lazy(() => import('./pages/ReviewQuizPage'));
 const MediaHubPage = lazy(() => import('./pages/MediaHubPage'));
 const ReadingDiscoveryPage = lazy(() => import('./pages/ReadingDiscoveryPage'));
@@ -60,15 +60,19 @@ const DictionarySearchPage = lazy(() => import('./pages/DictionarySearchPage'));
 const CommunityAddPage = lazy(() => import('./pages/CommunityAddPage'));
 const DesktopCommunityPage = lazy(() => import('./pages/desktop/DesktopCommunityPage'));
 const MobileCommunityPage = lazy(() => import('./components/mobile/MobileCommunityPage'));
-const DesktopLeaderboardPage = lazy(() => import('./pages/desktop/DesktopLeaderboardPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const DesktopQAListPage = lazy(() => import('./pages/desktop/DesktopQAListPage'));
 const DesktopQADetailPage = lazy(() => import('./pages/desktop/DesktopQADetailPage'));
 const DesktopAskQuestionPage = lazy(() => import('./pages/desktop/DesktopAskQuestionPage'));
 const MobileQAListPage = lazy(() => import('./components/mobile/MobileQAListPage'));
 const MobileQADetailPage = lazy(() => import('./components/mobile/MobileQADetailPage'));
 const MobileAskQuestionPage = lazy(() => import('./components/mobile/MobileAskQuestionPage'));
-const DesktopUserProfilePage = lazy(() => import('./pages/desktop/DesktopUserProfilePage'));
-const MobileUserProfilePage = lazy(() => import('./components/mobile/MobileUserProfilePage'));
+const DesktopCommunityProfilePage = lazy(
+  () => import('./pages/desktop/DesktopCommunityProfilePage')
+);
+const MobileCommunityProfilePage = lazy(
+  () => import('./components/mobile/MobileCommunityProfilePage')
+);
 
 import { useIsMobile } from './hooks/useIsMobile';
 
@@ -78,13 +82,19 @@ const VocabBookExportPdfPage = lazy(() => import('./pages/VocabBookExportPdfPage
 
 const TopikPage = lazy(() => import('./pages/TopikPage'));
 const TopikWritingPage = lazy(() => import('./pages/TopikWritingPage'));
-const PodcastDashboard = lazy(() => import('./pages/PodcastDashboard'));
+const PodcastHubPage = lazy(() => import('./pages/PodcastHubPage'));
 const PodcastSearchPage = lazy(() => import('./pages/PodcastSearchPage'));
 const PodcastChannelPage = lazy(() => import('./pages/PodcastChannelPage'));
 const PodcastPlayerPageRoute = lazy(() => import('./pages/PodcastPlayerPageRoute'));
-const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const VideoLibraryPage = lazy(() => import('./pages/VideoLibraryPage'));
 const VideoPlayerPage = lazy(() => import('./pages/VideoPlayerPage'));
+const TopikWritingCoachPage = lazy(() => import('./pages/learning/TopikWritingCoachPage'));
+const TextImportPage = lazy(() => import('./pages/learning/TextImportPage'));
+const SentenceLearningPage = lazy(() => import('./pages/learning/SentenceLearningPage'));
+const AssetQualityReviewPage = lazy(() => import('./pages/learning/AssetQualityReviewPage'));
+const SpeakingCoachPage = lazy(() => import('./pages/learning/SpeakingCoachPage'));
+const WeeklyReportPage = lazy(() => import('./pages/dashboard/WeeklyReportPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 
 const AdminPage = lazy(() => import('./features/admin/AdminPage'));
 
@@ -93,6 +103,22 @@ const PageLoader = () => <ContentSkeleton />;
 const withPageLoader = (element: React.ReactNode) => (
   <Suspense fallback={<PageLoader />}>{element}</Suspense>
 );
+
+const LocalizedAliasRoute: React.FC<{
+  language: string;
+  target: string;
+  extraSearchParams?: Readonly<Record<string, string>>;
+}> = ({ language, target, extraSearchParams }) => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  for (const [key, value] of Object.entries(extraSearchParams ?? {})) {
+    searchParams.set(key, value);
+  }
+  const search = searchParams.toString();
+  const searchSuffix = search ? `?${search}` : '';
+
+  return <Navigate to={`/${language}${target}${searchSuffix}${location.hash}`} replace />;
+};
 
 const RedirectToDetectedLanguage: React.FC<{ keepPathname?: boolean }> = ({
   keepPathname = true,
@@ -151,7 +177,7 @@ const AskQuestionRoute = () => {
 
 const CommunityUserProfileRoute = () => {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileUserProfilePage /> : <DesktopUserProfilePage />;
+  return isMobile ? <MobileCommunityProfilePage /> : <DesktopCommunityProfilePage />;
 };
 
 // Inner routes component that uses language from URL params
@@ -168,16 +194,25 @@ const LanguageAwareRoutes: React.FC = () => {
       <Routes>
         {/* === Public routes (no login required) === */}
         <Route index element={withPageLoader(<Landing />)} />
-        <Route path="landing" element={<Navigate to={`/${language}`} replace />} />
+        <Route path="landing" element={<LocalizedAliasRoute language={language} target="" />} />
         <Route path="login" element={withPageLoader(<AuthPage />)} />
         <Route path="register" element={withPageLoader(<AuthPage />)} />
         <Route path="auth" element={withPageLoader(<AuthPage />)} /> {/* Google OAuth callback */}
         <Route path="auth/verify-email" element={withPageLoader(<VerifyEmailPage />)} />
         <Route path="auth/forgot-password" element={withPageLoader(<ForgotPasswordPage />)} />
         <Route path="auth/reset-password" element={withPageLoader(<ResetPasswordPage />)} />
-        <Route path="verify-email" element={withPageLoader(<VerifyEmailPage />)} />
-        <Route path="forgot-password" element={withPageLoader(<ForgotPasswordPage />)} />
-        <Route path="reset-password" element={withPageLoader(<ResetPasswordPage />)} />
+        <Route
+          path="verify-email"
+          element={<LocalizedAliasRoute language={language} target="/auth/verify-email" />}
+        />
+        <Route
+          path="forgot-password"
+          element={<LocalizedAliasRoute language={language} target="/auth/forgot-password" />}
+        />
+        <Route
+          path="reset-password"
+          element={<LocalizedAliasRoute language={language} target="/auth/reset-password" />}
+        />
         <Route
           path="terms"
           element={withPageLoader(<LegalDocumentPage language={language} documentType="terms" />)}
@@ -191,13 +226,19 @@ const LanguageAwareRoutes: React.FC = () => {
           element={withPageLoader(<LegalDocumentPage language={language} documentType="refund" />)}
         />
         <Route path="pricing" element={withPageLoader(<SubscriptionPage />)} />
-        <Route path="subscription" element={withPageLoader(<SubscriptionPage />)} />
+        <Route
+          path="subscription"
+          element={<LocalizedAliasRoute language={language} target="/pricing" />}
+        />
         <Route path="pricing/details" element={withPageLoader(<PricingDetailsPage />)} />
-        <Route path="subscription/details" element={withPageLoader(<PricingDetailsPage />)} />
+        <Route
+          path="subscription/details"
+          element={<LocalizedAliasRoute language={language} target="/pricing/details" />}
+        />
         <Route path="learn" element={withPageLoader(<LearnHubPage />)} />
         <Route path="learn/:guideSlug" element={withPageLoader(<LearnGuidePage />)} />
+        <Route path="help" element={withPageLoader(<HelpCenterPage />)} />
         <Route path="payment/success" element={withPageLoader(<PaymentSuccessPage />)} />
-        <Route path="preview/mobile" element={withPageLoader(<MobilePreviewPage />)} />
         <Route path="features/topik" element={withPageLoader(<TopikFeaturePage />)} />
         <Route path="features/vocab" element={withPageLoader(<VocabFeaturePage />)} />
         <Route path="features/listening" element={withPageLoader(<ListeningFeaturePage />)} />
@@ -205,17 +246,23 @@ const LanguageAwareRoutes: React.FC = () => {
         {/* === Admin login page (public) === */}
         <Route path="admin/login" element={withPageLoader(<AdminLoginPage />)} />
         <Route element={withPageLoader(<ProtectedRoute />)}>
+          {/* Onboarding - outside AppLayout (full-screen wizard) */}
+          <Route path="onboarding" element={withPageLoader(<OnboardingPage />)} />
           <Route element={withPageLoader(<AppLayout />)}>
             <Route path="achievements" element={<AchievementsPage />} />
             <Route path="profile/*" element={<ProfilePage language={language} />} />
             <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="dashboard/course" element={<CourseDashboard />} />
+            <Route path="dashboard/course" element={<CourseDetailPage />} />
+            <Route path="dashboard/weekly-report" element={<WeeklyReportPage />} />
             <Route path="dashboard/:moduleParam" element={<ModulePage />} />
             {/* Courses */}
             <Route path="courses" element={<CoursesOverview />} />
             <Route path="grammar" element={<GrammarHubPage />} />
-            <Route path="practice" element={<Navigate to={`/${language}/courses`} replace />} />
-            <Route path="review" element={<ReviewDashboardPage />} />
+            <Route
+              path="practice"
+              element={<LocalizedAliasRoute language={language} target="/courses" />}
+            />
+            <Route path="review" element={<PracticeHubPage />} />
             <Route path="review/quiz" element={<ReviewQuizPage />} />
             <Route path="media" element={<MediaHubPage />} />
             <Route path="reading" element={<ReadingDiscoveryPage />} />
@@ -223,28 +270,51 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="reading/books/:slug" element={<PictureBookReaderPage />} />
             <Route path="reading/library/:slug" element={<EpubReaderPage />} />
             <Route path="reading/:articleId" element={<ReadingArticlePage />} />
-            <Route path="course/:instituteId" element={<CourseDashboard />} />
+            <Route path="course/:instituteId" element={<CourseDetailPage />} />
             <Route path="course/:instituteId/vocab" element={<VocabModulePage />} />
             <Route path="course/:instituteId/grammar" element={<GrammarModulePage />} />
             <Route path="course/:instituteId/:moduleParam" element={<ModulePage />} />
             <Route path="topik" element={<TopikPage />} />
-            <Route path="topik/history" element={<TopikPage />} />
+            <Route
+              path="topik/history"
+              element={
+                <LocalizedAliasRoute
+                  language={language}
+                  target="/topik"
+                  extraSearchParams={{ view: 'history' }}
+                />
+              }
+            />
+            <Route path="topik/writing-coach" element={<TopikWritingCoachPage />} />
             <Route path="topik/writing/:examId" element={<TopikWritingPage />} />
             <Route path="topik/:examId" element={<TopikPage />} />
             <Route path="topik/:examId/:view" element={<TopikPage />} />
+            <Route path="learning/text-import" element={<TextImportPage />} />
+            <Route path="learning/sentence/:sentenceId" element={<SentenceLearningPage />} />
+            <Route path="learning/asset-quality" element={<AssetQualityReviewPage />} />
+            <Route path="speaking" element={<SpeakingCoachPage />} />
             <Route path="notebook" element={<NotebookPage />} />
             <Route path="vocab-book" element={<VocabBookPage />} />
-            <Route path="vocabbook" element={<Navigate to={`/${language}/vocab-book`} replace />} />
+            <Route
+              path="vocabbook"
+              element={<LocalizedAliasRoute language={language} target="/vocab-book" />}
+            />
             <Route path="vocab-book/practice" element={<VocabBookPracticePage />} />
             <Route path="vocab-book/export-pdf" element={<VocabBookExportPdfPage />} />
 
             {/* Podcast Learning */}
-            <Route path="podcasts" element={<PodcastDashboard />} />
-            <Route path="podcasts/subscriptions" element={<PodcastDashboard />} />
+            <Route path="podcasts" element={<PodcastHubPage />} />
+            <Route
+              path="podcasts/subscriptions"
+              element={<LocalizedAliasRoute language={language} target="/podcasts" />}
+            />
             <Route path="podcasts/search" element={<PodcastSearchPage />} />
             <Route path="podcasts/channel" element={<PodcastChannelPage />} />
             <Route path="podcasts/player" element={<PodcastPlayerPageRoute />} />
-            <Route path="podcasts/history" element={<HistoryPage />} />
+            <Route
+              path="podcasts/history"
+              element={<LocalizedAliasRoute language={language} target="/podcasts" />}
+            />
 
             {/* Video Learning */}
             <Route path="videos" element={<VideoLibraryPage />} />
@@ -259,8 +329,11 @@ const LanguageAwareRoutes: React.FC = () => {
             <Route path="community/qa/ask" element={<AskQuestionRoute />} />
             <Route path="community/qa/:questionId" element={<QADetailRoute />} />
             <Route path="community/u/:userId" element={<CommunityUserProfileRoute />} />
-            <Route path="leaderboard" element={<DesktopLeaderboardPage />} />
-            <Route path="history" element={<HistoryPage />} />
+            <Route path="leaderboard" element={<LeaderboardPage />} />
+            <Route
+              path="history"
+              element={<LocalizedAliasRoute language={language} target="/podcasts" />}
+            />
           </Route>
         </Route>
         {/* === Admin routes (standalone pages, Admin permission required) === */}

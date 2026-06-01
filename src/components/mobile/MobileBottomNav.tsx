@@ -61,9 +61,7 @@ export function MobileBottomNav() {
   const { t } = useTranslation();
   const pathWithoutLang = getPathWithoutLang(location.pathname);
   const isProfileTabActive =
-    pathWithoutLang.startsWith('/profile') ||
-    pathWithoutLang.startsWith('/pricing') ||
-    pathWithoutLang.startsWith('/subscription');
+    pathWithoutLang.startsWith('/profile') || pathWithoutLang.startsWith('/pricing');
   const pendingBadges = useQuery(
     api.achievements.getPendingBadges,
     isProfileTabActive ? 'skip' : {}
@@ -114,7 +112,8 @@ export function MobileBottomNav() {
       return (
         pathWithoutLang.startsWith('/dashboard') ||
         pathWithoutLang.startsWith('/dictionary/') ||
-        pathWithoutLang.startsWith('/community')
+        pathWithoutLang.startsWith('/community') ||
+        pathWithoutLang.startsWith('/leaderboard')
       );
     }
     if (tab.key === 'learn') {
@@ -125,7 +124,6 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/topik') ||
         pathWithoutLang.startsWith('/typing') ||
         pathWithoutLang.startsWith('/vocab-book') ||
-        pathWithoutLang.startsWith('/vocabbook') ||
         pathWithoutLang.startsWith('/notebook')
       );
     }

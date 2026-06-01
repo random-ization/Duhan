@@ -1,0 +1,250 @@
+# Korean Sentence Explainer Evaluation Set
+# 50 sentences across beginner/intermediate/advanced levels
+#
+# Categories:
+#   beginner (15): basic sentence patterns, 하다 verbs, particles
+#   intermediate (20): connective endings, indirect speech, passive/causative
+#   advanced (15): idioms, contractions, literary style
+
+# ════════════════════════════════════════════════════════════
+# BEGINNER (TOPIK 1-2)
+# ════════════════════════════════════════════════════════════
+
+- vars:
+    sentence_input: '{"sentence": "저는 학생입니다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.vocabulary||[]).some(v => v.surface.includes("학생")), reason: "Must identify 학생" };'
+
+- vars:
+    sentence_input: '{"sentence": "오늘 날씨가 좋아요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.vocabulary||[]).some(v => v.surface.includes("날씨")), reason: "Must identify 날씨" };'
+
+- vars:
+    sentence_input: '{"sentence": "한국어를 공부합니다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.vocabulary||[]).some(v => v.surface.includes("공부")), reason: "Must identify 공부" };'
+
+- vars:
+    sentence_input: '{"sentence": "이 책은 재미있어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "어제 친구를 만났어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("았") || g.pattern.includes("었")), reason: "Must identify past tense" };'
+
+- vars:
+    sentence_input: '{"sentence": "매일 아침 운동을 해요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "저는 서울에 살고 있어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("고 있")), reason: "Must identify progressive -고 있다" };'
+
+- vars:
+    sentence_input: '{"sentence": "커피를 마시고 싶어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("고 싶")), reason: "Must identify desiderative -고 싶다" };'
+
+- vars:
+    sentence_input: '{"sentence": "가족이 네 명이에요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "주말에 영화를 봤어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "내일 시험이 있어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "이 음식은 너무 매워요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "지하철로 학교에 가요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "방이 넓고 깨끗해요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "한국 음식을 좋아해요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+# ════════════════════════════════════════════════════════════
+# INTERMEDIATE (TOPIK 3-4)
+# ════════════════════════════════════════════════════════════
+
+- vars:
+    sentence_input: '{"sentence": "비가 오면 집에서 쉴 거예요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("면") || g.pattern.includes("을 거")), reason: "Must identify conditional or future" };'
+
+- vars:
+    sentence_input: '{"sentence": "시간이 없어서 택시를 탔어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("아서") || g.pattern.includes("어서")), reason: "Must identify causal -아/어서" };'
+
+- vars:
+    sentence_input: '{"sentence": "친구가 한국에 온다고 했어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("다고")), reason: "Must identify indirect speech -다고" };'
+
+- vars:
+    sentence_input: '{"sentence": "이 영화를 보는 것을 추천합니다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("는 것")), reason: "Must identify nominalizer -는 것" };'
+
+- vars:
+    sentence_input: '{"sentence": "한국에서 생활한 지 벌써 3년이 됐어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("ㄴ 지")), reason: "Must identify duration -ㄴ 지" };'
+
+- vars:
+    sentence_input: '{"sentence": "열심히 공부했는데 시험을 못 봤어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("는데")), reason: "Must identify contrastive -는데" };'
+
+- vars:
+    sentence_input: '{"sentence": "다른 사람에게 도움을 받았습니다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "회의가 끝나면 연락 드리겠습니다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "요즘 운동을 하느라 바빠요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("느라")), reason: "Must identify -느라" };'
+
+- vars:
+    sentence_input: '{"sentence": "그 문제는 생각보다 어려웠어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "약속 시간에 늦을까 봐 서둘렀어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("까 봐")), reason: "Must identify worry pattern -ㄹ까 봐" };'
+
+- vars:
+    sentence_input: '{"sentence": "아무리 노력해도 안 되는 일이 있어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("아무리") || g.pattern.includes("아도")), reason: "Must identify concessive" };'
+
+- vars:
+    sentence_input: '{"sentence": "이 책을 다 읽은 후에 반납하세요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "건강을 위해서 규칙적으로 운동해야 해요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("아야") || g.pattern.includes("어야")), reason: "Must identify obligation -아/어야 하다" };'
+
+- vars:
+    sentence_input: '{"sentence": "문이 갑자기 열렸어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("리") || g.explanation.includes("被动") || g.explanation.includes("passive")), reason: "Must identify passive" };'
+
+- vars:
+    sentence_input: '{"sentence": "선생님께서 학생들에게 숙제를 내 주셨어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "우리 팀이 이길 수 있을지 모르겠어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "지금 출발하지 않으면 늦을 수밖에 없어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("수밖에 없")), reason: "Must identify -ㄹ 수밖에 없다" };'
+
+- vars:
+    sentence_input: '{"sentence": "이 일을 혼자 하기에는 너무 힘들어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "최근에 한국 드라마를 보기 시작했어요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+# ════════════════════════════════════════════════════════════
+# ADVANCED (TOPIK 5-6)
+# ════════════════════════════════════════════════════════════
+
+- vars:
+    sentence_input: '{"sentence": "그녀는 눈코 뜰 새 없이 바쁜 나날을 보내고 있다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.vocabulary||[]).some(v => v.meaning && v.meaning.length > 0) && (o.grammar||[]).length >= 1, reason: "Must explain idiom + grammar" };'
+
+- vars:
+    sentence_input: '{"sentence": "세상에 공짜는 없다더니 역시 그렇군요.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("더니") || g.pattern.includes("군요")), reason: "Must identify -더니 or -군요" };'
+
+- vars:
+    sentence_input: '{"sentence": "환경 오염이 심각해짐에 따라 정부 차원의 대책이 시급하다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("에 따라") || g.pattern.includes("짐에")), reason: "Must identify formal pattern" };'
+
+- vars:
+    sentence_input: '{"sentence": "그 사실을 알았더라면 다르게 행동했을 텐데.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("더라면") || g.pattern.includes("텐데")), reason: "Must identify counterfactual" };'
+
+- vars:
+    sentence_input: '{"sentence": "이 문제를 해결하기 위해서는 근본적인 변화가 불가피하다고 본다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "경제가 나아질 기미가 보이지 않는다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.vocabulary||[]).some(v => v.surface.includes("기미")), reason: "Must identify 기미 (sign/indication)" };'
+
+- vars:
+    sentence_input: '{"sentence": "그건 두말할 나위도 없는 사실이다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "인공지능의 발전으로 말미암아 많은 직업이 사라질 것으로 전망된다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("로 말미암아") || g.pattern.includes("것으로 전망")), reason: "Must identify formal causal or forecast patterns" };'
+
+- vars:
+    sentence_input: '{"sentence": "그가 얼마나 성실한지는 동료들이 더 잘 알 것이다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "차라리 처음부터 시작하는 게 나을지도 모른다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "사회적 합의 없이 정책을 추진하는 것은 바람직하지 않다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "이번 조사 결과를 토대로 향후 대응 방안을 마련할 예정이다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("토대로") || g.pattern.includes("을 예정")), reason: "Must identify formal patterns" };'
+
+- vars:
+    sentence_input: '{"sentence": "끊임없는 자기 계발이야말로 성공의 지름길이다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("야말로")), reason: "Must identify emphasis -야말로" };'
+
+- vars:
+    sentence_input: '{"sentence": "상대방의 입장을 고려하지 않을 수 없는 상황이었다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+
+- vars:
+    sentence_input: '{"sentence": "다양한 문화를 접해 봄으로써 시야를 넓힐 수 있다.", "tokenization": [], "candidateVocabulary": [], "candidateGrammar": []}'
+  assert:
+    - type: javascript
+      value: 'const o = JSON.parse(output); return { pass: (o.grammar||[]).some(g => g.pattern.includes("으로써") || g.pattern.includes("봄으로써")), reason: "Must identify means -ㅁ으로써" };'

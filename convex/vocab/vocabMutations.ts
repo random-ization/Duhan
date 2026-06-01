@@ -6,6 +6,7 @@
 import { mutation } from '../_generated/server';
 import { v, ConvexError } from 'convex/values';
 import { getAuthUserId, requireAdmin } from '../utils';
+import { LooseJsonDeepValueValidator } from '../jsonValidators';
 
 import { vocabLogger } from '../logger';
 import { cleanupUndefinedFields, mapFsrsStateToStatus } from '../vocabHelpers';
@@ -24,6 +25,8 @@ export const saveWord = mutation({
     exampleMn: v.optional(v.string()),
     audioUrl: v.optional(v.string()),
     partOfSpeech: v.string(),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -44,6 +47,8 @@ export const saveWord = mutation({
         meaningMn: args.meaningMn,
         audioUrl: args.audioUrl,
         partOfSpeech: args.partOfSpeech,
+        source: args.source,
+        sourceRefId: args.sourceRefId,
         updatedAt: Date.now(),
       }) as Record<string, unknown>;
 
@@ -60,6 +65,10 @@ export const saveWord = mutation({
       meaningMn: args.meaningMn,
       audioUrl: args.audioUrl,
       partOfSpeech: args.partOfSpeech,
+      source: args.source,
+      sourceRefId: args.sourceRefId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     return wordId;
@@ -133,7 +142,7 @@ export const updateProgressV2 = mutation({
 
     const now = Date.now();
     const status = mapFsrsStateToStatus(args.fsrsState.state, args.fsrsState.stability);
-    
+
     const updates = {
       ...args.fsrsState,
       status,
@@ -334,7 +343,7 @@ export const upsertLearningSession = mutation({
     instituteId: v.string(),
     unitId: v.number(),
     mode: v.union(v.literal('FLASHCARD'), v.literal('LEARN'), v.literal('TEST')),
-    snapshot: v.any(),
+    snapshot: LooseJsonDeepValueValidator,
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

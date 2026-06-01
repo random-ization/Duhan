@@ -2,21 +2,16 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Globe, Check } from 'lucide-react';
-import { useMutation } from 'convex/react';
 import { isValidLanguage } from '../LanguageRouter';
 import { Button } from '../ui';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui';
 import { safeSetLocalStorageItem } from '../../utils/browserStorage';
-import { mRef } from '../../utils/convexRefs';
 
 export const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const updateUserSettings = useMutation(
-    mRef<{ displayLanguage?: 'en' | 'zh' | 'vi' | 'mn' }, unknown>('userSettings:updateSettings')
-  );
   const menuId = 'language-switcher-menu';
 
   const languages = [
@@ -73,9 +68,6 @@ export const LanguageSwitcher = () => {
                 const nextPath = `/${segments.join('/')}${location.search}${location.hash}`;
                 safeSetLocalStorageItem('preferredLanguage', nextLang);
                 safeSetLocalStorageItem('preferredLanguageSource', 'user');
-                void updateUserSettings({ displayLanguage: nextLang }).catch(() => {
-                  // Guests or offline users still get immediate local language switching.
-                });
                 i18n.changeLanguage(nextLang);
                 navigate(nextPath);
                 setIsOpen(false);

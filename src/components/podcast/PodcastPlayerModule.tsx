@@ -5,17 +5,13 @@ import {
   ArrowLeft,
   Play,
   Pause,
-  Repeat,
   Sparkles,
   X,
   BookOpen,
   MessageSquare,
   Lightbulb,
-  SkipBack,
-  SkipForward,
   Languages,
   Volume2,
-  Heart,
   Share2,
   ListMusic,
   RefreshCw,
@@ -23,30 +19,17 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { Button } from '../ui';
-import { Switch } from '../ui';
 import { Badge } from '../ui';
 import { Card } from '../ui';
 import { Slider } from '../ui';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui';
 import { Sheet, SheetContent, SheetOverlay, SheetPortal } from '../ui';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '../ui';
-import { aRef, mRef, qRef } from '../../utils/convexRefs';
+import { aRef, mRef, qRef, type NoArgs } from '../../utils/convexRefs';
 import { getLocalizedPath, useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLanguageLabel } from '../../utils/languageUtils';
-import { buildMediaPath } from '../../utils/mediaRoutes';
-import { resolveSafeReturnTo } from '../../utils/navigation';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { normalizePublicAssetUrl } from '../../utils/imageSrc';
 import { KT } from '../mobile/ksoft/ksoft';
@@ -79,6 +62,52 @@ interface AnalysisData {
   nuance: string;
   cached?: boolean;
 }
+
+type GenerateTranscriptArgs = {
+  audioUrl: string;
+  episodeId: string;
+  language?: string;
+};
+
+type GenerateTranscriptResult = {
+  success: boolean;
+  data?: { segments: TranscriptLine[] };
+  error?: string;
+};
+
+type GetTranscriptArgs = {
+  episodeId: string;
+  language?: string;
+};
+
+type GetTranscriptResult = {
+  segments: TranscriptLine[] | null;
+};
+
+type PodcastEpisodesResult = {
+  episodes: PodcastEpisode[];
+};
+
+type ToggleSubscriptionArgs = {
+  channel: {
+    itunesId?: string;
+    title: string;
+    author: string;
+    feedUrl: string;
+    artworkUrl?: string;
+  };
+};
+
+type PodcastSubscriptionSummary = {
+  feedUrl: string;
+};
+
+const EMPTY_PODCAST_SUBSCRIPTIONS: PodcastSubscriptionSummary[] = [];
+
+type PodcastRouteState = {
+  episode?: Partial<PodcastEpisode> & { channel?: Partial<PodcastChannel> };
+  channel?: Partial<PodcastChannel>;
+};
 
 type UiLang = 'en' | 'zh' | 'vi' | 'mn';
 
@@ -629,7 +658,7 @@ const TranscriptLineRow: React.FC<{
   );
 };
 
-const TranscriptStreamBody: React.FC<{
+const _TranscriptStreamBody: React.FC<{
   showTranscriptLoader: boolean;
   isGeneratingTranscript: boolean;
   transcriptError: string | null;
@@ -709,109 +738,6 @@ const TranscriptStreamBody: React.FC<{
         />
       ))}
   </>
-);
-
-const PlayPauseIcon: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) =>
-  isPlaying ? (
-    <Pause className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
-  ) : (
-    <Play className="w-4 h-4 md:w-5 md:h-5 ml-0.5" fill="currentColor" />
-  );
-
-const EpisodeUtilityControls: React.FC<{
-  mobile?: boolean;
-  showTranslation: boolean;
-  setShowTranslation: React.Dispatch<React.SetStateAction<boolean>>;
-  translationLabel: string;
-  translationStatusLabel?: string | null;
-  copy: UiCopy;
-  transcriptLoading: boolean;
-  isGeneratingTranscript: boolean;
-  onRegenerate: () => void;
-  onToggleSubscription: () => void;
-  subscriptionPending: boolean;
-  isSubscribed: boolean;
-  onShare: () => void;
-}> = ({
-  mobile = false,
-  showTranslation,
-  setShowTranslation,
-  translationLabel,
-  translationStatusLabel,
-  copy,
-  transcriptLoading,
-  isGeneratingTranscript,
-  onRegenerate,
-  onToggleSubscription,
-  subscriptionPending,
-  isSubscribed,
-  onShare,
-}) => (
-  <div className={mobile ? 'space-y-3' : 'w-full space-y-4 md:mt-auto pb-4 md:pb-0'}>
-    <div
-      className={
-        mobile
-          ? 'flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/70 px-4 py-3'
-          : 'flex items-center justify-between p-4 bg-muted rounded-xl border border-border'
-      }
-    >
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-card rounded-lg shadow-sm text-indigo-500 dark:text-indigo-300">
-          <Languages className="w-5 h-5" />
-        </div>
-        <div className="text-left">
-          <p className="text-sm font-bold text-muted-foreground">{copy.translationSubtitle}</p>
-          <p className="text-xs text-muted-foreground">
-            {copy.showTranslationTemplate.replace('{{language}}', translationLabel)}
-          </p>
-          {translationStatusLabel ? (
-            <p className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-300">
-              {translationStatusLabel}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      <Switch checked={showTranslation} onCheckedChange={setShowTranslation} />
-    </div>
-
-    <Button
-      onClick={onRegenerate}
-      disabled={transcriptLoading || isGeneratingTranscript}
-      loading={isGeneratingTranscript}
-      loadingText={copy.generating}
-      loadingIconClassName="w-4 h-4"
-      variant="outline"
-      size="default"
-      className="w-full gap-2 border-dashed border-border text-muted-foreground hover:border-indigo-300 dark:hover:border-indigo-300/50 hover:text-indigo-600 dark:hover:text-indigo-300"
-    >
-      <RefreshCw className="w-4 h-4" />
-      {copy.regenerateSubtitle}
-    </Button>
-
-    <div className="grid grid-cols-2 gap-3">
-      <Button
-        variant="outline"
-        size="default"
-        onClick={onToggleSubscription}
-        disabled={subscriptionPending}
-        loading={subscriptionPending}
-        loadingText={copy.saving}
-        loadingIconClassName="w-4 h-4"
-        className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
-      >
-        <Heart className={`w-4 h-4 ${isSubscribed ? 'fill-current' : ''}`} />
-        {isSubscribed ? copy.saved : copy.saveEpisode}
-      </Button>
-      <Button
-        variant="outline"
-        size="default"
-        onClick={onShare}
-        className="gap-2 border-border text-muted-foreground hover:border-indigo-200 dark:hover:border-indigo-300/40"
-      >
-        <Share2 className="w-4 h-4" /> {copy.share}
-      </Button>
-    </div>
-  </div>
 );
 
 const PlaylistSheetBody: React.FC<{
@@ -980,49 +906,23 @@ type PodcastChannel = {
   image?: string;
 };
 
-function buildMockTranscript(copy: UiCopy): TranscriptLine[] {
-  return [
-    {
-      start: 0,
-      end: 4.5,
-      text: '안녕하세요, 여러분. 오늘도 한국어 공부 시작해볼까요?',
-      translation: copy.mockTranslations[0],
-    },
-    {
-      start: 4.5,
-      end: 8.2,
-      text: '꾸준히 하는 것이 가장 중요합니다.',
-      translation: copy.mockTranslations[1],
-    },
-    {
-      start: 8.2,
-      end: 12,
-      text: '이 문장은 조금 빠르니까 다시 들어보세요.',
-      translation: copy.mockTranslations[2],
-    },
-    {
-      start: 12,
-      end: 16.5,
-      text: '오늘은 일상 대화에서 많이 쓰는 표현을 배워볼 거예요.',
-      translation: copy.mockTranslations[3],
-    },
-    {
-      start: 16.5,
-      end: 21,
-      text: "예를 들어, '어떻게 지내세요?'라는 표현이 있어요.",
-      translation: copy.mockTranslations[4],
-    },
-  ];
+function isPodcastRouteState(value: unknown): value is PodcastRouteState {
+  return typeof value === 'object' && value !== null;
 }
 
-function resolveEpisodeFromState(state: any, searchParams: URLSearchParams): PodcastEpisode {
-  const stateEpisode = state?.episode;
+function resolveEpisodeFromState(state: unknown, searchParams: URLSearchParams): PodcastEpisode {
+  const routeState = isPodcastRouteState(state) ? state : {};
+  const stateEpisode = routeState.episode;
   const audioUrl = searchParams.get('audioUrl');
   const title = searchParams.get('title');
   const guid = searchParams.get('guid');
 
   const resolved = stateEpisode?.audioUrl
-    ? stateEpisode
+    ? {
+        ...stateEpisode,
+        title: stateEpisode.title ?? 'Unknown Episode',
+        audioUrl: stateEpisode.audioUrl,
+      }
     : {
         guid: guid || '',
         title: title || 'Unknown Episode',
@@ -1039,8 +939,9 @@ function resolveEpisodeFromState(state: any, searchParams: URLSearchParams): Pod
   };
 }
 
-function resolvePodcastChannel(state: any): PodcastChannel {
-  const channel = state?.channel ?? state?.episode?.channel ?? {};
+function resolvePodcastChannel(state: unknown): PodcastChannel {
+  const routeState = isPodcastRouteState(state) ? state : {};
+  const channel = routeState.channel ?? routeState.episode?.channel ?? {};
   return {
     ...channel,
     artworkUrl: normalizePublicAssetUrl(channel.artworkUrl) || channel.artworkUrl,
@@ -1067,7 +968,7 @@ function formatPlaybackTime(seconds: number) {
   return `${m}:${r.toString().padStart(2, '0')}`;
 }
 
-function parseDurationToSeconds(value: any): number {
+function parseDurationToSeconds(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value !== 'string') return 0;
   const parts = value.split(':').map(p => parseInt(p, 10));
@@ -1097,23 +998,17 @@ function scrollPodcastLineIntoView(element: HTMLElement | null, isMobile: boolea
 export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   initialEpisode,
   initialChannel,
-  onBack,
-  isEmbedded = false,
 }) => {
   const location = useLocation();
   const { state } = location;
   const navigate = useLocalizedNavigate();
   const [searchParams] = useSearchParams();
-  const { language, viewerAccess } = useAuth();
+  const { language } = useAuth();
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth();
   const { settings: globalSettings } = useGlobalSettings();
   const uiLang: UiLang = language;
   const copy = UI_COPY[uiLang];
   const isMobile = useIsMobile();
-  const backPath = useMemo(
-    () => resolveSafeReturnTo(searchParams.get('returnTo'), buildMediaPath('podcast')),
-    [searchParams]
-  );
 
   const episode = useMemo(
     () => initialEpisode || resolveEpisodeFromState(state, searchParams),
@@ -1133,27 +1028,37 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState<string | null>(null);
-  const [isGeneratingTranscript, setIsGeneratingTranscript] = useState(false);
   const [showTranslation, setShowTranslation] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlist, setPlaylist] = useState<PodcastEpisode[]>([]);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
-  const [analyzingLine, setAnalyzingLine] = useState<TranscriptLine | null>(null);
-  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const analyzingLine: TranscriptLine | null = null;
+  const analysisData: AnalysisData | null = null;
+  const analysisLoading = false;
   const transcriptLoadKeyRef = useRef<string | null>(null);
   const transcriptLoadedKeyRef = useRef<string | null>(null);
   const playlistLoadedFeedRef = useRef<string | null>(null);
 
-  const generateTranscript = useAction(aRef<any, any>('ai:generateTranscript'));
-  const getTranscript = useAction(aRef<any, any>('ai:getTranscript'));
-  const getEpisodesAction = useAction(aRef<any, any>('podcastActions:getEpisodes'));
-  const toggleSubscription = useMutation(mRef<any, any>('podcasts:toggleSubscription'));
-  const subscriptions =
-    useQuery(qRef<any, any>('podcasts:getSubscriptions'), isAuthenticated ? {} : 'skip') ?? [];
-  const analyzeSentenceAction = useAction(aRef<any, any>('ai:analyzeSentence'));
+  const generateTranscript = useAction(
+    aRef<GenerateTranscriptArgs, GenerateTranscriptResult>('ai:generateTranscript')
+  );
+  const getTranscript = useAction(aRef<GetTranscriptArgs, GetTranscriptResult>('ai:getTranscript'));
+  const getEpisodesAction = useAction(
+    aRef<{ feedUrl: string }, PodcastEpisodesResult>('podcastActions:getEpisodes')
+  );
+  const toggleSubscription = useMutation(
+    mRef<ToggleSubscriptionArgs, unknown>('podcasts:toggleSubscription')
+  );
+  const subscriptionQuery = useQuery(
+    qRef<NoArgs, PodcastSubscriptionSummary[]>('podcasts:getSubscriptions'),
+    isAuthenticated ? {} : 'skip'
+  );
+  const subscriptions = useMemo(
+    () => subscriptionQuery ?? EMPTY_PODCAST_SUBSCRIPTIONS,
+    [subscriptionQuery]
+  );
 
   const getEpisodeId = useCallback(() => getEpisodeIdForTranscript(episode), [episode]);
   const episodeArtwork = useMemo(
@@ -1174,7 +1079,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
     [currentTime, effectiveDuration]
   );
   const isSubscribed = useMemo(
-    () => subscriptions.some((s: any) => s.feedUrl === channel.feedUrl),
+    () => subscriptions.some(s => s.feedUrl === channel.feedUrl),
     [subscriptions, channel.feedUrl]
   );
 
@@ -1198,11 +1103,11 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
       setTranscriptError(null);
       try {
         const db = await getTranscript({ episodeId: epId, language });
-        if (db?.segments?.length > 0) {
-          setTranscript(db.segments);
+        const existingSegments = db.segments;
+        if (Array.isArray(existingSegments) && existingSegments.length > 0) {
+          setTranscript(existingSegments);
           transcriptLoadedKeyRef.current = loadKey;
         } else {
-          setIsGeneratingTranscript(true);
           const res = await generateTranscript({
             audioUrl: episode.audioUrl,
             episodeId: epId,
@@ -1214,9 +1119,8 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
           } else {
             setTranscriptError(res.error || 'Failed to generate transcript');
           }
-          setIsGeneratingTranscript(false);
         }
-      } catch (e) {
+      } catch {
         setTranscriptError('Error loading transcript');
       } finally {
         setTranscriptLoading(false);
@@ -1251,7 +1155,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
       .then(res => {
         if (cancelled) return;
         if (res?.episodes) {
-          setPlaylist(res.episodes.filter((e: any) => e.audioUrl));
+          setPlaylist(res.episodes.filter(e => e.audioUrl));
         }
         playlistLoadedFeedRef.current = channel.feedUrl ?? null;
       })
@@ -1278,7 +1182,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
     } else {
       try {
         await audioRef.current.play();
-      } catch (e) {
+      } catch {
         notify.error('Playback failed');
       }
     }
@@ -1299,34 +1203,21 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
     notify.success('Link copied');
   };
   const handleToggleSub = async () => {
+    if (!channel.feedUrl) return;
     try {
       await toggleSubscription({
         channel: {
           itunesId: channel.itunesId || channel.id,
-          title: channel.title || episode.channelTitle,
-          author: channel.author,
-          feedUrl: channel.feedUrl!,
+          title: channel.title || episode.channelTitle || 'Unknown Podcast',
+          author: channel.author || channel.title || episode.channelTitle || 'Unknown Author',
+          feedUrl: channel.feedUrl,
           artworkUrl: episodeArtwork,
         },
       });
-    } catch (e) {
-      console.error('Failed to toggle podcast subscription', e);
+    } catch (error) {
+      console.error('Failed to toggle podcast subscription', error);
     }
   };
-  const analyzeSentence = async (line: TranscriptLine) => {
-    setAnalyzingLine(line);
-    setShowAnalysis(true);
-    setAnalysisLoading(true);
-    try {
-      const res = await analyzeSentenceAction({ sentence: line.text, language });
-      if (res.success) setAnalysisData(res.data);
-    } catch (e) {
-      console.error('Failed to analyze transcript sentence', e);
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
-
   const activeLineIndex = useMemo(
     () => transcript.findIndex(l => currentTime >= l.start && currentTime < l.end),
     [currentTime, transcript]
@@ -1381,7 +1272,6 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
             scrollRef={scrollRef}
             showTranscriptLoader={transcriptLoading}
             transcriptError={transcriptError}
-            TranscriptStreamBody={TranscriptStreamBody}
           />
         </Suspense>
       ) : (

@@ -16,7 +16,6 @@ import { Input } from '../ui';
 import { trackEvent } from '../../utils/analytics';
 import { resolveAuthErrorMessage } from '../../utils/authErrors';
 import { KT } from './ksoft/ksoft';
-import { HanjaSeal } from './ksoft/ksoft';
 
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
@@ -240,7 +239,13 @@ export const MobileAuthPage: React.FC = () => {
             flexDirection: 'column',
           }}
         >
-          <img src="/logo.svg" alt="Duhan Logo" width={64} height={64} style={{ borderRadius: 16 }} />
+          <img
+            src="/logo.svg"
+            alt="Duhan Logo"
+            width={64}
+            height={64}
+            style={{ borderRadius: 16 }}
+          />
           <div
             style={{
               fontFamily: KT.serif,

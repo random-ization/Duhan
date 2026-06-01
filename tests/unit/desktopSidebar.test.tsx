@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { ComponentType } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import DesktopSidebar from '../../src/components/layout/DesktopSidebar';
-import { useLayoutActions } from '../../src/contexts/LayoutContext';
 
 const logoutMock = vi.fn();
 const navigateMock = vi.fn();
@@ -11,9 +11,9 @@ const toggleEditModeMock = vi.fn();
 const toggleSidebarMock = vi.fn();
 const setThemeMock = vi.fn();
 
-const useLayoutActionsMock = vi.fn(() => ({ 
+const useLayoutActionsMock = vi.fn(() => ({
   toggleEditMode: toggleEditModeMock,
-  toggleSidebar: toggleSidebarMock 
+  toggleSidebar: toggleSidebarMock,
 }));
 
 vi.mock('../../src/contexts/AuthContext', () => ({
@@ -27,7 +27,14 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
   }),
-  withTranslation: () => (component: any) => component,
+  withTranslation:
+    () =>
+    <P extends object>(component: ComponentType<P>) =>
+      component,
+}));
+
+vi.mock('convex/react', () => ({
+  useQuery: vi.fn(() => undefined),
 }));
 
 vi.mock('../../src/hooks/useLocalizedNavigate', () => ({
@@ -52,6 +59,12 @@ vi.mock('../../src/contexts/ThemeContext', () => ({
 
 import { LearningProvider } from '../../src/contexts/LearningContext';
 
+describe('DesktopSidebar', () => {
+  beforeEach(() => {
+    toggleSidebarMock.mockClear();
+    useLayoutActionsMock.mockClear();
+  });
+
   it('renders a collapse toggle button and calls toggleSidebar on click', () => {
     render(
       <MemoryRouter initialEntries={['/zh/dashboard']}>
@@ -67,3 +80,4 @@ import { LearningProvider } from '../../src/contexts/LearningContext';
     fireEvent.click(toggleButton);
     expect(toggleSidebarMock).toHaveBeenCalled();
   });
+});

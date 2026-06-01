@@ -13,7 +13,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLearningActions, useLearningSelection } from '../contexts/LearningContext';
-import { logInfo, logError, logWarn } from '../utils/logger';
+import { logError, logWarn } from '../utils/logger';
 import { useData } from '../contexts/DataContext';
 import { UserWordProgress, VocabularyItem } from '../types';
 import EmptyState from '../components/common/EmptyState';
@@ -26,7 +26,6 @@ import { ENTITLEMENTS, VOCAB, mRef } from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import type { Id } from '../../convex/_generated/dataModel';
-import VocabProgressSections from '../features/vocab/components/VocabProgressSections';
 
 import { useFSRSBatchProgress } from '../features/vocab/hooks/useVocabProgress';
 import { useUpgradeFlow } from '../hooks/useUpgradeFlow';
@@ -99,6 +98,7 @@ type InstituteLite = {
   nameZh?: string;
   nameVi?: string;
   nameMn?: string;
+  displayLevel?: string | number;
   volume?: string;
   levels?: unknown[];
 };
@@ -229,7 +229,7 @@ function resolveCourseBreadcrumbLabel(
   if (localized) return localized;
   if (course?.name) {
     let name = course.nameZh || course.name;
-    let levelDisplay = (course as any).displayLevel || '';
+    let levelDisplay = course.displayLevel ? String(course.displayLevel) : '';
     if (levelDisplay) {
       if (/^\d+$/.test(levelDisplay)) {
         levelDisplay = `${levelDisplay}级`;
@@ -238,7 +238,7 @@ function resolveCourseBreadcrumbLabel(
         levelDisplay = `${l}级 ${v}册`;
       }
     }
-    const volume = (course as any).volume || '';
+    const volume = course.volume || '';
     return [name, levelDisplay, volume].filter(Boolean).join(' ');
   }
   if (instituteId) return instituteId;
@@ -250,9 +250,6 @@ const isLevelConfig = (value: unknown): value is LevelConfig => {
   const candidate = value as { level?: unknown; units?: unknown };
   return typeof candidate.level === 'number' && typeof candidate.units === 'number';
 };
-
-// Standard background class
-const CONTAINER_CLASS = "min-h-screen bg-k-bg";
 
 function useSyncInstituteSelection(params: {
   instituteId: string | undefined;
@@ -370,7 +367,6 @@ function VocabModulePage() {
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const [redSheetActive, setRedSheetActive] = useState(true);
   const [learnOpen, setLearnOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
   const [resumeModePrompt, setResumeModePrompt] = useState<SessionMode | null>(null);
@@ -1161,17 +1157,6 @@ function VocabModulePage() {
     trackLearningEvent,
   ]);
 
-  const scopeTitle = (() => {
-    if (selectedUnitId === 'ALL') {
-      const localizedCourseName = course ? getLocalizedContent(course, 'name', language) : '';
-      return localizedCourseName || course?.name || labels.vocab?.allUnits || 'All Units';
-    }
-    if (selectedUnitId === 0) {
-      return labels.vocab?.unassigned ?? 'Unassigned';
-    }
-    return `${labels.vocab?.unit ?? 'Unit'} ${selectedUnitId}`;
-  })();
-
   const tabs = useMemo(() => buildTabs(labels), [labels]);
 
   if (isLoading) {
@@ -1182,38 +1167,38 @@ function VocabModulePage() {
     const flashcardResumeForMobile =
       flashcardResumeSnapshot && flashcardResumeSnapshot.orderedWordIds.length >= 4
         ? {
-          completed: Math.max(
-            0,
-            Math.min(
-              flashcardResumeSnapshot.cardIndex,
-              flashcardResumeSnapshot.orderedWordIds.length
-            )
-          ),
-          total: flashcardResumeSnapshot.orderedWordIds.length,
-        }
+            completed: Math.max(
+              0,
+              Math.min(
+                flashcardResumeSnapshot.cardIndex,
+                flashcardResumeSnapshot.orderedWordIds.length
+              )
+            ),
+            total: flashcardResumeSnapshot.orderedWordIds.length,
+          }
         : null;
     const learnResumeForMobile =
       learnResumeSnapshot && learnResumeSnapshot.wordIds.length >= 4
         ? {
-          completed: Math.max(
-            0,
-            Math.min(learnResumeSnapshot.totalAnswered, learnResumeSnapshot.wordIds.length)
-          ),
-          total: learnResumeSnapshot.wordIds.length,
-        }
+            completed: Math.max(
+              0,
+              Math.min(learnResumeSnapshot.totalAnswered, learnResumeSnapshot.wordIds.length)
+            ),
+            total: learnResumeSnapshot.wordIds.length,
+          }
         : null;
     const testResumeForMobile =
       testResumeSnapshot && testResumeSnapshot.cards.length > 0
         ? {
-          completed: Math.max(
-            0,
-            Math.min(
-              Object.keys(testResumeSnapshot.answers || {}).length,
-              testResumeSnapshot.cards.length
-            )
-          ),
-          total: testResumeSnapshot.cards.length,
-        }
+            completed: Math.max(
+              0,
+              Math.min(
+                Object.keys(testResumeSnapshot.answers || {}).length,
+                testResumeSnapshot.cards.length
+              )
+            ),
+            total: testResumeSnapshot.cards.length,
+          }
         : null;
     const handleAbandonActiveSession = (mode: 'flashcard' | 'learn' | 'test') => {
       const sessionMode: SessionMode =
@@ -1272,11 +1257,15 @@ function VocabModulePage() {
         testResume={testResumeForMobile}
         testResumeSnapshot={testResumeSnapshot}
         onAbandonActiveSession={handleAbandonActiveSession}
-        onSessionSnapshot={(mode: 'flashcard' | 'learn' | 'test', completed: number, total: number) => {
+        onSessionSnapshot={(
+          mode: 'flashcard' | 'learn' | 'test',
+          completed: number,
+          total: number
+        ) => {
           let snapshot:
             | FlashcardSessionSnapshot
             | LearningSessionSnapshot
-            | Partial<VocabTestSessionSnapshot>
+            | VocabTestSessionSnapshot
             | undefined;
           if (mode === 'flashcard') {
             snapshot = {
@@ -1307,18 +1296,41 @@ function VocabModulePage() {
               timestamp: Date.now(),
             } satisfies LearningSessionSnapshot;
           } else if (mode === 'test') {
+            const cards: VocabTestSessionSnapshot['cards'] = filteredWords.map(w => {
+              const native = getLocalizedContent(w, 'meaning', language) || w.meaning || w.english;
+              return {
+                id: `resume-${w.id}`,
+                type: 'TRUE_FALSE',
+                wordId: w.id,
+                direction: 'KR_TO_NATIVE',
+                prompt: w.korean,
+                statement: native,
+                correctIsTrue: true,
+                correctPair: { korean: w.korean, native },
+              };
+            });
             snapshot = {
               stage: 'RUNNING',
+              answerLanguage: 'NATIVE',
+              enabledTypes: {
+                TRUE_FALSE: true,
+                MULTIPLE_CHOICE: true,
+                FILL_10: true,
+                WRITTEN: true,
+              },
               questionCount: total,
               activeCardIndex: completed,
-              cards: filteredWords.map(w => ({ wordId: w.id })),
+              cards,
+              answers: {},
+              startedAt: Date.now(),
+              submitAttempted: false,
               timestamp: Date.now(),
-            } as any;
+            };
           }
           if (snapshot) {
             void persistLearningSnapshot(
               mode === 'flashcard' ? 'FLASHCARD' : mode === 'learn' ? 'LEARN' : 'TEST',
-              snapshot as any
+              snapshot
             );
           }
         }}
@@ -1420,7 +1432,11 @@ function VocabModulePage() {
                     }}
                     className={`w-full text-left px-3 py-2 rounded-lg font-bold text-sm flex justify-between items-center mb-1 ${selectedUnitId === u ? 'bg-k-mint-deep/10 text-k-ink border border-k-divider' : 'hover:bg-k-bg2 text-k-sub'}`}
                   >
-                    <span>{u === 0 ? labels.vocab?.unassigned || 'Unassigned' : `${labels.vocab?.unit || 'Unit'} ${u}`}</span>
+                    <span>
+                      {u === 0
+                        ? labels.vocab?.unassigned || 'Unassigned'
+                        : `${labels.vocab?.unit || 'Unit'} ${u}`}
+                    </span>
                     <span className="text-[10px] text-k-sub">{count}</span>
                   </Button>
                 );
@@ -1443,7 +1459,14 @@ function VocabModulePage() {
           </div>
           <div className="w-8 h-8 relative">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--color-k-bg2)" strokeWidth="4" />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                stroke="var(--color-k-bg2)"
+                strokeWidth="4"
+              />
               <circle
                 cx="18"
                 cy="18"
@@ -1556,15 +1579,15 @@ function VocabModulePage() {
             variant="ghost"
             size="auto"
             onClick={() => handleTabClick(tab.id)}
-            className={`bg-k-card border rounded-2xl p-4 flex items-center justify-center gap-3 relative overflow-hidden transition-all shadow-sm ${isActive
+            className={`bg-k-card border rounded-2xl p-4 flex items-center justify-center gap-3 relative overflow-hidden transition-all shadow-sm ${
+              isActive
                 ? 'border-k-crimson ring-1 ring-k-crimson/20 bg-k-crimson/5'
                 : 'border-k-divider hover:border-k-crimson/50 hover:bg-k-bg2'
-              }`}
+            }`}
           >
             <span className="text-2xl">{tab.emoji}</span>
             <span
-              className={`font-extrabold text-[14px] ${isActive ? 'text-k-crimson' : 'text-k-sub'
-                }`}
+              className={`font-extrabold text-[14px] ${isActive ? 'text-k-crimson' : 'text-k-sub'}`}
             >
               {tab.label}
             </span>
@@ -1573,8 +1596,6 @@ function VocabModulePage() {
       })}
     </div>
   );
-
-
 
   const renderEmptyContent = () => (
     <div className="w-full max-w-4xl py-12">
@@ -1597,8 +1618,6 @@ function VocabModulePage() {
       />
     </div>
   );
-
-
 
   return (
     <Suspense fallback={<VocabModuleSkeleton />}>
@@ -1643,8 +1662,6 @@ function VocabModulePage() {
         user={user}
         navigate={navigate}
         backPath={resolveSafeReturnTo(searchParams.get('returnTo'), '/courses')}
-
-
         resolveCourseBreadcrumbLabel={resolveCourseBreadcrumbLabel}
         getLabel={getLabel}
         restartFromResumePrompt={restartFromResumePrompt}

@@ -421,6 +421,13 @@ export const MobileProfilePage: React.FC = () => {
 
   const contactItems = [
     {
+      l: t('nav.help', { defaultValue: 'Help & docs' }),
+      s: t('profile.mobile.helpCenterHint', {
+        defaultValue: 'Learn what each DuHan feature does and where to start',
+      }),
+      onClick: () => navigate('/help'),
+    },
+    {
       l: t('footer.contactSupport', { defaultValue: 'Contact support' }),
       s: 'support@koreanstudy.me',
       onClick: () => {

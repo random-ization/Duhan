@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import MobileGrammarDetailSheet from '../../src/components/mobile/MobileGrammarDetailSheet';
@@ -148,5 +148,45 @@ describe('MobileGrammarDetailSheet', () => {
 
     expect(readerShell).toHaveAttribute('data-font-scale', 'relaxed');
     expect(window.localStorage.getItem('grammar_mobile_reader_font_scale')).toBe('relaxed');
+  });
+
+  it('keeps the expanded reader free from the fixed practice footer', () => {
+    render(
+      <MobileGrammarDetailSheet
+        grammar={grammar}
+        onClose={vi.fn()}
+        onProficiencyUpdate={vi.fn()}
+        instituteId="topik-2"
+      />
+    );
+
+    const readerShell = screen.getByTestId('mobile-grammar-reader-shell');
+
+    expect(screen.queryByTestId('mobile-grammar-footer-practice')).not.toBeInTheDocument();
+    expect(within(readerShell).getByTestId('mobile-grammar-expanded-practice')).toBeInTheDocument();
+  });
+
+  it('constrains long mobile grammar titles so the header cannot consume the reader', () => {
+    const longTitleGrammar: GrammarPointData = {
+      ...grammar,
+      titleEn: '~haetdeoni (after doing something, a result was discovered after the prior action)',
+    };
+
+    render(
+      <MobileGrammarDetailSheet
+        grammar={longTitleGrammar}
+        onClose={vi.fn()}
+        onProficiencyUpdate={vi.fn()}
+        instituteId="topik-2"
+      />
+    );
+
+    const title = screen.getByTestId('mobile-grammar-title-text');
+
+    expect(title).toHaveStyle({
+      maxHeight: '5.2em',
+      overflowY: 'auto',
+      overflowWrap: 'anywhere',
+    });
   });
 });

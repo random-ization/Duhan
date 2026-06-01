@@ -1,10 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const navigateMock = vi.fn();
-const useQueryMock = vi.fn();
-const useMutationMock = vi.fn();
 const tMock = (key: string, options?: { defaultValue?: string; count?: number }) =>
   options?.defaultValue ?? (options?.count !== undefined ? String(options.count) : key);
 
@@ -28,7 +26,7 @@ vi.mock('react-i18next', async () => {
 });
 
 vi.mock('convex/react', () => ({
-  useQuery: (ref: any, args: any) => {
+  useQuery: (_ref: unknown, args: { newsLimit?: number; articleLimit?: number } | undefined) => {
     // News/Article detection
     if (args && (args.newsLimit || args.articleLimit)) {
       return {
@@ -88,7 +86,7 @@ const renderPage = (initialPath: string) => {
   );
 };
 
-// NOTE: This entire suite is skipped due to persistent instability in JSDOM 
+// NOTE: This entire suite is skipped due to persistent instability in JSDOM
 // when rendering the complex DesktopReadingDiscoveryPage component.
 // The component itself has been verified to function correctly in development.
 describe.skip('ReadingDiscoveryPage', () => {
@@ -107,9 +105,7 @@ describe.skip('ReadingDiscoveryPage', () => {
     const book = await screen.findByText('Catalog Story', {}, { timeout: 3000 });
     fireEvent.click(book);
 
-    expect(navigateMock).toHaveBeenCalledWith(
-      '/reading/books/book-2'
-    );
+    expect(navigateMock).toHaveBeenCalledWith('/reading/books/book-2');
   });
 
   it('preserves active filters in article navigation', async () => {
@@ -117,15 +113,13 @@ describe.skip('ReadingDiscoveryPage', () => {
 
     // Filter by Intermediate
     fireEvent.click(await screen.findByRole('button', { name: 'Intermediate' }));
-    
+
     // Click on news item
     const newsItem = await screen.findByText('Economy Brief', {}, { timeout: 3000 });
     fireEvent.click(newsItem);
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith(
-        '/reading/news-1'
-      );
+      expect(navigateMock).toHaveBeenCalledWith('/reading/news-1');
     });
   });
 
@@ -135,7 +129,7 @@ describe.skip('ReadingDiscoveryPage', () => {
     // By default first featured book is shown (from mock implementation)
     // Note: Featured books are different from catalog books in the real app,
     // but the test mock returns them as the same list for simplicity.
-    
+
     expect(await screen.findByText('Featured Books')).toBeInTheDocument();
   });
 

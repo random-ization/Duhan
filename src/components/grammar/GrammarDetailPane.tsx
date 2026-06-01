@@ -25,6 +25,17 @@ type TranslateFn = (key: string, options?: string | Record<string, unknown>) => 
 type SupportedLanguage = 'zh' | 'en' | 'vi' | 'mn';
 type LocalizedSection = { zh?: string; en?: string; vi?: string; mn?: string };
 type ReaderFontScale = 'compact' | 'comfortable' | 'relaxed' | 'large';
+type MarkdownCodeProps = React.HTMLAttributes<HTMLElement> & {
+  inline?: boolean;
+  children?: React.ReactNode;
+  className?: string;
+};
+type MaskableMarkdownNode = {
+  properties?: Record<string, unknown>;
+  data?: {
+    hProperties?: Record<string, unknown>;
+  };
+};
 
 const READER_FONT_SCALE_STORAGE_KEY = 'grammar_reader_font_scale';
 const READER_RED_EYE_STORAGE_KEY = 'grammar_reader_red_eye';
@@ -378,10 +389,12 @@ function renderMaskedNode(node: React.ReactNode, redEyeEnabled: boolean): React.
   return node;
 }
 
-function getNodeMaskKind(node: any): 'translation' | 'answer' | null {
+function getNodeMaskKind(node: unknown): 'translation' | 'answer' | null {
+  if (!node || typeof node !== 'object') return null;
+  const maskableNode = node as MaskableMarkdownNode;
   const value =
-    node?.properties?.['data-grammar-mask'] ??
-    node?.data?.hProperties?.['data-grammar-mask'] ??
+    maskableNode.properties?.['data-grammar-mask'] ??
+    maskableNode.data?.hProperties?.['data-grammar-mask'] ??
     null;
   return value === 'translation' || value === 'answer' ? value : null;
 }
@@ -659,7 +672,7 @@ const MarkdownRenderer: React.FC<{
             {children}
           </pre>
         ),
-        code: ({ inline, className, children, ...props }: any) => (
+        code: ({ inline, className, children, ...props }: MarkdownCodeProps) => (
           <code
             className={
               inline

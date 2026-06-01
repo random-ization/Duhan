@@ -16,7 +16,6 @@ import {
   Circle,
   Layers,
   Headphones,
-  PencilLine,
   SpellCheck,
   Trash2,
   X,
@@ -184,9 +183,9 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
   toggleExpand,
   masteryPendingId,
   setMastery,
-  setOptimisticMastery,
-  optimisticMastery,
-  notify,
+  setOptimisticMastery: _setOptimisticMastery,
+  optimisticMastery: _optimisticMastery,
+  notify: _notify,
   startLearning,
   loading,
   loadingMore,
@@ -236,7 +235,9 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
               size="auto"
               onClick={() => {
                 if (isMobileListMode) {
-                  navigate(`/vocab-book${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`);
+                  navigate(
+                    `/vocab-book${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`
+                  );
                   return;
                 }
                 navigate(returnToPath);
@@ -425,8 +426,6 @@ export const DesktopVocabBookPage: React.FC<DesktopVocabBookPageProps> = ({
         </motion.div>
       );
     }
-
-
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

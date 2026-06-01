@@ -73,8 +73,8 @@ export const NOTEBOOK_KEY_FIELD = 'notebookKey';
 export const blockInputValidator = {
   blockKey: 'string?',
   blockType: 'string',
-  content: 'any',
-  props: 'record(string, any)?',
+  content: 'json',
+  props: 'record(string, json)?',
   sortOrder: 'number',
 } as const;
 
@@ -83,13 +83,13 @@ export const pageInputValidator = {
   title: 'string',
   kind: 'string',
   tags: 'array(string)',
-  blocks: 'array(any)',
+  blocks: 'array(json)',
   sortOrder: 'number?',
 } as const;
 
 export const updatePageInputValidator = {
   title: 'string?',
   tags: 'array(string)?',
-  blocks: 'array(any)?',
+  blocks: 'array(json)?',
   sortOrder: 'number?',
 } as const;

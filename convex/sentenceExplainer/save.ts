@@ -10,6 +10,7 @@ import {
   pruneExplanationPayload,
   resolveLocalizedMeaning,
 } from './shared';
+import { createInitialFsrsState, fsrsStateToPrefixedFields } from '../fsrsUtils';
 
 const SentenceTokenValidator = v.object({
   surface: v.string(),
@@ -260,6 +261,9 @@ export const upsertExplanationRecord = internalMutation({
     model: v.optional(v.string()),
     cacheKey: v.optional(v.string()),
     payload: SentenceExplanationPayloadValidator,
+    // AI quality tracking (PRD section 20)
+    confidence: v.optional(v.number()),
+    promptVersion: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -281,6 +285,8 @@ export const upsertExplanationRecord = internalMutation({
         model: args.model,
         cacheKey: args.cacheKey,
         payload,
+        confidence: args.confidence,
+        promptVersion: args.promptVersion,
         updatedAt: now,
       });
       return existing._id;
@@ -297,6 +303,9 @@ export const upsertExplanationRecord = internalMutation({
       model: args.model,
       cacheKey: args.cacheKey,
       payload,
+      confidence: args.confidence,
+      reviewStatus: 'unreviewed',
+      promptVersion: args.promptVersion,
       createdAt: now,
       updatedAt: now,
     });
@@ -327,12 +336,18 @@ export const saveAssets = mutation({
     const targetLanguage = normalizeSentenceLanguage(explanation.targetLanguage);
     const payload = pruneExplanationPayload(explanation.payload);
     const now = Date.now();
-    const selectedWords = args.selectedWords?.length
-      ? args.selectedWords
-      : payload.vocabulary || [];
-    const selectedGrammar = args.selectedGrammar?.length
-      ? args.selectedGrammar
-      : payload.grammar || [];
+    const selectedWords =
+      args.selectedWords !== undefined ? args.selectedWords : payload.vocabulary || [];
+    const selectedGrammar =
+      args.selectedGrammar !== undefined ? args.selectedGrammar : payload.grammar || [];
+    const assetQuality = {
+      confidence: explanation.confidence,
+      promptVersion: explanation.promptVersion,
+      provider: explanation.provider,
+      reviewStatus: explanation.reviewStatus ?? 'unreviewed',
+      source,
+      sourceRefId,
+    };
 
     let notePageId: Id<'note_pages'> | undefined;
     if (args.createNotePage) {
@@ -388,6 +403,7 @@ export const saveAssets = mutation({
         });
         savedSentenceId = existingSentence._id;
       } else {
+        const fsrsFields = fsrsStateToPrefixedFields(createInitialFsrsState(now));
         savedSentenceId = await ctx.db.insert('user_saved_sentences', {
           userId,
           sentenceId: explanation.sentenceId,
@@ -398,6 +414,7 @@ export const saveAssets = mutation({
           notePageId,
           source,
           sourceRefId,
+          ...fsrsFields,
           createdAt: now,
           updatedAt: now,
         });
@@ -453,6 +470,7 @@ export const saveAssets = mutation({
         .first()
         .catch(() => null);
 
+      const grammarFsrsFields = fsrsStateToPrefixedFields(createInitialFsrsState(now));
       const grammarSavedId = await ctx.db.insert('user_grammar_saved', {
         userId,
         grammarId: linkedGrammar?._id,
@@ -464,6 +482,7 @@ export const saveAssets = mutation({
         notePageId,
         source,
         sourceRefId,
+        ...grammarFsrsFields,
         createdAt: now,
         updatedAt: now,
       });
@@ -507,10 +526,21 @@ export const saveAssets = mutation({
       savedWordIds.slice(0, 5).map(async wordId => {
         const word = await ctx.db.get(wordId);
         if (!word) return null;
+        const progress = await ctx.db
+          .query('user_vocab_progress')
+          .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', wordId))
+          .first();
         return {
           id: word._id,
           word: word.word,
           meaning: resolveLocalizedMeaning(word, targetLanguage),
+          reviewStatus: progress?.status ?? 'NEW',
+          qualityReviewStatus: assetQuality.reviewStatus,
+          confidence: assetQuality.confidence,
+          promptVersion: assetQuality.promptVersion,
+          provider: assetQuality.provider,
+          source,
+          sourceRefId,
         };
       })
     );
@@ -518,11 +548,45 @@ export const saveAssets = mutation({
     return {
       success: true,
       source,
+      sourceRefId,
+      quality: assetQuality,
       savedSentenceId,
       notePageId,
       savedWordCount: savedWordIds.length,
       savedGrammarCount: savedGrammarIds.length,
       recentWords: recentWords.filter((word): word is NonNullable<typeof word> => word !== null),
     };
+  },
+});
+
+export const removeSavedVocabularyAsset = mutation({
+  args: {
+    wordId: v.id('words'),
+    source: v.optional(v.string()),
+    sourceRefId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ success: true; removed: boolean }> => {
+    const userId = await getAuthUserId(ctx);
+    const source = args.source?.trim();
+    const sourceRefId = args.sourceRefId?.trim();
+
+    const progress = await ctx.db
+      .query('user_vocab_progress')
+      .withIndex('by_user_word', q => q.eq('userId', userId).eq('wordId', args.wordId))
+      .first();
+
+    if (!progress || progress.savedByUser !== true) {
+      return { success: true, removed: false };
+    }
+
+    if (source && progress.source !== source) {
+      return { success: true, removed: false };
+    }
+    if (sourceRefId && progress.sourceRefId !== sourceRefId) {
+      return { success: true, removed: false };
+    }
+
+    await ctx.db.delete(progress._id);
+    return { success: true, removed: true };
   },
 });

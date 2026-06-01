@@ -48,7 +48,7 @@
     "noQuestions": "Асуулт байхгүй байна. Эхлэж асуугаарай!",
     "backToList": "Буцах",
     "postedBy": "{{name}}",
-    "timeAgo": "{{time}}",
+    "timeAgo": "Цаг",
     "accepted": "Зөвшөөрсөн",
     "communityProfile": "Олон нийтийн профайл",
     "profileNotFound": "Профайл олдсонгүй.",
@@ -77,443 +77,525 @@
   },
   "readingDiscovery": {
     "library": {
-      "title": "Classic Reading",
-      "subtitle": "One rotating Wikipedia spotlight, plus your private EPUB uploads, drafts, and share entry points.",
-      "privateLabel": "Private EPUB Library",
-      "privateTitle": "Visible only to you, with share links for invited readers",
-      "privateLogin": "Sign in to see your private EPUB library and create share links.",
-      "privateEmpty": "No private EPUBs yet. Upload your first book from the button above.",
-      "myUploads": "My Uploads",
-      "uploadCta": "Upload EPUB",
-      "myUploadsSubtitle": "Drafts, processing jobs, rejected submissions, and published EPUBs.",
-      "emptyMyUploads": "You have not uploaded any EPUBs yet.",
-      "chapterCount": "{{count}} chapters",
-      "wordCount": "{{count}} words",
-      "openReader": "Open Reader",
-      "submitForReview": "Submit for Review",
-      "shareLink": "Share Link",
-      "copyShareLink": "Copy Share Link",
-      "stopSharing": "Stop Sharing",
-      "shareShort": "Share",
-      "stopShareShort": "Stop",
-      "shareCopied": "Share link copied",
-      "shareFailed": "Unable to share this book right now.",
-      "shareDisabled": "Share link disabled",
-      "shareDisableFailed": "Unable to disable sharing right now.",
-      "wikipediaSpotlight": "Wikipedia Spotlight",
-      "wikipediaTitle": "Featured archive pick",
-      "wikipediaSourceFallback": "Wikipedia",
-      "featuredToday": "Featured today",
-      "read": "Read",
-      "wikipediaEmpty": "No Wikipedia spotlight is available yet.",
-      "communityLabel": "Community EPUB Library",
-      "communityTitle": "Reader-ready uploads",
-      "communityEmpty": "No community EPUBs are published yet. Upload the first one from the button above.",
-      "communityEmptyMobile": "No EPUBs published yet.",
-      "descriptionFallback": "Open the reader to browse the chapter list and start reading.",
+      "title": "Сонгомол унших",
+      "subtitle": "Википедиа тэргүүлэх гэрэл, таны хувийн EPUB байршуулалт, төсөл, нэвтрэх цэгүүдийг хуваалцах.",
+      "privateLabel": "Хувийн EPUB Номын сан",
+      "privateTitle": "Уригдсан уншигчдад зориулсан линкийг хуваалцах нь зөвхөн танд харагдана",
+      "privateLogin": "Хувийн EPUB номын сангаа харах, хуваалцах холбоос үүсгэхийн тулд нэвтэрнэ үү.",
+      "privateEmpty": "Хувийн EPUB-ууд хараахан байхгүй. Доорх товчлуураас анхны номоо байршуулна уу.",
+      "myUploads": "Миний байршуулалт",
+      "uploadCta": "ҮӨБ-ыг байршуулах",
+      "myUploadsSubtitle": "Дүрслэл, боловсруулалтын ажлын байр, ирүүлсэн мэдүүлэгээс татгалзаж, ҮӨБ-д нийтлэгдсэн.",
+      "emptyMyUploads": "Та одоогоор ямар ч EPUB-ууд байршуулаагүй байна.",
+      "chapterCount": "{{count}} Бүлгүүд",
+      "wordCount": "{{count}} үгс",
+      "openReader": "Уншигчийн нээлттэй",
+      "submitForReview": "Редакторт үлдээн хадгалах",
+      "shareLink": "Холбоосыг хуваалцах",
+      "copyShareLink": "Хуваалцах холбоосыг хуулах",
+      "stopSharing": "Хуваалцахыг зогсоох",
+      "shareShort": "Хуваалцах",
+      "stopShareShort": "Зогс",
+      "shareCopied": "Холбоосыг хуулах",
+      "shareFailed": "Энэ номыг яг одоо хуваалцаж чадсангүй.",
+      "shareDisabled": "Холбоосыг хуваалцах идэвхгүй болсон",
+      "shareDisableFailed": "Хуваалцахыг яг одоо идэвхгүй болгож чадсангүй.",
+      "wikipediaSpotlight": "Википедиа",
+      "wikipediaTitle": "Онцлох архивын сонголт",
+      "wikipediaSourceFallback": "Википедиа",
+      "featuredToday": "Өнөөдөр нийтэлсэн",
+      "read": "Унших",
+      "wikipediaEmpty": "Википедиа гэрлийн чийдэн одоогоор байхгүй байна.",
+      "communityLabel": "Олон нийтийн EPUB Номын сан",
+      "communityTitle": "Уншигчийн бэлэн байршуулалт",
+      "communityEmpty": "Нийтийн EPUB-ууд хараахан нийтлэгдээгүй байна. Эхнийхийг дээрх товчлуураас байршуулна уу.",
+      "communityEmptyMobile": "Одоогоор EPUB-ууд нийтлэгдээгүй байна.",
+      "descriptionFallback": "Бүлгийн жагсаалтыг үзэж, уншиж эхлэхийн тулд уншигчдыг нээнэ үү.",
       "status": {
-        "draftUploaded": "Draft uploaded",
-        "processing": "Processing",
-        "readyForReview": "Ready for review",
-        "inReview": "In review",
-        "published": "Published",
-        "rejected": "Rejected",
-        "processingFailed": "Processing failed"
+        "draftUploaded": "Баримт байршуулсан",
+        "processing": "Боловсруулж байна",
+        "readyForReview": "Хяналт хийхэд бэлэн",
+        "inReview": "Хяналтанд",
+        "published": "Нийтэд нийтлэгдсэн",
+        "rejected": "Татгалзсан",
+        "processingFailed": "Боловсруулалт амжилтгүй боллоо"
       }
     },
     "upload": {
-      "title": "Upload EPUB",
-      "subtitle": "Upload an EPUB and we'll parse chapters, build the reader, and queue it for review.",
-      "action": "Upload",
-      "supportedFormat": "Supported format: EPUB. The file will be parsed after upload and saved as a draft.",
-      "fileLabel": "EPUB File",
-      "uploading": "Uploading {{progress}}%",
-      "chooseFile": "Choose an EPUB file",
-      "maxSize": "Up to 100MB",
-      "titleLabel": "Title",
-      "authorLabel": "Author",
-      "descriptionLabel": "Description",
-      "languageLabel": "Language",
-      "tagsLabel": "Tags",
-      "tagsPlaceholder": "Add tags",
-      "submit": "Upload Book",
+      "title": "ҮӨБ-ыг байршуулах",
+      "subtitle": "ҮӨБ-ыг байршуулаад бид бүлгүүдийг хувааж, уншигч барьж, хянахын тулд дарж бичнэ үү.",
+      "action": "Оруулах",
+      "supportedFormat": "Дэмжигдсэн формат: EPUB. Файлыг байршуулсны дараа хадгална.",
+      "fileLabel": "EPUB Файл",
+      "uploading": "Байршуулж байна {{progress}}%",
+      "chooseFile": "ҮӨБ-ийн файл сонгоно уу",
+      "maxSize": "100MB хүртэл",
+      "titleLabel": "Агуулга",
+      "authorLabel": "Зохиогч",
+      "descriptionLabel": "Тодорхойлолт",
+      "languageLabel": "Хэл",
+      "tagsLabel": "Шошгонууд",
+      "tagsPlaceholder": "Шошго нэмэх",
+      "submit": "Хөтлөлтийг байршуулах",
       "languages": {
-        "en": "English",
-        "ko": "Korean",
-        "zh": "Chinese",
-        "vi": "Vietnamese",
-        "mn": "Mongolian",
-        "ja": "Japanese"
+        "en": "Англи хэл",
+        "ko": "солонгос",
+        "zh": "Хятад -",
+        "vi": "вьетнам",
+        "mn": "монгол",
+        "ja": "япон",
+        "answer": "Хариулт",
+        "question": "Асуулт",
+        "questions": "асуултууд",
+        "quiz": "Асуулт хариулт",
+        "selectGrammar": "Зүүн талын каталогоос дүрэм сонгоно уу"
       },
       "errors": {
-        "invalidExtension": "Please select an EPUB file (.epub).",
-        "unsupportedType": "Only EPUB files are supported.",
-        "emptyFile": "The selected file is empty.",
-        "fileTooLarge": "EPUB files must be smaller than 100MB.",
-        "fileRequired": "Please select an EPUB file.",
-        "titleAuthorRequired": "Title and author are required.",
-        "uploadFailed": "Failed to upload EPUB."
+        "invalidExtension": "EPUB файлыг сонгоно уу (.epub).",
+        "unsupportedType": "Зөвхөн EPUB файлыг дэмждэг.",
+        "emptyFile": "Сонгосон файл хоосон байна.",
+        "fileTooLarge": "EPUB файлууд 100MB-ээс бага байх ёстой.",
+        "fileRequired": "EPUB файлыг сонгоно уу.",
+        "titleAuthorRequired": "Гарчиг, зохиолч шаардлагатай.",
+        "uploadFailed": "EPUB-г байршуулж чадсангүй."
       }
     },
     "reader": {
-      "notFoundTitle": "Book not found",
-      "notFoundBody": "This EPUB is unavailable or you do not have access to it.",
-      "backToReading": "Back to Reading",
-      "chapterProgress": "Chapter {{current}} / {{total}}",
-      "completion": "{{percent}}% complete",
-      "contents": "Contents",
-      "previewMode": "Preview mode. You can read {{count}} chapters on the free plan.",
-      "chapterLocked": "Chapter Locked",
-      "chapterLockedBody": "This chapter is outside the free preview. Upgrade to unlock the full book.",
-      "chapterLabel": "Chapter {{number}}",
-      "minRead": "~{{count}} min read",
-      "chapterUnavailable": "This chapter is unavailable.",
+      "notFoundTitle": "Олдсонгүй",
+      "notFoundBody": "Энэхүү EPUB нь боломжгүй эсвэл та үүнд нэвтрэх эрхгүй.",
+      "backToReading": "Унших руу буцах",
+      "chapterProgress": "Бүлэг {{current}} / {{total}}",
+      "completion": "{{percent}}% дууссан",
+      "contents": "АГУУЛГА",
+      "previewMode": "Урьдчилан харах хэлбэр. Үнэгүй төлөвлөгөөний {{count}} бүлгүүдийг уншиж болно.",
+      "chapterLocked": "Бүлэг Түгжигдсэн",
+      "chapterLockedBody": "Энэ бүлэг нь үнэгүй урьдчилж харахаас гадна байна. Бүтэн номыг онгойлгохын тулд шинэчлэх.",
+      "chapterLabel": "Бүлэг {{number}}",
+      "minRead": "~{{count}} мин унших",
+      "chapterUnavailable": "Энэ бүлэг боломжгүй байна.",
       "settings": {
-        "title": "Reader Settings",
-        "fontSize": "Font size",
-        "theme": "Theme",
-        "lineHeight": "Line height",
+        "title": "Уншигчийн Тохиргоо",
+        "fontSize": "Фонтын хэмжээ",
+        "theme": "Сэдэв",
+        "lineHeight": "Мөрийн өндөр",
         "fontSizes": {
-          "small": "Small",
-          "medium": "Medium",
-          "large": "Large",
-          "extra-large": "Extra Large"
+          "small": "Жижиг",
+          "medium": "Дунд",
+          "large": "Их",
+          "extra-large": "Илүү том"
         },
         "themes": {
-          "light": "Light",
+          "light": "гэрэл",
           "sepia": "Sepia",
-          "dark": "Dark"
+          "dark": "Харанхуй"
         },
         "lineHeights": {
-          "compact": "Compact",
-          "normal": "Normal",
-          "relaxed": "Relaxed"
+          "compact": "Компакт",
+          "normal": "Энгийн",
+          "relaxed": "Чөлөөтэй"
         }
       }
     },
     "mobile": {
-      "publishedUploads": "Published uploads",
-      "privateUploads": "Only visible to you"
+      "publishedUploads": "Нийтлэсэн байршлууд",
+      "privateUploads": "Зөвхөн танд харагдана",
+      "articlesToday": "Өнөөдөр {{count}} мэдээ шинэчлэгдсэн",
+      "globalInsights": "Дэлхийн динамик",
+      "swipeHint": "Зүүн, баруун тийш гүйлгэж үзэх"
+    },
+    "featured": {
+      "newsDesc": "Нэр хүндтэй хэвлэл мэдээллийн хэрэгслээс AI-ийн сонгосон мэдээ. Уншиж, суралцаж, үгийн сангаа нэмэгдүүлнэ.",
+      "newsTitle": "Өдөр тутмын солонгос мэдээ"
+    },
+    "news": {
+      "empty": "Шинэ мэдээ гарахыг дараа ирж үзнэ үү.",
+      "loadError": "Мэдээг ачаалж чадсангүй.",
+      "title": "Шууд мэдээ",
+      "updated": "Цаг тутамд шинэчлэгдэнэ"
+    },
+    "noContent": "Нийтлэлийн агуулга байхгүй байна",
+    "pictureBooks": {
+      "openCard": "{{title}} зургийн номыг нээх",
+      "title": "Зургийн номууд",
+      "viewAll": "Бүгдийг харах"
+    },
+    "readingHub": {
+      "mobileSubtitle": "Сонгосон мэдээ, түүх, зургийн номууд таныг сурахад тусална."
     }
   },
   "common": {
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "close": "Close",
-    "add": "Add",
-    "all": "All",
-    "previous": "Previous",
-    "next": "Next"
+    "cancel": "Цуцлах",
+    "delete": "Устгах",
+    "close": "Хаах",
+    "add": "Нэмэх",
+    "all": "Бүгд",
+    "previous": "Өмнөх",
+    "next": "Дараагийн",
+    "appName": "Духан Солонгос хэл",
+    "back": "Буцах",
+    "exams": "Шалгалт",
+    "items": "шүүлт",
+    "learnChar": "Сур",
+    "loading": "Ачаалж байна...",
+    "masteredChar": "Эзэмшсэн",
+    "minutes": "минут",
+    "recently": "Саяхан сонссон",
+    "retry": "Дахин оролдох",
+    "search": "Хайх",
+    "start": "Эхлэх",
+    "streak": "Идэвхтэй өдрүүд",
+    "viewAll": "Бүгдийг харах",
+    "vocabChar": "Үгсийн сан"
   },
   "admin": {
     "epubReview": {
-      "title": "EPUB Library Review",
-      "subtitle": "Moderate community EPUB uploads and publish them into the reading library.",
-      "filterTitle": "Status Filter",
-      "empty": "No books found for this status.",
-      "unknownOwner": "Unknown",
-      "selectTitle": "Select a book to review",
-      "selectBody": "Pick a submission from the list to inspect metadata, chapter previews, and moderation actions.",
-      "chapterCount": "{{count}} chapters",
-      "noDescription": "No description provided.",
-      "owner": "Owner",
-      "language": "Language",
-      "words": "Words",
-      "reviewNote": "Review Note",
-      "reviewNotePlaceholder": "Optional approval note, or required rejection reason.",
-      "chapterPreview": "Chapter Preview",
-      "noParsedChapters": "No parsed chapters are available yet.",
-      "wordCount": "{{count}} words",
-      "noPreview": "No preview available.",
+      "title": "EPUB Номын сангийн тойм",
+      "subtitle": "Дунд зэргийн нийгэмлэг EPUB байршуулалтыг унших номын сан руу нийтлэх.",
+      "filterTitle": "Статусын Шүүлтүүр",
+      "empty": "Энэ статусыг ном олдсонгүй.",
+      "unknownOwner": "Үл мэдэгдэх",
+      "selectTitle": "Захиалгыг хянахаар сонгоно уу",
+      "selectBody": "Мета өгөгдөл, бүлгийн урьдчилсан байдлаар болон дундаж үйлдлүүдийг шалгах жагсаалтаас ирүүлсэн илгээх сонголтыг сонгоно уу.",
+      "chapterCount": "{{count}} Бүлгүүд",
+      "noDescription": "Тайлбар олдсонгүй.",
+      "owner": "Эзэмшигч",
+      "language": "Хэл",
+      "words": "Үг",
+      "reviewNote": "Тэмдэглэлийг хянах",
+      "reviewNotePlaceholder": "Нэмэлт зөвшөөрлийн тэмдэглэл, эсвэл татгалзах шаардлагатай шалтгаан.",
+      "chapterPreview": "Бүлгийн урьдчилсан харах",
+      "noParsedChapters": "Хараахан задгай бүлэг байхгүй байна.",
+      "wordCount": "{{count}} үгс",
+      "noPreview": "Урьдчилан харах боломжгүй.",
       "summary": {
-        "ready": "Ready",
-        "processing": "Processing",
-        "published": "Published",
-        "failed": "Failed"
+        "ready": "Бэлэн",
+        "processing": "Боловсруулж байна",
+        "published": "Нийтэд нийтлэгдсэн",
+        "failed": "Aмжилтгүй"
       },
       "status": {
-        "allBooks": "All Books",
-        "processing": "Processing",
-        "readyForReview": "Ready for Review",
-        "inReview": "In Review",
-        "published": "Published",
-        "rejected": "Rejected",
-        "processingFailed": "Processing Failed"
+        "allBooks": "Бүх ном",
+        "processing": "Боловсруулж байна",
+        "readyForReview": "Тойм хийхэд бэлэн",
+        "inReview": "Хяналтанд",
+        "published": "Нийтэд нийтлэгдсэн",
+        "rejected": "Татгалзсан",
+        "processingFailed": "Боловсруулалт амжилтгүй боллоо"
       },
       "actions": {
-        "approve": "Approve",
-        "reject": "Reject",
-        "retry": "Retry Processing"
+        "approve": "Зөвшөөрөх",
+        "reject": "Татгалзах",
+        "retry": "Боловсруулалтыг дахин оролдох"
       }
     }
   },
   "courseDashboard": {
     "modules": {
-      "vocabulary": "Vocabulary",
-      "grammar": "Grammar",
-      "listening": "Listening",
-      "reading": "Reading"
+      "vocabulary": "Үгсийн сан.",
+      "grammar": "Дүрэм",
+      "listening": "Сонсож байна",
+      "reading": "Уншиж байна"
     }
   },
   "dashboard": {
     "desktop": {
-      "greeting": "Hello, {{name}}",
-      "welcomeBack": "Welcome back, {{name}}",
-      "todayPath": "Today's Path",
-      "todayPathDescription": "TODAY'S PATH · {{minutes}} min",
-      "weeklyGoal": "Weekly Goal",
-      "hours": "hours",
+      "greeting": "Сайн байна уу, {{name}}",
+      "welcomeBack": "Буцах, {{name}}",
+      "todayPath": "Өнөөдрийн зам",
+      "todayPathDescription": "ӨДӨР БУСАД ЗАМЫН · {{MINTS}} МИНУ",
+      "weeklyGoal": "Долоо хоног тутмын зорилго",
+      "hours": "цагууд",
       "loading": "Loading...",
-      "start": "Start",
-      "items": "items",
+      "start": "Эхлэх",
+      "items": "зүйлс",
       "vocabChar": "Vocab",
       "masteredChar": "Mastered",
       "learnChar": "Learn",
-      "tasksLeft": "{{count}} tasks",
-      "approxTime": "~{{count}} min",
+      "tasksLeft": "{{count}} даалгаварууд",
+      "approxTime": "~{{count}} мин",
       "tenThousand": "10k",
-      "weeklyActivity": "Last 7 Days",
-      "viewAll": "View all",
-      "dailyChallenge": "Daily Challenge",
-      "incorrectBook": "Mistake Notebook",
-      "daysActivity": "{{count}} Days Activity",
+      "weeklyActivity": "Сүүлийн 7 хоног",
+      "viewAll": "БҮГД",
+      "dailyChallenge": "Өдөр тутмын бэрхшээл",
+      "incorrectBook": "Алдаа тэмдэглэлийн дэвтэр",
+      "daysActivity": "{{count}} Өдрийн үйл ажиллагаа",
       "streak": "Streak",
-      "consecutiveDays": "consecutive days",
-      "friendActivity": "Learning Partners",
-      "communityCta": "Community",
-      "noFriendActivity": "Follow friends to see their activity here",
-      "upcomingReviews": "Upcoming Reviews",
-      "reviewCta": "Review",
-      "noUpcomingReviews": "No upcoming reviews",
-      "tasksLeftSummary": "{{count}} tasks left today",
-      "allDone": "All done today ✓",
+      "consecutiveDays": "дараалсан өдөр",
+      "friendActivity": "Сургалтын түншүүд",
+      "communityCta": "Нийгэмлэг",
+      "noFriendActivity": "Найз нөхөдтэйгөө дагаж, тэдний үйл ажиллагааг эндээс харах",
+      "upcomingReviews": "Дараагийн сэтгэгдэл",
+      "reviewCta": "Сэтгэгдэл",
+      "noUpcomingReviews": "Удахгүй болох үнэлгээ байхгүй байна",
+      "tasksLeftSummary": "{{count}} өнөөдөр ажлуудыг орхисон",
+      "allDone": "Бүгд өнөөдөр хийгдсэн ✓",
       "modules": {
-        "review": "Review",
-        "grammar": "Grammar",
-        "listening": "Listening",
+        "review": "Сэтгэгдэл",
+        "grammar": "Дүрэм",
+        "listening": "Сонсож байна",
         "topik": "TOPIK"
       },
       "primaryAction": {
-        "reviewEyebrow": "REVIEW · 复习",
-        "reviewTitle": "{{count}} cards due now",
-        "reviewSubtitle": "About {{minutes}} min · FSRS smart review",
-        "startReview": "Start review →",
-        "challengeEyebrow": "DAILY CHALLENGE · 挑战",
-        "continueChallenge": "Continue challenge →",
-        "weakAreaEyebrow": "WEAK AREA · 弱项",
+        "reviewEyebrow": "Давталт · 复习",
+        "reviewTitle": "{{count}} одоо картууд төлөх",
+        "reviewSubtitle": "Ойролцоогоор {{минут}} мин · FSRS ухаалаг үнэлгээ хийх",
+        "startReview": "Дүгнэлтийг эхлүүлэх →",
+        "challengeEyebrow": "Өдөр тутмын сорилт · 挑战",
+        "continueChallenge": "Үргэлжлүүлэх →",
+        "weakAreaEyebrow": "Сул хэсэг · 弱项",
         "weakAreaTitle": "{{label}} · {{score}}%",
-        "strengthen": "Strengthen →",
-        "grammarEyebrow": "GRAMMAR · 语法",
-        "grammarTitle": "Unit {{unit}}",
-        "continueLesson": "Continue lesson →",
-        "podcastEyebrow": "LISTEN · 沉浸",
-        "podcastTitle": "Today's podcast pick",
-        "podcastSubtitle": "10 minutes of listening every day",
-        "openPodcast": "Open podcast →"
+        "strengthen": "Бэхжүүлэх →",
+        "grammarEyebrow": "Дүрэм · 语法",
+        "grammarTitle": "Нэгж {{unit}}",
+        "continueLesson": "Үргэлжлүүлээрэй →",
+        "podcastEyebrow": "Сонсох · 沉浸",
+        "podcastTitle": "Өнөөдрийн подкаст сонголт",
+        "podcastSubtitle": "Өдөр бүр 10 минут сонсох",
+        "openPodcast": "Подкастыг нээх →"
       },
       "insights": {
-        "title": "30-day Insights",
-        "retention": "Retention",
-        "activeDays": "Active days",
-        "reviews": "Reviews"
+        "title": "30 хоногийн талаарх ойлголт",
+        "retention": "Хадгалах",
+        "activeDays": "Идэвхтэй өдрүүд",
+        "reviews": "Эргэн хяналт"
       },
       "topikCountdown": {
         "title": "TOPIK",
-        "lobby": "Lobby",
-        "daysLeft": "days left",
-        "noUpcoming": "No exam scheduled",
-        "weakAreasLabel": "Weak areas",
-        "noWeakAreas": "Complete a mock exam to see your weak areas"
+        "lobby": "ЛОББИ",
+        "daysLeft": "үлдсэн хоног",
+        "noUpcoming": "Шалгалт хийгдээгүй",
+        "weakAreasLabel": "Сул дорой хэсгүүд",
+        "noWeakAreas": "Сул дорой газраа харахын тулд товчлох шалгалтыг бөглөнө үү"
       },
-      "dailyPhrase": "Phrase of the Day",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago",
-      "justNow": "Just now",
-      "dayJoined": "Days joined",
-      "level": "Level",
-      "myResources": "My Resources",
-      "vocabBook": "Vocab Book",
+      "dailyPhrase": "Өдрийн хэллэг",
+      "minutesAgo": "{{count}}m өмнө",
+      "hoursAgo": "{{count}}h өмнө",
+      "justNow": "Яг одоо",
+      "dayJoined": "Өдөр нийлсэн",
+      "level": "Багц",
+      "myResources": "Миний нөөцүүд",
+      "vocabBook": "Үгсийн Хөтөлбөр",
       "notebook": "Notebook",
-      "achievements": "Achievements",
-      "history": "History",
-      "settings": "Settings",
-      "subscription": "Subscription",
-      "notifications": "Notifications",
-      "language": "Language",
-      "help": "Help & Feedback",
-      "logout": "Logout"
+      "achievements": "Гаргасан амжилт",
+      "history": "Түүх",
+      "settings": "Системийн тохиргоо",
+      "subscription": "Захиалга:",
+      "notifications": "Мэдэгдлүүд",
+      "language": "Хэл",
+      "help": "Тусламж ба санал хүсэлт",
+      "logout": "Гарах",
+      "now": "ОДОО",
+      "participate": "Оролцох"
     },
     "dictionary": {
-      "label": "Dictionary",
-      "placeholder": "Search Korean word...",
-      "searching": "Searching...",
-      "noResults": "No results found",
-      "error": "Something went wrong",
-      "sense": "Sense"
+      "label": "Толь бичиг",
+      "placeholder": "Солонгос үг хайх...",
+      "searching": "Хайж байна...",
+      "noResults": "Ямар ч үр дүн олдсонгүй!",
+      "error": "Ямар нэг алдаа гарлаа",
+      "sense": "Мэдрэмтгий"
     },
     "topik": {
-      "writing": "TOPIK Writing",
+      "writing": "ТОПИК Бичих",
       "controller": {
-        "exit": "Exit"
+        "exit": "Гарах"
       }
+    },
+    "common": {
+      "continueLearning": "Үргэлжлүүлэн сурах"
+    },
+    "mobile": {
+      "exploreLabel": "Хөгжмийн суваг",
+      "exploreTitle": "Зөвлөмж болгосон сувгууд",
+      "mainActions": "Сургалтын станц",
+      "quickMediaSubtitle": "Хэзээ ч подкаст, видео, унших контент руу шилжих боломжтой.",
+      "quickNotebookSubtitle": "Алдаагаа хянаж, мэдлэгийн зөрүүг арилгах.",
+      "quickPracticeSubtitle": "Шивэх дасгал, тэмдэглэлийн дэвтэр, зорилтот дасгал.",
+      "quickReviewSubtitle": "Хугацаа дууссан үгсийг цэвэрлэж, санах ойгоо идэвхтэй байлгах.",
+      "shortcutsTitle": "Үндсэн товчлуурууд",
+      "streakShort": "Дараалсан өдрүүд"
+    },
+    "mobileFocus": {
+      "choose": "Өнөөдөр эхлэх: Сургалтын модулиа сонгоно уу",
+      "continue": "Аянаа үргэлжлүүлэх: Орхисон газраасаа үргэлжлүүлнэ үү"
+    },
+    "podcast": {
+      "community": "Трэндинг",
+      "editorPicks": "Редакторын сонголт"
+    },
+    "summary": {
+      "title": "Өдрийн зорилтын явц"
+    },
+    "textbook": {
+      "default": "Сурах бичиг"
     }
   },
   "community": {
     "desktop": {
-      "title": "Community Activity",
-      "composerPlaceholder": "Share your learning...",
-      "studyCard": "Study Card",
-      "publish": "Publish",
+      "title": "Олон нийтийн үйл ажиллагаа",
+      "composerPlaceholder": "Суралцлаа хуваалцах...",
+      "studyCard": "Сургалтын карт",
+      "publish": "Нийтлэх",
       "filters": {
-        "all": "All",
-        "following": "Following",
-        "milestones": "Milestones",
+        "all": "Бүгд",
+        "following": "Дагаж байгаа",
+        "milestones": "Чухал үе шатууд",
         "qa": "Q&A",
-        "resources": "Resources"
+        "resources": "Эх үүсвэрүүд"
       },
-      "noActivity": "No activity yet",
-      "like": "Like",
-      "comment": "Comment",
-      "share": "Share",
-      "linkCopied": "Link copied to clipboard",
-      "shareFailed": "Sharing unavailable",
+      "noActivity": "Одоогоор үйл ажиллагаа хараахан байхгүй байна",
+      "like": "Таалагдлаа",
+      "comment": "Сэтгэгдэл",
+      "share": "Хуваалцах",
+      "linkCopied": "Холбоосыг түр санах ой руу хуулсан",
+      "shareFailed": "Хуваалцах боломжгүй",
       "tags": {
-        "vocab": "Vocab",
+        "vocab": "Үгсийн сан",
         "questions": "questions",
         "question": "Question",
         "answer": "Answer",
-        "selectGrammar": "Please select a grammar point from the left directory"
+        "selectGrammar": "Please select a grammar point from the left directory",
+        "grammar": "Дүрэм",
+        "listening": "Сонсгол",
+        "milestone": "Амжилт",
+        "study": "Сургууль",
+        "topik": "TOPIK"
       },
       "mediaHub": {
         "completedContent": "Completed content",
         "topikScore": "TOPIK Score {{score}}",
         "submittedExam": "Submitted exam"
+      },
+      "events": {
+        "completedContent": "сургуулиа төгссөн",
+        "submittedExam": "шалгалт өгсөн",
+        "topikScore": "TOPIK Шалгалтын оноо {{score}}"
       }
     }
   },
   "leaderboard": {
     "desktop": {
-      "title": "Leaderboard",
-      "weeklyOverview": "Weekly Overview",
-      "weekLeft": "{{days}}d {{hours}}h left",
-      "myRank": "My Rank",
-      "promotionCutoff": "Top {{count}} promote",
-      "relegationZone": "Bottom 10 relegate",
+      "title": "Удирдагч самбар",
+      "weeklyOverview": "7 хоног тутмын тойм",
+      "weekLeft": "{{days}}d {{hours}}цаг зүүн",
+      "myRank": "Миний рейтинг",
+      "promotionCutoff": "Дээд {{count}} -ийн сурталчилгаа",
+      "relegationZone": "Доод 10 төлөөлөгч",
       "leagueNames": {
-        "bronze": "Bronze League",
-        "silver": "Silver League",
-        "gold": "Gold League",
-        "diamond": "Diamond League"
+        "bronze": "Хүрэл лигийн",
+        "silver": "Мөнгөний лигийн",
+        "gold": "Алт лигийн",
+        "diamond": "Алмазны лигийн"
       },
-      "rankLabel": "Rank",
-      "promote": "Promote",
-      "stay": "Stay",
-      "seasonProgress": "Season Progress",
-      "weekLabel": "Week {{count}}",
-      "rewards": "Weekly Rewards",
-      "fetchingData": "Fetching leaderboard data",
+      "rankLabel": "Ранд:",
+      "promote": "Дэмжих",
+      "stay": "Үлдэх",
+      "seasonProgress": "Улирлын явц",
+      "weekLabel": "7 хоног {{count}}",
+      "rewards": "Долоо хоног тутмын шагнал",
+      "fetchingData": "Удирдах самбарын өгөгдлийг ашиглах",
       "rewardsList": {
-        "firstPlace": "#1 — Diamond Badge + Limited Avatar Frame",
-        "topThree": "#2-3 — Diamond Badge",
-        "promotion": "#4-{{count}} — Promote"
+        "firstPlace": "#1 — Алмаз тэмдэг + Хязгаарлагдмал Аватар Frame",
+        "topThree": "#2-3 — Алмазны тэмдэг",
+        "promotion": "#4-{{count}} — Дэмжих"
       }
     }
   },
   "coursesOverview": {
     "desktop": {
-      "currentJourney": "Current Journey",
-      "learningJourney": "Learning Journey",
+      "currentJourney": "Одоогийн Аялал",
+      "learningJourney": "Сургалтын зам",
       "learningTools": {
-        "title": "Learning Tools",
-        "flashcards": "Flashcards",
-        "reviewStatus": "{{count}} cards due",
-        "grammar": "Grammar",
-        "masteryStatus": "{{count}} mastered",
-        "typing": "Typing",
-        "notebook": "Notebook"
+        "title": "Сургалтын хэрэгсэл",
+        "flashcards": "Флашкартууд",
+        "reviewStatus": "{{count}} картууд төлөх",
+        "grammar": "Дүрэм",
+        "masteryStatus": "{{count}} мэргэшсэн",
+        "typing": "Төрөл",
+        "notebook": "Тэмдэглэлийн дэвтэр"
       },
       "tabs": {
-        "mine": "My Courses",
-        "grammar": "Grammar",
-        "vocabulary": "Vocabulary",
-        "typing": "Typing",
+        "mine": "Миний хичээлүүд",
+        "grammar": "Дүрэм",
+        "vocabulary": "Үгсийн сан.",
+        "typing": "Төрөл",
         "topik": "TOPIK"
       },
       "grammar": {
-        "categories": "Categories",
-        "myProgress": "My Progress",
-        "masteryRate": "Mastery Rate",
-        "redEyeMode": "Recite Mode",
-        "redEyeOff": "Normal Mode",
-        "introduction": "Introduction",
-        "coreUsage": "Core Usage",
-        "comparative": "Comparison",
-        "culturalNotes": "Cultural Notes",
-        "commonMistakes": "Common Mistakes",
-        "review": "Review",
-        "explanation": "Explanation",
-        "conjugationRules": "Conjugation",
-        "examples": "Examples"
+        "categories": "Ангиллууд",
+        "myProgress": "Миний ахиц",
+        "masteryRate": "Магистрын түвшин",
+        "redEyeMode": "Горимыг дахин давтах",
+        "redEyeOff": "Энгийн горим",
+        "introduction": "Оршил.",
+        "coreUsage": "Үндсэн хэрэглээ",
+        "comparative": "Харьцуулалт",
+        "culturalNotes": "Соёлын тэмдэглэл",
+        "commonMistakes": "Нийтлэг алдаа",
+        "review": "Сэтгэгдэл",
+        "explanation": "Тайлбар",
+        "conjugationRules": "Тэсвэржилт",
+        "examples": "Жишээ нь"
       },
       "vocabulary": {
-        "dueToday": "Due Today",
-        "availableToLearn": "Available to Learn",
-        "studiedToday": "Studied Today",
-        "mastered": "Mastered",
-        "toLearn": "New",
-        "myWordbooks": "My Wordbooks",
+        "dueToday": "Өнөөдөр Тооцох",
+        "availableToLearn": "Сурах боломжтой",
+        "studiedToday": "Өнөөдөр сурч байна",
+        "mastered": "MASTED",
+        "toLearn": "Шинэ",
+        "myWordbooks": "Миний үгний номууд",
         "modes": {
-          "title": "Practice Modes",
+          "title": "Практик горимууд",
           "flashcard": "Flashcard",
-          "learn": "Learn",
-          "test": "Test",
-          "match": "Match"
+          "learn": "СУРАЛЦ!",
+          "test": "Туршилт",
+          "match": "Харгалдуулах"
         },
-        "forecast": "Forecast",
-        "totalProgress": "Total Progress",
-        "startReview": "Start Review",
-        "startLearning": "Start Learning"
+        "forecast": "Таамаглал",
+        "totalProgress": "Нийт Явцын",
+        "startReview": "Тоймыг эхлүүлэх",
+        "startLearning": "Сургалтыг эхлүүлэх"
       },
       "typing": {
         "avgSpeed": "Avg Speed",
-        "accuracy": "Accuracy",
-        "totalTests": "Total Tests",
-        "highestSpeed": "Top Speed",
-        "practicePrompt": "Start typing the text above...",
-        "fullMode": "Full Mode"
+        "accuracy": "Нарийвчлал",
+        "totalTests": "Нийт сорилууд",
+        "highestSpeed": "Дээд хурд",
+        "practicePrompt": "Дээр текстийг бичиж эхлэх...",
+        "fullMode": "Бүтэн горим"
       },
       "topik": {
-        "mockExam": "Mock Exam",
-        "predictedScore": "Predicted Score",
-        "targetLevel": "Target Level",
-        "startExam": "Start Exam",
-        "recentAttempts": "Recent Records",
-        "questions": "Questions"
+        "mockExam": "Мокийн шалгалт",
+        "predictedScore": "Урьдчилсан оноо",
+        "targetLevel": "Зорилтот түвшин",
+        "startExam": "Шалгалтыг Эхлэх",
+        "recentAttempts": "Сүүлийн бичлэгүүд",
+        "questions": "Асуултууд"
       },
       "notebook": {
-        "title": "Notebook",
-        "noteCount": "{{count}} notes",
-        "all": "All",
-        "newNote": "New Note",
-        "loadingNotes": "Loading notes...",
-        "today": "Today",
-        "yesterday": "Yesterday",
-        "noContent": "No content",
-        "noNotes": "Your notebook is empty",
-        "startJourney": "Highlights from your reading will appear here.",
-        "createFirstNote": "Create First Note",
+        "title": "Тэмдэглэлийн дэвтэр",
+        "noteCount": "{{count}} Тэмдэглэл",
+        "all": "Бүгд",
+        "newNote": "Шинэ тэмдэглэл",
+        "loadingNotes": "Тэмдэглэлийг ачааллаж байна...",
+        "today": "Өнөөдөр",
+        "yesterday": "Өчигдөр",
+        "noContent": "Агуулга байхгүй",
+        "noNotes": "Таны тэмдэглэлийн дэвтэр хоосон байна",
+        "startJourney": "Таны уншсан зүйлүүд энд харагдах болно.",
+        "createFirstNote": "Анхны тэмдэглэл үүсгэх",
         "types": {
-          "grammar": "Grammar",
-          "vocab": "Vocab",
-          "mistakes": "Mistakes",
-          "reflections": "Reflections",
-          "default": "Default"
+          "grammar": "Дүрэм",
+          "vocab": "Үгсийн сан",
+          "mistakes": "Алдаа",
+          "reflections": "Бясалгал",
+          "default": "Анхдагч"
         }
       }
     },
     "mobile": {
       "hanjaTag": "學",
-      "latin": "LEARN",
+      "latin": "СУРАЛЦ!",
       "title": "배우다",
       "subtitle": "Системээр солонгос хэл сурах",
       "tabs": {
@@ -562,56 +644,56 @@
   "notes": {
     "v2": {
       "source": {
-        "manual": "Manual",
+        "manual": "Гарын авлага",
         "topik": "TOPIK",
-        "reading": "Reading",
-        "vocab": "Vocab",
-        "grammar": "Grammar",
-        "dictionary": "Dictionary",
-        "practice": "Practice"
+        "reading": "Уншиж байна",
+        "vocab": "Үгсийн сан",
+        "grammar": "Дүрэм",
+        "dictionary": "Толь бичиг",
+        "practice": "Дасгал хийх"
       },
       "cardType": {
-        "vocab": "Vocab",
-        "grammar": "Grammar",
-        "mistake": "Mistake",
-        "quoteCard": "Quote Note",
-        "note": "Note"
+        "vocab": "Үгсийн сан",
+        "grammar": "Дүрэм",
+        "mistake": "Алдаа",
+        "quoteCard": "Үнийн саналын тэмдэглэл",
+        "note": "Тэмдэглэл:"
       },
       "status": {
-        "reviewed": "Reviewed",
-        "queued": "Queued"
+        "reviewed": "Хянасан",
+        "queued": "Дараалал"
       },
       "page": {
-        "newNoteTitle": "New Note"
+        "newNoteTitle": "Шинэ тэмдэглэл"
       },
       "confirm": {
-        "deletePage": "Delete this note? It will be moved out of your active notebook."
+        "deletePage": "Энэ тэмдэглэлийг устгах уу? Таны идэвхтэй тэмдэглэлийн дэвтэрээс нүүлгэн шилжинэ."
       },
-      "recentHighlights": "Recent Highlights",
+      "recentHighlights": "Сүүлийн үеийн онцлох үйлдлүүд",
       "scope": {
-        "reading": "Reading",
+        "reading": "Уншиж байна",
         "topik": "TOPIK",
-        "book": "Book",
-        "podcast": "Podcast"
+        "book": "Хөтлөлт",
+        "podcast": "Подкаст"
       }
     }
   },
   "epub": {
     "upload": {
-      "title": "Import Private Library",
-      "description": "Upload EPUB books to parse chapters automatically for an immersive reading experience. Books stay in your private library.",
+      "title": "Хувийн санг импортлох",
+      "description": "ҮӨБ-ийн номыг импульсийн унших туршлагыг автоматаар тайлбарлахын тулд бүлгүүдийг автоматаар байршуулна уу. Номууд таны хувийн номын санд үлддэг.",
       "features": {
         "parsing": {
-          "title": "Smart Parsing",
-          "desc": "System automatically identifies book structure and table of contents."
+          "title": "Ухаалаг сэтгэгдлүүд",
+          "desc": "Систем нь дэвтэрийн бүтэц ба агуулгын хүснэгтийг автоматаар тодорхойлно."
         },
         "reader": {
-          "title": "Custom Reader",
-          "desc": "Support multiple themes, font sizes, and layout adjustments."
+          "title": "Тохируулсан уншигч",
+          "desc": "Олон загвар, фонт хэмжээ, зохион байгуулах тохиргоог дэмжинэ."
         },
         "sync": {
-          "title": "Cross-device Sync",
-          "desc": "Seamlessly sync reading progress across all devices."
+          "title": "Төхөөрөмж хоорондын Sync",
+          "desc": "Бүх төхөөрөмжүүдийн даяар унших явцыг уян хатан синхрончилно."
         }
       }
     }
@@ -619,322 +701,322 @@
   "landing": {
     "v2": {
       "nav": {
-        "features": "Features",
-        "loop": "Daily Path",
-        "modules": "Modules",
-        "community": "Community",
-        "pricing": "Pricing",
-        "faq": "FAQ",
-        "login": "Login",
-        "register": "Sign up"
+        "features": "Онцлогууд",
+        "loop": "Өдөр тутмын зам",
+        "modules": "Модулиуд",
+        "community": "Нийгэмлэг",
+        "pricing": "Үнэ тогтоолт",
+        "faq": "Түгээмэл асуултууд",
+        "login": "Нэвтрэх",
+        "register": "Бүртгүүлэх"
       },
       "hero": {
         "phone": {
           "s1": {
-            "t": "Morning Review",
-            "s": "18 cards due · Done"
+            "t": "Өглөөний тойм",
+            "s": "18 картыг төлөх · Болсон"
           },
           "s2": {
-            "t": "New Lesson · L24 Alleyway",
-            "s": "In progress · 8 min"
+            "t": "Шинэ хичээл · L24 Alleyway",
+            "s": "Явагдаж байна · 8 мин"
           },
           "s3": {
-            "t": "Podcast Clip",
-            "s": "Korean Alley Walk · 6 min"
+            "t": "Подкаст Клип",
+            "s": "Солонгосын Аллей Walk · 6 мин"
           },
           "s4": {
-            "t": "Bedtime Reading",
-            "s": "Short Story · Memories"
+            "t": "Унтах цаг Унших",
+            "s": "Товч намтар/дурсамж"
           },
-          "date": "May 11th",
-          "greet": "Hello, Haeun",
-          "sub": "Daily path ready · 4 steps ~22 min"
+          "date": "5-р сарын 11",
+          "greet": "Сайн уу, Хайун",
+          "sub": "Өдөр бүр бэлэн зам · 4 алхам ~22 мин"
         },
-        "eyebrow": "v3.0 released · New learning path and community",
+        "eyebrow": "v3.0 -г гаргасан · Шинэ суралцах зам ба нийгэмлэг",
         "titleKo": "讀韓",
-        "titlePre": "Make Korean ",
-        "titleUnderlined": "your routine",
-        "ctaPrimary": "Start learning for free →",
-        "ctaSecondary": "Watch 90s demo",
-        "meta1": "Active learners",
-        "meta2": "Daily reviews",
-        "meta3": "App Store rating",
+        "titlePre": "Солонгос хүн болоорой",
+        "titleUnderlined": "таны ердийн хэвшил",
+        "ctaPrimary": "Үнэгүй сургалтыг эхлүүл →",
+        "ctaSecondary": "90s демо үзэх",
+        "meta1": "Идэвхтэй суралцагчид",
+        "meta2": "Өдрийн тойм",
+        "meta3": "App Store-ийн зэрэглэл",
         "chip1": {
           "t": "Streak",
-          "v": "47 Days"
+          "v": "47 Өдөр"
         },
         "chip2": {
-          "t": "Today's New",
+          "t": "Өнөөдрийн шинэ",
           "v": "12 / 15"
         },
         "chip3": {
-          "t": "TOPIK II",
-          "v": "Level 5 · 87%"
+          "t": "ТОПИК II",
+          "v": "Түвшин 5 · 87%"
         },
         "sub": "A daily curated path · Vocab, grammar, TOPIK, media, podcasts, reading, and community interlinked · Powered by FSRS memory model."
       },
       "logos": {
-        "v1": "Immersive reading",
-        "v2": "Media listening",
-        "v3": "FSRS smart reviews",
-        "v4": "Native community",
-        "v5": "Cross-platform sync"
+        "v1": "Иммерсив унших",
+        "v2": "Хэвлэл мэдээллийн хэрэгслийг сонсох",
+        "v3": "FSRS ухаалаг үнэлгээ",
+        "v4": "Үндсэн нийгэмлэг",
+        "v5": "Хөндлөн платформын синхрон"
       },
       "features": {
         "t1": {
-          "title": "Daily Learning Path",
-          "pill": "/ Auto-generated @ 7:00 AM · ~22 min"
+          "title": "Сургалтын өдөр тутмын зам",
+          "pill": "/ Авто үүсгэсэн @ 7:00 AM · ~22 мин"
         },
         "t2": {
-          "title": "Vocab Book + 4 Modes",
-          "desc": "Flashcards, Learn, Test, Match — 4 ways to master a word.",
-          "pill": "/ TOPIK I + II · 9,300 words"
+          "title": "Тайлбарын дэвтэр + 4 хэлбэр",
+          "desc": "Үгийг эзэмших 4 арга.",
+          "pill": "/ ТОПИК I + II · 9,300 ҮГСЭН ҮГС"
         },
         "t3": {
-          "title": "Grammar Library",
-          "desc": "Every grammar with context sentences + exam questions.",
-          "pill": "/ 480 Core Grammars"
+          "title": "Дүрмийн номын сан",
+          "desc": "Хамаарал өгүүлбэртэй дүрэм бүр + шалгалтын асуултууд.",
+          "pill": "/ 480 Гол грамм"
         },
         "t4": {
-          "title": "TOPIK Preparation",
-          "desc": "Past exams / Mocks / AI Writing score + Speed control.",
-          "pill": "/ TOPIK II avg improvement +1.4 levels"
+          "title": "ТОПИК-н бэлтгэл",
+          "desc": "Өмнөх шалгалтууд / Оймс / AI Writing score + Speed control.",
+          "pill": "/ ТОПИК II avg сайжруулалт +1.4 түвшин"
         },
         "t6": {
-          "title": "Native Community",
-          "desc": "Ask native speakers for the most natural translations and explanations.",
-          "pill": "/ 1.2k+ Active groups"
+          "title": "Үндсэн нийгэмлэг",
+          "desc": "Хамгийн байгалийн орчуулга, тайлбарыг уугуул хэлээр ярьдаг хүмүүсээс асуугаарай.",
+          "pill": "/ 1.2k + Идэвхтэй бүлгүүд"
         },
         "t5": {
-          "title": "Immersive Media & Reading",
-          "pill": "/ 4,800+ Study materials · Weekly updates"
+          "title": "Иммерсив медиа ба унших",
+          "pill": "/ 4,800+ Судалгааны материал · Долоо хоног тутмын шинэчлэлтүүд"
         },
-        "title": "All-in-one Korean Toolkit"
+        "title": "Бүгд нэг дор Солонгосын багаж хэрэгсэл"
       },
       "loop": {
         "s1": {
-          "label": "STEP 1 · MORNING",
-          "title": "Review Due Cards",
-          "desc": "FSRS algorithm decides what you review today · ~7 mins.",
-          "preview": "18 Cards · 7 Min"
+          "label": "Алхам 1 · өглөө",
+          "title": "Хүлээн Авах Картыг хянах",
+          "desc": "FSRS алгоритм нь өнөөдөр юуг хянахаа шийддэг · ~7 минут.",
+          "preview": "18 карт · 7 Минут"
         },
         "s2": {
-          "label": "STEP 2 · LESSON",
-          "title": "New Content",
-          "desc": "Textbook + Listening + Quiz · Capture any segment into cards.",
-          "preview": "L24 · 8 Min"
+          "label": "Алхам 2 · Хичээл",
+          "title": "Шинэ агуулга",
+          "desc": "Сурах бичиг + Сонсох + асуулт хариулт · Картанд ямар нэгэн сегментийг бичнэ.",
+          "preview": "L24 · 8 Минут"
         },
         "s3": {
-          "label": "STEP 3 · COMMUTE",
-          "title": "Listening Immersion",
-          "desc": "Real podcasts or K-drama clips · Bilingual subs.",
-          "preview": "Podcast 6 Min"
+          "label": "Алхам 3 · хөлөг онгоц",
+          "title": "Сонсох умбан орох",
+          "desc": "Бодит файлууд эсвэл K-drama клипүүд · Хоёр хэлээр хэлээр нэмэгдсэн.",
+          "preview": "Подкаст 6 Минут"
         },
         "s4": {
-          "label": "STEP 4 · BEDTIME",
-          "title": "Reading Session",
-          "desc": "Auto-matched difficulty · Consolidation through reading.",
-          "preview": "Story 4 Min"
+          "label": "Алхам 4 · Унтах цаг",
+          "title": "Унших хэсэг",
+          "desc": "Автоматаар тохируулсан асуудал · Унших замаар нэгдмэл байдал.",
+          "preview": "Түүх 4 Мин"
         },
-        "title": "Four steps to master Korean"
+        "title": "Солонгосыг магистр болгох дөрвөн алхам"
       },
       "modules": {
-        "title": "Modules built for long-term learning",
+        "title": "Урт хугацааны суралцахад зориулсан модулиуд",
         "m1": {
-          "title": "Vocab · 4 Modes",
-          "tag1": "FSRS Algorithm",
-          "tag2": "4 Practice Modes",
-          "tag3": "Context Association",
-          "tag4": "Book Filter",
-          "link": "Learn about Vocab →"
+          "title": "Үгсийн сан · 4 горим",
+          "tag1": "FSRS алгоритм",
+          "tag2": "4 Практик горим",
+          "tag3": "Хам сэдвийн холбоо",
+          "tag4": "Хөтлөх шүүлт",
+          "link": "Үгсийн сангийн талаар мэдэх →"
         },
         "m2": {
-          "title": "TOPIK · Mocks + AI",
-          "tag1": "10 Years of Exams",
-          "tag2": "1:1 Mock Environment",
-          "tag3": "AI Writing Feedback",
-          "tag4": "Score Prediction",
-          "link": "Learn about TOPIK →"
+          "title": "TOPIK · Оймс + AI",
+          "tag1": "10 Шалгалтын жилүүд",
+          "tag2": "1:1 Толгойн орчин",
+          "tag3": "AI бичих санал хүсэлт",
+          "tag4": "Суурь таамаглал",
+          "link": "TOPIK-ийн тухай мэдэх →"
         },
         "m3": {
-          "title": "Media Hub · Listening",
-          "tag1": "4,800+ Clips",
-          "tag2": "Bilingual Subs",
-          "tag3": "Tap to Save",
-          "tag4": "Difficulty Match",
-          "link": "Learn about Immersion →"
+          "title": "Хэвлэл мэдээллийн төв · Сонсох",
+          "tag1": "4,800+ Клип",
+          "tag2": "Хоёр хэл дээрх дэд үйлчилгээ",
+          "tag3": "Хадгалахын тулд товшино уу",
+          "tag4": "Тохироход хэцүү",
+          "link": "Шумбах талаар мэдэх →"
         },
         "m4": {
-          "title": "Graded Reading · AI",
-          "tag1": "Levels 1–6",
-          "tag2": "Picture Books",
-          "tag3": "Quick Lookup",
-          "tag4": "Note Capture",
-          "link": "Learn about Reading →"
+          "title": "Унших зэрэглэл · AI",
+          "tag1": "1–6 түвшин",
+          "tag2": "Зурагтай ном",
+          "tag3": "Хурдан хайлт",
+          "tag4": "Тэмдэглэл барих",
+          "link": "Унших талаар мэдэх →"
         }
       },
       "community": {
         "s1": {
-          "l": "Study Partners",
-          "s": "Grow Together"
+          "l": "Сургалтын түншүүд",
+          "s": "Хамтдаа өсгөөрэй"
         },
         "s2": {
-          "l": "Shared Wordbooks",
-          "s": "Resource Sharing"
+          "l": "Хуваалцсан Үгний дэвтэр",
+          "s": "Нөөц хуваалцах"
         },
         "s3": {
-          "l": "Learning Tips",
-          "s": "Experience Sharing"
+          "l": "Сургалтын зөвлөгөө",
+          "s": "Туршлага хуваалцах"
         },
         "s4": {
-          "l": "Streak Days",
-          "s": "Milestone Tracking"
+          "l": "Хүнд өдрүүд",
+          "s": "Явахдаа хянах"
         },
-        "title": "Don't study alone, go further together"
+        "title": "Битгий ганцаараа хичээллэ, хамтдаа яваарай"
       },
       "pricing": {
         "perMonth": "/ mo",
-        "perQuarter": "/ quarter",
-        "perYear": "/ year",
-        "lifetime": "/ lifetime",
-        "tabMonthly": "Monthly",
-        "tabQuarterly": "Quarterly",
-        "tabAnnual": "Annual",
+        "perQuarter": "Улирал",
+        "perYear": "ЖИЛ",
+        "lifetime": "Насан туршийнх",
+        "tabMonthly": "Сар тутам",
+        "tabQuarterly": "Улирал бүр",
+        "tabAnnual": "Жилийн",
         "pro": {
-          "f1": "<b>Unlimited</b> new words + FSRS",
-          "f2": "All textbooks + TOPIK <b>Levels 1-6</b>",
-          "f3": "Full media library + <b>Smart scripts</b>",
-          "f4": "<b>AI Writing diagnosis</b> + Speed control",
-          "f5": "Unlimited <b>community resources</b>",
-          "f6": "<b>Real-time sync</b> across all devices",
-          "title": "Full Access · Plus",
-          "desc": "Best for serious learners · Unlock all AI features",
-          "cta": "Start Full Access Now"
+          "f1": "<b>Хязгааргүй</b> шинэ үг + FSRS",
+          "f2": "Бүх сурах бичиг + ТОПИК-ийн <b>Түвшин 1-6</b>",
+          "f3": "Бүтэн хэвлэл мэдээллийн номын сан + <b>Ухаалаг скриптүүд</b>",
+          "f4": "<b>AI бичих оношлогоо</b> + Хурдны хяналт",
+          "f5": "Хязгааргүй <b>олон нийтийн нөөц</b>",
+          "f6": "Бүх төхөөрөмжүүд дээрх <b>бодит цагийн синхрон</b>",
+          "title": "Бүрэн нэвтрэх · Plus",
+          "desc": "Ноцтой суралцагчдад зориулсан шилдэг · Мэдээллийн технологийн бүх функцийг онгойлгох",
+          "cta": "Одоо Бүрэн Хандалтыг Эхлэх"
         },
-        "title": "Pick a plan, start learning",
+        "title": "Төлөвлөгөөг сонгож, суралцаж эхлэх",
         "free": {
-          "title": "Starter · Free",
-          "desc": "Entry level · Start your Korean journey",
-          "unit": "/ Forever",
-          "f1": "<b>5 new words</b> per day",
-          "f2": "<b>30 review cards</b> limit/day",
-          "f3": "<b>Basic courses</b> (L1–L2) trial",
-          "f4": "Media library <b>preview mode</b>",
-          "f5": "TOPIK past exams (Sample)",
-          "f6": "Basic AI writing diagnosis",
-          "cta": "Start for Free"
+          "title": "Гарааны машин · Үнэгүй",
+          "desc": "Орох түвшин · Солонгос улсын аяллаа эхлүүл",
+          "unit": "Мөнхөд",
+          "f1": "<b>5 өдөрт шинэ үг</b>",
+          "f2": "<b>30 тойм картын</b> хязгаар/өдөр",
+          "f3": "<b>Үндсэн сургалт</b> (L1-L2)",
+          "f4": "Хэвлэл мэдээллийн сангийн <b>урьдчилж харах горим</b>",
+          "f5": "TOPIK өнгөрсөн шалгалтууд (Дээж)",
+          "f6": "AI-ийн үндсэн бичих оношлогоо",
+          "cta": "Үнэгүй эхлэх"
         },
-        "popular": "Popular"
+        "popular": "Эрэлттэй"
       },
       "testimonials": {
-        "title": "What Duhan learners are saying",
+        "title": "Духан суралцагчдын юу гэж ярьж байна",
         "t1": {
-          "tag1": "Used for 11 months",
-          "tag2": "Reached TOPIK 5",
+          "tag1": "11 сар ашигласан",
+          "tag2": "TOPIK 5-д хүрсэн",
           "name": "Haeun",
-          "meta": "Designer · Hangzhou"
+          "meta": "Дизайнер · Ханган"
         },
         "t2": {
-          "tag1": "Learning via Drama",
-          "tag2": "3 Months",
-          "name": "Xiao Ke",
-          "meta": "Junior Student"
+          "tag1": "Драмын тусламжтайгаар суралцах",
+          "tag2": "3 сар",
+          "name": "Сяо Ке",
+          "meta": "Бага ангийн оюутан"
         },
         "t3": {
-          "tag1": "Native Assistant",
-          "name": "Minji",
-          "meta": "Seoul · Native"
+          "tag1": "Уугуул туслах",
+          "name": "Минжи",
+          "meta": "Сөүл · Уугуул"
         }
       },
       "faq": {
-        "title": "FAQ",
-        "q1": "Is it suitable for beginners?",
-        "q2": "What is the FSRS algorithm?",
-        "q3": "Pro vs Elite differences?",
-        "q4": "Can I study offline?",
-        "q5": "Is there a student discount?",
-        "q6": "Can I get a refund?"
+        "title": "Түгээмэл асуултууд",
+        "q1": "Эхлэгчдэд тохирсон юу?",
+        "q2": "FSRS алгоритм гэж юу вэ?",
+        "q3": "Элит хоёрын ялгааг сөргөх үү?",
+        "q4": "Оффлайн хичээл хийж болох уу?",
+        "q5": "Оюутны хөнгөлөлт байна уу?",
+        "q6": "Буцаан авч болох уу?"
       },
       "finalCta": {
-        "titlePre": "Make Korean",
-        "titleMid": "part of your",
-        "titlePost": "daily life today",
-        "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
-        "ctaPrimary": "Start for Free →",
-        "ctaSecondary": "Download App"
+        "titlePre": "Солонгос хүн болоорой",
+        "titleMid": "таны нэг хэсэг",
+        "titlePost": "өнөөдөр өдөр тутмын амьдрал",
+        "sub": "30-д бүртгүүлнэ үү · 7-өдөр дээр нэмэх үнэгүй туршилт · Ямар ч кредит карт шаардахгүй",
+        "ctaPrimary": "Үнэгүй эхлэх →",
+        "ctaSecondary": "Апп татах"
       },
       "footer": {
         "col1": {
-          "head": "Product",
-          "l1": "Overview",
-          "l3": "TOPIK prep",
-          "l4": "Media hub",
-          "l5": "Graded reading",
-          "l6": "Community"
+          "head": "Бүтээгдэхүүн",
+          "l1": "Ерөнхий",
+          "l3": "ТОПИКИЙН ТЭМДЭГЛЭЛ",
+          "l4": "Хэвлэл мэдээллийн төв",
+          "l5": "Түвшинжсэн унших",
+          "l6": "Нийгэмлэг"
         },
         "col2": {
-          "head": "Learn",
-          "l1": "Guides",
-          "l2": "Grammar wiki",
-          "l3": "Exam blog",
-          "l4": "Daily Korean"
+          "head": "СУРАЛЦ!",
+          "l1": "удирдамж",
+          "l2": "Дүрмийн вики",
+          "l3": "Шалгалтын блог",
+          "l4": "Өдөр тутмын Солонгос"
         },
         "col3": {
-          "head": "Company",
-          "l1": "About Duhan",
-          "l5": "Contact"
+          "head": "Компани",
+          "l1": "Duhan тухай",
+          "l5": "Контакт"
         },
         "col4": {
-          "head": "Support",
-          "l1": "Help Center",
-          "l2": "Refund Policy",
-          "l3": "Privacy",
-          "l4": "Terms"
+          "head": "Тусламж ",
+          "l1": "Тусламжийн төв",
+          "l2": "Буцаан олголтын Бодлого",
+          "l3": "Нууцлал",
+          "l4": "Нөхцөл"
         },
-        "tag1": "Duhan · Make Korean your routine.",
-        "tag2": "From vocab to TOPIK Level 6, all in one.",
-        "copy": "Duhan · All rights reserved."
+        "tag1": "Duhan · Солонгосыг заншилтай болго.",
+        "tag2": "Дүгнэлтээс ТОПИК түвшин 6 хүртэл бүгд нэг дор.",
+        "copy": "Duhan · Бүх эрх хуулиар хамгаалагдсан."
       }
     }
   },
   "topikWriting": {
-    "roundLabel": "Session {{count}}",
-    "defaultDescription": "Please complete the writing based on the prompt.",
-    "fetchingExam": "Fetching prompt...",
-    "noChallenge": "No challenges today",
-    "answerArea": "Answer Area",
-    "wordCount": "{{count}} words written",
-    "placeholder": "Start your Korean writing here...",
-    "template": "Paragraph Templates",
-    "save": "Save Draft",
-    "submit": "Submit for AI Score",
-    "aiFeedback": "AI Real-time Feedback",
-    "contentScore": "Content",
-    "grammarScore": "Grammar",
-    "vocabScore": "Vocab",
-    "structureScore": "Structure",
-    "aiFeedbackNote": "After submission, AI will provide detailed feedback, grammar corrections, and expression suggestions.",
-    "gradingCriteria": "Grading Criteria",
-    "criteria1": "Does the content meet the requirements and is it rich?",
-    "criteria2": "Did you use a variety of vocabulary and grammar?",
-    "criteria3": "Is the article structure logical and coherent?",
+    "roundLabel": "Хэсэг {{count}}",
+    "defaultDescription": "Хурдан тулгуурлан бичиж дуусгана уу.",
+    "fetchingExam": "Шуурхай түлхүүрийг...",
+    "noChallenge": "Өнөөдөр ямар ч бэрхшээл байхгүй",
+    "answerArea": "Хариултын талбар",
+    "wordCount": "{{count}}} бичсэн үгүүд",
+    "placeholder": "Эхлээд солонгос бичнэ үү...",
+    "template": "Параграфын загварууд",
+    "save": "Ноорог хадгал",
+    "submit": "AI Score-д илгээх",
+    "aiFeedback": "AI-ийн бодит хугацааны санал хүсэлт",
+    "contentScore": "Агуулга",
+    "grammarScore": "Дүрэм",
+    "vocabScore": "Үгсийн сан",
+    "structureScore": "Бүтэц",
+    "aiFeedbackNote": "Оруулсаны дараа AI нь нарийвчилсан санал хүсэлт, дүрмийг засах, илэрхийлэх саналыг өгөх болно.",
+    "gradingCriteria": "Шалгах шалгуур",
+    "criteria1": "Агуулга нь шаардлагыг хангаж, баян уу?",
+    "criteria2": "Та янз бүрийн үгийн сан, дүрмийг хэрэглэсэн үү?",
+    "criteria3": "Энэ өгүүллийн бүтэц логик, уялдаатай юу?",
     "session": {
-      "fillBlank": "Fill-in response",
-      "graphEssay": "Graph essay",
-      "opinionEssay": "Opinion essay",
-      "answerPlaceholder": "Type your answer here...",
-      "characterCount": "{{count}} chars",
-      "remainingChars": "{{count}} left",
-      "fillBlankPaperTitle": "Fill in answers (㉠ / ㉡)",
-      "fillBlankOneSentence": "One sentence per blank recommended",
-      "fillBlankHint": "Please complete both ㉠ and ㉡ with natural full sentences.",
-      "fillBlankA": "Fill ㉠ here",
-      "fillBlankB": "Fill ㉡ here",
-      "charsUnit": "chars",
-      "mobileHeaderSubtitle": "Question {{active}} · {{answered}} / {{total}} answered",
-      "progress": "Progress",
+      "fillBlank": "Дүүргэхэд хариу үйлдэл",
+      "graphEssay": "График эссэ",
+      "opinionEssay": "Санал эссэ",
+      "answerPlaceholder": "Хариултаа энд бичнэ үү",
+      "characterCount": "{{count}} чарга",
+      "remainingChars": "{{count}} зүүн",
+      "fillBlankPaperTitle": "Хариултыг бөглөнө үү (㉠/㉡)",
+      "fillBlankOneSentence": "Хоосон тутамд нэг өгүүлбэр зөвлөж байна",
+      "fillBlankHint": "Байгалийн бүрэн өгүүлбэрүүдийг ㉠ хоёуланг ㉡ нь бөглөнө үү.",
+      "fillBlankA": "㉠ Энд бөглөнө үү",
+      "fillBlankB": "㉡ Энд бөглөнө үү",
+      "charsUnit": "дугар",
+      "mobileHeaderSubtitle": "Асуулт {{active}} · {{answered}} / {{total}} хариулт",
+      "progress": "Явц",
       "points": "pts",
-      "submitButton": "Submit",
+      "submitButton": "Илгээх",
       "desktopEyebrow": "Бичгийн шалгалт",
       "questionX": "{{num}}-р даалгавар",
       "desktopQuestionMeta": "{{num}}-р даалгавар · {{type}} · {{score}} оноо",
@@ -1001,7 +1083,7 @@
       "q54Instruction": "Доорх сэдвээр мэтгэлцээний эсээ (400-700 тэмдэгт) бичнэ үү.",
       "submitFailed": "Одоогоор энэ бичгийн шалгалтыг илгээх боломжгүй байна."
     },
-    "title": "TOPIK II Writing",
+    "title": "ТОПИК II Бичих",
     "report": {
       "title": "Бичгийн үнэлгээний тайлан",
       "subtitle": "TOPIK II бичгийн AI үнэлгээний үр дүн",
@@ -1045,5 +1127,76 @@
     "column": "Багана",
     "mobileHint": "Шаардлагатай бол хажуу тийш гүйлгэнэ үү",
     "perLine": "Нэг мөрт {{count}} тэмдэгт · 원고지"
+  },
+  "coursesLibrary": {
+    "items": "Нэгжүүд",
+    "loadError": "Сурах бичгийн жагсаалтыг ачаалж чадсангүй.",
+    "otherPublisher": "Бусад хэвлэл",
+    "results": "Хайлтын үр дүн",
+    "searchPlaceholder": "Сурах бичиг, түвшин, хэвлэлээр хайх...",
+    "textbook": "Сурах бичгийн агуулга"
+  },
+  "learningFlow": {
+    "mobileHub": {
+      "grammar": {
+        "description": "Өгүүлбэрийн бүтэц, дэлгэрэнгүй тайлбар, бүтцийн шинжилгээ."
+      },
+      "listening": {
+        "description": "Сурах бичгийн аудио, сонсголын эх, ойлгох дасгал."
+      },
+      "materialPickerSummary": "{{module}} · Нийт {{count}} сурах бичиг",
+      "materialPickerTitle": "Сурах бичиг сонгох",
+      "noMaterialSelected": "Сонгоогүй байна",
+      "paths": "Сургалтын замууд",
+      "pickMaterial": "Замыг эхлүүлэх",
+      "progressLabel": "Одоогийн явц",
+      "reading": {
+        "description": "Догол мөр унших, нийтлэлийн дасгал, шуурхай толь бичиг хайх."
+      },
+      "resumeFromUnit": "Нэгж {{unit}}-ээс үргэлжлүүлэх",
+      "selectMaterialCta": "Сурах бичиг сонгох",
+      "selectMaterialHint": "Энэхүү сургалтын замыг эхлүүлэхийн тулд сурах бичиг сонгоно уу.",
+      "subtitle": "Эхлээд чадвараа сонгоод, дараа нь хамгийн тохиромжтой сурах бичиг рүү орно уу.",
+      "title": "Өнөөдрийн суралцах чиглэлээ сонгоно уу",
+      "vocabulary": {
+        "description": "Үгийн карт, сурах горим, идэвхтэй санах дасгалууд."
+      }
+    }
+  },
+  "media": {
+    "videoCountLabel": "{{count}} хичээл"
+  },
+  "nav": {
+    "learn": "Сургалтын зам",
+    "media": "Медиа төв",
+    "podcasts": "Подкаст",
+    "practice": "Ерөнхий дасгал",
+    "reading": "Уншлага",
+    "videos": "Видео хичээлүүд"
+  },
+  "podcast": {
+    "filterOptions": {
+      "all": "Бүгд",
+      "beginner": "Анхан шат",
+      "daily": "Өдөр тутмын",
+      "intermediate": "Дунд шат",
+      "news": "Мэдээ"
+    },
+    "history": "Сонссон түүх",
+    "mySubscriptions": "Миний захиалга",
+    "nowPlaying": "Одоо тоглож байна",
+    "searchPlaceholder": "Подкаст эсвэл контент хайх...",
+    "title": "Подкаст төв",
+    "trendingThisWeek": "Энэ долоо хоногийн трэндинг"
+  },
+  "practice": {
+    "mobileSkillLabel": {
+      "notebook": "Тэмдэглэл хянах",
+      "spelling": "Зөв бичих дасгал",
+      "typing": "Шивэх дасгал"
+    },
+    "mobileSubtitle": "Таны гаргасан амжилт бүрийг тэмдэглэнэ",
+    "mobileTitle": "Хэлний чадвараа бэхжүүлэх",
+    "recommended": "Танд санал болгох"
   }
 }

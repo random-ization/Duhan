@@ -12,34 +12,33 @@ type UpgradeBenefitCopy = {
 export function getUpgradeBenefitCopy(language: Language): UpgradeBenefitCopy {
   if (language === 'zh') {
     return {
-      title: '\u89e3\u9501\u5b8c\u6574\u5b66\u4e60\u7248',
+      title: '让你的韩语真正突破',
       subtitle:
-        'Free \u8d1f\u8d23\u8ba9\u4f60\u5f00\u59cb\u5b66，Pro / Lifetime \u8d1f\u8d23\u8ba9\u4f60\u6301\u7eed\u5b66、\u6df1\u5ea6\u5b66。',
+        '免费版帮你起步，完整版让你每周看到明确进步 — 更多词汇、更准确的语法、更高的写作分数。',
       bullets: [
-        '\u5168\u90e8\u6559\u6750、\u5168\u90e8\u8bfe\u7a0b、\u5168\u90e8\u5355\u5143\u5b8c\u6574\u5f00\u653e',
-        '\u5168\u90e8 TOPIK / \u5199\u4f5c\u771f\u9898、\u9519\u9898\u805a\u5408\u4e0e\u957f\u671f\u62a5\u544a',
-        '\u5a92\u4f53\u65e0\u9650\u64ad\u653e、\u652f\u6301\u500d\u901f、\u7edf\u4e00 AI Credit 100 \u70b9/\u5929',
-        'PDF \u5bfc\u51fa、\u5386\u53f2\u5206\u6790、\u6df1\u5ea6\u5b66\u4e60\u5de5\u5177\u5168\u90e8\u5f00\u653e',
+        'AI 深度解析每一个句子，让阅读时遇到的生词和语法不再是谜',
+        'TOPIK 写作 AI 实时评估 + 错题归档，分数可见提升',
+        '间隔重复不限量，掌握的词汇以每周可见的速度增长',
+        '个性化弱点分析 + 每周周报，用数据驱动你的学习决策',
       ],
-      lockedTitle: '\u8fd9\u4e00\u90e8\u5206\u5c5e\u4e8e\u5b8c\u6574\u5b66\u4e60\u7248',
-      lockedNote:
-        '\u5347\u7ea7\u540e\u53ef\u7acb\u5373\u89e3\u9501\u5f53\u524d\u5185\u5bb9，\u5e76\u7ee7\u7eed\u4fdd\u7559\u5230\u4f60\u7684\u5f53\u524d\u8d26\u53f7。',
-      lockedCtaHint:
-        '\u67e5\u770b\u65b9\u6848\u540e\u5373\u53ef\u8fd4\u56de\u5f53\u524d\u9875\u9762\u7ee7\u7eed\u5b66\u4e60',
+      lockedTitle: '升级后即可使用此功能',
+      lockedNote: '升级立即生效，你保存的进度和学习数据完整保留。',
+      lockedCtaHint: '查看方案后即可返回当前页面继续学习',
     };
   }
 
   return {
-    title: 'Unlock the full study plan',
-    subtitle: 'Free helps you start. Pro / Lifetime unlock the full depth of the platform.',
+    title: 'Break through your Korean plateau',
+    subtitle:
+      'Free gets you started. Full access turns every study session into measurable progress.',
     bullets: [
-      'All textbooks, courses, and units unlocked',
-      'Full TOPIK and writing archive with long-term reports',
-      'Unlimited media playback, speed control, and 100 daily AI credits',
-      'PDF export, analytics, and the full study toolkit',
+      'AI explains every sentence you read — no more guessing at grammar or vocab',
+      'TOPIK writing coach with instant scoring — watch your score improve week by week',
+      'Unlimited spaced repetition — your vocabulary grows at a pace you can see',
+      'Personalized weak-point reports — know exactly what to study next',
     ],
-    lockedTitle: 'This section belongs to the full plan',
-    lockedNote: 'Upgrade to unlock this content immediately on your current account.',
+    lockedTitle: 'Unlock this feature',
+    lockedNote: 'Upgrade takes effect immediately. Your progress and data are fully preserved.',
     lockedCtaHint: 'After checkout you can return here and continue right away',
   };
 }

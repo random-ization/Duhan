@@ -4,12 +4,9 @@ import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { Bell, BookOpen, ShieldAlert, UserRoundPlus, Users } from 'lucide-react';
 import type { Id } from '../../../convex/_generated/dataModel';
-import type { CommunityActivityDto } from '../../../convex/community';
-import type { DailyChallengeDto } from '../../../convex/dailyChallenges';
-import type { DailyTaskPlanDto, DailyTaskItemDto, DailyTaskKind } from '../../../convex/dailyTask/shared';
+import type { DailyTaskItemDto } from '../../../convex/dailyTask/shared';
 import type { FriendSearchItemDto } from '../../../convex/friends';
 import type { PartnershipDto } from '../../../convex/partnerships';
-import type { GrammarItemDto } from '../../../convex/grammars';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
@@ -18,8 +15,6 @@ import {
   DAILY_CHALLENGES,
   DAILY_TASK,
   FRIENDS,
-  GRAMMARS,
-  INSTITUTES,
   LEADERBOARD,
   NEWS,
   NoArgs,
@@ -27,594 +22,211 @@ import {
   PARTNERSHIPS,
   qRef,
   RECOMMENDATIONS,
-  VOCAB,
-  WEAK_POINTS,
+  ABILITY_PROFILER,
+  COMMUNITY_INSIGHTS,
+  type AbilityDimensions,
+  type LiveAbilityScores,
   type NextBestAction,
   type NotificationDto,
 } from '../../utils/convexRefs';
-import { useLearningSelection } from '../../contexts/LearningContext';
 import { buildMediaPath } from '../../utils/mediaRoutes';
 import { appendReturnToPath } from '../../utils/navigation';
 import { notify } from '../../utils/notify';
 import { buildPodcastPlayerPath } from '../../utils/podcastRoutes';
-import { buildVocabTodayPath, type VocabPathStep } from '../../utils/todayPath';
-import { getLocalizedContent } from '../../utils/languageUtils';
+import { buildTodayTaskPath } from '../../utils/todayFlow';
 import type { ExamAttempt, Institute } from '../../types';
 import { formatNotificationTime } from '../../utils/notificationFormat';
-import { ChipTone, Chip, HanjaSeal, KT, SectionHead, StreakRow } from './ksoft/ksoft';
+import { Chip, HanjaSeal, KT, SectionHead, StreakRow } from './ksoft/ksoft';
+import {
+  CommunityLikeOverride,
+  EMPTY_LEARNER_STATS,
+  PodcastHistoryItem,
+  TOPIK_GRAMMAR_COURSE_ID,
+  formatChallengeActionLabel,
+  formatChallengeProgressLabel,
+  formatChallengeRewardLabel,
+  formatCommunityAction,
+  formatCommunityTime,
+  getCommunityTone,
+  getConvexErrorCode,
+  getDashboardCopy,
+  getTargetAlreadyPairedMessage,
+  type LearningEntryTarget,
+} from './MobileDashboard.helpers';
 
-type LearningEntryTarget = {
-  instituteId: string;
-  level: number;
+const estimateDailyTaskMinutes = (kind: DailyTaskItemDto['kind']): number => {
+  if (kind === 'vocab_20') return 12;
+  if (kind === 'grammar_drill') return 15;
+  if (kind === 'listening_10min') return 10;
+  if (kind === 'typing_wpm') return 8;
+  if (kind === 'note_review') return 8;
+  if (kind === 'sentence_review') return 10;
+  if (kind === 'grammar_review') return 10;
+  if (kind === 'topik_rewrite') return 20;
+  return 10;
 };
 
-type PodcastHistoryItem = {
-  _id: string;
-  episodeGuid?: string;
-  episodeTitle: string;
-  episodeUrl?: string;
-  channelName: string;
-  channelImage?: string;
-  playedAt: number;
-  progress?: number;
-  duration?: number;
+const formatTodayPathTitle = (language: string): string => {
+  if (language.startsWith('zh')) return '今日之路';
+  if (language.startsWith('vi')) return 'Lộ trình hôm nay';
+  if (language.startsWith('mn')) return 'Өнөөдрийн зам';
+  return "Today's Path";
 };
 
-const TOPIK_GRAMMAR_COURSE_ID = 'topik-grammar';
-
-const EMPTY_LEARNER_STATS: LearnerStatsDto = {
-  streak: 0,
-  todayMinutes: 0,
-  dailyGoal: 30,
-  dailyProgress: 0,
-  weeklyActivity: [],
-  todayActivities: {
-    wordsLearned: 0,
-    readingsCompleted: 0,
-    listeningsCompleted: 0,
-    examsCompleted: 0,
-  },
-  courseProgress: [],
-  currentProgress: null,
-  totalWordsLearned: 0,
-  totalGrammarLearned: 0,
-  wordsToReview: 0,
-  vocabStats: { total: 0, dueReviews: 0, unlearned: 0, mastered: 0 },
-  grammarStats: { total: 0, mastered: 0 },
-  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0, unlearned: 0, mastered: 0, total: 0, recommendedToday: 0 },
-  moduleBreakdown: [],
-  recentSessions: [],
-  totalMinutes: 0,
-  todayWordsStudied: 0,
-  todayGrammarStudied: 0,
+const formatTodayPathEstimate = (language: string, minutes: number): string => {
+  if (language.startsWith('zh')) return `预计 ${minutes} 分钟`;
+  if (language.startsWith('vi')) return `Dự kiến ${minutes} phút`;
+  if (language.startsWith('mn')) return `Ойролцоогоор ${minutes} мин`;
+  return `Est. ${minutes} min`;
 };
 
-type Copy = {
-  greeting: string;
-  greetingSub: string;
-  streakUnit: string;
-  streakLabel: string;
-  pathTitle: string;
-  pathSub: string;
-  pathStart: string;
-  pathSkip: string;
-  pathLater: string;
-  minsShort: (n: number) => string;
-  minsDone: string;
-  achievementsTitle: string;
-  communityTitle: string;
-  communityAction: string;
-  challengeBadge: string;
-  reviewKind: string;
-  reviewEn: string;
-  reviewTitle: (n: number) => string;
-  reviewSub: string;
-  grammarKind: string;
-  grammarEn: string;
-  grammarSub: string;
-  grammarStartTitle: string;
-  listenKind: string;
-  listenEn: string;
-  listenFallbackTitle: string;
-  listenFallbackSub: string;
-  topikKind: string;
-  topikEn: string;
-  topikTitle: string;
-  topikSub: string;
+const formatStartTodayPathLabel = (language: string): string => {
+  if (language.startsWith('zh')) return '开始今日学习';
+  if (language.startsWith('vi')) return 'Bắt đầu hôm nay';
+  if (language.startsWith('mn')) return 'Өнөөдөр эхлэх';
+  return "Start Today's Path";
 };
 
-const getDashboardCopy = (language: string, userName: string): Copy => {
-  const name = userName || '친구';
-  if (language.startsWith('zh')) {
-    return {
-      greeting: `你好，${name}`,
-      greetingSub: '今天的学习已就绪',
-      streakUnit: '天',
-      streakLabel: '',
-      pathTitle: '今日之路',
-      pathSub: "TODAY'S PATH",
-      pathStart: '开始',
-      pathSkip: '跳过',
-      pathLater: '稍后 →',
-      minsShort: n => `${n}分`,
-      minsDone: '完成',
-      achievementsTitle: '今日成就',
-      communityTitle: '学习伙伴',
-      communityAction: '全部',
-      challengeBadge: '今日挑战',
-      reviewKind: '复习',
-      reviewEn: 'Review',
-      reviewTitle: n => `到期单词 ${n} 张`,
-      reviewSub: 'FSRS · 今日复习',
-      grammarKind: '语法',
-      grammarEn: 'Grammar',
-      grammarSub: '下一个语法',
-      grammarStartTitle: '开始 TOPIK 语法',
-      listenKind: '听',
-      listenEn: 'Listen',
-      listenFallbackTitle: '继续播客',
-      listenFallbackSub: '沉浸式听力',
-      topikKind: 'TOPIK',
-      topikEn: 'Exam',
-      topikTitle: '今日一题',
-      topikSub: 'II 级阅读',
-    };
-  }
-  if (language.startsWith('vi')) {
-    return {
-      greeting: `Xin chào, ${name}`,
-      greetingSub: 'Bài học hôm nay đã sẵn sàng',
-      streakUnit: 'ngày',
-      streakLabel: 'Học liên tục',
-      pathTitle: 'Hành trình hôm nay',
-      pathSub: "TODAY'S PATH",
-      pathStart: 'Bắt đầu',
-      pathSkip: 'Bỏ qua',
-      pathLater: 'Sau →',
-      minsShort: n => `${n} phút`,
-      minsDone: 'hoàn thành',
-      achievementsTitle: 'Thành tựu hôm nay',
-      communityTitle: 'Bạn học',
-      communityAction: 'Tất cả',
-      challengeBadge: 'Thử thách hôm nay',
-      reviewKind: 'Ôn',
-      reviewEn: 'Review',
-      reviewTitle: n => `${n} thẻ ôn tập`,
-      reviewSub: 'FSRS · hôm nay',
-      grammarKind: 'Ngữ pháp',
-      grammarEn: 'Grammar',
-      grammarSub: 'Ngữ pháp tiếp theo',
-      grammarStartTitle: 'Bắt đầu ngữ pháp TOPIK',
-      listenKind: 'Nghe',
-      listenEn: 'Listen',
-      listenFallbackTitle: 'Tiếp tục nghe podcast',
-      listenFallbackSub: 'Nhập vai tiếng Hàn',
-      topikKind: 'TOPIK',
-      topikEn: 'Exam',
-      topikTitle: 'Một câu hôm nay',
-      topikSub: 'Đọc cấp II',
-    };
-  }
-  if (language.startsWith('mn')) {
-    return {
-      greeting: `Сайн уу, ${name}`,
-      greetingSub: 'Өнөөдрийн сургалт бэлэн',
-      streakUnit: 'өдөр',
-      streakLabel: 'Дараалан',
-      pathTitle: 'Өнөөдрийн зам',
-      pathSub: "TODAY'S PATH",
-      pathStart: 'Эхлэх',
-      pathSkip: 'Алгасах',
-      pathLater: 'Дараа →',
-      minsShort: n => `${n} мин`,
-      minsDone: 'дууссан',
-      achievementsTitle: 'Өнөөдрийн амжилт',
-      communityTitle: 'Сургалтын найзууд',
-      communityAction: 'Бүгд',
-      challengeBadge: 'Өнөөдрийн сорилт',
-      reviewKind: 'Давтлага',
-      reviewEn: 'Review',
-      reviewTitle: n => `${n} карт хугацаатай`,
-      reviewSub: 'FSRS · өнөөдөр',
-      grammarKind: 'Дүрэм',
-      grammarEn: 'Grammar',
-      grammarSub: 'Дараагийн дүрэм',
-      grammarStartTitle: 'TOPIK дүрэм эхлэх',
-      listenKind: 'Сонсох',
-      listenEn: 'Listen',
-      listenFallbackTitle: 'Подкаст үргэлжлүүлэх',
-      listenFallbackSub: 'Солонгос хэл шингээх',
-      topikKind: 'TOPIK',
-      topikEn: 'Exam',
-      topikTitle: 'Өнөөдрийн нэг асуулт',
-      topikSub: 'II түвшин унших',
-    };
-  }
-  return {
-    greeting: `Hi, ${name}`,
-    greetingSub: "Today's session is ready",
-    streakUnit: 'd',
-    streakLabel: 'Streak',
-    pathTitle: "Today's Path",
-    pathSub: "TODAY'S PATH",
-    pathStart: 'Start',
-    pathSkip: 'Skip',
-    pathLater: 'Later →',
-    minsShort: n => `${n} min`,
-    minsDone: 'done',
-    achievementsTitle: "Today's wins",
-    communityTitle: 'Study friends',
-    communityAction: 'All',
-    challengeBadge: "Today's challenge",
-    reviewKind: 'Review',
-    reviewEn: 'Review',
-    reviewTitle: n => `${n} cards due`,
-    reviewSub: 'FSRS · due today',
-    grammarKind: 'Grammar',
-    grammarEn: 'Grammar',
-    grammarSub: 'Next grammar',
-    grammarStartTitle: 'Start TOPIK grammar',
-    listenKind: 'Listen',
-    listenEn: 'Listen',
-    listenFallbackTitle: 'Resume a podcast',
-    listenFallbackSub: 'Korean immersion',
-    topikKind: 'TOPIK',
-    topikEn: 'Exam',
-    topikTitle: "Today's question",
-    topikSub: 'Level II · reading',
-  };
+const MOBILE_ABILITY_COPY: Record<keyof AbilityDimensions, { zh: string; en: string }> = {
+  vocabulary: { zh: '词汇', en: 'Vocab' },
+  grammar: { zh: '语法', en: 'Grammar' },
+  reading: { zh: '阅读', en: 'Reading' },
+  writing: { zh: '写作', en: 'Writing' },
+  listening: { zh: '听力', en: 'Listening' },
 };
 
-const getGrammarLocalizedTitle = (grammar: GrammarItemDto | null, language: string) => {
-  if (!grammar) return '';
-  if (language.startsWith('zh')) return grammar.titleZh || grammar.title;
-  if (language.startsWith('vi')) return grammar.titleVi || grammar.titleEn || grammar.title;
-  if (language.startsWith('mn')) return grammar.titleMn || grammar.titleEn || grammar.title;
-  return grammar.titleEn || grammar.title;
+const findWeakestMobileAbilityDimension = (dimensions: AbilityDimensions | undefined) => {
+  if (!dimensions) return null;
+
+  return (Object.entries(dimensions) as Array<[keyof AbilityDimensions, number]>).reduce<{
+    key: keyof AbilityDimensions;
+    score: number;
+  } | null>((weakest, [key, score]) => {
+    if (!weakest || score < weakest.score) return { key, score };
+    return weakest;
+  }, null);
 };
 
-const formatChallengeProgressLabel = (challenge: DailyChallengeDto, language: string) => {
-  const current = Math.min(challenge.currentCount, challenge.targetCount);
-  if (challenge.kind === 'vocab_20') {
-    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 个单词`;
-    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} từ`;
-    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} үг`;
-    return `${current} / ${challenge.targetCount} words`;
-  }
-  if (challenge.kind === 'grammar_drill') {
-    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 个语法点`;
-    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} điểm ngữ pháp`;
-    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} дүрмийн цэг`;
-    return `${current} / ${challenge.targetCount} grammar points`;
-  }
-  if (challenge.kind === 'listening_10min') {
-    if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} 分钟听力`;
-    if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} phút nghe`;
-    if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} минут сонссон`;
-    return `${current} / ${challenge.targetCount} listening min`;
-  }
-  if (language.startsWith('zh')) return `${current} / ${challenge.targetCount} WPM`;
-  if (language.startsWith('vi')) return `${current} / ${challenge.targetCount} WPM`;
-  if (language.startsWith('mn')) return `${current} / ${challenge.targetCount} WPM`;
-  return `${current} / ${challenge.targetCount} WPM`;
-};
-
-const formatChallengeRewardLabel = (rewardXp: number, language: string) => {
-  if (language.startsWith('zh')) return `奖励 +${rewardXp} XP`;
-  if (language.startsWith('vi')) return `Thưởng +${rewardXp} XP`;
-  if (language.startsWith('mn')) return `Шагнал +${rewardXp} XP`;
-  return `Reward +${rewardXp} XP`;
-};
-
-const formatChallengeActionLabel = (args: {
-  challenge: DailyChallengeDto | undefined;
+function MobileLearningLoopSummary({
+  plan,
+  stats,
+  abilityScores,
+  nextBestAction,
+  nextDailyTask,
+  language,
+}: {
+  plan: { rationale?: string; reviewSummary?: { weakPointSummary?: string } } | null | undefined;
+  stats: LearnerStatsDto;
+  abilityScores: LiveAbilityScores | null | undefined;
+  nextBestAction: NextBestAction | null | undefined;
+  nextDailyTask: DailyTaskItemDto | null;
   language: string;
-  isClaiming: boolean;
-}) => {
-  if (!args.challenge) {
-    if (args.language.startsWith('zh')) return '加载中…';
-    if (args.language.startsWith('vi')) return 'Đang tải...';
-    if (args.language.startsWith('mn')) return 'Ачаалж байна...';
-    return 'Loading...';
-  }
-  if (args.isClaiming) {
-    if (args.language.startsWith('zh')) return '领取中…';
-    if (args.language.startsWith('vi')) return 'Đang nhận...';
-    if (args.language.startsWith('mn')) return 'Ашиг авч байна...';
-    return 'Claiming...';
-  }
-  if (args.challenge.isClaimed) {
-    if (args.language.startsWith('zh')) return '已完成';
-    if (args.language.startsWith('vi')) return 'Đã hoàn thành';
-    if (args.language.startsWith('mn')) return 'Дууссан';
-    return 'Completed';
-  }
-  if (args.challenge.isCompleted) {
-    if (args.language.startsWith('zh')) return `领取 +${args.challenge.rewardXp} XP`;
-    if (args.language.startsWith('vi')) return `Nhận +${args.challenge.rewardXp} XP`;
-    if (args.language.startsWith('mn')) return `+${args.challenge.rewardXp} XP авах`;
-    return `Claim +${args.challenge.rewardXp} XP`;
-  }
-  if (args.language.startsWith('zh')) return '去完成 →';
-  if (args.language.startsWith('vi')) return 'Bắt đầu →';
-  if (args.language.startsWith('mn')) return 'Эхлэх →';
-  return 'Start →';
-};
-
-type PathTone = 'pink' | 'mint' | 'butter' | 'lilac';
-
-type PathStep = {
-  key: string;
-  kind: string;
-  en: string;
-  mins: number;
-  title: string;
-  sub: string;
-  tone: PathTone;
-  kanji: string;
-  onStart: () => void;
-};
-
-type CommunityCardTone = {
-  tag: string;
-  tagTone: ChipTone;
-  emoji: string;
-  bg: string;
-};
-
-type CommunityLikeOverride = {
-  liked: boolean;
-  likeCount: number;
-};
-
-const moduleToneMap: Record<string, CommunityCardTone> = {
-  EXAM: { tag: '考試', tagTone: 'ink', emoji: '🎯', bg: KT.butter },
-  TYPING: { tag: '打字', tagTone: 'butter', emoji: '⌨️', bg: KT.lilac },
-  LISTENING: { tag: '聽力', tagTone: 'mint', emoji: '🎧', bg: KT.mint },
-  PODCAST: { tag: '聽力', tagTone: 'mint', emoji: '🎧', bg: KT.mint },
-  GRAMMAR: { tag: '文法', tagTone: 'crimson', emoji: '📘', bg: KT.pink },
-  VOCAB: { tag: '單詞', tagTone: 'crimson', emoji: '📚', bg: KT.pink },
-  READING: { tag: '閱讀', tagTone: 'ink', emoji: '📖', bg: KT.butter },
-};
-
-function getCommunityTone(module: string, language: string): CommunityCardTone {
-  const base = moduleToneMap[module] ?? {
-    tag: '學習',
-    tagTone: 'ink' as ChipTone,
-    emoji: '✨',
-    bg: KT.card,
-  };
-  if (language.startsWith('zh')) return base;
-  if (language.startsWith('vi')) {
-    return {
-      ...base,
-      tag:
-        module === 'EXAM'
-          ? 'Thi'
-          : module === 'TYPING'
-            ? 'Gõ'
-            : module === 'LISTENING' || module === 'PODCAST'
-              ? 'Nghe'
-              : module === 'GRAMMAR'
-                ? 'Ngữ pháp'
-                : module === 'VOCAB'
-                  ? 'Từ vựng'
-                  : module === 'READING'
-                    ? 'Đọc'
-                    : 'Học',
-    };
-  }
-  if (language.startsWith('mn')) {
-    return {
-      ...base,
-      tag:
-        module === 'EXAM'
-          ? 'Шалгалт'
-          : module === 'TYPING'
-            ? 'Бичих'
-            : module === 'LISTENING' || module === 'PODCAST'
-              ? 'Сонсох'
-              : module === 'GRAMMAR'
-                ? 'Дүрэм'
-                : module === 'VOCAB'
-                  ? 'Үг'
-                  : module === 'READING'
-                    ? 'Унших'
-                    : 'Сургалт',
-    };
-  }
-  return {
-    ...base,
-    tag:
-      module === 'EXAM'
-        ? 'Exam'
-        : module === 'TYPING'
-          ? 'Typing'
-          : module === 'LISTENING' || module === 'PODCAST'
-            ? 'Listening'
-            : module === 'GRAMMAR'
-              ? 'Grammar'
-              : module === 'VOCAB'
-                ? 'Vocab'
-                : module === 'READING'
-                  ? 'Reading'
-                  : 'Study',
-  };
-}
-
-function formatCommunityAction(item: CommunityActivityDto, language: string): string {
-  const minutes = Math.max(1, Math.round(item.durationSec / 60));
-  if (item.module === 'EXAM') {
-    if (typeof item.score === 'number' && item.score > 0) {
-      const roundedScore = Math.round(item.score);
-      if (language.startsWith('zh')) return `TOPIK 模考得分 ${roundedScore}`;
-      if (language.startsWith('vi')) return `TOPIK mock đạt ${roundedScore} điểm`;
-      if (language.startsWith('mn')) return `TOPIK сорилд ${roundedScore} оноо авлаа`;
-      return `Scored ${roundedScore} on a TOPIK mock`;
-    }
-    if (language.startsWith('zh')) return '完成了一套 TOPIK 练习';
-    if (language.startsWith('vi')) return 'Vừa hoàn thành một bộ TOPIK';
-    if (language.startsWith('mn')) return 'TOPIK дасгалын нэг сет дуусгалаа';
-    return 'Completed a TOPIK practice session';
-  }
-  if (item.module === 'VOCAB') {
-    const count = Math.max(1, item.itemCount);
-    if (language.startsWith('zh')) return `完成了 ${count} 个单词复习`;
-    if (language.startsWith('vi')) return `Đã ôn ${count} từ vựng`;
-    if (language.startsWith('mn')) return `${count} үгийн давтлага хийлээ`;
-    return `Reviewed ${count} vocabulary items`;
-  }
-  if (item.module === 'GRAMMAR') {
-    if (language.startsWith('zh')) return '完成了语法训练';
-    if (language.startsWith('vi')) return 'Đã hoàn thành một lượt ngữ pháp';
-    if (language.startsWith('mn')) return 'Дүрмийн дасгалын нэг сет дуусгалаа';
-    return 'Completed a grammar drill';
-  }
-  if (item.module === 'TYPING') {
-    if (typeof item.accuracy === 'number' && item.accuracy > 0) {
-      const accuracy = Math.round(item.accuracy);
-      if (language.startsWith('zh')) return `完成打字训练，准确率 ${accuracy}%`;
-      if (language.startsWith('vi')) return `Hoàn thành bài gõ, độ chính xác ${accuracy}%`;
-      if (language.startsWith('mn')) return `Бичгийн дасгал дуусгаж, нарийвчлал ${accuracy}%`;
-      return `Finished a typing session at ${accuracy}% accuracy`;
-    }
-    if (language.startsWith('zh')) return '完成了一次打字练习';
-    if (language.startsWith('vi')) return 'Đã hoàn thành một lượt gõ chữ';
-    if (language.startsWith('mn')) return 'Бичгийн дасгал дуусгалаа';
-    return 'Completed a typing session';
-  }
-  if (item.module === 'LISTENING' || item.module === 'PODCAST') {
-    if (language.startsWith('zh')) return `完成了 ${minutes} 分钟听力`;
-    if (language.startsWith('vi')) return `Đã nghe ${minutes} phút`;
-    if (language.startsWith('mn')) return `${minutes} минут сонсгол хийлээ`;
-    return `Completed ${minutes} minutes of listening`;
-  }
-  if (item.module === 'READING') {
-    if (language.startsWith('zh')) return '完成了一篇阅读内容';
-    if (language.startsWith('vi')) return 'Đã hoàn thành một bài đọc';
-    if (language.startsWith('mn')) return 'Нэг унших контент дуусгалаа';
-    return 'Completed a reading session';
-  }
-  if (language.startsWith('zh')) return '完成了一次学习活动';
-  if (language.startsWith('vi')) return 'Đã hoàn thành một hoạt động học';
-  if (language.startsWith('mn')) return 'Нэг сургалтын үйлдэл дуусгалаа';
-  return 'Completed a learning activity';
-}
-
-function formatCommunityTime(eventAt: number, language: string): string {
-  const diffSec = Math.max(0, Math.floor((Date.now() - eventAt) / 1000));
-  if (diffSec < 60) {
-    if (language.startsWith('zh')) return '刚刚';
-    if (language.startsWith('vi')) return 'Vừa xong';
-    if (language.startsWith('mn')) return 'Дөнгөж сая';
-    return 'Just now';
-  }
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) {
-    if (language.startsWith('zh')) return `${diffMin} 分钟前`;
-    if (language.startsWith('vi')) return `${diffMin} phút trước`;
-    if (language.startsWith('mn')) return `${diffMin} минутын өмнө`;
-    return `${diffMin}m ago`;
-  }
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) {
-    if (language.startsWith('zh')) return `${diffHour} 小时前`;
-    if (language.startsWith('vi')) return `${diffHour} giờ trước`;
-    if (language.startsWith('mn')) return `${diffHour} цагийн өмнө`;
-    return `${diffHour}h ago`;
-  }
-  const diffDay = Math.floor(diffHour / 24);
-  if (language.startsWith('zh')) return `${diffDay} 天前`;
-  if (language.startsWith('vi')) return `${diffDay} ngày trước`;
-  if (language.startsWith('mn')) return `${diffDay} хоногийн өмнө`;
-  return `${diffDay}d ago`;
-}
-
-function getConvexErrorCode(error: unknown): string | null {
-  if (!error || typeof error !== 'object') return null;
-  const payload = error as { data?: { code?: string }; message?: string };
-  if (typeof payload.data?.code === 'string') return payload.data.code;
-  if (typeof payload.message === 'string' && payload.message.includes('TARGET_ALREADY_PAIRED')) {
-    return 'TARGET_ALREADY_PAIRED';
-  }
-  return null;
-}
-
-function getTargetAlreadyPairedMessage(language: string): string {
-  if (language.startsWith('zh')) return '对方已有学习搭档，无法重复邀请。';
-  if (language.startsWith('vi')) return 'Người học này đã có bạn đồng hành.';
-  if (language.startsWith('mn')) return 'Энэ хэрэглэгч аль хэдийн суралцах хамтрагчтай байна.';
-  return 'That learner already has a study buddy.';
-}
-
-function renderVocabPathRow(
-  step: VocabPathStep,
-  language: string
-): { title: string; sub: string; tone: string } {
+}) {
   const isZh = language.startsWith('zh');
-  const isVi = language.startsWith('vi');
-  const isMn = language.startsWith('mn');
-  const isKo = language.startsWith('ko');
+  const weakest = findWeakestMobileAbilityDimension(abilityScores?.dimensions);
+  const weakestLabel = weakest
+    ? MOBILE_ABILITY_COPY[weakest.key][isZh ? 'zh' : 'en']
+    : isZh
+      ? '待诊断'
+      : 'Pending';
+  const learnedWords = stats.vocabStats.mastered ?? 0;
+  const learnedHours = Math.round((stats.totalMinutes ?? 0) / 60);
+  const actionTitle =
+    nextDailyTask?.title ??
+    (nextBestAction ? nextBestAction.kind : isZh ? '打开课程中心' : 'Open course center');
+  const actionDetail =
+    nextDailyTask?.description ??
+    plan?.rationale ??
+    (isZh ? '从最有收益的一步开始。' : 'Start with the highest-impact step.');
+  const gapDetail =
+    plan?.reviewSummary?.weakPointSummary ??
+    (weakest
+      ? `${weakestLabel} ${Math.round(weakest.score)}/100`
+      : isZh
+        ? '多完成几次练习后会生成薄弱项。'
+        : 'More practice will unlock a gap estimate.');
+  const items = [
+    {
+      k: '做',
+      label: isZh ? '先做' : 'Next',
+      title: actionTitle,
+      detail: actionDetail,
+      bg: KT.crimson,
+    },
+    {
+      k: '得',
+      label: isZh ? '已学' : 'Learned',
+      title: isZh ? `${learnedWords} 词已掌握` : `${learnedWords} mastered`,
+      detail: isZh ? `累计 ${learnedHours} 小时` : `${learnedHours} total hours`,
+      bg: KT.mint,
+    },
+    {
+      k: '缺',
+      label: isZh ? '不足' : 'Gap',
+      title: weakestLabel,
+      detail: gapDetail,
+      bg: KT.butter,
+    },
+  ];
 
-  if (step.kind === 'review') {
-    const title = isZh
-      ? `复习 ${step.count} 个到期词`
-      : isVi
-        ? `Ôn lại ${step.count} từ đến hạn`
-        : isMn
-          ? `${step.count} үг давтах`
-          : isKo
-            ? `복습 ${step.count}개`
-            : `Review ${step.count} due words`;
-    const sub = isZh
-      ? 'FSRS · 优先到期'
-      : isVi
-        ? 'FSRS · ưu tiên đến hạn'
-        : isMn
-          ? 'FSRS · хугацаа дууссан'
-          : isKo
-            ? 'FSRS · 만기 우선'
-            : 'FSRS · due first';
-    return { title, sub, tone: KT.crimson };
-  }
-
-  if (step.kind === 'new') {
-    const title = isZh
-      ? `新学 ${step.count} 个新词`
-      : isVi
-        ? `Học ${step.count} từ mới`
-        : isMn
-          ? `${step.count} шинэ үг сурах`
-          : isKo
-            ? `새 단어 ${step.count}개`
-            : `Learn ${step.count} new words`;
-    const courseLabel = step.courseLabel;
-    const unitLabel = step.unitId
-      ? ` · ${isZh ? '單元' : isKo ? '단원' : 'Unit'} ${step.unitId}`
-      : '';
-    return { title, sub: `${courseLabel}${unitLabel}`, tone: KT.ink };
-  }
-
-  // weak
-  const title = isZh
-    ? `攻克 ${step.categoryLabel} 薄弱词类`
-    : isVi
-      ? `Khắc phục từ loại yếu (${step.categoryLabel})`
-      : isMn
-      ? `Сул талтай үг (${step.categoryLabel})`
-      : isKo
-        ? `약점 보완 · ${step.categoryLabel}`
-        : `Drill weak ${step.categoryLabel}`;
-  const sub = isZh
-    ? `针对性练习 ${step.count} 词`
-    : isVi
-      ? `Luyện tập tập trung ${step.count} từ`
-      : isMn
-        ? `Зорилтот ${step.count} үг`
-        : isKo
-          ? `집중 연습 ${step.count}개`
-          : `Focused drill of ${step.count} words`;
-  return { title, sub, tone: KT.crimson };
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gap: 8,
+        padding: '12px 14px',
+        borderBottom: `1px solid ${KT.line}`,
+        background: KT.bg2,
+      }}
+    >
+      {items.map(item => (
+        <div
+          key={item.label}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            minWidth: 0,
+          }}
+        >
+          <HanjaSeal c={item.k} size={28} bg={item.bg} round={7} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', gap: 7, alignItems: 'baseline', minWidth: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 900, color: KT.crimson, flexShrink: 0 }}>
+                {item.label}
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: KT.ink,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.title}
+              </span>
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: KT.sub,
+                fontWeight: 600,
+                marginTop: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.detail}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export const MobileDashboard: React.FC<{
@@ -643,10 +255,6 @@ export const MobileDashboard: React.FC<{
     qRef<NoArgs, PodcastHistoryItem[]>('podcasts:getHistory'),
     user ? {} : 'skip'
   );
-  const topikGrammarList = useQuery(
-    GRAMMARS.getByCourse,
-    user ? { courseId: TOPIK_GRAMMAR_COURSE_ID, language } : 'skip'
-  );
   const communityActivities = useQuery(
     COMMUNITY.getRecentFriendActivity,
     user ? { limit: 3 } : 'skip'
@@ -656,24 +264,15 @@ export const MobileDashboard: React.FC<{
   // don't re-issue the recommendation query every minute.
   const [localHour] = React.useState(() => new Date().getHours());
   const nextBestAction = useQuery(RECOMMENDATIONS.getNextBestAction, user ? { localHour } : 'skip');
-  const vocabReviewSummary = useQuery(VOCAB.getReviewSummary, user ? {} : 'skip');
   const dailyTaskPlan = useQuery(DAILY_TASK.getTodayPlan, user ? { language } : 'skip');
-  const weakVocabCategories = useQuery(
-    WEAK_POINTS.getWeakVocabCategories,
-    user ? { limit: 3, language } : 'skip'
-  );
   const unreadNotificationCount = useQuery(NOTIFICATIONS.getUnreadCount, user ? {} : 'skip') ?? 0;
   const recentNotifications = useQuery(
     NOTIFICATIONS.listRecent,
     user && notificationPanelOpen ? { limit: 20 } : 'skip'
   );
-  const learningSelection = useLearningSelection();
-  const recentVocabMaterial = learningSelection.recentMaterials.vocabulary ?? null;
-  const recentVocabInstitute = useQuery(
-    INSTITUTES.get,
-    recentVocabMaterial?.instituteId ? { id: recentVocabMaterial.instituteId } : 'skip'
-  );
   const myRank = useQuery(LEADERBOARD.getMyRank, user ? {} : 'skip');
+  const abilityScores = useQuery(ABILITY_PROFILER.getLiveAbilityScores, user ? {} : 'skip');
+  const communityStanding = useQuery(COMMUNITY_INSIGHTS.getMyStanding, user ? {} : 'skip');
   const activePartnership = useQuery(PARTNERSHIPS.getActivePartnership, user ? {} : 'skip');
   const pendingPartnerships = useQuery(PARTNERSHIPS.listPending, user ? {} : 'skip');
   const [friendSearchInput, setFriendSearchInput] = React.useState('');
@@ -703,7 +302,6 @@ export const MobileDashboard: React.FC<{
     Record<string, boolean>
   >({});
   const [friendSearchBusy, setFriendSearchBusy] = React.useState<Record<string, boolean>>({});
-    
 
   useEffect(() => {
     if (!user?.id) return;
@@ -749,19 +347,6 @@ export const MobileDashboard: React.FC<{
   );
   const streak = stats.streak ?? 0;
 
-  const featuredTopikGrammar = useMemo(() => {
-    const grammars = topikGrammarList ?? [];
-    const learningGrammar = grammars.find(item => item.status === 'LEARNING');
-    if (learningGrammar) return learningGrammar;
-    const learned = grammars.filter(
-      item => item.status === 'MASTERED' || item.status === 'LEARNING'
-    );
-    return learned.length > 0 ? learned[learned.length - 1] : null;
-  }, [topikGrammarList]);
-
-  const grammarTitle =
-    getGrammarLocalizedTitle(featuredTopikGrammar, language) || copy.grammarStartTitle;
-
   const latestPodcast = podcastHistory?.[0];
   const dashboardPath = `${location.pathname}${location.search}`;
 
@@ -787,35 +372,27 @@ export const MobileDashboard: React.FC<{
     }
     navigate(buildMediaPath('podcast'));
   };
-  const goTopik = () => navigate(appendReturnToPath('/topik', dashboardPath));
   const goTyping = () => navigate(appendReturnToPath('/typing', dashboardPath));
 
-  const recentInstituteName = recentVocabInstitute
-    ? getLocalizedContent(recentVocabInstitute as unknown as Record<string, unknown>, 'name', language) ||
-      recentVocabInstitute.name ||
-      recentVocabMaterial?.instituteId
-    : recentVocabMaterial?.instituteId;
-
-  const vocabTodayPath = useMemo(
-    () =>
-      buildVocabTodayPath({
-        reviewSummary: vocabReviewSummary ?? null,
-        weakCategories: weakVocabCategories ?? null,
-        recentVocab: recentVocabMaterial,
-        recentInstituteName,
-      }),
-    [vocabReviewSummary, weakVocabCategories, recentVocabMaterial, recentInstituteName]
-  );
+  const nextDailyTask = useMemo(() => {
+    if (!dailyTaskPlan) return null;
+    return (
+      dailyTaskPlan.tasks.find(task => !task.completed && task.linkPath) ??
+      dailyTaskPlan.tasks.find(task => task.linkPath) ??
+      null
+    );
+  }, [dailyTaskPlan]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const auto = searchParams.get('auto') === '1';
-    if (auto && vocabTodayPath.steps.length > 0) {
-      const target = vocabTodayPath.steps[0].target;
-      const connector = target.includes('?') ? '&' : '?';
-      navigate(appendReturnToPath(`${target}${connector}flow=today`, dashboardPath), { replace: true });
+    const taskPath = nextDailyTask ? buildTodayTaskPath(nextDailyTask, dashboardPath) : null;
+    if (auto && taskPath) {
+      navigate(taskPath, {
+        replace: true,
+      });
     }
-  }, [vocabTodayPath.steps, navigate, dashboardPath]);
+  }, [nextDailyTask, navigate, dashboardPath]);
 
   const streakDoneDays = Math.min(7, Math.max(0, streak % 7 || (streak > 0 ? 7 : 0)));
 
@@ -838,7 +415,12 @@ export const MobileDashboard: React.FC<{
 
   const recentScoreCount = examAttempts?.length ?? 0;
   const achievements = [
-    { e: '⚡', l: copy.reviewKind, s: `${stats.todayActivities?.wordsLearned || 0}`, visible: true },
+    {
+      e: '⚡',
+      l: copy.reviewKind,
+      s: `${stats.todayActivities?.wordsLearned || 0}`,
+      visible: true,
+    },
     { e: '📚', l: copy.grammarKind, s: `+${stats.todayGrammarStudied || 0}`, visible: true },
     { e: '🎯', l: 'TOPIK', s: `${recentScoreCount}`, visible: recentScoreCount > 0 },
   ].filter(a => a.visible);
@@ -1590,6 +1172,53 @@ export const MobileDashboard: React.FC<{
             ) : null}
           </div>
         </div>
+
+        {/* Learning Feedback Entry (Mobile) */}
+        <div style={{ padding: '0 18px 14px' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/weekly-report')}
+            style={{
+              width: '100%',
+              background: `linear-gradient(135deg, ${KT.mint}20 0%, ${KT.sky}20 100%)`,
+              borderRadius: 18,
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              border: `1px solid ${KT.mint}40`,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: KT.mint,
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 16,
+              }}
+            >
+              📊
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: KT.ink }}>
+                {language.startsWith('zh') ? '学习反馈' : 'Learning Feedback'}
+              </div>
+              <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600 }}>
+                {language.startsWith('zh')
+                  ? '周报 · 能力画像 · 复习资产'
+                  : 'Weekly report · ability profile · review assets'}
+              </div>
+            </div>
+            <div style={{ color: KT.sub, fontSize: 14 }}>→</div>
+          </button>
+        </div>
+
         <StreakRow done={streakDoneDays} />
       </div>
 
@@ -1675,340 +1304,395 @@ export const MobileDashboard: React.FC<{
       )}
 
       {/* DAILY TASK COCKPIT */}
-      {dailyTaskPlan && dailyTaskPlan.tasks.length > 0 && (() => {
-        const allDone = dailyTaskPlan.status === 'completed';
-        const completedCount = dailyTaskPlan.tasks.filter((tk: DailyTaskItemDto) => tk.completed).length;
-        const totalCount = dailyTaskPlan.tasks.length;
-        const taskKindMeta: Record<string, { k: string; bg: string }> = {
-          vocab_20: { k: '詞', bg: KT.pink },
-          grammar_drill: { k: '法', bg: KT.mint },
-          listening_10min: { k: '聽', bg: KT.butter },
-          typing_wpm: { k: '寫', bg: KT.lilac },
-          note_review: { k: '記', bg: KT.butter },
-        };
-        return (
-          <div style={{ padding: '0 18px', marginTop: 10 }}>
-            <div
-              style={{
-                background: KT.card,
-                borderRadius: 22,
-                boxShadow: KT.sh,
-                overflow: 'hidden',
-                border: `1px solid ${KT.line}`,
-              }}
-            >
-              {/* Header */}
+      {dailyTaskPlan &&
+        dailyTaskPlan.tasks.length > 0 &&
+        (() => {
+          const allDone = dailyTaskPlan.status === 'completed';
+          const completedCount = dailyTaskPlan.tasks.filter(
+            (tk: DailyTaskItemDto) => tk.completed
+          ).length;
+          const totalCount = dailyTaskPlan.tasks.length;
+          const estimatedMinutes = dailyTaskPlan.tasks.reduce(
+            (sum: number, task: DailyTaskItemDto) => sum + estimateDailyTaskMinutes(task.kind),
+            0
+          );
+          const startPath =
+            !allDone && nextDailyTask ? buildTodayTaskPath(nextDailyTask, dashboardPath) : null;
+          const taskKindMeta: Record<string, { k: string; bg: string }> = {
+            vocab_20: { k: '詞', bg: KT.pink },
+            grammar_drill: { k: '法', bg: KT.mint },
+            listening_10min: { k: '聽', bg: KT.butter },
+            typing_wpm: { k: '寫', bg: KT.lilac },
+            note_review: { k: '記', bg: KT.butter },
+            sentence_review: { k: '句', bg: KT.mint },
+            grammar_review: { k: '法', bg: KT.butter },
+            topik_rewrite: { k: '改', bg: KT.lilac },
+          };
+          return (
+            <div style={{ padding: '0 18px', marginTop: 10 }}>
               <div
                 style={{
-                  padding: '14px 18px 12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: allDone
-                    ? `linear-gradient(135deg, ${KT.mint}30 0%, transparent 100%)`
-                    : `linear-gradient(135deg, ${KT.butter}20 0%, transparent 100%)`,
+                  background: KT.card,
+                  borderRadius: 22,
+                  boxShadow: KT.sh,
+                  overflow: 'hidden',
+                  border: `1px solid ${KT.line}`,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <HanjaSeal c="任" size={26} bg={KT.crimson} round={6} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: KT.ink, letterSpacing: -0.2 }}>
-                      {language.startsWith('zh') ? '今日任务' : language.startsWith('vi') ? 'Nhiệm vụ hôm nay' : language.startsWith('mn') ? 'Өнөөдрийн даалгавар' : "Today's Tasks"}
-                    </div>
-                    <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600, marginTop: 1 }}>
-                      {completedCount}/{totalCount} · {dailyTaskPlan.date}
-                    </div>
-                  </div>
-                </div>
-                {allDone && (
-                  <Chip tone="mint" size="sm">✓ DONE</Chip>
-                )}
-              </div>
-
-              {/* Global progress bar */}
-              <div style={{ height: 3, background: KT.line }}>
+                {/* Header */}
                 <div
                   style={{
-                    height: '100%',
-                    width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
-                    background: allDone ? KT.mint : KT.crimson,
-                    transition: 'width 0.6s ease-out',
+                    padding: '14px 18px 12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: allDone
+                      ? `linear-gradient(135deg, ${KT.mint}30 0%, transparent 100%)`
+                      : `linear-gradient(135deg, ${KT.butter}20 0%, transparent 100%)`,
                   }}
-                />
-              </div>
-
-              {/* Task rows */}
-              {dailyTaskPlan.tasks.map((task: DailyTaskItemDto, idx: number) => {
-                const meta = taskKindMeta[task.kind] ?? { k: '?', bg: KT.sub };
-                const target = task.targetCount ?? 1;
-                const current = Math.min(task.currentCount ?? 0, target);
-                const pct = target > 0 ? Math.round((current / target) * 100) : 0;
-                const xp = typeof task.metadata?.rewardXp === 'number' ? task.metadata.rewardXp : 0;
-                return (
-                  <button
-                    key={task.taskId}
-                    type="button"
-                    onClick={() => {
-                      if (!task.completed && task.linkPath) navigate(task.linkPath);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: '12px 18px',
-                      width: '100%',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: idx < dailyTaskPlan.tasks.length - 1 ? `1px solid ${KT.line}` : 'none',
-                      cursor: task.completed ? 'default' : 'pointer',
-                      opacity: task.completed ? 0.6 : 1,
-                      textAlign: 'left',
-                      fontFamily: KT.font,
-                    }}
-                  >
-                    <HanjaSeal
-                      c={meta.k}
-                      size={32}
-                      bg={task.completed ? KT.mint : meta.bg}
-                      round={8}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 800,
-                            color: KT.ink,
-                            letterSpacing: -0.2,
-                            textDecoration: task.completed ? 'line-through' : 'none',
-                          }}
-                        >
-                          {task.title}
-                        </span>
-                        {xp > 0 && (
-                          <span style={{ fontSize: 9, fontWeight: 900, color: KT.crimson, letterSpacing: 0.5 }}>
-                            +{xp} XP
-                          </span>
-                        )}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <HanjaSeal c="道" size={26} bg={KT.crimson} round={6} />
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: KT.ink,
+                          letterSpacing: -0.2,
+                        }}
+                      >
+                        {formatTodayPathTitle(language)}
                       </div>
-                      {task.description && (
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: KT.sub,
-                            fontWeight: 500,
-                            marginTop: 2,
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 1,
-                            WebkitBoxOrient: 'vertical',
-                          }}
-                        >
-                          {task.description}
+                      <div style={{ fontSize: 10, color: KT.sub, fontWeight: 600, marginTop: 1 }}>
+                        {completedCount}/{totalCount} · {dailyTaskPlan.date} ·{' '}
+                        {formatTodayPathEstimate(language, estimatedMinutes)}
+                      </div>
+                    </div>
+                  </div>
+                  {allDone && (
+                    <Chip tone="mint" size="sm">
+                      ✓ DONE
+                    </Chip>
+                  )}
+                </div>
+
+                {/* Global progress bar */}
+                <div style={{ height: 3, background: KT.line }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
+                      background: allDone ? KT.mint : KT.crimson,
+                      transition: 'width 0.6s ease-out',
+                    }}
+                  />
+                </div>
+
+                <MobileLearningLoopSummary
+                  plan={dailyTaskPlan}
+                  stats={stats}
+                  abilityScores={abilityScores}
+                  nextBestAction={nextBestAction}
+                  nextDailyTask={nextDailyTask}
+                  language={language}
+                />
+
+                {/* Task rows */}
+                {dailyTaskPlan.tasks.map((task: DailyTaskItemDto, idx: number) => {
+                  const meta = taskKindMeta[task.kind] ?? { k: '?', bg: KT.sub };
+                  const target = task.targetCount ?? 1;
+                  const current = Math.min(task.currentCount ?? 0, target);
+                  const pct = target > 0 ? Math.round((current / target) * 100) : 0;
+                  const xp =
+                    typeof task.metadata?.rewardXp === 'number' ? task.metadata.rewardXp : 0;
+                  return (
+                    <button
+                      key={task.taskId}
+                      type="button"
+                      onClick={() => {
+                        const taskPath = buildTodayTaskPath(task, dashboardPath);
+                        if (!task.completed && taskPath) {
+                          navigate(taskPath);
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '12px 18px',
+                        width: '100%',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom:
+                          idx < dailyTaskPlan.tasks.length - 1 ? `1px solid ${KT.line}` : 'none',
+                        cursor: task.completed ? 'default' : 'pointer',
+                        opacity: task.completed ? 0.6 : 1,
+                        textAlign: 'left',
+                        fontFamily: KT.font,
+                      }}
+                    >
+                      <HanjaSeal
+                        c={meta.k}
+                        size={32}
+                        bg={task.completed ? KT.mint : meta.bg}
+                        round={8}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: KT.ink,
+                              letterSpacing: -0.2,
+                              textDecoration: task.completed ? 'line-through' : 'none',
+                            }}
+                          >
+                            {task.title}
+                          </span>
+                          {xp > 0 && (
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 900,
+                                color: KT.crimson,
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              +{xp} XP
+                            </span>
+                          )}
                         </div>
-                      )}
-                      {target > 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                        {task.description && (
                           <div
                             style={{
-                              flex: 1,
-                              height: 4,
-                              borderRadius: 2,
-                              background: KT.line,
+                              fontSize: 11,
+                              color: KT.sub,
+                              fontWeight: 500,
+                              marginTop: 2,
                               overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
                             }}
+                          >
+                            {task.description}
+                          </div>
+                        )}
+                        {target > 1 && (
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}
                           >
                             <div
                               style={{
-                                height: '100%',
+                                flex: 1,
+                                height: 4,
                                 borderRadius: 2,
-                                width: `${pct}%`,
-                                background: task.completed ? KT.mint : KT.crimson,
-                                transition: 'width 0.5s ease',
+                                background: KT.line,
+                                overflow: 'hidden',
                               }}
-                            />
-                          </div>
-                          <span style={{ fontSize: 10, fontWeight: 900, color: KT.sub, flexShrink: 0 }}>
-                            {current}/{target}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {task.completed ? (
-                      <span style={{ fontSize: 14, color: KT.mint, fontWeight: 900, flexShrink: 0 }}>✓</span>
-                    ) : (
-                      <span style={{ fontSize: 16, fontFamily: KT.serif, color: KT.crimson, opacity: 0.6, flexShrink: 0 }}>→</span>
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Review summary footer */}
-              {dailyTaskPlan.reviewSummary && (dailyTaskPlan.reviewSummary.dueVocabCount || dailyTaskPlan.reviewSummary.weakPointSummary) && (
-                <div
-                  style={{
-                    padding: '8px 18px',
-                    borderTop: `1px solid ${KT.line}`,
-                    background: KT.bg2,
-                    display: 'flex',
-                    gap: 8,
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: KT.sub,
-                  }}
-                >
-                  {dailyTaskPlan.reviewSummary.dueVocabCount != null && dailyTaskPlan.reviewSummary.dueVocabCount > 0 && (
-                    <span>📚 {dailyTaskPlan.reviewSummary.dueVocabCount} {language.startsWith('zh') ? '词待复习' : 'vocab due'}</span>
-                  )}
-                  {dailyTaskPlan.reviewSummary.weakPointSummary && (
-                    <span style={{ fontStyle: 'italic', opacity: 0.8 }}>💡 {dailyTaskPlan.reviewSummary.weakPointSummary}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* TODAY'S PATH hero (Vocab focus) */}
-      <div style={{ padding: '0 18px', marginTop: 8 }}>
-        <div
-          style={{
-            background: KT.card,
-            borderRadius: 28,
-            boxShadow: KT.sh,
-            overflow: 'hidden',
-            border: `1px solid ${KT.line}`,
-            position: 'relative',
-          }}
-        >
-          {/* Header */}
-          <div
-            style={{
-              padding: '16px 20px 14px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <HanjaSeal c="道" size={28} bg={KT.crimson} round={6} />
-              <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: KT.ink,
-                    letterSpacing: -0.2,
-                  }}
-                >
-                  {copy.pathTitle}
-                </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: KT.sub,
-                    fontWeight: 600,
-                    letterSpacing: 0.5,
-                    marginTop: 1,
-                  }}
-                >
-                  {vocabTodayPath.estimatedMinutes > 0 
-                    ? `${language.startsWith('zh') ? '预计' : 'Est.'} ${vocabTodayPath.estimatedMinutes} ${language.startsWith('zh') ? '分钟' : 'min'}`
-                    : language.startsWith('zh') ? '全部完成' : 'All done'}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ height: 1, background: KT.line }} />
-
-          {/* Steps */}
-          <div style={{ padding: '16px 20px' }}>
-            {vocabTodayPath.steps.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: KT.subLight, fontSize: 13, fontWeight: 500 }}>
-                {language.startsWith('zh') ? '太棒了！今天的单词任务已全部完成。' : 'Awesome! All vocab tasks for today are done.'}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {vocabTodayPath.steps.map((vstep, idx) => {
-                  const meta = renderVocabPathRow(vstep, language);
-                  return (
-                    <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                      <div style={{ 
-                        width: 24, 
-                        height: 24, 
-                        borderRadius: 12, 
-                        background: `${meta.tone}15`, 
-                        color: meta.tone, 
-                        display: 'grid', 
-                        placeItems: 'center',
-                        fontSize: 12,
-                        fontWeight: 800,
-                        fontFamily: KT.serif,
-                        flexShrink: 0
-                      }}>
-                        {idx + 1}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: KT.ink, letterSpacing: -0.2 }}>
-                          {meta.title}
-                        </div>
-                        {meta.sub && (
-                          <div style={{ fontSize: 12, color: KT.sub, marginTop: 2, fontWeight: 500 }}>
-                            {meta.sub}
+                            >
+                              <div
+                                style={{
+                                  height: '100%',
+                                  borderRadius: 2,
+                                  width: `${pct}%`,
+                                  background: task.completed ? KT.mint : KT.crimson,
+                                  transition: 'width 0.5s ease',
+                                }}
+                              />
+                            </div>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 900,
+                                color: KT.sub,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {current}/{target}
+                            </span>
                           </div>
                         )}
                       </div>
-                    </div>
+                      {task.completed ? (
+                        <span
+                          style={{ fontSize: 14, color: KT.mint, fontWeight: 900, flexShrink: 0 }}
+                        >
+                          ✓
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 16,
+                            fontFamily: KT.serif,
+                            color: KT.crimson,
+                            opacity: 0.6,
+                            flexShrink: 0,
+                          }}
+                        >
+                          →
+                        </span>
+                      )}
+                    </button>
                   );
                 })}
-              </div>
-            )}
-          </div>
 
-          {/* Footer Action */}
-          {vocabTodayPath.steps.length > 0 && (
-            <div style={{ padding: '0 20px 20px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const target = vocabTodayPath.steps[0].target;
-                  const connector = target.includes('?') ? '&' : '?';
-                  navigate(appendReturnToPath(`${target}${connector}flow=today`, dashboardPath));
-                }}
-                style={{
-                  width: '100%',
-                  padding: 16,
-                  borderRadius: 18,
-                  background: KT.ink,
-                  color: KT.bg,
-                  fontSize: 15,
-                  fontWeight: 800,
-                  letterSpacing: 0.3,
-                  cursor: 'pointer',
-                  fontFamily: KT.font,
-                  boxShadow: '0 4px 14px rgba(31,27,23,0.22)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <span>{language.startsWith('zh') ? '开始今日学习' : 'Start Today\'s Path'}</span>
-                <span style={{ fontSize: 16 }}>▶</span>
-              </button>
+                {/* Review summary footer */}
+                {dailyTaskPlan.reviewSummary &&
+                  (dailyTaskPlan.reviewSummary.dueVocabCount ||
+                    dailyTaskPlan.reviewSummary.weakPointSummary) && (
+                    <div
+                      style={{
+                        padding: '8px 18px',
+                        borderTop: `1px solid ${KT.line}`,
+                        background: KT.bg2,
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: KT.sub,
+                      }}
+                    >
+                      {dailyTaskPlan.reviewSummary.dueVocabCount != null &&
+                        dailyTaskPlan.reviewSummary.dueVocabCount > 0 && (
+                          <span>
+                            📚 {dailyTaskPlan.reviewSummary.dueVocabCount}{' '}
+                            {language.startsWith('zh') ? '词待复习' : 'vocab due'}
+                          </span>
+                        )}
+                      {dailyTaskPlan.reviewSummary.weakPointSummary && (
+                        <span style={{ fontStyle: 'italic', opacity: 0.8 }}>
+                          💡 {dailyTaskPlan.reviewSummary.weakPointSummary}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                {startPath && (
+                  <div
+                    style={{
+                      padding: '12px 18px 16px',
+                      borderTop: `1px solid ${KT.line}`,
+                      background: KT.card,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => navigate(startPath)}
+                      style={{
+                        width: '100%',
+                        padding: 15,
+                        borderRadius: 18,
+                        border: 'none',
+                        background: KT.ink,
+                        color: KT.bg,
+                        fontSize: 14,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        fontFamily: KT.font,
+                        boxShadow: '0 4px 14px rgba(31,27,23,0.18)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <span>{formatStartTodayPathLabel(language)}</span>
+                      <span style={{ fontSize: 15 }}>▶</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          );
+        })()}
+
+      <div style={{ padding: '14px 18px 0' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/topik/writing-coach')}
+          aria-label={t('dashboard.topik.writingCoachTitle', { defaultValue: 'TOPIK 写作教练' })}
+          style={{
+            width: '100%',
+            border: `1px solid ${KT.line}`,
+            borderRadius: 22,
+            background: `linear-gradient(135deg, ${KT.ink} 0%, #413a34 100%)`,
+            boxShadow: KT.sh,
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            cursor: 'pointer',
+            textAlign: 'left',
+            fontFamily: KT.font,
+          }}
+        >
+          <HanjaSeal c="筆" size={38} bg={KT.mint} round={10} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 900,
+                color: 'rgba(255,255,255,0.62)',
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+              }}
+            >
+              AI COACH
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 900,
+                color: KT.bg,
+                marginTop: 2,
+                letterSpacing: -0.1,
+              }}
+            >
+              {t('dashboard.topik.writingCoachTitle', { defaultValue: 'TOPIK 写作教练' })}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.66)',
+                marginTop: 2,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: 'vertical',
+              }}
+            >
+              {t('dashboard.topik.writingCoachDesc', {
+                defaultValue: 'AI 实时批改、深度解析及提分建议。',
+              })}
+            </div>
+          </div>
+          <span
+            aria-hidden="true"
+            style={{
+              color: KT.bg,
+              fontSize: 20,
+              fontFamily: KT.serif,
+              opacity: 0.8,
+              flexShrink: 0,
+            }}
+          >
+            →
+          </span>
+        </button>
       </div>
 
       {achievements.length > 0 && (
         <div style={{ padding: '20px 18px 0' }}>
           <SectionHead kanji="成" title={copy.achievementsTitle} />
-          <div className="hide-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          <div
+            className="hide-scroll"
+            style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}
+          >
             {achievements.map((a, i) => (
               <div
                 key={i}
@@ -2034,6 +1718,245 @@ export const MobileDashboard: React.FC<{
           </div>
         </div>
       )}
+
+      {/* Ability Profile (P2-C) */}
+      {abilityScores && (
+        <div style={{ padding: '20px 18px 0' }}>
+          <SectionHead
+            kanji="能"
+            title={
+              language === 'zh'
+                ? '能力画像'
+                : language === 'vi'
+                  ? 'Năng lực'
+                  : language === 'mn'
+                    ? 'Чадвар'
+                    : 'Ability Profile'
+            }
+          />
+          <div
+            style={{
+              background: KT.card,
+              borderRadius: 20,
+              border: `1px solid ${KT.line}`,
+              padding: '16px',
+            }}
+          >
+            {/* Dimension bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                {
+                  key: 'vocabulary' as const,
+                  label: language === 'zh' ? '词汇' : 'Vocab',
+                  color: KT.pink,
+                },
+                {
+                  key: 'grammar' as const,
+                  label: language === 'zh' ? '语法' : 'Grammar',
+                  color: KT.lilac,
+                },
+                {
+                  key: 'reading' as const,
+                  label: language === 'zh' ? '阅读' : 'Reading',
+                  color: KT.sky,
+                },
+                {
+                  key: 'writing' as const,
+                  label: language === 'zh' ? '写作' : 'Writing',
+                  color: KT.mint,
+                },
+                {
+                  key: 'listening' as const,
+                  label: language === 'zh' ? '听力' : 'Listening',
+                  color: KT.butter,
+                },
+              ].map(dim => {
+                const val = Math.round(abilityScores.dimensions[dim.key] ?? 0);
+                return (
+                  <div key={dim.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: KT.sub,
+                        textAlign: 'right',
+                      }}
+                    >
+                      {dim.label}
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 6,
+                        borderRadius: 3,
+                        background: KT.bg2,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${val}%`,
+                          borderRadius: 3,
+                          background: dim.color,
+                          transition: 'width 0.6s ease',
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        width: 28,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: KT.ink,
+                        textAlign: 'right',
+                      }}
+                    >
+                      {val}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Overall + TOPIK level */}
+            <div
+              style={{
+                marginTop: 14,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: `1px solid ${KT.line}`,
+                paddingTop: 12,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {language === 'zh' ? '预估 TOPIK' : 'Est. TOPIK'}
+                </div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 900,
+                    color: KT.crimson,
+                    fontFamily: 'var(--font-k-serif)',
+                  }}
+                >
+                  Lv.{abilityScores.estimatedTopikLevel ?? '?'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: KT.sub,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {language === 'zh' ? '综合' : 'Overall'}
+                </div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 900,
+                    color: KT.ink,
+                    fontFamily: 'var(--font-k-serif)',
+                  }}
+                >
+                  {Math.round(abilityScores.overallScore)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Community Standing (P2-D) */}
+      {communityStanding &&
+        communityStanding.totalWords > 0 &&
+        communityStanding.communityAvgWords > 0 && (
+          <div style={{ padding: '20px 18px 0' }}>
+            <SectionHead
+              kanji="群"
+              title={
+                language === 'zh'
+                  ? '社区对比'
+                  : language === 'vi'
+                    ? 'Cộng đồng'
+                    : language === 'mn'
+                      ? 'Нийгэм'
+                      : 'Community'
+              }
+            />
+            <div
+              style={{
+                background: KT.card,
+                borderRadius: 20,
+                border: `1px solid ${KT.line}`,
+                padding: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub }}>
+                      {language === 'zh' ? '你的词汇' : 'Your words'}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 900,
+                        color: KT.ink,
+                        fontFamily: 'var(--font-k-serif)',
+                      }}
+                    >
+                      {communityStanding.totalWords}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub }}>
+                      {language === 'zh' ? '社区平均' : 'Avg'}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 900,
+                        color: KT.sub,
+                        fontFamily: 'var(--font-k-serif)',
+                      }}
+                    >
+                      {communityStanding.communityAvgWords}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: KT.bg2, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, Math.round((communityStanding.totalWords / Math.max(communityStanding.communityAvgWords * 2, 1)) * 100))}%`,
+                      borderRadius: 3,
+                      background: KT.crimson,
+                      transition: 'width 0.6s ease',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {myRank && myRank.myEntry && myRank.neighbours.length > 0 && (
         <div style={{ padding: '20px 18px 0' }}>
@@ -3077,14 +3000,8 @@ export const MobileDashboard: React.FC<{
                 padding: '12px 20px',
                 borderRadius: 14,
                 border: `1.5px solid ${KT.card}`,
-                background:
-                  !dailyChallenge || dailyChallenge.isClaimed
-                    ? 'transparent'
-                    : KT.card,
-                color:
-                  !dailyChallenge || dailyChallenge.isClaimed
-                    ? KT.card
-                    : KT.indigo,
+                background: !dailyChallenge || dailyChallenge.isClaimed ? 'transparent' : KT.card,
+                color: !dailyChallenge || dailyChallenge.isClaimed ? KT.card : KT.indigo,
                 fontSize: 13,
                 fontWeight: 800,
                 cursor:
@@ -3104,16 +3021,3 @@ export const MobileDashboard: React.FC<{
     </div>
   );
 };
-
-function btnSub(): React.CSSProperties {
-  return {
-    background: 'transparent',
-    border: 'none',
-    color: KT.sub,
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-    fontFamily: KT.font,
-    padding: 4,
-  };
-}

@@ -13,12 +13,17 @@ import {
   PracticeCategory,
   PracticeParagraph,
 } from '../../features/typing/data/practiceTexts';
-import { KT } from '../../components/mobile/ksoft/ksoft';
 import { RefreshCw, ArrowLeft, Play, Trophy, Keyboard, Type, FileText } from 'lucide-react';
 
 type GameState = 'lobby' | 'category-selection' | 'practicing' | 'results';
 type TypingMode = 'sentence' | 'word' | 'paragraph';
 type TypingGameData = PracticeCategory | PracticeParagraph | { courseId: string; title: string };
+type TypingSessionResults = {
+  wpm: number;
+  accuracy: number;
+  errorCount: number;
+  startTime?: number | null;
+};
 
 function hashString(input: string): number {
   let hash = 0;
@@ -37,7 +42,7 @@ function deterministicShuffle(items: string[]): string[] {
 }
 
 export default function DesktopTypingPage() {
-  const { t, i18n } = useTranslation('public');
+  const { t } = useTranslation('public');
   const [gameState, setGameState] = useState<GameState>('lobby');
   const [mode, setMode] = useState<TypingMode>('sentence');
   const [selectedData, setSelectedData] = useState<TypingGameData | null>(null);
@@ -45,7 +50,7 @@ export default function DesktopTypingPage() {
   // Results and Session State
   const [queue, setQueue] = useState<string[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
-  const [sessionResults, setSessionResults] = useState<any>(null);
+  const [sessionResults, setSessionResults] = useState<TypingSessionResults | null>(null);
 
   // Stats from DB
   const userStats = useQuery(api.typing.getUserStats);
@@ -57,8 +62,10 @@ export default function DesktopTypingPage() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
   const targetText = queue[queueIndex] || '';
-  const { userInput, completedIndex, phase, stats, inputRef, reset, getNextJamo, isComposing } =
-    useKoreanTyping(targetText, mode);
+  const { userInput, completedIndex, phase, stats, inputRef, reset, getNextJamo } = useKoreanTyping(
+    targetText,
+    mode
+  );
 
   const handleCompleteSession = useCallback(async () => {
     setGameState('results');
@@ -112,7 +119,7 @@ export default function DesktopTypingPage() {
   // Helper to get words for a course
   const courseWords = useQuery(
     VOCAB.getOfCourse,
-    mode === 'word' && selectedCourseId ? { courseId: selectedCourseId as any, unitId: 1 } : 'skip'
+    mode === 'word' && selectedCourseId ? { courseId: selectedCourseId, unitId: 1 } : 'skip'
   );
   const selectedCourseWords = useMemo(
     () =>
@@ -153,10 +160,6 @@ export default function DesktopTypingPage() {
       }),
     [completedIndex, targetCharacters]
   );
-
-  const formatNumber = (n: number): string => {
-    return n.toLocaleString(i18n.language === 'zh' ? 'zh-CN' : 'en-US');
-  };
 
   const renderLobby = () => (
     <div className="max-w-[1000px] mx-auto py-8 px-6">

@@ -8,7 +8,6 @@ import { logger } from '../../../utils/logger';
 import { notify } from '../../../utils/notify';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../../../components/ui';
 import { Button, Checkbox, Input, Radio } from '../../../components/ui';
-import { getPosColorClass } from '../../../utils/posColors';
 
 import { useFSRSProgress } from '../hooks/useVocabProgress';
 
@@ -474,7 +473,7 @@ const WritingInput: React.FC<WritingInputProps> = ({
   direction,
   targetWord,
   labels,
-  isLearn,
+  isLearn: _isLearn,
 }) => {
   const placeholder = getWritingPlaceholder(direction, labels);
 
@@ -486,9 +485,7 @@ const WritingInput: React.FC<WritingInputProps> = ({
 
   return (
     <div className="mb-6">
-      <div
-        className={`rounded-2xl border p-5 ${getWritingStateClass(writingState)}`}
-      >
+      <div className={`rounded-2xl border p-5 ${getWritingStateClass(writingState)}`}>
         <Input
           ref={inputRef}
           type="text"
@@ -532,21 +529,23 @@ const MCOptions: React.FC<MCOptionsProps> = ({
   optionStates,
   handleOptionClick,
   isLocked,
-  isLearn,
+  isLearn: _isLearn,
 }) => {
   return (
-    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+    <div
+      style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}
+    >
       {options.map((option, index) => {
         const state = optionStates[index];
         const displayText = direction === 'KR_TO_NATIVE' ? option.english : option.korean;
         const correct = state === 'correct' || state === 'selected';
         const wrong = state === 'wrong';
-        
+
         let bg = '#FFFFFF';
         let border = '1px solid #EBE8E2';
         let badgeBg = '#FAF7F2';
         let badgeColor = '#232220';
-        
+
         if (correct) {
           bg = '#E5ECE499';
           border = '2px solid #5B8A72';
@@ -566,22 +565,34 @@ const MCOptions: React.FC<MCOptionsProps> = ({
             onClick={() => handleOptionClick(index)}
             disabled={isLocked}
             style={{
-              padding: '14px 16px', borderRadius: 16,
-              background: bg, border: border,
+              padding: '14px 16px',
+              borderRadius: 16,
+              background: bg,
+              border: border,
               boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              display: 'flex', alignItems: 'center', gap: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
               cursor: isLocked ? 'default' : 'pointer',
               width: '100%',
-              textAlign: 'left'
+              textAlign: 'left',
             }}
           >
-            <div style={{
-              width: 32, height: 32, borderRadius: 10,
-              background: badgeBg, color: badgeColor,
-              display: 'grid', placeItems: 'center',
-              fontSize: 13, fontWeight: 800, flexShrink: 0,
-              transition: 'all 0.2s'
-            }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: badgeBg,
+                color: badgeColor,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 13,
+                fontWeight: 800,
+                flexShrink: 0,
+                transition: 'all 0.2s',
+              }}
+            >
               {String.fromCharCode(65 + index)}
             </div>
             <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: '#232220' }}>
@@ -601,7 +612,7 @@ interface PendingAdvanceBannerProps {
   onContinue: () => void;
 }
 
-const PendingAdvanceBanner: React.FC<PendingAdvanceBannerProps> = ({ language, onContinue }) => (
+const _PendingAdvanceBanner: React.FC<PendingAdvanceBannerProps> = ({ language, onContinue }) => (
   <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-4">
     <div className="min-w-0">
       <div className="text-sm font-black text-muted-foreground">
@@ -635,23 +646,60 @@ interface QuestionDisplayProps {
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   promptText,
   questionText,
-  isLearn,
+  isLearn: _isLearn,
   targetWord,
   onSpeak,
 }) => (
-  <div style={{ padding: 24, borderRadius: 24, background: `linear-gradient(180deg, #FDF3D040 0%, #FFFFFF 70%)`, border: '1px solid #EBE8E2', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 14 }}>
-    <div style={{ fontSize: 11, color: '#8E877B', fontWeight: 800, letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+  <div
+    style={{
+      padding: 24,
+      borderRadius: 24,
+      background: `linear-gradient(180deg, #FDF3D040 0%, #FFFFFF 70%)`,
+      border: '1px solid #EBE8E2',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      marginBottom: 14,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 11,
+        color: '#8E877B',
+        fontWeight: 800,
+        letterSpacing: 1,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+      }}
+    >
       {promptText}
     </div>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-      <div style={{ fontSize: 40, fontWeight: 800, color: '#232220', letterSpacing: -1.2, lineHeight: 1 }}>
+      <div
+        style={{
+          fontSize: 40,
+          fontWeight: 800,
+          color: '#232220',
+          letterSpacing: -1.2,
+          lineHeight: 1,
+        }}
+      >
         {questionText}
       </div>
       {onSpeak && (
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={() => onSpeak(questionText)}
-          style={{ width: 38, height: 38, borderRadius: 19, border: 'none', background: '#232220', color: '#FAF7F2', fontSize: 14, cursor: 'pointer', display: 'grid', placeItems: 'center' }}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            border: 'none',
+            background: '#232220',
+            color: '#FAF7F2',
+            fontSize: 14,
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+          }}
         >
           <Volume2 className="w-4 h-4" />
         </button>
@@ -672,7 +720,11 @@ interface ScoreBadgeProps {
   isLearn: boolean;
 }
 
-const ScoreBadge: React.FC<ScoreBadgeProps> = ({ correctCount, labels, isWriting }) => null;
+const _ScoreBadge: React.FC<ScoreBadgeProps> = ({
+  correctCount: _correctCount,
+  labels: _labels,
+  isWriting: _isWriting,
+}) => null;
 
 interface ProgressHeaderProps {
   labels: Labels;
@@ -689,7 +741,7 @@ interface ProgressHeaderProps {
 
 const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   labels,
-  currentBatchNum,
+  currentBatchNum: _currentBatchNum,
   questionIndex,
   totalQuestions,
   settingsLocked,
@@ -701,17 +753,43 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
 }) => (
   <div style={{ width: '100%' }}>
     <div style={{ padding: '24px 0 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <button 
+      <button
         type="button"
         onClick={onClose}
-        style={{ width: 36, height: 36, borderRadius: 18, border: 'none', background: '#FFFFFF', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', color: '#232220', fontWeight: 700, display: 'grid', placeItems: 'center' }}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          border: 'none',
+          background: '#FFFFFF',
+          fontSize: 16,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          color: '#232220',
+          fontWeight: 700,
+          display: 'grid',
+          placeItems: 'center',
+        }}
       >
         <X className="w-5 h-5" />
       </button>
-      <button 
+      <button
         type="button"
         onClick={() => !settingsLocked && setShowSettings(true)}
-        style={{ width: 36, height: 36, borderRadius: 18, border: 'none', background: '#FFFFFF', fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', color: '#232220', fontWeight: 700, display: 'grid', placeItems: 'center' }}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          border: 'none',
+          background: '#FFFFFF',
+          fontSize: 16,
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          color: '#232220',
+          fontWeight: 700,
+          display: 'grid',
+          placeItems: 'center',
+        }}
       >
         <Settings className="w-5 h-5" />
       </button>
@@ -723,7 +801,16 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
           第 {questionIndex + 1} 题 / {totalQuestions}
         </div>
       </div>
-      <div style={{ padding: '6px 10px', borderRadius: 14, background: '#232220', color: '#FAF7F2', fontSize: 12, fontWeight: 800 }}>
+      <div
+        style={{
+          padding: '6px 10px',
+          borderRadius: 14,
+          background: '#232220',
+          color: '#FAF7F2',
+          fontSize: 12,
+          fontWeight: 800,
+        }}
+      >
         02:14
       </div>
     </div>
@@ -733,7 +820,7 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
       {Array.from({ length: totalQuestions }).map((_, i) => {
         const done = i < questionIndex;
         const cur = i === questionIndex;
-        
+
         let background = '#DCD9CE';
         if (cur) background = '#232220';
         else if (done) {
@@ -741,12 +828,18 @@ const ProgressHeader: React.FC<ProgressHeaderProps> = ({
           const wasWrong = wrongWords?.some(w => w.id === targetWordId);
           background = wasWrong ? '#C05C46' : '#5B8A72';
         }
-        
+
         return (
-          <div key={i} style={{
-            flex: 1, height: 5, borderRadius: 3,
-            background: background, transition: 'all 0.2s'
-          }} />
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: 5,
+              borderRadius: 3,
+              background: background,
+              transition: 'all 0.2s',
+            }}
+          />
         );
       })}
     </div>
@@ -1592,32 +1685,61 @@ const ExplanationBanner: React.FC<{
   direction: 'KR_TO_NATIVE' | 'NATIVE_TO_KR';
   isLocked: boolean;
   language: Language;
-}> = ({ targetWord, direction, isLocked, language }) => {
+}> = ({ targetWord, direction: _direction, isLocked, language }) => {
   if (!isLocked) return null;
-  
+
   const wordText = targetWord.korean;
   const meaningText = targetWord.english;
-  
-  const expText = language === 'zh'
-    ? `「${wordText}」的意思是「${meaningText}」。`
-    : language === 'en'
-    ? `The meaning of "${wordText}" is "${meaningText}".`
-    : `"${wordText}" translates to "${meaningText}".`;
-    
+
+  const expText =
+    language === 'zh'
+      ? `「${wordText}」的意思是「${meaningText}」。`
+      : language === 'en'
+        ? `The meaning of "${wordText}" is "${meaningText}".`
+        : `"${wordText}" translates to "${meaningText}".`;
+
   return (
-    <div style={{ padding: 14, marginTop: 12, background: '#E5ECE440', borderRadius: 16, border: 'none', marginBottom: 14 }}>
+    <div
+      style={{
+        padding: 14,
+        marginTop: 12,
+        background: '#E5ECE440',
+        borderRadius: 16,
+        border: 'none',
+        marginBottom: 14,
+      }}
+    >
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 9, background: '#5B8A72', color: '#FFFFFF',
-          display: 'grid', placeItems: 'center', fontFamily: 'serif', fontSize: 14, fontWeight: 500, flexShrink: 0
-        }}>
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            background: '#5B8A72',
+            color: '#FFFFFF',
+            display: 'grid',
+            placeItems: 'center',
+            fontFamily: 'serif',
+            fontSize: 14,
+            fontWeight: 500,
+            flexShrink: 0,
+          }}
+        >
           解
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, color: '#5B8A72', fontWeight: 800, letterSpacing: 1 }}>
             {language === 'zh' ? '答案解析' : 'Explanation'}
           </div>
-          <div style={{ fontSize: 12, color: '#3A3937', marginTop: 3, lineHeight: 1.5, fontWeight: 500 }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: '#3A3937',
+              marginTop: 3,
+              lineHeight: 1.5,
+              fontWeight: 500,
+            }}
+          >
             {expText}
           </div>
         </div>
@@ -1635,7 +1757,7 @@ const QuizContent: React.FC<QuizContentProps> = ({
   totalQuestions,
   settingsLocked,
   setShowSettings,
-  correctCount,
+  correctCount: _correctCount,
   optionStates,
   handleOptionClick,
   isLocked,
@@ -1663,8 +1785,24 @@ const QuizContent: React.FC<QuizContentProps> = ({
   const { speak: speakTTS } = useTTS();
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, padding: '0 22px 10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: '#FAF7F2',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          padding: '0 22px 10px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <div className="max-w-[800px] mx-auto w-full flex-1 flex flex-col">
           <ProgressHeader
             labels={labels}
@@ -1679,55 +1817,67 @@ const QuizContent: React.FC<QuizContentProps> = ({
             onClose={onClose}
           />
 
-        <QuestionDisplay
-          promptText={promptText}
-          questionText={questionText}
-          isLearn={isLearn}
-          targetWord={currentQuestion.targetWord}
-          onSpeak={speakTTS}
-        />
-
-        <ExplanationBanner 
-          targetWord={currentQuestion.targetWord}
-          direction={currentQuestion.direction}
-          isLocked={isLocked}
-          language={language}
-        />
-
-        {!isWriting && currentQuestion.options && (
-          <MCOptions
-            options={currentQuestion.options}
-            direction={currentQuestion.direction}
-            optionStates={optionStates}
-            handleOptionClick={handleOptionClick}
-            isLocked={isLocked}
+          <QuestionDisplay
+            promptText={promptText}
+            questionText={questionText}
             isLearn={isLearn}
-          />
-        )}
-
-        {isWriting && (
-          <WritingInput
-            inputRef={inputRef}
-            writingInput={writingInput}
-            setWritingInput={setWritingInput}
-            writingState={writingState}
-            handleWritingSubmit={handleWritingSubmit}
-            direction={currentQuestion.direction}
             targetWord={currentQuestion.targetWord}
-            labels={labels}
-            isLearn={isLearn}
+            onSpeak={speakTTS}
           />
-        )}
-      </div>
-    </div>
 
-      <div style={{ padding: '12px 22px 32px', borderTop: '1px solid #EBE8E2', background: '#FFFFFF' }}>
+          <ExplanationBanner
+            targetWord={currentQuestion.targetWord}
+            direction={currentQuestion.direction}
+            isLocked={isLocked}
+            language={language}
+          />
+
+          {!isWriting && currentQuestion.options && (
+            <MCOptions
+              options={currentQuestion.options}
+              direction={currentQuestion.direction}
+              optionStates={optionStates}
+              handleOptionClick={handleOptionClick}
+              isLocked={isLocked}
+              isLearn={isLearn}
+            />
+          )}
+
+          {isWriting && (
+            <WritingInput
+              inputRef={inputRef}
+              writingInput={writingInput}
+              setWritingInput={setWritingInput}
+              writingState={writingState}
+              handleWritingSubmit={handleWritingSubmit}
+              direction={currentQuestion.direction}
+              targetWord={currentQuestion.targetWord}
+              labels={labels}
+              isLearn={isLearn}
+            />
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{ padding: '12px 22px 32px', borderTop: '1px solid #EBE8E2', background: '#FFFFFF' }}
+      >
         <div className="max-w-[800px] mx-auto w-full flex items-center gap-3">
           {showSkip ? (
             <button
               type="button"
               onClick={handleDontKnow}
-              style={{ flex: 0.35, padding: 14, borderRadius: 16, border: '1px solid #DCD9CE', background: '#FFFFFF', fontSize: 12, fontWeight: 800, cursor: 'pointer', color: '#232220' }}
+              style={{
+                flex: 0.35,
+                padding: 14,
+                borderRadius: 16,
+                border: '1px solid #DCD9CE',
+                background: '#FFFFFF',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                color: '#232220',
+              }}
             >
               {language === 'zh' ? '跳过' : 'Skip'}
             </button>
@@ -1735,24 +1885,34 @@ const QuizContent: React.FC<QuizContentProps> = ({
             <div style={{ flex: 0.35 }} />
           )}
 
-        {pendingAdvance ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPendingAdvanceReason(null);
-              nextQuestionRef.current?.();
-            }}
-            style={{ flex: 1, padding: 14, borderRadius: 16, border: 'none', background: '#232220', color: '#FAF7F2', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}
-          >
-            {language === 'zh' ? '下一题 →' : 'Next Question →'}
-          </button>
-        ) : (
-          <div style={{ flex: 1 }} />
-        )}
+          {pendingAdvance ? (
+            <button
+              type="button"
+              onClick={() => {
+                setPendingAdvanceReason(null);
+                nextQuestionRef.current?.();
+              }}
+              style={{
+                flex: 1,
+                padding: 14,
+                borderRadius: 16,
+                border: 'none',
+                background: '#232220',
+                color: '#FAF7F2',
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              {language === 'zh' ? '下一题 →' : 'Next Question →'}
+            </button>
+          ) : (
+            <div style={{ flex: 1 }} />
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 function VocabQuizComponent({
@@ -1868,7 +2028,7 @@ function VocabQuizComponent({
   useEffect(() => {
     if (settings.autoTTS && currentQuestion && gameState === 'PLAYING') {
       if (lastSpokenIndexRef.current === questionIndex) return;
-      
+
       if (currentQuestion.direction === 'KR_TO_NATIVE') {
         speakWord(currentQuestion.targetWord.korean);
         lastSpokenIndexRef.current = questionIndex;

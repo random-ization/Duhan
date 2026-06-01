@@ -1,29 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, Navigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { LogoIcon } from '../components/ui/Logo';
 import { LocalizedLink } from '../components/LocalizedLink';
 import { SEO as Seo } from '../seo/SEO';
 import { getRouteMeta } from '../seo/publicRoutes';
 import { runConvexActionWithRetry } from '../utils/convexActionRetry';
-import { callPublicConvexAction, hasConvexAuthToken } from '../utils/publicConvexClient';
+import { callPublicConvexAction } from '../utils/publicConvexClient';
 import { trackEvent } from '../utils/analytics';
 import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
 
-import {
-  Globe,
-  Check,
-  ChevronRight,
-  ArrowRight,
-  Play,
-  Languages,
-  BookOpen,
-  Headphones,
-  Users,
-  Repeat,
-  Smartphone,
-  CheckCircle2,
-} from 'lucide-react';
+import { Globe, Check, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 type PricePlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
@@ -139,9 +126,27 @@ const LandingJsonLd = ({
               url: canonicalUrl,
               inLanguage: language,
               offers: [
-                { '@type': 'Offer', name: 'Monthly Subscription', price: getPrice('MONTHLY'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
-                { '@type': 'Offer', name: 'Annual Subscription', price: getPrice('ANNUAL'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
-                { '@type': 'Offer', name: 'Lifetime Access', price: getPrice('LIFETIME'), priceCurrency: 'USD', availability: 'https://schema.org/InStock' },
+                {
+                  '@type': 'Offer',
+                  name: 'Monthly Subscription',
+                  price: getPrice('MONTHLY'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Annual Subscription',
+                  price: getPrice('ANNUAL'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
+                {
+                  '@type': 'Offer',
+                  name: 'Lifetime Access',
+                  price: getPrice('LIFETIME'),
+                  priceCurrency: 'USD',
+                  availability: 'https://schema.org/InStock',
+                },
               ],
             },
             {
@@ -167,7 +172,11 @@ const LandingJsonLd = ({
               name: g.name,
               description: g.description,
               inLanguage: language,
-              provider: { '@type': 'Organization', name: 'DuHan', sameAs: 'https://koreanstudy.me' },
+              provider: {
+                '@type': 'Organization',
+                name: 'DuHan',
+                sameAs: 'https://koreanstudy.me',
+              },
             })),
           ],
         }),
@@ -226,8 +235,7 @@ const Seal: React.FC<{
 // ───────────────────────────────────────────────────────────────────────
 
 const LandingLanguageSwitcher = () => {
-  const { i18n, t } = useTranslation();
-  const navigate = useLocalizedNavigate();
+  const { i18n } = useTranslation();
   const location = useLocation();
 
   const languages = [
@@ -275,8 +283,7 @@ const NavBar: React.FC<{
   onFreeStart: () => void;
   onLogin: () => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
-  hasAuthToken: boolean;
-}> = ({ isScrolled, onFreeStart, onLogin, t, hasAuthToken }) => {
+}> = ({ isScrolled, onFreeStart, onLogin, t }) => {
   const links = [
     { href: '#features', label: t('landing.v2.nav.features', { defaultValue: '功能' }) },
     { href: '#loop', label: t('landing.v2.nav.loop', { defaultValue: '每日路径' }) },
@@ -294,8 +301,15 @@ const NavBar: React.FC<{
       }}
     >
       <Container className="flex h-[52px] items-center gap-10 md:h-[68px]">
-        <LocalizedLink to="/" className="flex items-center gap-2 text-[16px] font-extrabold tracking-[-0.3px] text-k-ink md:gap-2.5 md:text-[19px]">
-          <img src="/logo.svg" alt="Duhan Logo" className="h-[28px] w-[28px] md:h-8 md:w-8 rounded-lg flex-shrink-0" />
+        <LocalizedLink
+          to="/"
+          className="flex items-center gap-2 text-[16px] font-extrabold tracking-[-0.3px] text-k-ink md:gap-2.5 md:text-[19px]"
+        >
+          <img
+            src="/logo.svg"
+            alt="Duhan Logo"
+            className="h-[28px] w-[28px] md:h-8 md:w-8 rounded-lg flex-shrink-0"
+          />
           <span>
             <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>Duhan
           </span>
@@ -364,7 +378,9 @@ const FloatChip: React.FC<{
   </div>
 );
 
-const MobilePhoneBlock: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
+const MobilePhoneBlock: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => (
   <div className="flex justify-center lg:hidden">
     <div className="relative h-[580px] w-full max-w-[290px]">
       <div
@@ -382,8 +398,15 @@ const MobilePhoneBlock: React.FC<{ t: (k: string, opts?: Record<string, unknown>
   </div>
 );
 
-const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
-  const steps: Array<{ kanji: string; title: string; sub: string; state: 'done' | 'active' | 'idle' }> = [
+const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => {
+  const steps: Array<{
+    kanji: string;
+    title: string;
+    sub: string;
+    state: 'done' | 'active' | 'idle';
+  }> = [
     {
       kanji: '複',
       title: t('landing.v2.hero.phone.s1.t', { defaultValue: '早间复习' }),
@@ -447,8 +470,8 @@ const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => 
                       s.state === 'done'
                         ? '#BFE0CF'
                         : isActive
-                        ? 'var(--color-k-bg)'
-                        : 'rgba(31,27,23,0.08)',
+                          ? 'var(--color-k-bg)'
+                          : 'rgba(31,27,23,0.08)',
                     color: isActive ? 'var(--color-k-crimson)' : 'var(--color-k-ink)',
                   }}
                 >
@@ -484,8 +507,6 @@ const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => 
     </div>
   );
 };
-
-
 
 const Hero: React.FC<{
   onFreeStart: () => void;
@@ -541,9 +562,21 @@ const Hero: React.FC<{
         <div className="grid grid-cols-3 gap-3 border-t border-[rgba(31,27,23,0.08)] pt-4 md:flex md:gap-7 md:pt-7">
           {(
             [
-              { n: '48K+', nDesktop: '48,200+', l: t('landing.v2.hero.meta1', { defaultValue: '活跃学习者' }) },
-              { n: '230K+', nDesktop: '230,000+', l: t('landing.v2.hero.meta2', { defaultValue: '每日复习卡' }) },
-              { n: '⭐ 4.9', nDesktop: '⭐ 4.9', l: t('landing.v2.hero.meta3', { defaultValue: 'App Store 评分' }) },
+              {
+                n: '48K+',
+                nDesktop: '48,200+',
+                l: t('landing.v2.hero.meta1', { defaultValue: '活跃学习者' }),
+              },
+              {
+                n: '230K+',
+                nDesktop: '230,000+',
+                l: t('landing.v2.hero.meta2', { defaultValue: '每日复习卡' }),
+              },
+              {
+                n: '⭐ 4.9',
+                nDesktop: '⭐ 4.9',
+                l: t('landing.v2.hero.meta3', { defaultValue: 'App Store 评分' }),
+              },
             ] as const
           ).map(m => (
             <div key={m.l} className="flex flex-col gap-0.5">
@@ -610,7 +643,9 @@ const Hero: React.FC<{
 // LOGOS STRIP
 // ───────────────────────────────────────────────────────────────────────
 
-const LogosStrip: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+const LogosStrip: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => {
   const items = [
     { ko: '讀', label: t('landing.v2.logos.v1', { defaultValue: '真实语境沉浸阅读' }) },
     { ko: '聽', label: t('landing.v2.logos.v2', { defaultValue: '影视播客原声精听' }) },
@@ -622,8 +657,13 @@ const LogosStrip: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => s
     <section className="bg-k-bg2 py-8 md:py-11">
       <Container className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 md:justify-between">
         {items.map(i => (
-          <div key={i.ko} className="flex items-center gap-3 text-[13px] font-bold text-k-ink transition-opacity hover:opacity-100 md:text-[14px]">
-            <span className="font-k-serif text-[18px] text-k-crimson opacity-90 md:text-[20px]">{i.ko}</span>
+          <div
+            key={i.ko}
+            className="flex items-center gap-3 text-[13px] font-bold text-k-ink transition-opacity hover:opacity-100 md:text-[14px]"
+          >
+            <span className="font-k-serif text-[18px] text-k-crimson opacity-90 md:text-[20px]">
+              {i.ko}
+            </span>
             <span className="opacity-70">{i.label}</span>
           </div>
         ))}
@@ -656,7 +696,9 @@ const SectionHead: React.FC<{
       className="m-0 mb-4 mt-3 text-[32px] font-extrabold leading-[1.1] tracking-[-1px] md:mt-3.5 md:text-[52px] md:tracking-[-1.4px]"
       style={{ color: tone === 'dark' ? 'var(--color-k-bg)' : 'var(--color-k-ink)' }}
     >
-      {titleKo ? <span className="mr-2 font-k-serif font-medium text-k-crimson">{titleKo}</span> : null}
+      {titleKo ? (
+        <span className="mr-2 font-k-serif font-medium text-k-crimson">{titleKo}</span>
+      ) : null}
       {title}
     </h2>
     {sub ? (
@@ -674,7 +716,9 @@ const SectionHead: React.FC<{
 // FEATURES MOSAIC
 // ───────────────────────────────────────────────────────────────────────
 
-const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => {
   type Tone = 'dark' | 'cream' | 'butter' | 'mint' | 'crimson';
   type Tile = {
     tone: Tone;
@@ -703,7 +747,9 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
       tone: 'butter',
       kanji: '詞',
       title: t('landing.v2.features.t2.title', { defaultValue: '词汇本 + 四种模式' }),
-      desc: t('landing.v2.features.t2.desc', { defaultValue: '闪卡、学习、考试、连连看 — 一个词四种练法。' }),
+      desc: t('landing.v2.features.t2.desc', {
+        defaultValue: '闪卡、学习、考试、连连看 — 一个词四种练法。',
+      }),
       pill: t('landing.v2.features.t2.pill', { defaultValue: '/ TOPIK I + II · 9,300 词' }),
       deco: '詞',
     },
@@ -711,7 +757,9 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
       tone: 'cream',
       kanji: '法',
       title: t('landing.v2.features.t3.title', { defaultValue: '语法句型库' }),
-      desc: t('landing.v2.features.t3.desc', { defaultValue: '每条语法配场景例句 + 真题。错误自动入复习队列。' }),
+      desc: t('landing.v2.features.t3.desc', {
+        defaultValue: '每条语法配场景例句 + 真题。错误自动入复习队列。',
+      }),
       pill: t('landing.v2.features.t3.pill', { defaultValue: '/ 480 条核心语法' }),
       deco: '法',
     },
@@ -719,7 +767,9 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
       tone: 'mint',
       kanji: '能',
       title: t('landing.v2.features.t4.title', { defaultValue: 'TOPIK 备考' }),
-      desc: t('landing.v2.features.t4.desc', { defaultValue: '真题 / 模考 / 写作 AI 评分 + 听力倍速精听' }),
+      desc: t('landing.v2.features.t4.desc', {
+        defaultValue: '真题 / 模考 / 写作 AI 评分 + 听力倍速精听',
+      }),
       pill: t('landing.v2.features.t4.pill', { defaultValue: '/ TOPIK II 平均提升 1.4 级' }),
       deco: '能',
     },
@@ -727,7 +777,9 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
       tone: 'cream',
       kanji: '譯',
       title: t('landing.v2.features.t6.title', { defaultValue: '母语社区 · 互译' }),
-      desc: t('landing.v2.features.t6.desc', { defaultValue: '遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。' }),
+      desc: t('landing.v2.features.t6.desc', {
+        defaultValue: '遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。',
+      }),
       pill: t('landing.v2.features.t6.pill', { defaultValue: '/ 1.2k+ 活跃互助组' }),
       deco: '譯',
     },
@@ -798,7 +850,8 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
           titleKo="學"
           title={t('landing.v2.features.title', { defaultValue: '一站式的韩语学习工具箱' })}
           sub={t('landing.v2.features.sub', {
-            defaultValue: '从五十音到 TOPIK 6 级，覆盖你学韩语过程中的每一个场景 — 不再东拼西凑十个 App。',
+            defaultValue:
+              '从五十音到 TOPIK 6 级，覆盖你学韩语过程中的每一个场景 — 不再东拼西凑十个 App。',
           })}
         />
 
@@ -816,8 +869,12 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
                 }}
               >
                 <Seal ch={tile.kanji} size={40} bg={seal.bg} fg={seal.fg} className="mb-4" />
-                <div className="mb-2 text-[22px] font-extrabold tracking-[-0.4px]">{tile.title}</div>
-                <div className={`text-[13.5px] leading-[1.55] ${descClass(tile.tone)}`}>{tile.desc}</div>
+                <div className="mb-2 text-[22px] font-extrabold tracking-[-0.4px]">
+                  {tile.title}
+                </div>
+                <div className={`text-[13.5px] leading-[1.55] ${descClass(tile.tone)}`}>
+                  {tile.desc}
+                </div>
                 <div
                   className={`mt-auto flex items-center gap-1.5 font-k-mono text-[11px] font-bold uppercase tracking-[0.5px] ${pillClass(tile.tone)}`}
                 >
@@ -843,13 +900,17 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
 // DAILY LOOP (dark)
 // ───────────────────────────────────────────────────────────────────────
 
-const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => {
   const cards = [
     {
       koNum: '壹',
       label: t('landing.v2.loop.s1.label', { defaultValue: 'STEP 1 · 早间' }),
       title: t('landing.v2.loop.s1.title', { defaultValue: '复习到期卡' }),
-      desc: t('landing.v2.loop.s1.desc', { defaultValue: 'FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。' }),
+      desc: t('landing.v2.loop.s1.desc', {
+        defaultValue: 'FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。',
+      }),
       previewKo: '複',
       preview: t('landing.v2.loop.s1.preview', { defaultValue: '18 卡 · 7 分钟' }),
     },
@@ -857,7 +918,9 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
       koNum: '貳',
       label: t('landing.v2.loop.s2.label', { defaultValue: 'STEP 2 · 课程' }),
       title: t('landing.v2.loop.s2.title', { defaultValue: '新一课内容' }),
-      desc: t('landing.v2.loop.s2.desc', { defaultValue: '课本 + 听力 + 即学即考 · 任何片段都能截图入卡。' }),
+      desc: t('landing.v2.loop.s2.desc', {
+        defaultValue: '课本 + 听力 + 即学即考 · 任何片段都能截图入卡。',
+      }),
       previewKo: '學',
       preview: t('landing.v2.loop.s2.preview', { defaultValue: 'L24 · 8 分钟' }),
     },
@@ -865,7 +928,9 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
       koNum: '參',
       label: t('landing.v2.loop.s3.label', { defaultValue: 'STEP 3 · 通勤' }),
       title: t('landing.v2.loop.s3.title', { defaultValue: '听力沉浸' }),
-      desc: t('landing.v2.loop.s3.desc', { defaultValue: '真实播客或韩剧片段 · 双语字幕 · 生词秒收。' }),
+      desc: t('landing.v2.loop.s3.desc', {
+        defaultValue: '真实播客或韩剧片段 · 双语字幕 · 生词秒收。',
+      }),
       previewKo: '聽',
       preview: t('landing.v2.loop.s3.preview', { defaultValue: '播客 6 分钟' }),
     },
@@ -873,7 +938,9 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
       koNum: '肆',
       label: t('landing.v2.loop.s4.label', { defaultValue: 'STEP 4 · 睡前' }),
       title: t('landing.v2.loop.s4.title', { defaultValue: '阅读一段' }),
-      desc: t('landing.v2.loop.s4.desc', { defaultValue: '段落难度自动匹配 · 看完一篇 = 巩固今天的所学。' }),
+      desc: t('landing.v2.loop.s4.desc', {
+        defaultValue: '段落难度自动匹配 · 看完一篇 = 巩固今天的所学。',
+      }),
       previewKo: '讀',
       preview: t('landing.v2.loop.s4.preview', { defaultValue: '短文 4 分钟' }),
     },
@@ -904,8 +971,12 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
                 <div className="mb-1 mt-3.5 text-[11px] font-extrabold uppercase tracking-[2px] text-[rgba(251,248,243,0.5)]">
                   {c.label}
                 </div>
-                <h4 className="m-0 mb-2.5 text-[19px] font-extrabold tracking-[-0.2px]">{c.title}</h4>
-                <p className="m-0 text-[13px] leading-[1.55] text-[rgba(251,248,243,0.65)]">{c.desc}</p>
+                <h4 className="m-0 mb-2.5 text-[19px] font-extrabold tracking-[-0.2px]">
+                  {c.title}
+                </h4>
+                <p className="m-0 text-[13px] leading-[1.55] text-[rgba(251,248,243,0.65)]">
+                  {c.desc}
+                </p>
                 <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-[rgba(251,248,243,0.07)] px-3 py-2.5 text-[11px] font-semibold text-[rgba(251,248,243,0.55)]">
                   <span className="font-k-serif text-[#F2A78D]">{c.previewKo}</span>
                   {c.preview}
@@ -993,7 +1064,14 @@ const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => stri
           visualBg="#BFE0CF"
           visual={
             <svg viewBox="0 0 200 200" width={180} height={180}>
-              <circle cx={100} cy={100} r={78} fill="none" stroke="rgba(31,27,23,0.12)" strokeWidth={14} />
+              <circle
+                cx={100}
+                cy={100}
+                r={78}
+                fill="none"
+                stroke="rgba(31,27,23,0.12)"
+                strokeWidth={14}
+              />
               <circle
                 cx={100}
                 cy={100}
@@ -1006,7 +1084,15 @@ const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => stri
                 strokeDashoffset={100}
                 transform="rotate(-90 100 100)"
               />
-              <text x={100} y={92} textAnchor="middle" fontFamily="Noto Serif KR" fontSize={42} fontWeight={500} fill="var(--color-k-ink)">
+              <text
+                x={100}
+                y={92}
+                textAnchor="middle"
+                fontFamily="Noto Serif KR"
+                fontSize={42}
+                fontWeight={500}
+                fill="var(--color-k-ink)"
+              >
                 87
               </text>
               <text
@@ -1029,7 +1115,8 @@ const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => stri
           kanji="映"
           title={t('landing.v2.modules.m3.title', { defaultValue: '媒体库 · 精听变速' })}
           desc={t('landing.v2.modules.m3.desc', {
-            defaultValue: '告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。',
+            defaultValue:
+              '告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。',
           })}
           tags={[
             t('landing.v2.modules.m3.tag1', { defaultValue: '4,800+ 片段' }),
@@ -1090,10 +1177,14 @@ const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => stri
                 三 · LEVEL 3
               </div>
               <div className="font-k-serif text-[14px] font-medium leading-[1.6]">
-                <span style={{ background: '#F2D27A', padding: '0 2px', borderRadius: 2 }}>골목길</span>
+                <span style={{ background: '#F2D27A', padding: '0 2px', borderRadius: 2 }}>
+                  골목길
+                </span>
                 의 끝에 작은 빵집이 있다. 매일 아침 갓 구운 빵{' '}
-                <span style={{ background: '#F4C5C5', padding: '0 2px', borderRadius: 2 }}>냄새</span>가
-                거리를 채운다…
+                <span style={{ background: '#F4C5C5', padding: '0 2px', borderRadius: 2 }}>
+                  냄새
+                </span>
+                가 거리를 채운다…
               </div>
               <div className="mt-3 flex justify-between text-[11px] font-semibold text-k-sub">
                 <span>3 / 18 段</span>
@@ -1123,7 +1214,9 @@ const ModuleCard: React.FC<{
     <article className="grid items-center gap-6 rounded-[24px] bg-k-card p-7 md:grid-cols-[1fr_280px] md:p-9">
       <div>
         <Seal ch={kanji} size={44} className="mb-4" />
-        <h3 className="m-0 mb-2.5 text-[26px] font-extrabold tracking-[-0.5px] text-k-ink">{title}</h3>
+        <h3 className="m-0 mb-2.5 text-[26px] font-extrabold tracking-[-0.5px] text-k-ink">
+          {title}
+        </h3>
         <p className="m-0 mb-4 text-[14px] leading-[1.55] text-[#3A342E]">{desc}</p>
         <ul className="m-0 mb-4 flex list-none flex-wrap gap-1.5 p-0">
           {tags.map(tag => (
@@ -1135,7 +1228,10 @@ const ModuleCard: React.FC<{
             </li>
           ))}
         </ul>
-        <LocalizedLink to={href} className="text-[13px] font-bold text-k-crimson no-underline hover:underline">
+        <LocalizedLink
+          to={href}
+          className="text-[13px] font-bold text-k-crimson no-underline hover:underline"
+        >
           {link}
         </LocalizedLink>
       </div>
@@ -1153,7 +1249,9 @@ const ModuleCard: React.FC<{
 // COMMUNITY STATS
 // ───────────────────────────────────────────────────────────────────────
 
-const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => {
   const stats = [
     {
       n: '48,200+',
@@ -1185,7 +1283,8 @@ const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
           titleKo="伴"
           title={t('landing.v2.community.title', { defaultValue: '不一个人学，更走得远' })}
           sub={t('landing.v2.community.sub', {
-            defaultValue: '共享词汇卡片、交流备考心得、见证彼此成长 · K-Soft 社区让韩语学习不再孤单',
+            defaultValue:
+              '共享词汇卡片、交流备考心得、见证彼此成长 · K-Soft 社区让韩语学习不再孤单',
           })}
         />
         <div className="grid grid-cols-2 rounded-[24px] bg-k-bg2 p-2 md:grid-cols-4">
@@ -1194,10 +1293,7 @@ const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
               key={s.l}
               className="px-7 py-8 text-center"
               style={{
-                borderRight:
-                  i < stats.length - 1
-                    ? '1px dashed rgba(31,27,23,0.12)'
-                    : 'none',
+                borderRight: i < stats.length - 1 ? '1px dashed rgba(31,27,23,0.12)' : 'none',
               }}
             >
               <div className="font-k-serif text-[48px] font-semibold leading-none tracking-[-1.5px] text-k-crimson">
@@ -1274,7 +1370,9 @@ const Pricing: React.FC<{
 
   const commonFeatures = [
     { html: t('landing.v2.pricing.pro.f1', { defaultValue: '<b>无限</b>新词 + 科学复习 (FSRS)' }) },
-    { html: t('landing.v2.pricing.pro.f2', { defaultValue: '全库课程 + TOPIK <b>1-6 级</b>真题' }) },
+    {
+      html: t('landing.v2.pricing.pro.f2', { defaultValue: '全库课程 + TOPIK <b>1-6 级</b>真题' }),
+    },
     { html: t('landing.v2.pricing.pro.f3', { defaultValue: '影视 / 播客<b>全库 + 智能脚本</b>' }) },
     { html: t('landing.v2.pricing.pro.f4', { defaultValue: '<b>AI 写作诊断</b> + 变速精听' }) },
     { html: t('landing.v2.pricing.pro.f5', { defaultValue: '社区<b>公开资源</b>无限获取' }) },
@@ -1299,16 +1397,35 @@ const Pricing: React.FC<{
           <PlanCard
             koName="無"
             title={t('landing.v2.pricing.free.title', { defaultValue: '免费版 · Free' })}
-            desc={t('landing.v2.pricing.free.desc', { defaultValue: '入门之选 · 开启你的韩语进阶之旅' })}
+            desc={t('landing.v2.pricing.free.desc', {
+              defaultValue: '入门之选 · 开启你的韩语进阶之旅',
+            })}
             currency="¥"
             value="0"
             unit={t('landing.v2.pricing.free.unit', { defaultValue: '/ 永久' })}
             features={[
-              { html: t('landing.v2.pricing.free.f1', { defaultValue: '<b>每日 5 个</b>新学单词' }) },
-              { html: t('landing.v2.pricing.free.f2', { defaultValue: '<b>每日 30 张</b>复习上限' }) },
-              { html: t('landing.v2.pricing.free.f3', { defaultValue: '<b>基础课程</b> (L1–L2) 体验' }) },
-              { html: t('landing.v2.pricing.free.f4', { defaultValue: '影视 / 播客<b>预览模式</b>' }) },
-              { html: t('landing.v2.pricing.free.f5', { defaultValue: 'TOPIK 历年真题' }), x: true },
+              {
+                html: t('landing.v2.pricing.free.f1', { defaultValue: '<b>每日 5 个</b>新学单词' }),
+              },
+              {
+                html: t('landing.v2.pricing.free.f2', {
+                  defaultValue: '<b>每日 30 张</b>复习上限',
+                }),
+              },
+              {
+                html: t('landing.v2.pricing.free.f3', {
+                  defaultValue: '<b>基础课程</b> (L1–L2) 体验',
+                }),
+              },
+              {
+                html: t('landing.v2.pricing.free.f4', {
+                  defaultValue: '影视 / 播客<b>预览模式</b>',
+                }),
+              },
+              {
+                html: t('landing.v2.pricing.free.f5', { defaultValue: 'TOPIK 历年真题' }),
+                x: true,
+              },
               { html: t('landing.v2.pricing.free.f6', { defaultValue: 'AI 写作诊断' }), x: true },
             ]}
             ctaLabel={t('landing.v2.pricing.free.cta', { defaultValue: '免费开始' })}
@@ -1324,12 +1441,24 @@ const Pricing: React.FC<{
                   {t('landing.v2.pricing.popular', { defaultValue: 'Popular' })}
                 </div>
               )}
-              
+
               <div className="flex flex-col p-8 pt-10 h-full">
                 <div className="mb-6">
-                  <Seal ch="恆" size={40} bg="var(--color-k-bg)" fg="var(--color-k-ink)" className="mb-4 shadow-pop-small" />
-                  <div className="text-[22px] font-extrabold tracking-tight">{t('landing.v2.pricing.pro.title', { defaultValue: '正式版 · Plus' })}</div>
-                  <div className="mt-1 text-[13px] opacity-60">{t('landing.v2.pricing.pro.desc', { defaultValue: '进阶首选 · 全方位解锁 AI 学习黑科技' })}</div>
+                  <Seal
+                    ch="恆"
+                    size={40}
+                    bg="var(--color-k-bg)"
+                    fg="var(--color-k-ink)"
+                    className="mb-4 shadow-pop-small"
+                  />
+                  <div className="text-[22px] font-extrabold tracking-tight">
+                    {t('landing.v2.pricing.pro.title', { defaultValue: '正式版 · Plus' })}
+                  </div>
+                  <div className="mt-1 text-[13px] opacity-60">
+                    {t('landing.v2.pricing.pro.desc', {
+                      defaultValue: '进阶首选 · 全方位解锁 AI 学习黑科技',
+                    })}
+                  </div>
                 </div>
 
                 <div className="mb-8 flex gap-1 rounded-xl bg-white/5 p-1 backdrop-blur-sm">
@@ -1338,7 +1467,9 @@ const Pricing: React.FC<{
                       key={tab.key}
                       onClick={() => setMode(tab.key)}
                       className={`relative flex-1 rounded-lg py-2 text-[12px] font-bold transition-all ${
-                        mode === tab.key ? 'bg-k-bg text-k-ink shadow-lg' : 'text-white/50 hover:text-white/80'
+                        mode === tab.key
+                          ? 'bg-k-bg text-k-ink shadow-lg'
+                          : 'text-white/50 hover:text-white/80'
                       }`}
                     >
                       {tab.label}
@@ -1352,8 +1483,12 @@ const Pricing: React.FC<{
                 </div>
 
                 <div className="mb-8 flex items-baseline gap-1">
-                  <span className="font-k-serif text-[24px] font-medium opacity-70">{subDisplay.c}</span>
-                  <span className="font-k-serif text-[52px] font-black leading-none tracking-tighter">{subDisplay.v}</span>
+                  <span className="font-k-serif text-[24px] font-medium opacity-70">
+                    {subDisplay.c}
+                  </span>
+                  <span className="font-k-serif text-[52px] font-black leading-none tracking-tighter">
+                    {subDisplay.v}
+                  </span>
                   <span className="ml-1 text-[14px] font-bold opacity-50">{subDisplay.u}</span>
                 </div>
 
@@ -1374,7 +1509,10 @@ const Pricing: React.FC<{
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     {t('landing.v2.pricing.pro.cta', { defaultValue: '立即开启全能模式' })}
-                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                    <ArrowRight
+                      size={18}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
                   </span>
                 </button>
               </div>
@@ -1385,7 +1523,9 @@ const Pricing: React.FC<{
           <PlanCard
             koName="永"
             title={t('landing.v2.pricing.lifetime.title', { defaultValue: '终身版 · Lifetime' })}
-            desc={t('landing.v2.pricing.lifetime.desc', { defaultValue: '终身无忧 · 一次投资，永久享有所有功能' })}
+            desc={t('landing.v2.pricing.lifetime.desc', {
+              defaultValue: '终身无忧 · 一次投资，永久享有所有功能',
+            })}
             currency={lifetimeDisplay.c}
             value={lifetimeDisplay.v}
             unit={lifetimeDisplay.u}
@@ -1399,7 +1539,8 @@ const Pricing: React.FC<{
         <div className="mt-16 flex flex-col items-center justify-center gap-6 border-t border-k-ink/5 pt-10 text-center">
           <p className="max-w-xl text-[13px] leading-relaxed text-k-sub opacity-70">
             {t('landing.v2.pricing.fine', {
-              defaultValue: '系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联',
+              defaultValue:
+                '系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联',
             })}
           </p>
         </div>
@@ -1424,17 +1565,7 @@ const PlanCard: React.FC<{
   ctaLabel: string;
   ctaVariant: 'line' | 'primary' | 'primary-on-dark';
   onCta: () => void;
-}> = ({
-  koName,
-  title,
-  desc,
-  currency,
-  value,
-  unit,
-  features,
-  ctaLabel,
-  onCta,
-}) => {
+}> = ({ koName, title, desc, currency, value, unit, features, ctaLabel, onCta }) => {
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border-2 border-k-ink/5 bg-k-bg p-8 shadow-pop transition-all hover:border-k-ink/10 hover:-translate-y-1">
       <div className="mb-6">
@@ -1445,15 +1576,26 @@ const PlanCard: React.FC<{
 
       <div className="mb-8 flex items-baseline gap-1">
         <span className="font-k-serif text-[20px] font-medium text-k-sub">{currency}</span>
-        <span className="font-k-serif text-[44px] font-black leading-none tracking-tight text-k-ink">{value}</span>
+        <span className="font-k-serif text-[44px] font-black leading-none tracking-tight text-k-ink">
+          {value}
+        </span>
         <span className="ml-1 text-[13px] font-bold text-k-sub">{unit}</span>
       </div>
 
       <div className="mb-10 flex-1 space-y-4">
         {features.map((f, i) => (
-          <div key={i} className={`flex items-start gap-3 text-[13px] ${f.x ? 'opacity-30 line-through' : 'text-k-ink'}`}>
-            <div className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full ${f.x ? 'bg-k-sub/20' : 'bg-k-ink/5'}`}>
-              {f.x ? <div className="h-[1.5px] w-2 bg-k-sub" /> : <Check size={10} strokeWidth={4} className="text-k-crimson" />}
+          <div
+            key={i}
+            className={`flex items-start gap-3 text-[13px] ${f.x ? 'opacity-30 line-through' : 'text-k-ink'}`}
+          >
+            <div
+              className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full ${f.x ? 'bg-k-sub/20' : 'bg-k-ink/5'}`}
+            >
+              {f.x ? (
+                <div className="h-[1.5px] w-2 bg-k-sub" />
+              ) : (
+                <Check size={10} strokeWidth={4} className="text-k-crimson" />
+              )}
             </div>
             <span dangerouslySetInnerHTML={{ __html: f.html }} />
           </div>
@@ -1474,7 +1616,9 @@ const PlanCard: React.FC<{
 // TESTIMONIALS
 // ───────────────────────────────────────────────────────────────────────
 
-const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
+const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
+  t,
+}) => (
   <section className="py-24">
     <Container>
       <SectionHead
@@ -1507,7 +1651,8 @@ const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) =>
             t('landing.v2.testimonials.t2.tag2', { defaultValue: '3 个月' }),
           ]}
           quote={t('landing.v2.testimonials.t2.quote', {
-            defaultValue: '看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。',
+            defaultValue:
+              '看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。',
           })}
           avatarCh="小"
           avatarBg="#BFE0CF"
@@ -1518,7 +1663,8 @@ const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) =>
           tone="card"
           tags={[t('landing.v2.testimonials.t3.tag1', { defaultValue: '母语者助教' })]}
           quote={t('landing.v2.testimonials.t3.quote', {
-            defaultValue: 'UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。',
+            defaultValue:
+              'UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。',
           })}
           avatarCh="민"
           avatarBg="#F4C5C5"
@@ -1542,11 +1688,7 @@ const TestimonialCard: React.FC<{
 }> = ({ tone, large, tags, quote, avatarCh, avatarBg, name, meta }) => {
   const isCrimson = tone === 'crimson';
   const containerClass =
-    tone === 'crimson'
-      ? 'bg-k-crimson text-k-bg'
-      : tone === 'cream'
-      ? 'bg-k-bg2'
-      : 'bg-k-card';
+    tone === 'crimson' ? 'bg-k-crimson text-k-bg' : tone === 'cream' ? 'bg-k-bg2' : 'bg-k-card';
   return (
     <article className={`relative rounded-[22px] p-7 ${containerClass}`}>
       <span
@@ -1572,7 +1714,9 @@ const TestimonialCard: React.FC<{
       </div>
       <blockquote
         className={`m-0 mb-6 max-w-[90%] font-medium ${
-          large ? 'text-[22px] font-semibold leading-[1.4] tracking-[-0.3px]' : 'text-[17px] leading-[1.5]'
+          large
+            ? 'text-[22px] font-semibold leading-[1.4] tracking-[-0.3px]'
+            : 'text-[17px] leading-[1.5]'
         }`}
       >
         {quote}
@@ -1634,7 +1778,9 @@ const FaqList: React.FC<{
                   className="flex w-full cursor-pointer items-center justify-between text-[17px] font-bold text-k-ink"
                 >
                   <span className="text-left">
-                    <span className="mr-2 font-k-serif text-[22px] font-medium text-k-crimson">問</span>
+                    <span className="mr-2 font-k-serif text-[22px] font-medium text-k-crimson">
+                      問
+                    </span>
                     {item.question}
                   </span>
                   <span className="ml-3 text-k-sub">{open ? '−' : '+'}</span>
@@ -1686,7 +1832,9 @@ const FinalCta: React.FC<{
             </span>
           </h2>
           <p className="m-0 mb-8 text-[17px] text-[rgba(251,248,243,0.75)]">
-            {t('landing.v2.finalCta.sub', { defaultValue: '注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱' })}
+            {t('landing.v2.finalCta.sub', {
+              defaultValue: '注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱',
+            })}
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button
@@ -1760,12 +1908,16 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
   return (
     <footer className="pb-8 pt-16">
       <Container>
-        <div
-          className="grid grid-cols-2 gap-8 border-b border-[rgba(31,27,23,0.1)] pb-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]"
-        >
+        <div className="grid grid-cols-2 gap-8 border-b border-[rgba(31,27,23,0.1)] pb-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.3px] text-k-ink">
-              <img src="/logo.svg" alt="Duhan Logo" width={32} height={32} className="rounded-lg flex-shrink-0" />
+              <img
+                src="/logo.svg"
+                alt="Duhan Logo"
+                width={32}
+                height={32}
+                className="rounded-lg flex-shrink-0"
+              />
               <span>
                 <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>Duhan
               </span>
@@ -1837,7 +1989,6 @@ export default function Landing() {
   const { i18n, t } = useTranslation();
   const navigate = useLocalizedNavigate();
   const location = useLocation();
-  const hasAuthToken = useMemo(() => hasConvexAuthToken(), []);
   const isScrolled = useLandingScroll();
   const [shouldLoadPrices, setShouldLoadPrices] = useState(false);
   const [prices, setPrices] = useState<VariantPrices | null>(null);
@@ -1938,28 +2089,27 @@ export default function Landing() {
       {
         question: t('landing.v2.faq.q4', { defaultValue: '能离线学吗？' }),
         answer: t('landing.v2.faq.a4', {
-          defaultValue: 'Plus 起支持离线 · 课程、闪卡、播客、阅读素材都可下载 · 通勤地铁、飞机上完全没问题。',
+          defaultValue:
+            'Plus 起支持离线 · 课程、闪卡、播客、阅读素材都可下载 · 通勤地铁、飞机上完全没问题。',
         }),
       },
       {
         question: t('landing.v2.faq.q5', { defaultValue: '有学生折扣吗？' }),
         answer: t('landing.v2.faq.a5', {
-          defaultValue: '学生认证（学信网 / 学生证）可享 Plus 七折 · Elite 八折。每年学生节（9/1 和 3/1）另有立减券。',
+          defaultValue:
+            '学生认证（学信网 / 学生证）可享 Plus 七折 · Elite 八折。每年学生节（9/1 和 3/1）另有立减券。',
         }),
       },
       {
         question: t('landing.v2.faq.q6', { defaultValue: '不满意可以退款吗？' }),
         answer: t('landing.v2.faq.a6', {
-          defaultValue: '符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。',
+          defaultValue:
+            '符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。',
         }),
       },
     ],
     [t]
   );
-
-  // if (hasAuthToken) {
-  //   return <Navigate to="dashboard" replace />;
-  // }
 
   const analyticsLang = (i18n.language || 'en').split('-')[0] || 'en';
   const handleFreeStart = () => {
@@ -2010,13 +2160,7 @@ export default function Landing() {
         canonicalUrl={canonicalUrl}
         featuredGuidesListName={featuredGuidesListName}
       />
-      <NavBar 
-        isScrolled={isScrolled} 
-        onFreeStart={handleFreeStart} 
-        onLogin={handleLogin} 
-        t={t} 
-        hasAuthToken={hasAuthToken}
-      />
+      <NavBar isScrolled={isScrolled} onFreeStart={handleFreeStart} onLogin={handleLogin} t={t} />
       <Hero onFreeStart={handleFreeStart} t={t} />
       <LogosStrip t={t} />
       <FeaturesMosaic t={t} />

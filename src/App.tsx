@@ -36,10 +36,12 @@ function App() {
     };
     const connection = navWithConnection.connection;
     const pathname = globalThis.window.location.pathname;
-    const inLearningCoreArea =
-      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review)/.test(pathname);
-    const inLearningSecondaryArea =
-      /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses)/.test(pathname);
+    const inLearningCoreArea = /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses|review)/.test(
+      pathname
+    );
+    const inLearningSecondaryArea = /^\/(?:en|zh|vi|mn)\/(?:dashboard|course|courses)/.test(
+      pathname
+    );
 
     // Keep the public landing/auth experience light; prefetch only after entering learning pages.
     if (!inLearningCoreArea) return;
@@ -54,7 +56,7 @@ function App() {
 
     const prefetchCoreRoutes = () => {
       void import('./pages/CoursesOverview');
-      void import('./pages/CourseDashboard');
+      void import('./pages/CourseDetailPage');
     };
 
     const prefetchSecondaryRoutes = () => {

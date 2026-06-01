@@ -1,20 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { 
-  BookOpen, 
-  Check, 
-  Languages, 
+import {
+  BookOpen,
+  Bookmark,
+  Check,
+  Languages,
+  MessageCircleWarning,
   Star,
+  Sparkles,
 } from 'lucide-react';
+import { useAction } from 'convex/react';
+import type { Id } from '../../../convex/_generated/dataModel';
 import {
   Tooltip,
   TooltipContent,
   TooltipPortal,
   TooltipTrigger,
-  Button
+  Button,
 } from '../../components/ui';
 import { cn } from '../../lib/utils';
+import {
+  EMBEDDINGS,
+  type EmbeddingSearchResult,
+  type SentenceSaveAssetsResult,
+} from '../../utils/convexRefs';
 import type {
   VocabularyItem,
   GrammarItem,
@@ -27,16 +37,45 @@ import type {
   ReaderNote,
   DraftNote,
   SelectionToolbarState,
-  SentenceExplanationPayload
+  SentenceExplanationPayload,
+  SentenceGrammarItem,
+  SentenceVocabularyItem,
 } from './types';
-import { 
-  getDictionaryMeaning, 
-  noteUnderlineClass,
-  normalizeInlineWhitespace
-} from './helpers';
+import { getDictionaryMeaning, noteUnderlineClass, normalizeInlineWhitespace } from './helpers';
 import { ReadingNotesSection } from './ReadingNotesSection';
-import { ContextualSection, ContextualCountBadge } from '../../components/layout/contextualSidebarBlocks';
+import {
+  ContextualSection,
+  ContextualCountBadge,
+} from '../../components/layout/contextualSidebarBlocks';
 import AnnotationToolbar from '../../features/annotation-kit/components/AnnotationToolbar';
+
+type SentenceExplanationState = {
+  id: Id<'sentence_explanations'>;
+  data: SentenceExplanationPayload;
+};
+
+type SaveSentenceAssetsArgs = {
+  explanationId: Id<'sentence_explanations'>;
+  saveSentence?: boolean;
+  selectedWords?: SentenceVocabularyItem[];
+  selectedGrammar?: SentenceGrammarItem[];
+  createNotePage?: boolean;
+  enqueueForReview?: boolean;
+  noteTitle?: string;
+  source?: string;
+  sourceRefId?: string;
+};
+
+type SaveSentenceAssetsMutation = (
+  args: SaveSentenceAssetsArgs
+) => Promise<SentenceSaveAssetsResult>;
+
+type SubmitSentenceFeedbackMutation = (args: {
+  targetType: string;
+  targetId: string;
+  feedbackType: string;
+  comment?: string;
+}) => Promise<unknown>;
 
 export const ReadingArticleAiTab: React.FC<{
   t: ReturnType<typeof useTranslation>['t'];
@@ -49,6 +88,8 @@ export const ReadingArticleAiTab: React.FC<{
   savingWordKey: string | null;
   savedWords: Record<string, boolean>;
   grammar: GrammarItem[];
+  articleTitle?: string;
+  onNavigateToArticle?: (articleId: string) => void;
 }> = ({
   t,
   aiAnalysisLoading,
@@ -60,11 +101,13 @@ export const ReadingArticleAiTab: React.FC<{
   savingWordKey,
   savedWords,
   grammar,
+  articleTitle,
+  onNavigateToArticle,
 }) => (
   <>
     <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm mb-10 transition-all hover:shadow-k-sh-lg group">
       <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60 group-hover:text-k-crimson transition-colors">
-        <span className="font-k-serif text-[20px] font-medium text-k-crimson">💡</span> 
+        <span className="font-k-serif text-[20px] font-medium text-k-crimson">💡</span>
         {t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })}
       </h3>
       {aiAnalysisLoading && (
@@ -126,7 +169,7 @@ export const ReadingArticleAiTab: React.FC<{
               }
               loadingIconClassName="w-3 h-3"
               className={cn(
-                "ml-3 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black transition-all",
+                'ml-3 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black transition-all',
                 savedWords[item.term.toLowerCase()]
                   ? 'bg-k-ink text-k-bg border border-k-ink'
                   : 'bg-k-bg2 text-k-sub hover:bg-k-ink hover:text-k-bg border border-transparent'
@@ -164,8 +207,93 @@ export const ReadingArticleAiTab: React.FC<{
         ))}
       </div>
     </section>
+    {articleTitle && (
+      <RelatedArticles t={t} articleTitle={articleTitle} onNavigate={onNavigateToArticle} />
+    )}
   </>
 );
+
+/**
+ * Semantic similarity-based related article suggestions.
+ * Fires a single search when the article title is available,
+ * then shows up to 3 related articles.
+ */
+const RelatedArticles: React.FC<{
+  t: ReturnType<typeof useTranslation>['t'];
+  articleTitle: string;
+  onNavigate?: (articleId: string) => void;
+}> = ({ t, articleTitle, onNavigate }) => {
+  const searchSimilar = useAction(EMBEDDINGS.searchSimilar);
+  const [searchState, setSearchState] = useState<{
+    title: string;
+    results: EmbeddingSearchResult[];
+    searched: boolean;
+  }>({ title: '', results: [], searched: false });
+  const searchedTitleRef = React.useRef('');
+
+  useEffect(() => {
+    if (!articleTitle || articleTitle.length < 4) return;
+    if (searchedTitleRef.current === articleTitle) return;
+    searchedTitleRef.current = articleTitle;
+    let cancelled = false;
+    searchSimilar({ query: articleTitle, sourceTable: 'news_articles', limit: 4 })
+      .then(res => {
+        if (!cancelled) {
+          setSearchState({
+            title: articleTitle,
+            results: Array.isArray(res) ? res : [],
+            searched: true,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSearchState({ title: articleTitle, results: [], searched: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [articleTitle, searchSimilar]);
+
+  const isCurrentSearch = searchState.title === articleTitle;
+  const searched = isCurrentSearch && searchState.searched;
+  const results = isCurrentSearch ? searchState.results : [];
+
+  // Don't show section at all if no results after search
+  if (searched && results.length === 0) return null;
+  // Don't show until the async search resolves.
+  if (!searched) return null;
+
+  return (
+    <section className="mt-8">
+      <h3 className="mb-5 flex items-center gap-2.5 px-1 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
+        <Sparkles size={16} className="text-k-crimson" />
+        {t('readingArticle.ai.relatedTitle', { defaultValue: 'Related Articles' })}
+      </h3>
+      <div className="space-y-2.5">
+        {results.slice(0, 3).map(r => (
+          <button
+            key={r._id}
+            type="button"
+            onClick={() => onNavigate?.(r.sourceId)}
+            className="group flex w-full items-center gap-3 rounded-[20px] border border-k-line/5 bg-k-card p-4 text-left shadow-k-sh-sm transition-all hover:shadow-k-sh-lg hover:border-k-line/20 hover:translate-x-0.5"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-k-bg2 text-[12px] font-black text-k-sub group-hover:bg-k-crimson/10 group-hover:text-k-crimson transition-colors">
+              {Math.round(r._score * 100)}%
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-bold text-k-ink line-clamp-2 group-hover:text-k-crimson transition-colors leading-snug">
+                {r.text || r.sourceId}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 export const ReadingDictionaryStatus: React.FC<{
   t: ReturnType<typeof useTranslation>['t'];
@@ -515,10 +643,11 @@ export const ReadingArticleNotesTab: React.FC<{
 export const ReadingArticleExplainTab: React.FC<{
   t: ReturnType<typeof useTranslation>['t'];
   explainingSentence: string | null;
-  sentenceExplanation: { id: string; data: SentenceExplanationPayload } | null;
+  sentenceExplanation: SentenceExplanationState | null;
   explainLoading: boolean;
   explainError: string | null;
-  saveAssetsMutation: any;
+  saveAssetsMutation: SaveSentenceAssetsMutation;
+  submitFeedbackMutation?: SubmitSentenceFeedbackMutation;
 }> = ({
   t,
   explainingSentence,
@@ -526,11 +655,32 @@ export const ReadingArticleExplainTab: React.FC<{
   explainLoading,
   explainError,
   saveAssetsMutation,
+  submitFeedbackMutation,
 }) => {
   const [isSaving, setIsSaving] = React.useState(false);
-  const [savedAssets, setSavedAssets] = React.useState<any>(null);
+  const [savedAssets, setSavedAssets] = React.useState<SentenceSaveAssetsResult | null>(null);
+  // Track individual word/grammar save states by index
+  const [savedWordIndices, setSavedWordIndices] = React.useState<Set<number>>(new Set());
+  const [savingWordIndex, setSavingWordIndex] = React.useState<number | null>(null);
+  const [savedGrammarIndices, setSavedGrammarIndices] = React.useState<Set<number>>(new Set());
+  const [savingGrammarIndex, setSavingGrammarIndex] = React.useState<number | null>(null);
+  // Feedback state
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  const [feedbackComment, setFeedbackComment] = React.useState('');
+  const [feedbackSent, setFeedbackSent] = React.useState(false);
+  const [feedbackSending, setFeedbackSending] = React.useState(false);
 
-  const handleSave = async () => {
+  // Reset per-item states when explanation changes
+  React.useEffect(() => {
+    setSavedWordIndices(new Set());
+    setSavedGrammarIndices(new Set());
+    setSavedAssets(null);
+    setFeedbackOpen(false);
+    setFeedbackSent(false);
+    setFeedbackComment('');
+  }, [sentenceExplanation?.id]);
+
+  const handleSaveAll = async () => {
     if (!sentenceExplanation) return;
     setIsSaving(true);
     try {
@@ -542,10 +692,70 @@ export const ReadingArticleExplainTab: React.FC<{
         source: 'reading_page_explain',
       });
       setSavedAssets(result);
+      // Mark all individual items as saved too
+      const vocabLen = sentenceExplanation.data.vocabulary?.length ?? 0;
+      const grammarLen = sentenceExplanation.data.grammar?.length ?? 0;
+      setSavedWordIndices(new Set(Array.from({ length: vocabLen }, (_, i) => i)));
+      setSavedGrammarIndices(new Set(Array.from({ length: grammarLen }, (_, i) => i)));
     } catch (e) {
       console.error(e);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveWord = async (wordItem: SentenceVocabularyItem, index: number) => {
+    if (!sentenceExplanation || savedWordIndices.has(index)) return;
+    setSavingWordIndex(index);
+    try {
+      await saveAssetsMutation({
+        explanationId: sentenceExplanation.id,
+        selectedWords: [wordItem],
+        enqueueForReview: true,
+        source: 'reading_page_explain_word',
+      });
+      setSavedWordIndices(prev => new Set(prev).add(index));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingWordIndex(null);
+    }
+  };
+
+  const handleSaveGrammar = async (grammarItem: SentenceGrammarItem, index: number) => {
+    if (!sentenceExplanation || savedGrammarIndices.has(index)) return;
+    setSavingGrammarIndex(index);
+    try {
+      await saveAssetsMutation({
+        explanationId: sentenceExplanation.id,
+        selectedGrammar: [grammarItem],
+        enqueueForReview: true,
+        source: 'reading_page_explain_grammar',
+      });
+      setSavedGrammarIndices(prev => new Set(prev).add(index));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingGrammarIndex(null);
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!sentenceExplanation || !submitFeedbackMutation) return;
+    setFeedbackSending(true);
+    try {
+      await submitFeedbackMutation({
+        targetType: 'sentence_explanation',
+        targetId: sentenceExplanation.id,
+        feedbackType: 'quality_issue',
+        comment: feedbackComment || undefined,
+      });
+      setFeedbackSent(true);
+      setFeedbackOpen(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFeedbackSending(false);
     }
   };
 
@@ -557,32 +767,42 @@ export const ReadingArticleExplainTab: React.FC<{
           {t('readingArticle.explain.targetSentence', { defaultValue: 'Target Sentence' })}
         </h3>
         <p className="text-sm text-foreground">
-          {explainingSentence || t('readingArticle.explain.noSelection', { defaultValue: 'No sentence selected.' })}
+          {explainingSentence ||
+            t('readingArticle.explain.noSelection', { defaultValue: 'No sentence selected.' })}
         </p>
       </section>
 
       {explainLoading ? (
         <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
           <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-k-crimson border-t-transparent"></div>
-          <p className="text-sm font-bold text-k-ink">{t('readingArticle.explain.loading', { defaultValue: 'Analyzing sentence structure...' })}</p>
+          <p className="text-sm font-bold text-k-ink">
+            {t('readingArticle.explain.loading', {
+              defaultValue: 'Analyzing sentence structure...',
+            })}
+          </p>
         </div>
       ) : explainError ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 dark:border-rose-900 dark:bg-rose-950/50">
-          <p className="text-sm font-bold">{t('readingArticle.explain.error', { defaultValue: 'Explanation failed' })}</p>
+          <p className="text-sm font-bold">
+            {t('readingArticle.explain.error', { defaultValue: 'Explanation failed' })}
+          </p>
           <p className="mt-1 text-xs opacity-80">{explainError}</p>
         </div>
       ) : sentenceExplanation?.data ? (
         <div className="space-y-4">
+          {/* Natural Translation */}
           <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
             <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
               <span className="font-k-serif text-[20px] font-medium text-k-crimson">💡</span>
               {t('readingArticle.explain.translation', { defaultValue: 'Natural Translation' })}
             </h3>
             <p className="text-[14px] leading-[1.7] font-medium text-k-ink/80">
-              {sentenceExplanation.data.naturalTranslation || sentenceExplanation.data.overallMeaning}
+              {sentenceExplanation.data.naturalTranslation ||
+                sentenceExplanation.data.overallMeaning}
             </p>
           </section>
 
+          {/* Vocabulary with individual save buttons */}
           {(sentenceExplanation.data.vocabulary?.length ?? 0) > 0 && (
             <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
               <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
@@ -590,16 +810,51 @@ export const ReadingArticleExplainTab: React.FC<{
                 {t('readingArticle.explain.vocabulary', { defaultValue: 'Key Vocabulary' })}
               </h3>
               <div className="flex flex-col gap-2">
-                {sentenceExplanation.data.vocabulary?.map((v: any, i: number) => (
-                  <div key={i} className="rounded-xl border border-k-line/10 bg-k-bg2 p-3 text-sm flex flex-col sm:flex-row gap-1 sm:gap-3 w-full">
-                    <span className="font-bold text-k-ink whitespace-nowrap">{v.surface}</span>
-                    <span className="text-k-sub">{v.meaning}</span>
-                  </div>
-                ))}
+                {sentenceExplanation.data.vocabulary?.map((v, i) => {
+                  const wordSaved = savedWordIndices.has(i);
+                  const wordSaving = savingWordIndex === i;
+                  return (
+                    <div
+                      key={i}
+                      className="group rounded-xl border border-k-line/10 bg-k-bg2 p-3 text-sm flex items-center gap-2 w-full"
+                    >
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-3 flex-1 min-w-0">
+                        <span className="font-bold text-k-ink whitespace-nowrap">{v.surface}</span>
+                        <span className="text-k-sub truncate">{v.meaning}</span>
+                      </div>
+                      <button
+                        onClick={() => handleSaveWord(v, i)}
+                        disabled={wordSaved || wordSaving}
+                        className={cn(
+                          'shrink-0 rounded-lg p-1.5 transition-all',
+                          wordSaved
+                            ? 'text-k-crimson bg-k-crimson/10'
+                            : 'text-k-sub/40 hover:text-k-crimson hover:bg-k-crimson/5 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                        )}
+                        title={
+                          wordSaved
+                            ? t('readingArticle.explain.wordSaved', { defaultValue: 'Saved' })
+                            : t('readingArticle.explain.saveWord', {
+                                defaultValue: 'Save word to review',
+                              })
+                        }
+                      >
+                        {wordSaving ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-k-crimson border-t-transparent" />
+                        ) : wordSaved ? (
+                          <Check size={16} />
+                        ) : (
+                          <Bookmark size={16} />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
 
+          {/* Grammar with individual save buttons */}
           {(sentenceExplanation.data.grammar?.length ?? 0) > 0 && (
             <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
               <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">
@@ -607,28 +862,123 @@ export const ReadingArticleExplainTab: React.FC<{
                 {t('readingArticle.explain.grammar', { defaultValue: 'Grammar Points' })}
               </h3>
               <div className="space-y-3">
-                {sentenceExplanation.data.grammar?.map((g: any, i: number) => (
-                  <div key={i} className="rounded-xl border border-k-line/10 bg-k-bg2 p-4">
-                    <div className="font-bold text-k-ink mb-1">{g.pattern}</div>
-                    <div className="text-sm text-k-sub leading-relaxed opacity-90">{g.explanation}</div>
-                  </div>
-                ))}
+                {sentenceExplanation.data.grammar?.map((g, i) => {
+                  const grammarSaved = savedGrammarIndices.has(i);
+                  const grammarSaving = savingGrammarIndex === i;
+                  return (
+                    <div key={i} className="group rounded-xl border border-k-line/10 bg-k-bg2 p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-k-ink mb-1">{g.pattern}</div>
+                          <div className="text-sm text-k-sub leading-relaxed opacity-90">
+                            {g.explanation}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleSaveGrammar(g, i)}
+                          disabled={grammarSaved || grammarSaving}
+                          className={cn(
+                            'shrink-0 rounded-lg p-1.5 mt-0.5 transition-all',
+                            grammarSaved
+                              ? 'text-k-crimson bg-k-crimson/10'
+                              : 'text-k-sub/40 hover:text-k-crimson hover:bg-k-crimson/5 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                          )}
+                          title={
+                            grammarSaved
+                              ? t('readingArticle.explain.grammarSaved', { defaultValue: 'Saved' })
+                              : t('readingArticle.explain.saveGrammar', {
+                                  defaultValue: 'Save grammar to review',
+                                })
+                          }
+                        >
+                          {grammarSaving ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-k-crimson border-t-transparent" />
+                          ) : grammarSaved ? (
+                            <Check size={16} />
+                          ) : (
+                            <Bookmark size={16} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
 
-          <div className="pt-2 pb-6 flex justify-center">
+          {/* Save All + Feedback row */}
+          <div className="pt-2 pb-2 flex flex-col gap-3">
             <Button
-              onClick={handleSave}
+              onClick={handleSaveAll}
               loading={isSaving}
               disabled={!!savedAssets}
               className="w-full rounded-2xl bg-k-crimson hover:bg-k-crimson/90 text-white font-bold py-3 shadow-k-sh-sm transition-all"
             >
-              {savedAssets 
+              {savedAssets
                 ? t('readingArticle.explain.saved', { defaultValue: 'Saved to Notebook!' })
-                : t('readingArticle.explain.saveAll', { defaultValue: 'Save to Notebook & Review' })
-              }
+                : t('readingArticle.explain.saveAll', {
+                    defaultValue: 'Save to Notebook & Review',
+                  })}
             </Button>
+
+            {/* "解释有问题？" Feedback button */}
+            {submitFeedbackMutation && !feedbackSent && (
+              <div className="flex flex-col items-center gap-2">
+                {!feedbackOpen ? (
+                  <button
+                    onClick={() => setFeedbackOpen(true)}
+                    className="flex items-center gap-1.5 text-xs text-k-sub/60 hover:text-k-sub transition-colors"
+                  >
+                    <MessageCircleWarning size={14} />
+                    {t('readingArticle.explain.reportIssue', { defaultValue: '解释有问题？' })}
+                  </button>
+                ) : (
+                  <div className="w-full rounded-2xl border border-k-line/10 bg-k-bg2 p-4 space-y-3">
+                    <p className="text-xs font-bold text-k-ink/70">
+                      {t('readingArticle.explain.feedbackPrompt', {
+                        defaultValue: '请描述问题（可选）',
+                      })}
+                    </p>
+                    <textarea
+                      value={feedbackComment}
+                      onChange={e => setFeedbackComment(e.target.value)}
+                      placeholder={t('readingArticle.explain.feedbackPlaceholder', {
+                        defaultValue: '翻译不准确、词汇遗漏、语法解释有误...',
+                      })}
+                      className="w-full rounded-xl border border-k-line/10 bg-k-card p-3 text-sm text-k-ink placeholder:text-k-sub/40 resize-none focus:outline-none focus:ring-2 focus:ring-k-crimson/30"
+                      rows={2}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setFeedbackOpen(false);
+                          setFeedbackComment('');
+                        }}
+                        variant="ghost"
+                        className="flex-1 text-xs text-k-sub"
+                      >
+                        {t('common.cancel', { defaultValue: '取消' })}
+                      </Button>
+                      <Button
+                        onClick={handleSubmitFeedback}
+                        loading={feedbackSending}
+                        className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold"
+                      >
+                        {t('readingArticle.explain.submitFeedback', { defaultValue: '提交反馈' })}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {feedbackSent && (
+              <p className="text-center text-xs text-emerald-600 font-medium">
+                {t('readingArticle.explain.feedbackThanks', {
+                  defaultValue: '感谢反馈！我们会持续改进 AI 解释质量。',
+                })}
+              </p>
+            )}
           </div>
         </div>
       ) : null}
@@ -649,6 +999,8 @@ export const ReadingArticleSidebar: React.FC<{
   savingWordKey: string | null;
   savedWords: Record<string, boolean>;
   grammar: GrammarItem[];
+  articleTitle?: string;
+  onNavigateToArticle?: (articleId: string) => void;
   activeWord: string;
   dictionaryQuery: string;
   dictionaryLoading: boolean;
@@ -669,10 +1021,11 @@ export const ReadingArticleSidebar: React.FC<{
   setHoveredNoteId: React.Dispatch<React.SetStateAction<string | null>>;
   getNoteVisualState: (noteId: string) => NoteVisualState;
   explainingSentence: string | null;
-  sentenceExplanation: { id: string; data: SentenceExplanationPayload } | null;
+  sentenceExplanation: SentenceExplanationState | null;
   explainLoading: boolean;
   explainError: string | null;
-  saveAssetsMutation: any;
+  saveAssetsMutation: SaveSentenceAssetsMutation;
+  submitFeedbackMutation?: SubmitSentenceFeedbackMutation;
 }> = ({
   panelTab,
   setPanelTab,
@@ -686,6 +1039,8 @@ export const ReadingArticleSidebar: React.FC<{
   savingWordKey,
   savedWords,
   grammar,
+  articleTitle,
+  onNavigateToArticle,
   activeWord,
   dictionaryQuery,
   dictionaryLoading,
@@ -710,6 +1065,7 @@ export const ReadingArticleSidebar: React.FC<{
   explainLoading,
   explainError,
   saveAssetsMutation,
+  submitFeedbackMutation,
 }) => (
   <div className="space-y-3">
     <ContextualSection
@@ -732,10 +1088,10 @@ export const ReadingArticleSidebar: React.FC<{
           size="auto"
           onClick={() => setPanelTab('ai')}
           className={cn(
-            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
-            panelTab === 'ai' 
-              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
-              : "text-k-sub hover:text-k-ink"
+            'rounded-xl px-2 py-2 text-[12px] font-black transition-all',
+            panelTab === 'ai'
+              ? 'bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10'
+              : 'text-k-sub hover:text-k-ink'
           )}
         >
           ✨ {t('readingArticle.tabs.ai', { defaultValue: 'AI Analysis' })}
@@ -746,10 +1102,10 @@ export const ReadingArticleSidebar: React.FC<{
           size="auto"
           onClick={() => setPanelTab('notes')}
           className={cn(
-            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
-            panelTab === 'notes' 
-              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
-              : "text-k-sub hover:text-k-ink"
+            'rounded-xl px-2 py-2 text-[12px] font-black transition-all',
+            panelTab === 'notes'
+              ? 'bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10'
+              : 'text-k-sub hover:text-k-ink'
           )}
         >
           📚 {t('readingArticle.tabs.notes', { defaultValue: 'Dictionary / Notes' })}
@@ -760,10 +1116,10 @@ export const ReadingArticleSidebar: React.FC<{
           size="auto"
           onClick={() => setPanelTab('explain')}
           className={cn(
-            "rounded-xl px-2 py-2 text-[12px] font-black transition-all",
-            panelTab === 'explain' 
-              ? "bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10" 
-              : "text-k-sub hover:text-k-ink"
+            'rounded-xl px-2 py-2 text-[12px] font-black transition-all',
+            panelTab === 'explain'
+              ? 'bg-k-card text-k-ink shadow-k-sh-sm border border-k-line/10'
+              : 'text-k-sub hover:text-k-ink'
           )}
         >
           📖 {t('readingArticle.tabs.explain', { defaultValue: 'Explain' })}
@@ -776,8 +1132,8 @@ export const ReadingArticleSidebar: React.FC<{
         panelTab === 'ai'
           ? t('readingArticle.ai.summaryTitle', { defaultValue: 'AI Summary' })
           : panelTab === 'notes'
-          ? t('readingArticle.notes.title', { defaultValue: 'Notes' })
-          : t('readingArticle.explain.title', { defaultValue: 'Sentence Analysis' })
+            ? t('readingArticle.notes.title', { defaultValue: 'Notes' })
+            : t('readingArticle.explain.title', { defaultValue: 'Sentence Analysis' })
       }
       badge={
         panelTab !== 'explain' ? (
@@ -800,6 +1156,8 @@ export const ReadingArticleSidebar: React.FC<{
             savingWordKey={savingWordKey}
             savedWords={savedWords}
             grammar={grammar}
+            articleTitle={articleTitle}
+            onNavigateToArticle={onNavigateToArticle}
           />
         ) : panelTab === 'notes' ? (
           <ReadingArticleNotesTab
@@ -834,6 +1192,7 @@ export const ReadingArticleSidebar: React.FC<{
             explainLoading={explainLoading}
             explainError={explainError}
             saveAssetsMutation={saveAssetsMutation}
+            submitFeedbackMutation={submitFeedbackMutation}
           />
         )}
       </div>

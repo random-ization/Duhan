@@ -1379,6 +1379,19 @@ export default function MobileGrammarDetailSheet({
     event.preventDefault();
   };
 
+  const practiceComposer = (
+    <MobileGrammarPracticeComposer
+      key={grammar.id}
+      localizedTitle={localizedTitle}
+      statusLabel={statusLabel}
+      tone={tone}
+      aiFeedback={aiFeedback}
+      isChecking={isChecking}
+      onCheck={handleCheck}
+      t={t}
+    />
+  );
+
   return (
     <Sheet open onOpenChange={open => !open && onClose()}>
       <SheetPortal>
@@ -1413,6 +1426,9 @@ export default function MobileGrammarDetailSheet({
             style={{
               background: `linear-gradient(180deg, ${KT.bg2} 0%, ${KT.bg} 100%)`,
               borderBottom: `1px solid ${KT.line}`,
+              maxHeight: isExpanded ? '42dvh' : undefined,
+              overflowY: isExpanded ? 'auto' : undefined,
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <div className="flex justify-center pb-1 pt-3">
@@ -1488,15 +1504,17 @@ export default function MobileGrammarDetailSheet({
               </div>
 
               <Card
-                pad={20}
+                pad={16}
                 style={{
-                  marginTop: 14,
+                  marginTop: 12,
                   background: tone.gradient,
                   boxShadow: KT.sh,
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <HanjaSeal c={tone.seal} size={44} bg={tone.deep} round={12} />
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0">
+                    <HanjaSeal c={tone.seal} size={40} bg={tone.deep} round={12} />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                       <Chip tone={tone.chipTone} size="sm">
@@ -1509,13 +1527,19 @@ export default function MobileGrammarDetailSheet({
                     </div>
 
                     <div
+                      data-testid="mobile-grammar-title-text"
                       style={{
                         marginTop: 4,
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: 800,
                         color: KT.ink,
-                        letterSpacing: -0.6,
-                        lineHeight: 1.1,
+                        letterSpacing: 0,
+                        lineHeight: 1.16,
+                        maxHeight: '5.2em',
+                        overflowY: 'auto',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                        WebkitOverflowScrolling: 'touch',
                       }}
                     >
                       {localizedTitle}
@@ -1829,30 +1853,36 @@ export default function MobileGrammarDetailSheet({
                 </Card>
               ) : null}
 
-              <div style={{ height: 18 }} />
+              {isExpanded ? (
+                <div
+                  data-testid="mobile-grammar-expanded-practice"
+                  style={{
+                    marginTop: 12,
+                    paddingBottom: 'calc(env(safe-area-inset-bottom) + 18px)',
+                  }}
+                >
+                  {practiceComposer}
+                </div>
+              ) : null}
+
+              <div style={{ height: isExpanded ? 8 : 18 }} />
             </article>
           </div>
 
-          <div
-            className="relative z-10"
-            onWheel={forwardWheelToReader}
-            style={{
-              padding: '14px 18px calc(env(safe-area-inset-bottom) + 18px)',
-              borderTop: `1px solid ${KT.line}`,
-              background: `linear-gradient(180deg, rgba(245,239,229,0) 0%, ${KT.bg2} 28%, ${KT.bg2} 100%)`,
-            }}
-          >
-            <MobileGrammarPracticeComposer
-              key={grammar.id}
-              localizedTitle={localizedTitle}
-              statusLabel={statusLabel}
-              tone={tone}
-              aiFeedback={aiFeedback}
-              isChecking={isChecking}
-              onCheck={handleCheck}
-              t={t}
-            />
-          </div>
+          {!isExpanded ? (
+            <div
+              data-testid="mobile-grammar-footer-practice"
+              className="relative z-10"
+              onWheel={forwardWheelToReader}
+              style={{
+                padding: '14px 18px calc(env(safe-area-inset-bottom) + 18px)',
+                borderTop: `1px solid ${KT.line}`,
+                background: `linear-gradient(180deg, rgba(245,239,229,0) 0%, ${KT.bg2} 28%, ${KT.bg2} 100%)`,
+              }}
+            >
+              {practiceComposer}
+            </div>
+          ) : null}
 
           {showConfetti ? (
             <div className="pointer-events-none absolute inset-0 z-[70] flex items-start justify-center overflow-hidden">

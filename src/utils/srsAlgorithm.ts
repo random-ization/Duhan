@@ -147,14 +147,12 @@ export const isMastered = (card: Card): boolean => {
  * Serialize Card for database storage
  */
 export const serializeCard = (card: Card) => {
-  // Use type assertion to avoid deprecation warnings while maintaining compatibility
-  const cardAny = card as any;
   return {
     state: card.state,
     due: card.due.getTime(),
     stability: card.stability,
     difficulty: card.difficulty,
-    elapsed_days: cardAny.elapsed_days as number,
+    elapsed_days: card.elapsed_days,
     scheduled_days: card.scheduled_days,
     learning_steps: card.learning_steps,
     reps: card.reps,

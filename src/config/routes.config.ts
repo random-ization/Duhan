@@ -106,18 +106,6 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       mobilePageMode: isImmersiveWorkspace ? 'immersive' : 'workspace',
     };
   },
-  practice: () => ({
-    hasFooter: false,
-    hasHeader: false,
-    usePatternBackground: false,
-    useDesktopContainerPadding: false,
-    useDesktopMaxWidth: false,
-    headerType: 'section',
-    headerAction: 'none',
-    headerTitle: 'nav.practice',
-    headerTitleDefault: 'Practice',
-    mobilePageMode: 'hub',
-  }),
   community: segments => {
     const sub = segments[1];
     const isAdd = sub === 'add';
@@ -132,11 +120,11 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       useDesktopContainerPadding: false,
       useDesktopMaxWidth: false,
       hasBottomNav: !isAdd && !isQAAsk && !isQADetail && !isUserProfile,
-      headerType: (isAdd || isQADetail || isQAAsk || isUserProfile) ? 'detail' : 'section',
+      headerType: isAdd || isQADetail || isQAAsk || isUserProfile ? 'detail' : 'section',
       headerAction: 'none',
       headerTitle: isQA ? 'qa.title' : isUserProfile ? 'qa.communityProfile' : 'community.title',
       headerTitleDefault: isQA ? 'Q&A' : isUserProfile ? 'Community Profile' : 'Community',
-      mobilePageMode: (isAdd || isQAAsk || isQADetail || isUserProfile) ? 'workspace' : 'hub',
+      mobilePageMode: isAdd || isQAAsk || isQADetail || isUserProfile ? 'workspace' : 'hub',
     };
   },
   leaderboard: () => ({
@@ -183,6 +171,24 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
     };
   },
   topik: segments => {
+    if (segments[1] === 'writing-coach') {
+      return {
+        hasDesktopSidebar: true,
+        hasBottomNav: true,
+        hasHeader: false,
+        hasFooter: false,
+        usePatternBackground: false,
+        useDesktopContainerPadding: false,
+        useDesktopMaxWidth: false,
+        headerType: 'section',
+        headerAction: 'none',
+        headerTitle: 'dashboard.topik.writingCoachTitle',
+        headerTitleDefault: 'TOPIK Writing Coach',
+        allowHiddenChrome: false,
+        mobilePageMode: 'workspace',
+      };
+    }
+
     if (segments[1] === 'writing') {
       return {
         hasDesktopSidebar: false,
@@ -263,18 +269,6 @@ const resolveByRoot: Record<string, (segments: string[]) => Partial<RouteUiConfi
       mobilePageMode: isImmersive ? 'immersive' : 'workspace',
     };
   },
-  vocabbook: () => ({
-    hasFooter: false,
-    hasHeader: false,
-    usePatternBackground: false,
-    useDesktopContainerPadding: true,
-    useDesktopMaxWidth: true,
-    headerType: 'section',
-    headerAction: 'filter',
-    headerTitle: 'dashboard.vocab.title',
-    headerTitleDefault: 'Vocab',
-    mobilePageMode: 'workspace',
-  }),
   podcasts: segments => {
     if (segments[1] === 'player') {
       return {

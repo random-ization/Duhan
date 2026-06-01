@@ -3,10 +3,11 @@ import { useQuery } from 'convex/react';
 import { Flame, Clock, BookOpen, Zap, BookText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LearnerStatsDto } from '../../../convex/learningStats';
+import type { DailyTaskPlanDto } from '../../../convex/dailyTask/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLabels } from '../../utils/i18n';
 import { Skeleton } from '../../components/common';
-import { NoArgs, qRef } from '../../utils/convexRefs';
+import { DAILY_TASK, NoArgs, qRef } from '../../utils/convexRefs';
 import {
   TooltipProvider,
   Tooltip,
@@ -169,13 +170,68 @@ const HeroSkeleton = () => (
 
 /* ────────────── main component ────────────── */
 
+type TaskRingProps = { completed: number; total: number; label: string };
+
+const TaskRing: React.FC<TaskRingProps> = ({ completed, total, label }) => {
+  const safeTotal = total > 0 ? total : 1;
+  const pct = Math.min(1, completed / safeTotal);
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - pct);
+  const done = total > 0 && completed >= total;
+  return (
+    <div
+      className="relative flex items-center justify-center"
+      style={{ width: 48, height: 48 }}
+      aria-label={label}
+      title={label}
+    >
+      <svg width="48" height="48" viewBox="0 0 48 48" className={done ? 'animate-pulse' : ''}>
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          stroke="rgba(255,255,255,0.18)"
+          strokeWidth="4"
+          fill="none"
+        />
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          stroke={done ? '#bef264' : '#fde68a'}
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          transform="rotate(-90 24 24)"
+          style={{ transition: 'stroke-dashoffset 600ms ease-out' }}
+        />
+      </svg>
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center text-white"
+        style={{ lineHeight: 1 }}
+      >
+        <span className="text-[11px] font-black">
+          {completed}/{total}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const LearnerSummaryCard: React.FC = () => {
-  const { language } = useAuth();
+  const { language, user } = useAuth();
   const { t } = useTranslation();
   const labels = getLabels(language);
 
   const userStats = useQuery(qRef<NoArgs, LearnerStatsDto>('userStats:getStats'));
   const xpStats = useQuery(qRef<NoArgs, XpStats>('xp:getMyXpStats'));
+  const dailyTaskPlan = useQuery(
+    DAILY_TASK.getTodayPlan,
+    user ? { language: language || 'en' } : 'skip'
+  ) as DailyTaskPlanDto | undefined;
 
   if (userStats === undefined) return <HeroSkeleton />;
   if (!userStats) return null;
@@ -211,18 +267,30 @@ export const LearnerSummaryCard: React.FC = () => {
       <div className="relative z-10 grid grid-cols-1 md:grid-cols-[1fr_180px] lg:grid-cols-[1fr_220px] gap-6 md:gap-8">
         {/* ── Left: core metrics ── */}
         <div className="space-y-4">
-          {/* Title + Streak */}
+          {/* Title + Streak + Task Ring */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-xl md:text-2xl font-black tracking-tight">
               {l?.title || t('learnerSummary.title', { defaultValue: 'Learning Summary' })}
             </h2>
-            <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
-              <Flame className="w-4 h-4 text-orange-300" />
-              <span className="font-bold text-sm">
-                {(
-                  l?.streak || t('learnerSummary.streak', { defaultValue: '{count} day streak' })
-                ).replace('{count}', String(streak))}
-              </span>
+            <div className="flex items-center gap-2">
+              {dailyTaskPlan?.tasks && dailyTaskPlan.tasks.length > 0 && (
+                <TaskRing
+                  completed={dailyTaskPlan.tasks.filter(task => task.completed).length}
+                  total={dailyTaskPlan.tasks.length}
+                  label={t('learnerSummary.taskRingLabel', {
+                    defaultValue: "Today's tasks completed",
+                  })}
+                />
+              )}
+              <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                <Flame className="w-4 h-4 text-orange-300" />
+                <span className="font-bold text-sm">
+                  {t('learnerSummary.streak', {
+                    count: streak,
+                    defaultValue: '{{count}} day streak',
+                  })}
+                </span>
+              </div>
             </div>
           </div>
 

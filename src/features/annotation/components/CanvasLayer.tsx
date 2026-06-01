@@ -23,7 +23,7 @@ export interface CanvasData {
   version: number;
 }
 
-interface CanvasLayerProps {
+export interface CanvasLayerProps {
   // \u6570\u636e
   data?: CanvasData | null;
 

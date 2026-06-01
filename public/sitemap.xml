@@ -11,7 +11,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -22,7 +22,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -33,7 +33,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -44,7 +44,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -55,7 +55,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -66,7 +66,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -79,6 +79,17 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
     <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/en/help</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/help" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/help" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/help" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/help" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/help" />
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -154,7 +165,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/topik" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/topik" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/topik" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -165,7 +176,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/vocab" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/vocab" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/vocab" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -176,7 +187,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/listening" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/listening" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/listening" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -187,7 +198,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/reading" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/reading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/reading" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -198,7 +209,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -209,7 +220,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -220,7 +231,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -231,7 +242,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -242,7 +253,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -253,7 +264,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -266,6 +277,17 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
     <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/zh/help</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/help" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/help" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/help" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/help" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/help" />
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -341,7 +363,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/topik" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/topik" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/topik" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -352,7 +374,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/vocab" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/vocab" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/vocab" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -363,7 +385,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/listening" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/listening" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/listening" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -374,7 +396,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/reading" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/reading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/reading" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -385,7 +407,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -396,7 +418,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -407,7 +429,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -418,7 +440,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -429,7 +451,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -440,7 +462,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -453,6 +475,17 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
     <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/vi/help</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/help" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/help" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/help" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/help" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/help" />
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -528,7 +561,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/topik" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/topik" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/topik" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -539,7 +572,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/vocab" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/vocab" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/vocab" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -550,7 +583,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/listening" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/listening" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/listening" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -561,7 +594,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/reading" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/reading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/reading" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -572,7 +605,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -583,7 +616,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -594,7 +627,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/pricing/details" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/pricing/details" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/pricing/details" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -605,7 +638,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/terms" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/terms" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/terms" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -616,7 +649,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/privacy" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/privacy" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/privacy" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -627,7 +660,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/refund" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/refund" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/refund" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -640,6 +673,17 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/learn" />
     <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://koreanstudy.me/mn/help</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://koreanstudy.me/en/help" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://koreanstudy.me/zh/help" />
+    <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/help" />
+    <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/help" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/help" />
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -715,7 +759,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/topik" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/topik" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/topik" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -726,7 +770,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/vocab" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/vocab" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/vocab" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -737,7 +781,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/listening" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/listening" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/listening" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -748,7 +792,7 @@
     <xhtml:link rel="alternate" hreflang="vi" href="https://koreanstudy.me/vi/features/reading" />
     <xhtml:link rel="alternate" hreflang="mn" href="https://koreanstudy.me/mn/features/reading" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://koreanstudy.me/en/features/reading" />
-    <lastmod>2026-05-14</lastmod>
+    <lastmod>2026-05-31</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

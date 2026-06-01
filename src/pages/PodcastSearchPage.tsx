@@ -14,7 +14,6 @@ import { buildPodcastChannelPath } from '../utils/podcastRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
 import { DesktopCard } from '../components/desktop/ui/DesktopCard';
 import { DesignChip } from '../components/desktop/ui/DesignChip';
-import { cn } from '../lib/utils';
 
 interface SearchResultsContentProps {
   loading: boolean;
@@ -84,7 +83,9 @@ const SearchResultsContent: React.FC<SearchResultsContentProps> = ({
                 <p className="text-[12px] font-bold text-k-sub line-clamp-1 mb-2">
                   {channel.author}
                 </p>
-                <DesignChip tone="muted" size="sm">Podcast</DesignChip>
+                <DesignChip tone="muted" size="sm">
+                  Podcast
+                </DesignChip>
               </div>
             </DesktopCard>
           ))}

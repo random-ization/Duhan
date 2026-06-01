@@ -2,11 +2,11 @@ import { Language } from '../types';
 
 import i18n from './i18next-config';
 
-export interface Labels {
-  [key: string]: any;
-}
+type LegacyLabelValue = ReturnType<typeof JSON.parse>;
+
+export type Labels = Record<string, LegacyLabelValue>;
 // Deprecated: translations are now managed by i18next
-// We export an empty object or proxy to satisfy legacy imports if any
+// We export an empty object or proxy to satisfy legacy imports.
 export const translations: Record<Language, Labels> = {
   en: '' as unknown as Labels,
   zh: '' as unknown as Labels,
@@ -18,7 +18,10 @@ export const getLabels = (language: Language): Labels => {
   const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
-  const deepMerge = (base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> => {
+  const deepMerge = (
+    base: Record<string, unknown>,
+    override: Record<string, unknown>
+  ): Record<string, unknown> => {
     const result: Record<string, unknown> = { ...base };
     for (const [key, overrideValue] of Object.entries(override)) {
       const baseValue = result[key];

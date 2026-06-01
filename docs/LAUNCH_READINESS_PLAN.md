@@ -48,7 +48,7 @@ Scope: Web 端（`src/`，同时服务桌面与移动视口）+ Convex 后端（
 6. **TOPIK mobile 过滤项** (`mobile_topik_filter_type`)、**mobile Vocab 默认 tab** (`mobile_vocab_active_tab`)、**grammar AI 面板** (`grammar_ai_panel_open`) 都只有 localStorage。
    - 低优，但桌面 / 移动切换时会感知到状态不一致。这些可以统一成 `userSettings.privacy | ui | layoutPrefs` 下的一个 namespace，或者主动接受「localStorage only 是设计意图」并落在文档里。
 
-7. **播客榜单缓存** (`PodcastDashboard.tsx` 里 `CHART_CACHE_KEY`)：桌面浏览器上打完榜的缓存不会迁移到手机端。可以接受，但要确认是「首屏加速」策略而非用户偏好。
+7. **播客榜单缓存** (`PodcastHubPage.tsx` 里 `CHART_CACHE_KEY`)：桌面浏览器上打完榜的缓存不会迁移到手机端。可以接受，但要确认是「首屏加速」策略而非用户偏好。
 
 8. **`useIsMobile` SSR / 预渲染**：服务端 snapshot 固定返回 `false`。`prerender.mjs` 产出的登录/落地页会是桌面版。移动用户在首次 HTML 可见期会闪桌面，随 hydrate 切换。
    - 需要确认 Landing / AuthPage 有否**视觉闪烁**；如果 prerender 页面在 CSS 层面就能做响应式，则没问题。
@@ -56,10 +56,10 @@ Scope: Web 端（`src/`，同时服务桌面与移动视口）+ Convex 后端（
 ### 1.3 重要（性能 / 可观测 / 上线工程）
 
 9. **首屏 JS 体积**：`stats.html` 在根目录，`vite.config.ts` manualChunks 已做了细致切分，但需要**实际复核**当前 `vendor-react / vendor-convex / vendor-vidstack-core` 的 gzip size，以及 mobile 首屏（Landing 或 AuthPage）到底会拖多少。
-    - 具体关注：
-      - `useDrainMutationQueueOnOnline` 在 `App.tsx` 顶层 mount 时就注册了；看其闭包是否把 Convex 客户端拉进 entry chunk。Convex 已被 `manualChunks` 单独切到 `vendor-convex`，但 lazy path 需要复查。
-      - `react-hot-toast` / `@vercel/speed-insights` / `posthog-js` 是否该再 defer。
-      - `finalizeStaleChunkRecovery` 在首屏无条件执行，本身很轻，但 `PostHogTracker` 需要确认是 lazy 触发。
+   - 具体关注：
+     - `useDrainMutationQueueOnOnline` 在 `App.tsx` 顶层 mount 时就注册了；看其闭包是否把 Convex 客户端拉进 entry chunk。Convex 已被 `manualChunks` 单独切到 `vendor-convex`，但 lazy path 需要复查。
+     - `react-hot-toast` / `@vercel/speed-insights` / `posthog-js` 是否该再 defer。
+     - `finalizeStaleChunkRecovery` 在首屏无条件执行，本身很轻，但 `PostHogTracker` 需要确认是 lazy 触发。
 
 10. **Vite PWA 缓存策略**：`navigateFallback: null` 加上 HTML 不进 precache 是对的；但 `globIgnores` 列表需要和实际产物名对齐，建议做一次 `npm run build && ls dist/assets | head -40` 比对。
 
@@ -73,8 +73,8 @@ Scope: Web 端（`src/`，同时服务桌面与移动视口）+ Convex 后端（
 
 ### 1.4 后置 / 可以忍到 v1.1
 
-14. 上面 §1.2 里提到的 tab / filter 偏好可以 v1.1 统一；  
-15. `convex/notePages_new.ts` / `convex/vocab_new.ts` 这种 `_new` 结尾文件如果只是迁移中间产物，要么合并要么标注；  
+14. 上面 §1.2 里提到的 tab / filter 偏好可以 v1.1 统一；
+15. `convex/notePages_new.ts` / `convex/vocab_new.ts` 这种 `_new` 结尾文件如果只是迁移中间产物，要么合并要么标注；
 16. `AdminPage` / admin 写入类功能需要再走一遍权限边界（`requireAdmin` 是否都挂了），但不影响普通用户上线。
 
 ---
@@ -100,78 +100,91 @@ Scope: Web 端（`src/`，同时服务桌面与移动视口）+ Convex 后端（
 目标：用户在 A 设备上做的选择，到 B 设备上回来就生效。
 
 B1. **把 mobile 字号 (`mobile_font_scale_index`) 接到 `userSettings.fontScale`**
-   - `userSettings` 已有 `fontScale: compact | comfortable | relaxed`，三档正好。
-   - `MobileHeader` 改成 `useQuery(qRef(USER_SETTINGS.getSettings))` 驱动，toggle 时 `mutation(userSettings:updateSettings, { fontScale })`，localStorage 仅作离线兜底（和 `MobileGrammarDetailSheet` 对齐）。
-   - 桌面端的字号目前没开关；如果要保持「桌面只读 user preference、移动可编辑」这个语义，把桌面 body 也消费 `fontScale` 变量即可（即把 `document.documentElement.style.setProperty('--mobile-font-scale', …)` 改成 `--app-font-scale` 或分别挂，避免桌面被 mobile 选择意外放大）。
+
+- `userSettings` 已有 `fontScale: compact | comfortable | relaxed`，三档正好。
+- `MobileHeader` 改成 `useQuery(qRef(USER_SETTINGS.getSettings))` 驱动，toggle 时 `mutation(userSettings:updateSettings, { fontScale })`，localStorage 仅作离线兜底（和 `MobileGrammarDetailSheet` 对齐）。
+- 桌面端的字号目前没开关；如果要保持「桌面只读 user preference、移动可编辑」这个语义，把桌面 body 也消费 `fontScale` 变量即可（即把 `document.documentElement.style.setProperty('--mobile-font-scale', …)` 改成 `--app-font-scale` 或分别挂，避免桌面被 mobile 选择意外放大）。
 
 B2. **确认 `userSettings` 被所有消费方共用**
-   - Audit 全局搜索 `userSettings:getSettings` 使用点，验证：
-     - `flashcardAutoTTS` / `flashcardFront` / `flashcardRatingMode` 在桌面 FSRS 和 mobile FSRS 都读取；
-     - `audioRepeatCount` / `audioSpeed` 在桌面播放器 / mobile 播放器都读取；
-     - `mediaSubtitleMode` / `mediaShowTranslation` 在桌面视频、mobile 视频、Android 都读取；
-     - `dailyGoalMinutes` 在桌面 Dashboard、mobile Today 都使用。
-   - 任何一端没读，就补上或记录为「端内专属」。
+
+- Audit 全局搜索 `userSettings:getSettings` 使用点，验证：
+  - `flashcardAutoTTS` / `flashcardFront` / `flashcardRatingMode` 在桌面 FSRS 和 mobile FSRS 都读取；
+  - `audioRepeatCount` / `audioSpeed` 在桌面播放器 / mobile 播放器都读取；
+  - `mediaSubtitleMode` / `mediaShowTranslation` 在桌面视频、mobile 视频、Android 都读取；
+  - `dailyGoalMinutes` 在桌面 Dashboard、mobile Today 都使用。
+- 任何一端没读，就补上或记录为「端内专属」。
 
 B3. **localStorage 状态分类清单**
-   - 输出一张表：`{ key, owner, 是否跨端同步, 理由 }`，作为 `docs/user-state-sync-matrix.md` 落盘。
-   - 至少覆盖：`grammar_ai_panel_open`、`mobile_topik_filter_type`、`mobile_vocab_active_tab`、`grammar_mobile_reader_font_scale`、`CHART_CACHE_*`、`grammar_reader_font_scale`、`grammar_reader_red_eye`、`duhan:stale-chunk-recovery-attempts`、`preferredLanguage`（这个桌面 + mobile 共享）、FSRS 队列 session key、reading session key。
-   - 有明确理由的（比如「会话内临时 UI 状态」「首屏缓存」）保留 localStorage / sessionStorage；属于「用户真实偏好」的全部挪到 `userSettings`。
+
+- 输出一张表：`{ key, owner, 是否跨端同步, 理由 }`，作为 `docs/user-state-sync-matrix.md` 落盘。
+- 至少覆盖：`grammar_ai_panel_open`、`mobile_topik_filter_type`、`mobile_vocab_active_tab`、`grammar_mobile_reader_font_scale`、`CHART_CACHE_*`、`grammar_reader_font_scale`、`grammar_reader_red_eye`、`duhan:stale-chunk-recovery-attempts`、`preferredLanguage`（这个桌面 + mobile 共享）、FSRS 队列 session key、reading session key。
+- 有明确理由的（比如「会话内临时 UI 状态」「首屏缓存」）保留 localStorage / sessionStorage；属于「用户真实偏好」的全部挪到 `userSettings`。
 
 B4. **语言偏好跨端确认**
-   - `preferredLanguage` / `preferredLanguageSource` 已经桌面 / mobile 共享一套逻辑，但是 Convex 端 `userSettings.displayLanguage` 也存。需要验证：登录后 `userSettings.displayLanguage` > `preferredLanguage` > 浏览器语言 的优先级在 `LanguageRouter`、`globalUserSettingsMigration.ts` 中一致。
-   - 端到端：PC 登录切成 `zh` → 手机端同账号登录 → 默认是否 `zh`。
+
+- `preferredLanguage` / `preferredLanguageSource` 已经桌面 / mobile 共享一套逻辑，但是 Convex 端 `userSettings.displayLanguage` 也存。需要验证：登录后 `userSettings.displayLanguage` > `preferredLanguage` > 浏览器语言 的优先级在 `LanguageRouter`、`globalUserSettingsMigration.ts` 中一致。
+- 端到端：PC 登录切成 `zh` → 手机端同账号登录 → 默认是否 `zh`。
 
 **Done 判据**：两台设备 / 两个浏览器登录同账号，对照 checklist 跑一遍：字号、字幕模式、TTS 自动、音频速率、每日目标、隐私可见性、语言；全部跨端同步。
 
 ### Phase C — 性能 & 首屏（半天）
 
 C1. **Bundle 审计**
-   - 跑一次 `npm run build`，打开 `stats.html`，记录下面几个指标：
-     - entry chunk gzip size
-     - Landing 首屏所需 chunk 合计
-     - AuthPage 首屏所需 chunk 合计
-     - 首个进入 Dashboard 的 chunk 合计
-   - 目标：entry < 180 KB gzip，首屏（Landing / Auth）总计 < 350 KB gzip。
-   - 超标项目：进一步 lazy / defer。重点看 `@sentry/react` 是否该 dynamic import，`posthog-js` 是否该在 hover / idle 后再初始化。
+
+- 跑一次 `npm run build`，打开 `stats.html`，记录下面几个指标：
+  - entry chunk gzip size
+  - Landing 首屏所需 chunk 合计
+  - AuthPage 首屏所需 chunk 合计
+  - 首个进入 Dashboard 的 chunk 合计
+- 目标：entry < 180 KB gzip，首屏（Landing / Auth）总计 < 350 KB gzip。
+- 超标项目：进一步 lazy / defer。重点看 `@sentry/react` 是否该 dynamic import，`posthog-js` 是否该在 hover / idle 后再初始化。
 
 C2. **关键路径 LCP / INP**
-   - 用 Playwright 跑一次 Lighthouse（或复用现有 `scripts/testing/mobile-e2e-report.mjs`）采集 Mobile 项目的 CLS / LCP / INP。
-   - 对首屏 hero image / landing 图片做 `preload` + `fetchpriority="high"`；对 `AppLayout` 内首屏 icon 包 (`lucide-react`) 做 tree-shake 验证。
+
+- 用 Playwright 跑一次 Lighthouse（或复用现有 `scripts/testing/mobile-e2e-report.mjs`）采集 Mobile 项目的 CLS / LCP / INP。
+- 对首屏 hero image / landing 图片做 `preload` + `fetchpriority="high"`；对 `AppLayout` 内首屏 icon 包 (`lucide-react`) 做 tree-shake 验证。
 
 C3. **Convex Query 热点**
-   - Dashboard 上同时跑了 `userStats:getStats`, `vocab:getReviewSummary`, `notifications:getUnreadCount`, `podcasts:getHistory`, `weakPoints:getWeakVocabCategories`, `leaderboard:getMyRank`, `partnerships:*`, `recommendations:getNextBestAction`。
-   - 合并可选合并项；给慢查询加 `Convex` 索引；在 `queryLimits.ts` 的指引下做一轮 `npm run test:convex:coverage`。
+
+- Dashboard 上同时跑了 `userStats:getStats`, `vocab:getReviewSummary`, `notifications:getUnreadCount`, `podcasts:getHistory`, `weakPoints:getWeakVocabCategories`, `leaderboard:getMyRank`, `partnerships:*`, `recommendations:getNextBestAction`。
+- 合并可选合并项；给慢查询加 `Convex` 索引；在 `queryLimits.ts` 的指引下做一轮 `npm run test:convex:coverage`。
 
 C4. **图片 / 字体**
-   - 确认 `public/pwa/*` 图标齐全（manifest 已挂）；
-   - 自定义字体（如有）是否有 `font-display: swap`；
-   - `html2canvas` / `konva` / `@react-pdf` 都已按需 chunk，复核 admin / export 页面不会从普通用户路径载入。
+
+- 确认 `public/pwa/*` 图标齐全（manifest 已挂）；
+- 自定义字体（如有）是否有 `font-display: swap`；
+- `html2canvas` / `konva` / `@react-pdf` 都已按需 chunk，复核 admin / export 页面不会从普通用户路径载入。
 
 **Done 判据**：build 产物贴近目标；`npm run ui:parity:ci` 通过；Mobile Chrome Lighthouse Performance ≥ 85。
 
 ### Phase D — 上线工程与护栏（半天）
 
 D1. **补齐 `LAUNCH_RUNBOOK.md §2 / §6`**
-   - 填 Sentry 告警规则（frontend error rate、API p95、webhook 失败、login 失败）并贴链接；
-   - 填 on-call engineer / payment owner / support / backup；
-   - 约定 rollback 触发条件。
+
+- 填 Sentry 告警规则（frontend error rate、API p95、webhook 失败、login 失败）并贴链接；
+- 填 on-call engineer / payment owner / support / backup；
+- 约定 rollback 触发条件。
 
 D2. **`scripts/validate-runtime-env.mjs`**
-   - 新增必填：`VITE_CONVEX_URL`、`CONVEX_DEPLOY_KEY`、`VITE_SENTRY_DSN`、`SENTRY_DSN`、`RESEND_API_KEY`、`POSTHOG_KEY`、LemonSqueezy / Creem webhook secret、S3 spaces（如使用）。
-   - 在 `.github/workflows/ci.yml` 最末补一步 `NODE_ENV=production npm run env:validate`。
+
+- 新增必填：`VITE_CONVEX_URL`、`CONVEX_DEPLOY_KEY`、`VITE_SENTRY_DSN`、`SENTRY_DSN`、`RESEND_API_KEY`、`POSTHOG_KEY`、LemonSqueezy / Creem webhook secret、S3 spaces（如使用）。
+- 在 `.github/workflows/ci.yml` 最末补一步 `NODE_ENV=production npm run env:validate`。
 
 D3. **CI 护栏**
-   - 在 `check:release` 之外加 `npm run test:mobile:e2e:report -- --require-min=80`（已有脚本），保证 mobile e2e 通过率基线。
-   - Convex 产线 deploy 前跑一次 `npm run test:convex`。
+
+- 在 `check:release` 之外加 `npm run test:mobile:e2e:report -- --require-min=80`（已有脚本），保证 mobile e2e 通过率基线。
+- Convex 产线 deploy 前跑一次 `npm run test:convex`。
 
 D4. **冒烟脚本**
-   - 现有 `tests/e2e/smoke.spec.ts` 基础上补：
-     - 两个 viewport（桌面 1440、mobile 390）走同一路径 `Landing → Login → Dashboard → Vocab Book → Reading`，断言无控制台 error、无 Sentry event 漏报。
-   - 补一条「跨设备数据一致性」自动化：用同一 Convex 账号 signin，用 API 写 `userSettings.fontScale = 'relaxed'`，再用 UI 验证两个 viewport 的字号都生效。
+
+- 现有 `tests/e2e/smoke.spec.ts` 基础上补：
+  - 两个 viewport（桌面 1440、mobile 390）走同一路径 `Landing → Login → Dashboard → Vocab Book → Reading`，断言无控制台 error、无 Sentry event 漏报。
+- 补一条「跨设备数据一致性」自动化：用同一 Convex 账号 signin，用 API 写 `userSettings.fontScale = 'relaxed'`，再用 UI 验证两个 viewport 的字号都生效。
 
 D5. **法律 / 退款 / 定价**
-   - 对照 runbook，verify `/terms`, `/privacy`, `/refund`, `/pricing`, `/pricing/details` 在 `en / zh / vi / mn` 全跑通；试用期统一 7 天，退款政策与实际发布版本一致。
-   - 支付 provider（Creem / LemonSqueezy）沙盒 → 成功 / 失败 / refund / chargeback 四条路径走一遍。
+
+- 对照 runbook，verify `/terms`, `/privacy`, `/refund`, `/pricing`, `/pricing/details` 在 `en / zh / vi / mn` 全跑通；试用期统一 7 天，退款政策与实际发布版本一致。
+- 支付 provider（Creem / LemonSqueezy）沙盒 → 成功 / 失败 / refund / chargeback 四条路径走一遍。
 
 **Done 判据**：CI 绿、runbook 填满、env 校验 gate 生效、冒烟跨端跑过。
 
@@ -181,27 +194,27 @@ D5. **法律 / 退款 / 定价**
 
 下面是上线前要人工跑一遍的 checklist（每行 = 一个场景）。每个场景在**同一账号**下，桌面 Chrome + Mobile Chrome（或真机）各一次，比对结果。
 
-| 模块 | 场景 | 一致性点 |
-| --- | --- | --- |
-| 身份 | 登录 / 登出 / refresh | token 不串、session 不丢 |
-| 偏好 | 语言切换 | `displayLanguage` 同步 |
-| 偏好 | 字号 | `fontScale` 同步（Phase B1 修完后） |
-| 偏好 | 字幕 / TTS / 音频速率 / 每日目标 / 隐私 | `userSettings:*` 字段同步 |
-| 词汇 | FSRS 做 10 张卡 | 进度条、到期卡片数、streak、XP 全部同步 |
-| 词汇 | 词书收藏 / 解除 | `vocab:saveSavedWord` → 两端列表同步 |
-| 语法 | 完成一个模块 | `grammars:updateStatus` 同步 |
-| TOPIK | 开启一次 exam，中途退出 | 再次进入草稿 resume 一致 |
-| TOPIK 写作 | 提交一次 | 历史 / AI 评估 cross-device 可见 |
-| 阅读 | EPUB 阅读进度 | `reading:saveProgress` 同步 + Phase A5 修完后不会跳章 |
-| 视频 | 播放 1 分钟 | `videos:saveProgress` 每 10s 节流保存；两端恢复一致 |
-| 播客 | 播放 + 收藏 | `podcasts:saveProgress` / 订阅同步 |
-| 词典 | 收藏词条 | 保存的词、复习队列一致 |
-| 笔记 | 新建页、标注词条 | `notePages` / `annotations` 一致 |
-| 社区 | 发帖 / 点赞 / 好友请求 | mutation 同步 |
-| 成就 | 触发一个新的成就 | `achievements:syncMyAchievements` 在另一端出现 |
-| 通知 | 已读 | `notifications:markAllRead` 在另一端清零 |
-| 订阅 | 升级、取消 | entitlement 在两端生效 |
-| 错误 | 任何报错 | Sentry 有事件、带 user scope |
+| 模块       | 场景                                    | 一致性点                                              |
+| ---------- | --------------------------------------- | ----------------------------------------------------- |
+| 身份       | 登录 / 登出 / refresh                   | token 不串、session 不丢                              |
+| 偏好       | 语言切换                                | `displayLanguage` 同步                                |
+| 偏好       | 字号                                    | `fontScale` 同步（Phase B1 修完后）                   |
+| 偏好       | 字幕 / TTS / 音频速率 / 每日目标 / 隐私 | `userSettings:*` 字段同步                             |
+| 词汇       | FSRS 做 10 张卡                         | 进度条、到期卡片数、streak、XP 全部同步               |
+| 词汇       | 词书收藏 / 解除                         | `vocab:saveSavedWord` → 两端列表同步                  |
+| 语法       | 完成一个模块                            | `grammars:updateStatus` 同步                          |
+| TOPIK      | 开启一次 exam，中途退出                 | 再次进入草稿 resume 一致                              |
+| TOPIK 写作 | 提交一次                                | 历史 / AI 评估 cross-device 可见                      |
+| 阅读       | EPUB 阅读进度                           | `reading:saveProgress` 同步 + Phase A5 修完后不会跳章 |
+| 视频       | 播放 1 分钟                             | `videos:saveProgress` 每 10s 节流保存；两端恢复一致   |
+| 播客       | 播放 + 收藏                             | `podcasts:saveProgress` / 订阅同步                    |
+| 词典       | 收藏词条                                | 保存的词、复习队列一致                                |
+| 笔记       | 新建页、标注词条                        | `notePages` / `annotations` 一致                      |
+| 社区       | 发帖 / 点赞 / 好友请求                  | mutation 同步                                         |
+| 成就       | 触发一个新的成就                        | `achievements:syncMyAchievements` 在另一端出现        |
+| 通知       | 已读                                    | `notifications:markAllRead` 在另一端清零              |
+| 订阅       | 升级、取消                              | entitlement 在两端生效                                |
+| 错误       | 任何报错                                | Sentry 有事件、带 user scope                          |
 
 ---
 

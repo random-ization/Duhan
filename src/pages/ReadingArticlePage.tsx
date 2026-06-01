@@ -16,13 +16,23 @@ import { useParams, useSearchParams } from 'react-router-dom';
 //   Languages,
 //   Star,
 // } from 'lucide-react';
-import { AI, DICTIONARY, NEWS, VOCAB, SENTENCE_EXPLAINER } from '../utils/convexRefs';
+import {
+  AI,
+  AI_CONTENT_FEEDBACK,
+  DICTIONARY,
+  EMBEDDINGS,
+  NEWS,
+  READING_PROGRESS,
+  VOCAB,
+  SENTENCE_EXPLAINER,
+} from '../utils/convexRefs';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
 import { useAuth } from '../contexts/AuthContext';
 import { useTTS } from '../hooks/useTTS';
 import { useTranslation } from 'react-i18next';
 // import { Button } from '../components/ui';
 import { useIsMobile } from '../hooks/useIsMobile';
+import type { Id } from '../../convex/_generated/dataModel';
 import { cleanArticleBodyText } from '../../constants/news-cleanup';
 import { buildMediaPath } from '../utils/mediaRoutes';
 import { resolveSafeReturnTo } from '../utils/navigation';
@@ -103,7 +113,7 @@ export default function ReadingArticlePage() {
   const [searchParams] = useSearchParams();
   const navigate = useLocalizedNavigate();
   const { t } = useTranslation();
-  const { language } = useAuth();
+  const { user, language } = useAuth();
   const uiLanguage = resolveReadingUiLanguage(language);
   const backPath = useMemo(
     () =>
@@ -169,11 +179,17 @@ export default function ReadingArticlePage() {
 
   // --- Sentence Explainer State ---
   const [explainingSentence, setExplainingSentence] = useState<string | null>(null);
-  const [sentenceExplanation, setSentenceExplanation] = useState<{ id: string; data: SentenceExplanationPayload } | null>(null);
+  const [sentenceExplanation, setSentenceExplanation] = useState<{
+    id: Id<'sentence_explanations'>;
+    data: SentenceExplanationPayload;
+  } | null>(null);
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState<string | null>(null);
   const explainSentenceAction = useAction(SENTENCE_EXPLAINER.explainSentence);
   const saveAssetsMutation = useMutation(SENTENCE_EXPLAINER.saveAssets);
+  const submitFeedbackMutation = useMutation(AI_CONTENT_FEEDBACK.submitFeedback);
+  const updateReadingProgress = useMutation(READING_PROGRESS.updateProgress);
+  const incrementSavedCounts = useMutation(READING_PROGRESS.incrementSavedCounts);
 
   const analyzeReadingArticle = useAction(AI.analyzeReadingArticle);
   const explainWordFallback = useAction(AI.explainWordFallback);
@@ -181,6 +197,7 @@ export default function ReadingArticlePage() {
   const searchDictionary = useAction(DICTIONARY.searchDictionary);
   const addToReview = useMutation(VOCAB.addToReview);
   const markArticleRead = useMutation(NEWS.markArticleRead);
+  const ensureEmbedding = useAction(EMBEDDINGS.ensureEmbedding);
   const { speak, stop, isLoading: speakingLoading, error: ttsError } = useTTS();
 
   const translationLang = useMemo(() => resolveReadingTranslationLanguage(language), [language]);
@@ -380,7 +397,31 @@ export default function ReadingArticlePage() {
     if (markedArticleIdRef.current === article._id) return;
     markedArticleIdRef.current = article._id;
     void markArticleRead({ articleId: article._id }).catch(() => undefined);
-  }, [article?._id, markArticleRead]);
+    // Lazily generate embedding for this article (fire-and-forget)
+    void ensureEmbedding({
+      text: `${article.title} ${(article.summary || '').slice(0, 300)}`,
+      sourceTable: 'news_articles',
+      sourceId: article._id,
+    }).catch(() => undefined);
+  }, [article?._id, article?.summary, article?.title, markArticleRead, ensureEmbedding]);
+
+  // --- Reading Progress: time tracking (increment every 30s while page is visible) ---
+  const readingProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!user || !articleId) return;
+    readingProgressTimerRef.current = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void updateReadingProgress({
+        contentType: 'news_article',
+        contentId: articleId,
+        readingTimeIncrement: 30,
+        totalSentenceCount: paragraphs.length || undefined,
+      }).catch(() => undefined);
+    }, 30_000);
+    return () => {
+      if (readingProgressTimerRef.current) clearInterval(readingProgressTimerRef.current);
+    };
+  }, [user, articleId, paragraphs.length, updateReadingProgress]);
 
   const requestTranslations = useCallback(async () => {
     if (!articleTitle || paragraphs.length === 0) {
@@ -1013,6 +1054,27 @@ export default function ReadingArticlePage() {
     });
   }, []);
 
+  // Wrap saveAssetsMutation to also increment reading progress saved counts
+  const saveAssetsWithProgress = useCallback(
+    async (args: Parameters<typeof saveAssetsMutation>[0]) => {
+      const result = await saveAssetsMutation(args);
+      if (user && articleId && result) {
+        const wordDelta = result.savedWordCount ?? 0;
+        const sentenceDelta = args.saveSentence ? 1 : 0;
+        if (wordDelta > 0 || sentenceDelta > 0) {
+          void incrementSavedCounts({
+            contentType: 'news_article',
+            contentId: articleId,
+            savedWordsDelta: wordDelta || undefined,
+            savedSentencesDelta: sentenceDelta || undefined,
+          }).catch(() => undefined);
+        }
+      }
+      return result;
+    },
+    [saveAssetsMutation, incrementSavedCounts, user, articleId]
+  );
+
   const readingSidebarContent = useMemo(
     () => (
       <ReadingArticleSidebar
@@ -1028,6 +1090,8 @@ export default function ReadingArticlePage() {
         savingWordKey={savingWordKey}
         savedWords={savedWords}
         grammar={grammar}
+        articleTitle={article?.title}
+        onNavigateToArticle={(id: string) => navigate(`/reading/${id}`)}
         activeWord={activeWord}
         dictionaryQuery={dictionaryQuery}
         dictionaryLoading={dictionaryLoading}
@@ -1051,7 +1115,8 @@ export default function ReadingArticlePage() {
         sentenceExplanation={sentenceExplanation}
         explainLoading={explainLoading}
         explainError={explainError}
-        saveAssetsMutation={saveAssetsMutation}
+        saveAssetsMutation={saveAssetsWithProgress}
+        submitFeedbackMutation={submitFeedbackMutation}
       />
     ),
     [
@@ -1069,6 +1134,8 @@ export default function ReadingArticlePage() {
       focusNote,
       getNoteVisualState,
       grammar,
+      article?.title,
+      navigate,
       noteSyncError,
       notes,
       onDiscardDraftNote,
@@ -1090,7 +1157,8 @@ export default function ReadingArticlePage() {
       sentenceExplanation,
       explainLoading,
       explainError,
-      saveAssetsMutation,
+      saveAssetsWithProgress,
+      submitFeedbackMutation,
     ]
   );
 

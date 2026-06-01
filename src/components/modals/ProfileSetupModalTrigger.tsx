@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from 'convex/react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGlobalModal } from '../../contexts/GlobalModalContext';
 import { safeGetSessionStorageItem } from '../../utils/browserStorage';
@@ -17,8 +18,13 @@ export function ProfileSetupModalTrigger({
 }: Readonly<ProfileSetupModalTriggerProps>) {
   const { user } = useAuth();
   const { isOpen, showModal } = useGlobalModal();
+  const location = useLocation();
   const shownRef = useRef(false);
   const isProfileRoute = pathWithoutLang === '/profile' || pathWithoutLang.startsWith('/profile/');
+  const isDailyCockpitRoute =
+    pathWithoutLang === '/dashboard' ||
+    pathWithoutLang.startsWith('/dashboard/') ||
+    new URLSearchParams(location.search).get('flow') === 'today';
 
   // Query the onboarding state to decide whether to trigger the modal.
   // Falls back to name-missing check while the query is loading.
@@ -27,6 +33,7 @@ export function ProfileSetupModalTrigger({
   useEffect(() => {
     if (!user) return;
     if (isProfileRoute) return;
+    if (isDailyCockpitRoute) return;
     if (shownRef.current) return;
     if (isOpen('profile-setup')) return;
 
@@ -63,7 +70,7 @@ export function ProfileSetupModalTrigger({
 
     shownRef.current = true;
     showModal('profile-setup');
-  }, [isOpen, isProfileRoute, showModal, user, onboardingState]);
+  }, [isDailyCockpitRoute, isOpen, isProfileRoute, showModal, user, onboardingState]);
 
   return null;
 }

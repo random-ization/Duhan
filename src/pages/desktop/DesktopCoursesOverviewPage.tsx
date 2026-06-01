@@ -6,7 +6,6 @@ import {
   Sparkles,
   BookOpen,
   Award,
-  LucideIcon,
   Eye,
   EyeOff,
   Lightbulb,
@@ -34,6 +33,7 @@ import {
 } from '../../utils/convexRefs';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { Button } from '../../components/ui';
+import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
 import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
 import { SectionHead } from '../../components/desktop/ui/SectionHead';
@@ -53,6 +53,12 @@ import type { UnitGrammarDto, GrammarItemDto } from '../../../convex/grammars';
 type Course = Institute & { _id?: string };
 
 type LearnTabKey = 'mine' | 'grammar' | 'vocabulary' | 'typing' | 'topik';
+type VocabCategoryKey = 'DUE' | 'UNLEARNED' | 'ALL' | 'MASTERED';
+
+const VOCAB_CATEGORY_KEYS: readonly VocabCategoryKey[] = ['DUE', 'UNLEARNED', 'ALL', 'MASTERED'];
+
+const normalizeVocabCategory = (value: string | null): VocabCategoryKey =>
+  VOCAB_CATEGORY_KEYS.includes(value as VocabCategoryKey) ? (value as VocabCategoryKey) : 'DUE';
 
 interface TextbookUnit {
   _id: string;
@@ -198,10 +204,8 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
     }
   }, [manualActiveCourseId]);
 
-  const [vocabCategory, setVocabCategory] = useState<'DUE' | 'UNLEARNED' | 'ALL' | 'MASTERED'>(
-    () => {
-      return (localStorage.getItem('last_selected_vocab_category') as any) || 'DUE';
-    }
+  const [vocabCategory, setVocabCategory] = useState<VocabCategoryKey>(() =>
+    normalizeVocabCategory(localStorage.getItem('last_selected_vocab_category'))
   );
 
   useEffect(() => {
@@ -676,6 +680,13 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
                 s: t('common.notes', { defaultValue: 'Notes' }),
                 tone: 'lilac',
                 path: '/notebook',
+              },
+              {
+                k: '文',
+                l: '文本导入',
+                s: '粘贴韩语内容学习',
+                tone: 'indigo',
+                path: '/learning/text-import',
               },
             ].map((m, i) => (
               <DesktopCard
@@ -1717,15 +1728,17 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
               {t('common.filter', { defaultValue: 'Filter Content' })}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'DUE', label: t('vocab.due', 'Review') },
-                { id: 'UNLEARNED', label: t('vocab.unlearned', 'New') },
-                { id: 'ALL', label: t('common.all', 'All') },
-                { id: 'MASTERED', label: t('vocab.mastered', 'Mastered') },
-              ].map(cat => (
+              {(
+                [
+                  { id: 'DUE', label: t('vocab.due', 'Review') },
+                  { id: 'UNLEARNED', label: t('vocab.unlearned', 'New') },
+                  { id: 'ALL', label: t('common.all', 'All') },
+                  { id: 'MASTERED', label: t('vocab.mastered', 'Mastered') },
+                ] satisfies Array<{ id: VocabCategoryKey; label: string }>
+              ).map(cat => (
                 <button
                   key={cat.id}
-                  onClick={() => setVocabCategory(cat.id as any)}
+                  onClick={() => setVocabCategory(cat.id)}
                   className={cn(
                     'px-3 py-2 rounded-xl text-[11px] font-black transition-all border',
                     vocabCategory === cat.id
@@ -1869,7 +1882,7 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
               })}
             </div>
             <div className="font-k-serif text-3xl font-medium">
-              {(stats as any)?.examAttempts?.[0]?.score || '---'} / 300
+              {topikHistory?.[0]?.score ?? '---'} / 300
             </div>
           </div>
           <div className="w-px h-10 bg-white/20" />
@@ -1892,53 +1905,143 @@ export const DesktopCoursesOverviewPage: React.FC = () => {
         </div>
       </DesktopCard>
 
-      {/* 2. Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          {
-            k: '聽',
-            l: t('courseDashboard.modules.listening'),
-            n: 50,
-            t: '60 min',
-            p: 78,
-            tone: 'mint',
-          },
-          {
-            k: '寫',
-            l: t('courseDashboard.modules.grammar'),
-            n: 4,
-            t: '50 min',
-            p: 54,
-            tone: 'pink',
-          },
-          {
-            k: '讀',
-            l: t('courseDashboard.modules.reading'),
-            n: 50,
-            t: '70 min',
-            p: 82,
-            tone: 'butter',
-          },
-        ].map((s, i) => (
-          <DesktopCard key={i} className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <HanjaSeal c={s.k} size={48} bg={`var(--color-k-${s.tone}-deep)`} round={12} />
-              <div className="text-right">
-                <div className="text-2xl font-black text-k-ink leading-none">{s.p}%</div>
-                <div className="text-[10px] font-bold text-k-sub mt-1">Accuracy</div>
+      {/* 2. Skill Training & AI Coach */}
+      <section>
+        <div className="flex items-baseline mb-6">
+          <span className="font-k-serif text-lg text-k-crimson font-medium mr-2 leading-none">
+            專
+          </span>
+          <span className="text-[14px] font-black text-k-ink uppercase tracking-wider">
+            专项练习 & AI 教练
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <DesktopCard
+            className="p-6 border-2 border-k-jade/20 bg-k-jade/5 hover:border-k-jade transition-all cursor-pointer group relative overflow-hidden"
+            onClick={() => navigate('/topik/writing-coach')}
+          >
+            <div className="absolute -right-4 -top-4 text-k-jade opacity-10">
+              <Sparkles size={120} />
+            </div>
+            <div className="flex items-center gap-4 mb-4 relative z-10">
+              <HanjaSeal c="笔" size={48} bg="var(--color-k-jade)" round={12} />
+              <div>
+                <h4 className="text-[16px] font-black text-k-ink">TOPIK 写作教练</h4>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <DesignChip tone="mint" size="sm">
+                    AI 实时
+                  </DesignChip>
+                  <span className="text-[10px] font-bold text-k-sub tracking-widest uppercase">
+                    Skill Up
+                  </span>
+                </div>
               </div>
             </div>
-            <h4 className="text-[16px] font-black text-k-ink mb-1">{s.l}</h4>
-            <div className="text-[11px] font-bold text-k-sub mb-4">
-              {s.n} {t('coursesOverview.desktop.topik.questions', { defaultValue: 'Questions' })} ·{' '}
-              {s.t}
-            </div>
-            <div className="h-1.5 w-full bg-k-line rounded-full overflow-hidden">
-              <div className={cn('h-full', `bg-k-${s.tone}-deep`)} style={{ width: `${s.p}%` }} />
-            </div>
+            <p className="text-[12px] font-medium text-k-sub mb-6 relative z-10">
+              针对 51-54 题进行专项 AI 批改，提供深度解析与提分建议。
+            </p>
+            <Button className="w-full bg-k-jade text-white hover:bg-k-jade/90 text-[12px] font-black rounded-xl h-10 border-none">
+              立即开始 →
+            </Button>
           </DesktopCard>
-        ))}
-      </div>
+
+          {[
+            {
+              k: '聽',
+              l: t('courseDashboard.modules.listening'),
+              desc: '听力专项真题模拟与错题复习',
+              tone: 'mint',
+            },
+            {
+              k: '讀',
+              l: t('courseDashboard.modules.reading'),
+              desc: '阅读理解专项训练与技巧解析',
+              tone: 'butter',
+            },
+          ].map((s, i) => (
+            <DesktopCard
+              key={i}
+              className="p-6 hover:border-k-ink/10 transition-all cursor-not-allowed opacity-60 grayscale"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <HanjaSeal c={s.k} size={48} bg={`var(--color-k-${s.tone}-deep)`} round={12} />
+                <div>
+                  <h4 className="text-[16px] font-black text-k-ink">{s.l}</h4>
+                  <div className="text-[10px] font-bold text-k-sub mt-1 uppercase tracking-widest">
+                    Coming Soon
+                  </div>
+                </div>
+              </div>
+              <p className="text-[12px] font-medium text-k-sub mb-6">{s.desc}</p>
+              <Button
+                variant="outline"
+                disabled
+                className="w-full text-[12px] font-black rounded-xl h-10"
+              >
+                敬请期待
+              </Button>
+            </DesktopCard>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. Performance Summary */}
+      <section>
+        <div className="flex items-baseline mb-6">
+          <span className="font-k-serif text-lg text-k-crimson font-medium mr-2 leading-none">
+            績
+          </span>
+          <span className="text-[14px] font-black text-k-ink uppercase tracking-wider">
+            能力概览
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              k: '聽',
+              l: t('courseDashboard.modules.listening'),
+              n: 50,
+              t: '60 min',
+              p: 78,
+              tone: 'mint',
+            },
+            {
+              k: '寫',
+              l: '写作 (Writing)',
+              n: 4,
+              t: '50 min',
+              p: 54,
+              tone: 'pink',
+            },
+            {
+              k: '讀',
+              l: t('courseDashboard.modules.reading'),
+              n: 50,
+              t: '70 min',
+              p: 82,
+              tone: 'butter',
+            },
+          ].map((s, i) => (
+            <DesktopCard key={i} className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <HanjaSeal c={s.k} size={48} bg={`var(--color-k-${s.tone}-deep)`} round={12} />
+                <div className="text-right">
+                  <div className="text-2xl font-black text-k-ink leading-none">{s.p}%</div>
+                  <div className="text-[10px] font-bold text-k-sub mt-1">Accuracy</div>
+                </div>
+              </div>
+              <h4 className="text-[16px] font-black text-k-ink mb-1">{s.l}</h4>
+              <div className="text-[11px] font-bold text-k-sub mb-4">
+                {s.n} {t('coursesOverview.desktop.topik.questions', { defaultValue: 'Questions' })}{' '}
+                · {s.t}
+              </div>
+              <div className="h-1.5 w-full bg-k-line rounded-full overflow-hidden">
+                <div className={cn('h-full', `bg-k-${s.tone}-deep`)} style={{ width: `${s.p}%` }} />
+              </div>
+            </DesktopCard>
+          ))}
+        </div>
+      </section>
 
       {/* 3. Recent Attempts */}
       <section>

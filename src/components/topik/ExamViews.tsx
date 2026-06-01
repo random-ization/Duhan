@@ -17,7 +17,12 @@ import {
 import { getLabels } from '../../utils/i18n';
 import { QuestionRenderer } from './QuestionRenderer';
 import AnnotationMenu from '../AnnotationMenu';
-import type { ToolType } from '../../features/annotation/components/CanvasLayer';
+import type {
+  CanvasData,
+  CanvasLayerProps,
+  CanvasToolbarProps,
+  ToolType,
+} from '../../features/annotation/components/CanvasLayer';
 import { useCanvasAnnotation } from '../../features/annotation/hooks/useCanvasAnnotation';
 import { useMutation, useAction } from 'convex/react';
 import toast from 'react-hot-toast';
@@ -155,7 +160,21 @@ const resolveAnnotationBadgeTone = (
   return 'default';
 };
 
-const resolveDictionaryMeaning = (bestMatch: any): { meaning: string; partOfSpeech: string } => {
+type DictionaryBestMatch = {
+  pos?: string;
+  partOfSpeech?: string;
+  senses?: Array<{
+    definition?: string;
+    translation?: {
+      definition?: string;
+      word?: string;
+    };
+  }>;
+};
+
+const resolveDictionaryMeaning = (
+  bestMatch: DictionaryBestMatch | null | undefined
+): { meaning: string; partOfSpeech: string } => {
   if (!bestMatch) {
     return { meaning: 'Manual Entry (Not found in dictionary)', partOfSpeech: 'noun' };
   }
@@ -1009,10 +1028,10 @@ const ReviewCanvasOverlays = ({
   handleCanvasClear,
 }: {
   isDrawingMode: boolean;
-  CanvasLayerComponent?: React.ComponentType<any>;
-  CanvasToolbarComponent?: React.ComponentType<any>;
-  canvasData: any;
-  handleCanvasChange: (data: any) => void;
+  CanvasLayerComponent?: React.ComponentType<CanvasLayerProps>;
+  CanvasToolbarComponent?: React.ComponentType<CanvasToolbarProps>;
+  canvasData: CanvasData | null | undefined;
+  handleCanvasChange: (data: CanvasData) => void;
   canvasTool: ToolType;
   setCanvasTool: (tool: ToolType) => void;
   canvasColor: string;
@@ -1153,10 +1172,10 @@ const ReviewPaper = ({
   exam: TopikExam;
   paperContainerRef: React.RefObject<HTMLDivElement | null>;
   isDrawingMode: boolean;
-  CanvasLayerComponent?: React.ComponentType<any>;
-  CanvasToolbarComponent?: React.ComponentType<any>;
-  canvasData: any;
-  handleCanvasChange: (data: any) => void;
+  CanvasLayerComponent?: React.ComponentType<CanvasLayerProps>;
+  CanvasToolbarComponent?: React.ComponentType<CanvasToolbarProps>;
+  canvasData: CanvasData | null | undefined;
+  handleCanvasChange: (data: CanvasData) => void;
   canvasTool: ToolType;
   setCanvasTool: (tool: ToolType) => void;
   canvasColor: string;
@@ -1340,10 +1359,10 @@ const ExamReviewLayout = ({
   wrongCount: number;
   onJumpToQuestion: (index: number) => void;
   paperContainerRef: React.RefObject<HTMLDivElement | null>;
-  CanvasLayerComponent?: React.ComponentType<any>;
-  CanvasToolbarComponent?: React.ComponentType<any>;
-  canvasData: any;
-  handleCanvasChange: (data: any) => void;
+  CanvasLayerComponent?: React.ComponentType<CanvasLayerProps>;
+  CanvasToolbarComponent?: React.ComponentType<CanvasToolbarProps>;
+  canvasData: CanvasData | null | undefined;
+  handleCanvasChange: (data: CanvasData) => void;
   canvasTool: ToolType;
   setCanvasTool: (tool: ToolType) => void;
   canvasColor: string;
@@ -1506,8 +1525,8 @@ export const ExamReviewView: React.FC<ExamReviewViewProps> = React.memo(
     const [canvasTool, setCanvasTool] = useState<ToolType>('pen');
     const [canvasColor, setCanvasColor] = useState('#1e293b');
     const [canvasUi, setCanvasUi] = useState<null | {
-      Layer: React.ComponentType<any>;
-      Toolbar: React.ComponentType<any>;
+      Layer: React.ComponentType<CanvasLayerProps>;
+      Toolbar: React.ComponentType<CanvasToolbarProps>;
     }>(null);
     const paperContainerRef = useRef<HTMLDivElement>(null);
 

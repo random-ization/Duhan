@@ -91,7 +91,7 @@ export const ReadingDiscoverySection: React.FC<ReadingDiscoverySectionProps> = (
     );
   };
 
-  const myBooks = useMemo(() => (Array.isArray(myUploads) ? myUploads : []), [myUploads]);
+  const myBooks = useMemo<EpubLibraryBook[]>(() => myUploads ?? [], [myUploads]);
   const privateBooks = useMemo(() => myBooks.slice(0, 6), [myBooks]);
 
   const buildShareUrl = (slug: string, shareToken: string) => {
@@ -99,7 +99,7 @@ export const ReadingDiscoverySection: React.FC<ReadingDiscoverySectionProps> = (
     return new URL(path, window.location.origin).toString();
   };
 
-  const handleShare = async (book: any) => {
+  const handleShare = async (book: EpubLibraryBook) => {
     try {
       const result = await ensureShareLink({ bookId: book._id });
       const shareUrl = buildShareUrl(book.slug, result.shareToken);
@@ -219,7 +219,7 @@ export const ReadingDiscoverySection: React.FC<ReadingDiscoverySectionProps> = (
             </p>
           ) : (
             <div className="space-y-4">
-              {myBooks.map((book: any) => (
+              {myBooks.map(book => (
                 <div
                   key={book._id}
                   className="flex flex-col gap-4 rounded-2xl border border-border bg-background/80 p-4 md:flex-row md:items-center md:justify-between"

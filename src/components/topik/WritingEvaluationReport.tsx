@@ -260,7 +260,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           <div className="min-w-0">
             <div className={cn('font-black text-foreground', isMobile ? 'text-sm' : '')}>
               {t('topikWriting.session.questionX', {
-                num: evaluation.questionNumber,
+                questionNumber: evaluation.questionNumber,
                 defaultValue: `Question ${evaluation.questionNumber}`,
               })}
             </div>
@@ -652,7 +652,7 @@ export const WritingEvaluationReport: React.FC<WritingEvaluationReportProps> = (
                 score={e.score}
                 maxScore={QUESTION_MAX_SCORES[e.questionNumber] ?? 50}
                 label={t('topikWriting.session.questionX', {
-                  num: e.questionNumber,
+                  questionNumber: e.questionNumber,
                   defaultValue: `Question ${e.questionNumber}`,
                 })}
                 compact={isMobile}

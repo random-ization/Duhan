@@ -26,7 +26,7 @@ import { resolveInstituteDefaultLevel } from '../utils/learningFlow';
 import { safeGetLocalStorageItem, safeSetLocalStorageItem } from '../utils/browserStorage';
 import { getNextGrammarSelection, normalizeGrammarProgressStatus } from '../utils/grammarProgress';
 
-const AI_PANEL_STORAGE_KEY = 'grammar_ai_panel_open';
+const AI_PRACTICE_DIALOG_STORAGE_KEY = 'grammar_ai_practice_dialog_open';
 const MobileGrammarView = lazy(() => import('../components/mobile/MobileGrammarView'));
 const DesktopGrammarModulePage = lazy(() => import('./desktop/DesktopGrammarModulePage'));
 
@@ -48,8 +48,8 @@ const GrammarModulePage: React.FC = () => {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [selectedGrammarId, setSelectedGrammarId] = useState<string | null>(null);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(() => {
-    const raw = safeGetLocalStorageItem(AI_PANEL_STORAGE_KEY);
-    return raw == null ? true : raw !== '0';
+    const raw = safeGetLocalStorageItem(AI_PRACTICE_DIALOG_STORAGE_KEY);
+    return raw == null ? false : raw !== '0';
   });
   const [dismissedRecommendedSelectionKey, setDismissedRecommendedSelectionKey] = useState<
     string | null
@@ -57,20 +57,11 @@ const GrammarModulePage: React.FC = () => {
 
   const { user, language } = useAuth();
 
-  const instituteQuery = useQuery(
-    INSTITUTES.get,
-    instituteId ? { id: instituteId as any } : 'skip'
-  );
+  const instituteQuery = useQuery(INSTITUTES.get, instituteId ? { id: instituteId } : 'skip');
   const allCourseGrammar = useQuery(
     GRAMMARS.getByCourse,
     instituteId ? { courseId: instituteId, language } : 'skip'
   );
-
-  const instituteName =
-    (instituteQuery && getLocalizedContent(instituteQuery, 'name', language)) ||
-    instituteQuery?.name ||
-    instituteId ||
-    '';
 
   const totalUnits = useMemo(() => {
     if (Array.isArray(allCourseGrammar) && allCourseGrammar.length > 0) {
@@ -173,7 +164,7 @@ const GrammarModulePage: React.FC = () => {
   }, [activeSelectedUnit, instituteId, instituteQuery, learningActions]);
 
   useEffect(() => {
-    safeSetLocalStorageItem(AI_PANEL_STORAGE_KEY, isAiPanelOpen ? '1' : '0');
+    safeSetLocalStorageItem(AI_PRACTICE_DIALOG_STORAGE_KEY, isAiPanelOpen ? '1' : '0');
   }, [isAiPanelOpen]);
 
   const isGrammarLoading = grammarListQuery === undefined;
@@ -295,23 +286,6 @@ const GrammarModulePage: React.FC = () => {
     });
   }, [deferredSearchQuery, grammarListWithUpdates, language]);
 
-  const currentIndex = useMemo(() => {
-    if (!desktopSelectedGrammarId || !grammarListWithUpdates) return -1;
-    return grammarListWithUpdates.findIndex(g => g.id === desktopSelectedGrammarId);
-  }, [desktopSelectedGrammarId, grammarListWithUpdates]);
-
-  const handleNext = () => {
-    if (currentIndex >= 0 && currentIndex < grammarListWithUpdates.length - 1) {
-      setSelectedGrammarId(grammarListWithUpdates[currentIndex + 1].id);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setSelectedGrammarId(grammarListWithUpdates[currentIndex - 1].id);
-    }
-  };
-
   useEffect(() => {
     clearContextualSidebar();
   }, [clearContextualSidebar]);
@@ -367,28 +341,11 @@ const GrammarModulePage: React.FC = () => {
     );
   }
 
-  const selectedStatus = normalizeGrammarProgressStatus(desktopSelectedGrammar?.status);
-  const selectedProficiency =
-    desktopSelectedGrammar?.proficiency ?? (selectedStatus === 'MASTERED' ? 100 : 0);
   const selectedTitle =
     desktopSelectedGrammar &&
     sanitizeGrammarDisplayText(
       getLocalizedContent(desktopSelectedGrammar, 'title', language) || desktopSelectedGrammar.title
     );
-
-  const statusLabel =
-    selectedStatus === 'MASTERED'
-      ? t('grammarModule.statusMastered', { defaultValue: 'Mastered' })
-      : selectedStatus === 'LEARNING'
-        ? t('grammarModule.statusLearning', { defaultValue: 'Learning' })
-        : t('grammarModule.statusNew', { defaultValue: 'New' });
-
-  const statusClass =
-    selectedStatus === 'MASTERED'
-      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/30'
-      : selectedStatus === 'LEARNING'
-        ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30'
-        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
 
   return (
     <Suspense
@@ -402,33 +359,18 @@ const GrammarModulePage: React.FC = () => {
     >
       <DesktopGrammarModulePage
         allCourseGrammar={normalizedAllCourseGrammar}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
         desktopSelectedGrammarId={desktopSelectedGrammarId}
         setHasManualUnitSelection={setHasManualUnitSelection}
         setSelectedUnit={setSelectedUnit}
         setSelectedGrammarId={setSelectedGrammarId}
-        clearRecommendedDismissal={() => setDismissedRecommendedSelectionKey(null)}
         activeSelectedUnit={activeSelectedUnit}
         clampUnit={clampUnit}
-        instituteName={instituteName}
-        instituteId={instituteId || ''}
         language={language}
-        t={t}
-        selectedStatus={selectedStatus ?? 'NEW'}
-        statusLabel={statusLabel}
-        statusClass={statusClass}
-        selectedProficiency={selectedProficiency}
         selectedTitle={selectedTitle}
         desktopSelectedGrammar={desktopSelectedGrammar}
-        handleToggleStatus={handleToggleStatus}
         isGrammarLoading={isGrammarLoading}
         isAiPanelOpen={isAiPanelOpen}
         setIsAiPanelOpen={setIsAiPanelOpen}
-        grammarListWithUpdates={grammarListWithUpdates}
-        currentIndex={currentIndex}
-        handleNext={handleNext}
-        handlePrev={handlePrev}
         navigate={navigate}
       />
     </Suspense>

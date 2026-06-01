@@ -14,38 +14,38 @@ function resolvePlanHighlights(language: string) {
   if (isZh) {
     return {
       monthly: [
-        '全部教材课程完整解锁',
-        '全部 TOPIK / 写作真题库',
-        '媒体无限播放 + AI Credit 提升',
+        '每天 AI 深度解析无限次，阅读中遇到的每个句子都能弄懂',
+        '用完整 TOPIK 真题库练习写作，获得实时 AI 评分和纠错',
+        '间隔重复复习系统不限量 — 掌握的词汇量以可见速度增长',
       ],
       annual: [
-        '包含月付全部权益',
-        '极低长期成本，适合深度备考',
-        '历史分析、PDF 导出、AI 深度解析',
+        '包含月付全部学习成果',
+        '个性化弱点分析 + 每周学习周报，用数据驱动进步',
+        '全年深度备考，平均下来每月不到一杯咖啡的钱',
       ],
       lifetime: [
-        '权益与 Pro 相同',
-        '未来新增功能自动包含',
-        '一次买断，终身拥有',
+        '一次投入，韩语能力终身可查、可练、可提升',
+        '未来新增 AI 功能（口语教练、内容推荐）自动解锁',
+        '适合认真计划长期进阶到高级水平的学习者',
       ],
     };
   }
 
   return {
     monthly: [
-      'Full course access',
-      'Full TOPIK and writing archive',
-      'Unlimited media + higher AI credits',
+      'Unlimited AI sentence analysis — understand every sentence you read',
+      'Full TOPIK writing practice with real-time AI scoring & correction',
+      'Spaced repetition with no limits — watch your vocab grow',
     ],
     annual: [
-      'Everything in monthly',
-      'Lower long-term cost for active learners',
-      'History analytics, PDF export, and deeper AI usage',
+      'Everything in monthly, plus personalized weak-point analysis',
+      'Weekly learning reports with data-driven progress tracking',
+      'Best value: less than a coffee per month for a year of growth',
     ],
     lifetime: [
-      'Same entitlements as Pro',
-      'Future Pro features stay included',
-      'One-time payment, no renewal',
+      'One investment, lifetime access to all current and future AI features',
+      'Upcoming: speaking coach, content recommendations, ability profiling',
+      'For learners committed to reaching advanced proficiency',
     ],
   };
 }
@@ -175,20 +175,26 @@ const PricingSection: React.FC<PricingSectionProps> = ({
                 </div>
 
                 <div className="flex items-baseline gap-1">
-                  <span className={`font-k-serif text-[24px] font-medium ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}>
+                  <span
+                    className={`font-k-serif text-[24px] font-medium ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}
+                  >
                     {plan.symbol}
                   </span>
                   <span className="font-k-serif text-[56px] font-black leading-none">
                     {plan.price}
                   </span>
-                  <span className={`text-[14px] font-bold ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}>
+                  <span
+                    className={`text-[14px] font-bold ${plan.highlight ? 'text-white/40' : 'text-k-ink/30'}`}
+                  >
                     {plan.period}
                   </span>
                 </div>
 
                 {plan.originalPrice && (
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[14px] line-through opacity-40">{plan.originalPrice}</span>
+                    <span className="text-[14px] line-through opacity-40">
+                      {plan.originalPrice}
+                    </span>
                     <span className="text-[12px] font-black text-k-crimson bg-k-crimson/10 px-2 py-0.5 rounded uppercase">
                       {plan.discount}
                     </span>
@@ -199,21 +205,27 @@ const PricingSection: React.FC<PricingSectionProps> = ({
               <ul className="space-y-4 mb-10 flex-1">
                 {plan.features.map(feature => (
                   <li key={feature} className="flex items-start gap-3">
-                    <div className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full shrink-0 ${
-                      plan.highlight ? 'bg-white/10 text-k-crimson' : 'bg-k-ink/5 text-k-crimson'
-                    }`}>
+                    <div
+                      className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full shrink-0 ${
+                        plan.highlight ? 'bg-white/10 text-k-crimson' : 'bg-k-ink/5 text-k-crimson'
+                      }`}
+                    >
                       <Check size={10} strokeWidth={4} />
                     </div>
-                    <span className="text-[14px] font-medium leading-tight opacity-90">{feature}</span>
+                    <span className="text-[14px] font-medium leading-tight opacity-90">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
 
               <div>
                 {currentPlan === plan.type ? (
-                  <div className={`w-full py-4 text-center text-[14px] font-black rounded-2xl ${
-                    plan.highlight ? 'bg-white/10 text-white' : 'bg-k-ink/5 text-k-ink opacity-50'
-                  }`}>
+                  <div
+                    className={`w-full py-4 text-center text-[14px] font-black rounded-2xl ${
+                      plan.highlight ? 'bg-white/10 text-white' : 'bg-k-ink/5 text-k-ink opacity-50'
+                    }`}
+                  >
                     {t('pricing.currentPlan')}
                   </div>
                 ) : (
