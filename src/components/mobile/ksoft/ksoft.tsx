@@ -121,7 +121,9 @@ export const SectionHead: React.FC<{
           color: KT.sub,
           background: 'transparent',
           border: 'none',
-          padding: 0,
+          padding: '6px 4px',
+          marginRight: -4,
+          minHeight: 24,
           cursor: 'pointer',
           fontFamily: KT.font,
         }}

@@ -4,8 +4,8 @@ export const KT = {
   card: '#FFFFFF',
   ink: '#1F1B17',
   ink2: '#3D3832',
-  sub: '#8C8377',
-  subLight: '#B8AFA2',
+  sub: '#736A5E',
+  subLight: '#787063',
   line: 'rgba(31,27,23,0.08)',
   line2: 'rgba(31,27,23,0.14)',
   pink: '#F5C7C0',
@@ -29,10 +29,20 @@ export const KT = {
   font: '"Pretendard", -apple-system, system-ui, "PingFang SC", sans-serif',
 } as const;
 
-export type ChipTone = 'muted' | 'pink' | 'mint' | 'butter' | 'lilac' | 'sky' | 'crimson' | 'ink';
+export type ChipTone =
+  | 'muted'
+  | 'onDark'
+  | 'pink'
+  | 'mint'
+  | 'butter'
+  | 'lilac'
+  | 'sky'
+  | 'crimson'
+  | 'ink';
 
 export const CHIP_TONES: Record<ChipTone, { bg: string; fg: string }> = {
   muted: { bg: 'rgba(31,27,23,0.05)', fg: KT.sub },
+  onDark: { bg: 'rgba(255,255,255,0.14)', fg: 'rgba(255,255,255,0.92)' },
   pink: { bg: KT.pink, fg: '#7A2F26' },
   mint: { bg: KT.mint, fg: '#2F5847' },
   butter: { bg: KT.butter, fg: '#7A5F1F' },

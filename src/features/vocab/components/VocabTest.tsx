@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  X,
-  List,
-  CheckSquare,
-  Keyboard,
-  Grip,
-  Volume2,
-  Check,
-} from 'lucide-react';
+import { X, List, CheckSquare, Keyboard, Grip, Volume2, Check } from 'lucide-react';
 import type { Language } from '../../../types';
 import { getLabels, Labels } from '../../../utils/i18n';
 import { getLocalizedContent } from '../../../utils/languageUtils';
@@ -425,7 +417,8 @@ function MobileRunningCard({
   isMissing,
 }: MobileRunningCardProps) {
   const labels = getLabels(language);
-  const koreanPrompt = card.type === 'FILL_10' ? card.items[0]?.pair.korean || '' : card.correctPair.korean;
+  const koreanPrompt =
+    card.type === 'FILL_10' ? card.items[0]?.pair.korean || '' : card.correctPair.korean;
 
   if (card.type === 'MULTIPLE_CHOICE') {
     const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -519,9 +512,7 @@ function MobileRunningCard({
         <div className="mt-3 flex flex-col gap-2.5">
           {card.options.map((option, idx) => {
             const selected = selectedIndex === idx;
-            const border = selected
-              ? `1.5px solid ${KT.mintDeep}`
-              : `1px solid ${KT.line}`;
+            const border = selected ? `1.5px solid ${KT.mintDeep}` : `1px solid ${KT.line}`;
             const background = selected ? `${KT.mint}5C` : KT.card;
             const letterBg = selected ? KT.mintDeep : KT.bg2;
             const letterColor = selected ? KT.card : KT.ink;
@@ -547,7 +538,8 @@ function MobileRunningCard({
                   gap: 14,
                   textAlign: 'left',
                   boxShadow: optionShadow,
-                  transition: 'background 140ms ease, border-color 140ms ease, box-shadow 140ms ease',
+                  transition:
+                    'background 140ms ease, border-color 140ms ease, box-shadow 140ms ease',
                 }}
               >
                 <span
@@ -630,7 +622,7 @@ function MobileRunningCard({
         style={{ background: KT.card, border: `1px solid ${KT.line}`, boxShadow: KT.sh }}
       >
         <div className="mb-6 flex items-center justify-between gap-4">
-          <div className="text-[14px] font-black tracking-[0.08em] text-[#8C8377]">
+          <div className="text-[14px] font-black tracking-[0.08em]" style={{ color: KT.sub }}>
             {language === 'zh' ? '考试模式 · 试' : 'TEST MODE'}
           </div>
           <Button
@@ -706,7 +698,13 @@ function RunningScreen({
           ? 'Шалгалтын горим'
           : 'Test mode';
   const skipLabel =
-    language === 'zh' ? '跳过' : language === 'vi' ? 'Bỏ qua' : language === 'mn' ? 'Алгасах' : 'Skip';
+    language === 'zh'
+      ? '跳过'
+      : language === 'vi'
+        ? 'Bỏ qua'
+        : language === 'mn'
+          ? 'Алгасах'
+          : 'Skip';
   const nextLabel =
     language === 'zh'
       ? '下一题'
@@ -801,7 +799,9 @@ function RunningScreen({
         </div>
         <div
           className="mx-auto mt-2 grid w-full max-w-[800px] gap-[4px]"
-          style={{ gridTemplateColumns: `repeat(${Math.max(progressPellets.length, 1)}, minmax(0,1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(progressPellets.length, 1)}, minmax(0,1fr))`,
+          }}
         >
           {progressPellets.map((item, idx) => (
             <span
@@ -809,7 +809,11 @@ function RunningScreen({
               style={{
                 height: 5,
                 borderRadius: 999,
-                background: item.isCurrent ? KT.ink : item.answered ? KT.mintDeep : 'rgba(31,27,23,0.1)',
+                background: item.isCurrent
+                  ? KT.ink
+                  : item.answered
+                    ? KT.mintDeep
+                    : 'rgba(31,27,23,0.1)',
               }}
             />
           ))}
@@ -854,7 +858,9 @@ function RunningScreen({
               fontWeight: 800,
             }}
           >
-            {activeCardIndex < cards.length - 1 ? skipLabel : labels.vocabTest?.submitTest || 'Submit'}
+            {activeCardIndex < cards.length - 1
+              ? skipLabel
+              : labels.vocabTest?.submitTest || 'Submit'}
           </button>
           <button
             type="button"
@@ -870,11 +876,16 @@ function RunningScreen({
               fontWeight: 800,
             }}
           >
-            {activeCardIndex < cards.length - 1 ? nextLabel : labels.vocabTest?.submitTest || 'Submit test'}
+            {activeCardIndex < cards.length - 1
+              ? nextLabel
+              : labels.vocabTest?.submitTest || 'Submit test'}
           </button>
         </div>
         {submitAttempted && !isAllAnswered ? (
-          <div className="mx-auto mt-2 w-full max-w-[800px]" style={{ fontSize: 12, fontWeight: 700, color: KT.pinkDeep }}>
+          <div
+            className="mx-auto mt-2 w-full max-w-[800px]"
+            style={{ fontSize: 12, fontWeight: 700, color: KT.pinkDeep }}
+          >
             {labels.vocabTest?.unansweredWarning || 'Some questions are unanswered.'}
           </div>
         ) : null}
@@ -951,11 +962,15 @@ function SettingsScreen({
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 0.9 }}>{scopeTitle}</div>
+          <div style={{ fontSize: 10, fontWeight: 800, color: KT.sub, letterSpacing: 0.9 }}>
+            {scopeTitle}
+          </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: KT.ink, marginTop: 4 }}>
             {labels.vocabTest?.setupTitle || 'Set up your test'}
           </div>
-          <div style={{ fontSize: 11, color: KT.sub, marginTop: 2 }}>{maxQuestions} Words in queue</div>
+          <div style={{ fontSize: 11, color: KT.sub, marginTop: 2 }}>
+            {maxQuestions} Words in queue
+          </div>
         </div>
 
         <div
@@ -1042,7 +1057,13 @@ function SettingsScreen({
                     >
                       {item.icon}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: selected ? KT.mintDeep : KT.ink }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: selected ? KT.mintDeep : KT.ink,
+                      }}
+                    >
                       {item.title}
                     </span>
                   </div>

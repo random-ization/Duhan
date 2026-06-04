@@ -19,8 +19,8 @@ export default {
           card: '#FFFFFF',
           ink: '#1F1B17',
           ink2: '#3D3832',
-          sub: '#8C8377',
-          'sub-light': '#B8AFA2',
+          sub: '#736A5E',
+          'sub-light': '#787063',
           line: 'rgba(31, 27, 23, 0.08)',
           line2: 'rgba(31, 27, 23, 0.14)',
           'line-base': '31, 27, 23', // For opacity usage: bg-[rgba(var(--color-k-line-base),0.05)] or simply using custom CSS variables if needed.

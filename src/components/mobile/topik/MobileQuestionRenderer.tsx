@@ -61,7 +61,7 @@ const EXAM_TACTILE_STYLES = `
   box-shadow: inset 0 2px 4px rgba(31,27,23,0.12), 0 1px 0 rgba(255,255,255,1);
   font-size: 11px;
   font-weight: 900;
-  color: #8C8377;
+  color: var(--color-k-sub);
   margin: 0 4px;
   vertical-align: middle;
   transition: all 0.2s;
@@ -287,7 +287,11 @@ export const MobileQuestionRenderer: React.FC<MobileQuestionRendererProps> = ({
 
       <section
         className="relative w-full rounded-[24px] p-5"
-        style={{ background: '#fff', border: '1px solid rgba(31,27,23,0.08)', boxShadow: '0 8px 26px rgba(31,27,23,0.08)' }}
+        style={{
+          background: '#fff',
+          border: '1px solid rgba(31,27,23,0.08)',
+          boxShadow: '0 8px 26px rgba(31,27,23,0.08)',
+        }}
       >
         {/* ── Header ── */}
         <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">

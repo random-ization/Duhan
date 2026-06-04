@@ -493,7 +493,7 @@
       "seasonProgress": "Tiến độ mùa giải",
       "weekLabel": "Tuần {{count}}",
       "rewards": "Phần thưởng tuần",
-      "fetchingData": "Đang tải dữ liệu bảng xếp hạng...",
+      "fetchingData": "Chưa có dữ liệu tuần này.",
       "rewardsList": {
         "firstPlace": "#1 — Huy hiệu Kim cương + Khung ảnh đại diện giới hạn",
         "topThree": "#2-3 — Huy hiệu Kim cương",

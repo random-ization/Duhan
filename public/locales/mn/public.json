@@ -3491,7 +3491,7 @@
     "desktop": {
       "title": "Энэ долоо хоногийн чансаа",
       "weekLeft": "Үлдсэн долоо хоног",
-      "fetchingData": "Өгөгдлийг татаж байна",
+      "fetchingData": "Энэ долоо хоногт өгөгдөл алга.",
       "promotionCutoff": "Дэвших хязгаар",
       "relegationZone": "Унах бүс",
       "myRank": "Миний рейтинг",

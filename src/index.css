@@ -68,7 +68,7 @@
   --secondary: 210 40% 96%;
   --secondary-foreground: 222.2 47.4% 11.2%;
   --muted: 210 40% 92%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted-foreground: 215.4 16.3% 42%;
   --accent: 210 40% 94%;
   --accent-foreground: 222.2 47.4% 11.2%;
   --destructive: 0 84.2% 60.2%;
@@ -99,8 +99,8 @@
   --color-k-card: #ffffff;
   --color-k-ink: #1f1b17;
   --color-k-ink2: #3d3832;
-  --color-k-sub: #8c8377;
-  --color-k-sub-light: #b8afa2;
+  --color-k-sub: #736a5e;
+  --color-k-sub-light: #787063;
   --color-k-line: rgba(31, 27, 23, 0.08);
   --color-k-line2: rgba(31, 27, 23, 0.14);
   --color-k-pink: #f5c7c0;

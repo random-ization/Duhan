@@ -488,7 +488,7 @@
       "seasonProgress": "赛季历程",
       "weekLabel": "第 {{count}} 周",
       "rewards": "每周奖励",
-      "fetchingData": "正在获取排行榜数据",
+      "fetchingData": "本周还没有排行数据",
       "rewardsList": {
         "firstPlace": "第 1 名 — 钻石勋章 + 限定头像框",
         "topThree": "第 2-3 名 — 钻石勋章",

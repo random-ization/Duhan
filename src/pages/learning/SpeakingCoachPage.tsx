@@ -418,7 +418,7 @@ export default function SpeakingCoachPage() {
           <h3 className="text-sm font-black text-k-ink">{isZh ? '练习句子' : 'Target Sentence'}</h3>
           <button
             onClick={pickRandomSentence}
-            className="text-[11px] font-bold text-k-crimson hover:underline"
+            className="text-[11px] font-bold text-k-crimson hover:underline min-h-[24px] px-1 -mr-1"
           >
             {isZh ? '随机选择' : 'Random'}
           </button>

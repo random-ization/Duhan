@@ -417,7 +417,7 @@
       "seasonProgress": "Season Progress",
       "weekLabel": "Week {{count}}",
       "rewards": "Weekly Rewards",
-      "fetchingData": "Fetching leaderboard data",
+      "fetchingData": "No data yet this week.",
       "rewardsList": {
         "firstPlace": "#1 — Diamond Badge + Limited Avatar Frame",
         "topThree": "#2-3 — Diamond Badge",

@@ -213,10 +213,12 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                marginBottom: 14,
+                marginBottom: 8,
+                marginLeft: -6,
+                minHeight: 24,
                 background: 'none',
                 border: 'none',
-                padding: 0,
+                padding: '6px',
                 cursor: 'pointer',
                 color: KT.sub,
                 fontSize: 13,
@@ -999,26 +1001,24 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                           ) : null}
                         </div>
                       </div>
-                    ) : (
-                      editorOpen ? (
-                        <Suspense
-                          fallback={
-                            <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                            </div>
-                          }
-                        >
-                          <OfficialTiptapEditor
-                            value={editorDoc}
-                            onChange={setEditorDoc}
-                            placeholder={t('notes.v2.page.editorPlaceholder', {
-                              defaultValue: 'Start writing your thoughts here…',
-                            })}
-                            preset="full"
-                          />
-                        </Suspense>
-                      ) : null
-                    )}
+                    ) : editorOpen ? (
+                      <Suspense
+                        fallback={
+                          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-muted/50">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        }
+                      >
+                        <OfficialTiptapEditor
+                          value={editorDoc}
+                          onChange={setEditorDoc}
+                          placeholder={t('notes.v2.page.editorPlaceholder', {
+                            defaultValue: 'Start writing your thoughts here…',
+                          })}
+                          preset="full"
+                        />
+                      </Suspense>
+                    ) : null}
                   </div>
                 )}
               </div>

@@ -3499,7 +3499,7 @@
     "desktop": {
       "title": "本周排行",
       "weekLeft": "剩余 {{days}} 天 {{hours}} 小时",
-      "fetchingData": "正在加载数据",
+      "fetchingData": "本周还没有排行数据",
       "promotionCutoff": "晋级线",
       "relegationZone": "降级区",
       "myRank": "我的排名",

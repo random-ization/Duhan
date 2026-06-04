@@ -5,6 +5,7 @@ import type { TFunction } from 'i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { COMMUNITY, FRIENDS, LEADERBOARD, STORAGE } from '../../utils/convexRefs';
 import { Chip, PageShell, PageIntro, Card, SectionHead } from './ksoft/ksoft';
+import { KT } from '../../theme/ksoftTokens';
 import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
 import { notify } from '../../utils/notify';
 import { UserAvatar } from '../common';
@@ -185,7 +186,7 @@ const PostComposer = ({
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-k-line/5">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-k-sub hover:text-k-crimson transition-colors"
+              className="flex items-center gap-1.5 -ml-1 px-1 min-h-[24px] text-k-sub hover:text-k-crimson transition-colors"
             >
               <ImageIcon size={18} />
               <span className="text-[12px] font-bold">
@@ -440,7 +441,7 @@ export default function MobileCommunityPage() {
             <PostComposer user={user} onSuccess={() => {}} />
 
             {showGuidelines && (
-              <Card pad={20} className="bg-k-ink text-k-bg mb-6 relative overflow-hidden">
+              <Card pad={20} tone={KT.ink} className="text-k-bg mb-6 relative overflow-hidden">
                 <button
                   onClick={() => setShowGuidelines(false)}
                   className="absolute top-3 right-3 text-k-bg/40"

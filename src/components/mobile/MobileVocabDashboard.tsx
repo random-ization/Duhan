@@ -73,7 +73,15 @@ const EMPTY_LEARNER_STATS: LearnerStatsDto = {
   wordsToReview: 0,
   vocabStats: { total: 0, dueReviews: 0, unlearned: 0, mastered: 0 },
   grammarStats: { total: 0, mastered: 0 },
-  reviewStats: { dueNow: 0, dueSoon: 0, savedWords: 0, unlearned: 0, mastered: 0, total: 0, recommendedToday: 0 },
+  reviewStats: {
+    dueNow: 0,
+    dueSoon: 0,
+    savedWords: 0,
+    unlearned: 0,
+    mastered: 0,
+    total: 0,
+    recommendedToday: 0,
+  },
   moduleBreakdown: [],
   recentSessions: [],
   totalMinutes: 0,
@@ -817,9 +825,9 @@ export const MobileVocabDashboard = ({
               marginTop: 14,
             }}
           >
-            <Chip tone="muted">{currentCourseBadge}</Chip>
-            {hasCurrentCourse ? <Chip tone="muted">{currentCourseMeta}</Chip> : null}
-            <Chip tone="muted">{`${copy.progressTitle} ${currentCourseProgress}%`}</Chip>
+            <Chip tone="onDark">{currentCourseBadge}</Chip>
+            {hasCurrentCourse ? <Chip tone="onDark">{currentCourseMeta}</Chip> : null}
+            <Chip tone="onDark">{`${copy.progressTitle} ${currentCourseProgress}%`}</Chip>
           </div>
 
           {hasCurrentCourse ? (

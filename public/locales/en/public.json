@@ -3499,7 +3499,7 @@
     "desktop": {
       "title": "本周排行",
       "weekLeft": "Week Left",
-      "fetchingData": "Fetching Data",
+      "fetchingData": "No data yet this week.",
       "promotionCutoff": "Promotion Cutoff",
       "relegationZone": "Relegation Zone",
       "myRank": "My Rank",
