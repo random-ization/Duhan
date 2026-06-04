@@ -121,6 +121,7 @@ export function MobileBottomNav() {
         pathWithoutLang.startsWith('/courses') ||
         pathWithoutLang.startsWith('/course/') ||
         pathWithoutLang.startsWith('/review') ||
+        pathWithoutLang.startsWith('/speaking') ||
         pathWithoutLang.startsWith('/topik') ||
         pathWithoutLang.startsWith('/typing') ||
         pathWithoutLang.startsWith('/vocab-book') ||

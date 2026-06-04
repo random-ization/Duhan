@@ -104,6 +104,15 @@ export function GlobalCommandPalette({ openRequestKey = 0 }: Readonly<GlobalComm
         keywords: ['topik', 'writing', 'essay', 'coach', 'ai'],
       },
       {
+        id: 'speaking-coach',
+        label: t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' }),
+        description: t('mobileSpeakingModule.commandDescription', {
+          defaultValue: 'Read aloud, shadowing, and pronunciation feedback',
+        }),
+        path: '/speaking',
+        keywords: ['speaking', 'pronunciation', 'shadowing', 'voice', 'audio'],
+      },
+      {
         id: 'typing',
         label: t('sidebar.typing', { defaultValue: 'Typing' }),
         description: t('typing.subtitle', { defaultValue: 'Speed + accuracy drills' }),

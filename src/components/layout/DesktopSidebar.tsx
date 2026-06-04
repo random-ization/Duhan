@@ -29,6 +29,8 @@ interface NavGroup {
 }
 
 function useDesktopSidebarNav(currentLanguage: string) {
+  const { t } = useTranslation('public');
+
   return useMemo<NavGroup[]>(() => {
     const toPath = (p: string) => getLocalizedPath(p, currentLanguage);
 
@@ -56,6 +58,12 @@ function useDesktopSidebarNav(currentLanguage: string) {
           { id: 'vocabhub', k: '詞', l: '词汇学习', path: toPath('/vocab-book') },
           { id: 'grammar', k: '法', l: '语法', path: grammarPath },
           { id: 'typing', k: '寫', l: '打字练习', path: toPath('/typing') },
+          {
+            id: 'speaking',
+            k: 'S',
+            l: t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' }),
+            path: toPath('/speaking'),
+          },
           { id: 'writing-coach', k: '筆', l: '写作教练', path: toPath('/topik/writing-coach') },
           { id: 'topik', k: '試', l: 'TOPIK 备考', path: toPath('/topik') },
         ],
@@ -96,7 +104,7 @@ function useDesktopSidebarNav(currentLanguage: string) {
         ],
       },
     ];
-  }, [currentLanguage]);
+  }, [currentLanguage, t]);
 }
 
 export default function DesktopSidebar() {

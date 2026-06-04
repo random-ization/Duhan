@@ -724,6 +724,15 @@ function EssentialActionsCard({
       tone: 'lilac',
     },
     {
+      k: 'S',
+      title: t('mobileSpeakingModule.title', { defaultValue: 'Speaking Practice' }),
+      detail: t('mobileSpeakingModule.commandDescription', {
+        defaultValue: 'Read aloud, shadowing, and pronunciation feedback.',
+      }),
+      path: '/speaking',
+      tone: 'sky',
+    },
+    {
       k: '詞',
       title: '词汇资产',
       detail: `${formatNumber(stats?.vocabStats?.total ?? 0)} 个词 · ${formatNumber(stats?.vocabStats?.dueReviews ?? 0)} 个待复习`,

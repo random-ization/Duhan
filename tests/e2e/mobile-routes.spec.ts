@@ -2,12 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const langPrefix = '/en';
 
-const publicRoutes = [
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/pricing/details',
-];
+const publicRoutes = ['/login', '/register', '/forgot-password', '/pricing/details'];
 
 const appRoutes = [
   '/dashboard',
@@ -17,6 +12,7 @@ const appRoutes = [
   '/course/demo-course/reading',
   '/course/demo-course/grammar',
   '/review',
+  '/speaking',
   '/typing',
   '/topik',
   '/topik/history',
