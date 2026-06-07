@@ -7,6 +7,7 @@ import { buildPictureBookReaderSessionStorageKey } from '../../src/utils/reading
 const navigateMock = vi.fn();
 const useQueryMock = vi.fn();
 const useActionMock = vi.fn();
+const useIsMobileMock = vi.fn();
 
 class MockAudio {
   preload = '';
@@ -51,6 +52,10 @@ vi.mock('../../src/hooks/useUpgradeFlow', () => ({
   }),
 }));
 
+vi.mock('../../src/hooks/useIsMobile', () => ({
+  useIsMobile: () => useIsMobileMock(),
+}));
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
@@ -83,10 +88,12 @@ describe('PictureBookReaderPage session restore', () => {
     navigateMock.mockReset();
     useQueryMock.mockReset();
     useActionMock.mockReset();
+    useIsMobileMock.mockReset();
     sessionStorage.clear();
     vi.stubGlobal('Audio', MockAudio);
     vi.stubGlobal('Image', MockImage);
     useActionMock.mockReturnValue(vi.fn());
+    useIsMobileMock.mockReturnValue(true);
 
     useQueryMock.mockImplementation((_ref: unknown, args: unknown) => {
       if (!args || args === 'skip') return undefined;
@@ -320,13 +327,88 @@ describe('PictureBookReaderPage session restore', () => {
     });
 
     const readerCanvas = Array.from(view.container.querySelectorAll('div')).find(element =>
-      element.className.includes('aspect-[1.56/1]')
+      element.className.includes('calc((100vw-2rem)*1.32)')
     );
 
     expect(readerCanvas).toBeInTheDocument();
     expect(readerCanvas?.className).toContain(
-      'w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.56))]'
+      'h-[min(calc(100svh-12rem),calc((100vw-2rem)*1.32))]'
+    );
+    expect(readerCanvas?.className).toContain(
+      'w-[min(calc(100vw-2rem),calc((100svh-12rem)/1.32))]'
     );
     expect(readerCanvas?.className).not.toContain(' h-[min(82vh,calc((100vw-400px)/1.56))]');
+  });
+
+  it('uses a full-width mobile reading column for long split-layout text', async () => {
+    useQueryMock.mockImplementation((_ref: unknown, args: unknown) => {
+      if (!args || args === 'skip') return undefined;
+      if (typeof args === 'object' && args && 'slug' in args && !('pageIndex' in args)) {
+        return {
+          _id: 'book-1',
+          slug: 'storybook',
+          title: 'Storybook',
+          pageCount: 1,
+          levelLabel: 'Level 5',
+        };
+      }
+      if (typeof args === 'object' && args && 'slug' in args && 'pageIndex' in args) {
+        return {
+          book: {
+            _id: 'book-1',
+            slug: 'storybook',
+            title: 'Storybook',
+            pageCount: 1,
+            levelLabel: 'Level 5',
+          },
+          page: {
+            _id: 'page-0',
+            pageIndex: 0,
+            imageUrl: '/page-0.png',
+            layoutClass: 'left',
+            sentenceCount: 2,
+            sentences: [
+              {
+                _id: 'sentence-0',
+                sentenceIndex: 0,
+                text: '옛날 어느 마을에 한 부부가 살았어요.',
+                audioUrl: '/audio-0.mp3',
+              },
+              {
+                _id: 'sentence-1',
+                sentenceIndex: 1,
+                text: '남편인 떼인기와 아내는 오래전부터 서로를 아끼며 살았지만 어느 날 긴 이야기가 시작되었어요.',
+                audioUrl: '/audio-1.mp3',
+              },
+            ],
+          },
+          pageCount: 1,
+          pageIndex: 0,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        };
+      }
+      return undefined;
+    });
+
+    const view = renderPage('/reading/books/storybook');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('옛날 어느 마을에 한 부부가 살았어요.').length).toBeGreaterThan(0);
+    });
+
+    const textBlock = Array.from(view.container.querySelectorAll('div')).find(
+      element =>
+        element.className.includes('overflow-y-auto') &&
+        element.className.includes('text-slate-900')
+    );
+    const textRegion = textBlock?.parentElement;
+
+    expect(textRegion?.className).toContain('left-5 right-5');
+    expect(textRegion?.className).toContain('w-auto');
+    expect(textRegion?.className).not.toContain('left-[57%]');
+    expect(textRegion?.className).not.toContain('w-[36%]');
+    expect(textBlock?.className).toContain('text-[clamp(18px,5vw,24px)]');
+    expect(textBlock?.className).toContain('leading-[1.85]');
   });
 });

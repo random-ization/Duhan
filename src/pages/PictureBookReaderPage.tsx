@@ -111,7 +111,17 @@ function getReaderLayoutForPage(
   return getReaderLayout(levelNumber);
 }
 
-function getPageImageRegionClass(layout: 'stacked' | 'split', layoutClass?: string) {
+function getPageImageRegionClass(
+  layout: 'stacked' | 'split',
+  layoutClass: string | undefined,
+  isMobile: boolean,
+  hasPageImage: boolean
+) {
+  if (isMobile) {
+    return hasPageImage
+      ? 'absolute left-4 right-4 top-4 flex h-[32%] items-center justify-center overflow-hidden rounded-[1.5rem] bg-k-bg2/70'
+      : 'hidden';
+  }
   if (layout === 'stacked') {
     return 'absolute left-0 top-0 flex h-[62%] w-full items-center justify-center overflow-hidden';
   }
@@ -123,7 +133,17 @@ function getPageImageRegionClass(layout: 'stacked' | 'split', layoutClass?: stri
 
 const PAGE_IMAGE_PRELOAD_TIMEOUT_MS = 1600;
 
-function getPageTextRegionClass(layout: 'stacked' | 'split', layoutClass?: string) {
+function getPageTextRegionClass(
+  layout: 'stacked' | 'split',
+  layoutClass: string | undefined,
+  isMobile: boolean,
+  hasPageImage: boolean
+) {
+  if (isMobile) {
+    return hasPageImage
+      ? 'absolute left-5 right-5 top-[39%] bottom-14 w-auto'
+      : 'absolute left-5 right-5 top-6 bottom-14 w-auto';
+  }
   if (layout === 'stacked') {
     return 'absolute left-[8%] top-[64%] h-[31%] w-[84%]';
   }
@@ -139,7 +159,14 @@ function getPageTextRegionClass(layout: 'stacked' | 'split', layoutClass?: strin
   return 'absolute left-[57%] top-0 h-full w-[36%]';
 }
 
-function getTextBlockClass(layout: 'stacked' | 'split', layoutClass?: string) {
+function getTextBlockClass(
+  layout: 'stacked' | 'split',
+  layoutClass: string | undefined,
+  isMobile: boolean
+) {
+  if (isMobile) {
+    return 'h-full w-full overflow-y-auto pr-1 text-left text-[clamp(18px,5vw,24px)] leading-[1.85] text-slate-900';
+  }
   return cn(
     'h-full w-full overflow-y-auto text-slate-900',
     layout === 'stacked'
@@ -735,7 +762,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
 
     return (
       <div className={cn('absolute inset-0', extraClassName)}>
-        <div className={getPageImageRegionClass(layerLayout, layerPage.layoutClass)}>
+        <div
+          className={getPageImageRegionClass(
+            layerLayout,
+            layerPage.layoutClass,
+            isMobile,
+            Boolean(pageImageSrc)
+          )}
+        >
           {pageImageSrc ? (
             <img
               src={pageImageSrc}
@@ -745,9 +779,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 page: layerPageData.pageIndex + 1,
               })}
               className={cn(
-                layerLayout === 'stacked'
-                  ? 'h-[90%] w-auto max-w-[92%] scale-[1.08] object-contain'
-                  : 'h-full w-auto max-w-full scale-[1.03] object-contain'
+                isMobile
+                  ? 'h-full w-full object-contain'
+                  : layerLayout === 'stacked'
+                    ? 'h-[90%] w-auto max-w-[92%] scale-[1.08] object-contain'
+                    : 'h-full w-auto max-w-full scale-[1.03] object-contain'
               )}
             />
           ) : (
@@ -757,9 +793,16 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           )}
         </div>
 
-        <div className={getPageTextRegionClass(layerLayout, layerPage.layoutClass)}>
+        <div
+          className={getPageTextRegionClass(
+            layerLayout,
+            layerPage.layoutClass,
+            isMobile,
+            Boolean(pageImageSrc)
+          )}
+        >
           {layerSentences.length > 0 ? (
-            <div className={getTextBlockClass(layerLayout, layerPage.layoutClass)}>
+            <div className={getTextBlockClass(layerLayout, layerPage.layoutClass, isMobile)}>
               {layerSentences.map((sentence, idx) => {
                 const isActive = sentence.sentenceIndex === safeSentenceIndex;
                 return (
@@ -767,9 +810,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                     key={sentence._id ?? `${sentence.sentenceIndex}-${sentence.text}`}
                     className={cn(
                       'transition',
-                      layerLayout === 'stacked'
-                        ? 'mb-[0.32em] flex justify-center last:mb-0'
-                        : 'mb-4 last:mb-0'
+                      isMobile
+                        ? 'mb-3 last:mb-0'
+                        : layerLayout === 'stacked'
+                          ? 'mb-[0.32em] flex justify-center last:mb-0'
+                          : 'mb-4 last:mb-0'
                     )}
                   >
                     <button
@@ -782,14 +827,20 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                       disabled={!isInteractive}
                       className={cn(
                         'transition-all duration-300 font-k-serif',
-                        layerLayout === 'stacked'
-                          ? 'inline rounded-[0.35em] px-[0.16em] py-[0.02em] align-baseline'
-                          : 'block w-full rounded-2xl px-4 py-3 text-left whitespace-normal break-keep',
-                        isActive
-                          ? 'bg-k-butter text-k-ink shadow-k-sh-sm transform scale-[1.02]'
+                        isMobile
+                          ? 'block w-full rounded-xl px-2 py-1.5 text-left whitespace-normal break-keep'
                           : layerLayout === 'stacked'
-                            ? 'text-k-ink hover:bg-k-line'
-                            : 'text-k-ink hover:bg-k-bg2/80',
+                            ? 'inline rounded-[0.35em] px-[0.16em] py-[0.02em] align-baseline'
+                            : 'block w-full rounded-2xl px-4 py-3 text-left whitespace-normal break-keep',
+                        isMobile && isActive
+                          ? 'bg-k-butter/55 text-k-ink shadow-none'
+                          : isActive
+                            ? 'bg-k-butter text-k-ink shadow-k-sh-sm transform scale-[1.02]'
+                            : isMobile
+                              ? 'text-k-ink hover:bg-k-bg2/70'
+                              : layerLayout === 'stacked'
+                                ? 'text-k-ink hover:bg-k-line'
+                                : 'text-k-ink hover:bg-k-bg2/80',
                         !isInteractive && 'pointer-events-none'
                       )}
                     >
@@ -799,7 +850,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                           <span
                             className={cn(
                               'mt-1 font-k-sans font-bold leading-tight opacity-60 italic',
-                              layerLayout === 'stacked' ? 'text-[0.6em]' : 'text-sm'
+                              isMobile
+                                ? 'text-[0.78em]'
+                                : layerLayout === 'stacked'
+                                  ? 'text-[0.6em]'
+                                  : 'text-sm'
                             )}
                           >
                             {translatedPages[layerPageData.pageIndex][idx]}
@@ -820,7 +875,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           )}
         </div>
 
-        <div className="absolute bottom-6 right-8 rounded-full border border-k-line bg-k-card/80 backdrop-blur-md px-5 py-1.5 text-xs font-black text-k-sub shadow-k-sh-sm">
+        <div className="absolute bottom-4 right-5 rounded-full border border-k-line bg-k-card/85 px-3 py-1 text-[11px] font-black text-k-sub shadow-k-sh-sm backdrop-blur-md sm:bottom-6 sm:right-8 sm:px-5 sm:py-1.5 sm:text-xs">
           {layerPageData.pageIndex + 1} <span className="mx-1.5 opacity-30">/</span>{' '}
           {layerPageData.pageCount}
         </div>
@@ -916,13 +971,15 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       <main className="flex-1 flex min-h-0 relative">
         {/* ─── LEFT: READER CANVAS ─── */}
         <div className="flex-1 flex flex-col min-w-0 bg-k-bg2/30">
-          <div className="flex-1 relative flex items-center justify-center p-6 lg:p-12 overflow-hidden">
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden p-4 sm:p-6 lg:p-12">
             <div
               className={cn(
                 'relative max-h-full max-w-full overflow-hidden bg-k-card shadow-k-sh-lg transition-all duration-500',
-                currentLayout === 'stacked'
-                  ? 'aspect-[1.56/1] w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.56))] lg:h-[min(82vh,calc((100vw-400px)/1.56))] lg:w-auto rounded-[2rem] border border-k-line'
-                  : 'aspect-[1.34/1] w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.34))] lg:h-[min(82vh,calc((100vw-400px)/1.34))] lg:w-auto rounded-[2.5rem] border border-k-line'
+                isMobile
+                  ? 'h-[min(calc(100svh-12rem),calc((100vw-2rem)*1.32))] w-[min(calc(100vw-2rem),calc((100svh-12rem)/1.32))] rounded-[2rem] border border-k-line'
+                  : currentLayout === 'stacked'
+                    ? 'aspect-[1.56/1] h-[min(82vh,calc((100vw-400px)/1.56))] w-auto rounded-[2rem] border border-k-line'
+                    : 'aspect-[1.34/1] h-[min(82vh,calc((100vw-400px)/1.34))] w-auto rounded-[2.5rem] border border-k-line'
               )}
             >
               {renderPageLayer(renderedPageData, safeActiveSentenceIndex, true)}
@@ -957,15 +1014,15 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           </div>
 
           {/* Player Bar */}
-          <div className="shrink-0 h-24 border-t border-k-line bg-k-card/50 backdrop-blur-md flex items-center px-10">
-            <div className="flex-1 flex items-center gap-6">
+          <div className="flex h-24 shrink-0 items-center border-t border-k-line bg-k-card/50 px-4 backdrop-blur-md sm:px-10">
+            <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-6">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => handlePageChange(renderedPageData.pageIndex - 1)}
                 disabled={!renderedPageData.hasPreviousPage}
-                className="h-12 w-12 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30"
+                className="h-11 w-11 shrink-0 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30 sm:h-12 sm:w-12"
               >
                 <ChevronLeft size={24} />
               </Button>
@@ -974,7 +1031,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 onClick={() => void handleTogglePlay()}
                 disabled={currentSentences.length === 0}
                 className={cn(
-                  'h-14 w-14 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-k-sh',
+                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-k-sh transition-all active:scale-95',
                   isPlaying ? 'bg-k-crimson text-k-bg' : 'bg-k-ink text-k-bg hover:bg-k-crimson'
                 )}
               >
@@ -986,20 +1043,20 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 size="icon"
                 onClick={() => handlePageChange(renderedPageData.pageIndex + 1)}
                 disabled={!renderedPageData.hasNextPage}
-                className="h-12 w-12 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30"
+                className="h-11 w-11 shrink-0 rounded-xl text-k-sub hover:text-k-ink disabled:opacity-30 sm:h-12 sm:w-12"
               >
                 <ChevronRight size={24} />
               </Button>
 
-              <div className="w-px h-6 bg-k-line mx-2" />
+              <div className="mx-2 hidden h-6 w-px bg-k-line sm:block" />
 
-              <div className="flex-1 max-w-2xl px-4 py-2 bg-k-bg2/40 rounded-2xl border border-k-line/5 flex items-center justify-center">
-                <span className="font-k-serif text-[18px] font-medium text-k-ink text-center truncate px-4">
+              <div className="flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-k-line/5 bg-k-bg2/40 px-3 py-2 sm:max-w-2xl sm:px-4">
+                <span className="truncate px-1 text-center font-k-serif text-[16px] font-medium text-k-ink sm:px-4 sm:text-[18px]">
                   {activeSentence?.text || '...'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 text-k-sub font-black text-[12px]">
+              <div className="hidden items-center gap-4 text-[12px] font-black text-k-sub sm:flex">
                 <span className="text-k-ink">{renderedPageData.pageIndex + 1}</span>
                 <div className="w-32 h-1 bg-k-line rounded-full overflow-hidden">
                   <div
