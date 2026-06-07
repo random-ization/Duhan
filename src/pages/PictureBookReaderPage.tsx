@@ -921,8 +921,8 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
               className={cn(
                 'relative max-h-full max-w-full overflow-hidden bg-k-card shadow-k-sh-lg transition-all duration-500',
                 currentLayout === 'stacked'
-                  ? 'aspect-[1.56/1] h-[min(82vh,calc((100vw-400px)/1.56))] w-auto rounded-[2rem] border border-k-line'
-                  : 'aspect-[1.34/1] h-[min(82vh,calc((100vw-400px)/1.34))] w-auto rounded-[2.5rem] border border-k-line'
+                  ? 'aspect-[1.56/1] w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.56))] lg:h-[min(82vh,calc((100vw-400px)/1.56))] lg:w-auto rounded-[2rem] border border-k-line'
+                  : 'aspect-[1.34/1] w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.34))] lg:h-[min(82vh,calc((100vw-400px)/1.34))] lg:w-auto rounded-[2.5rem] border border-k-line'
               )}
             >
               {renderPageLayer(renderedPageData, safeActiveSentenceIndex, true)}

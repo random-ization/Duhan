@@ -311,4 +311,22 @@ describe('PictureBookReaderPage session restore', () => {
       { timeout: 500 }
     );
   });
+
+  it('uses mobile-safe canvas sizing instead of the desktop sidebar width formula', async () => {
+    const view = renderPage('/reading/books/storybook');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Sentence 1').length).toBeGreaterThan(0);
+    });
+
+    const readerCanvas = Array.from(view.container.querySelectorAll('div')).find(element =>
+      element.className.includes('aspect-[1.56/1]')
+    );
+
+    expect(readerCanvas).toBeInTheDocument();
+    expect(readerCanvas?.className).toContain(
+      'w-[min(calc(100vw-3rem),calc((100svh-12rem)*1.56))]'
+    );
+    expect(readerCanvas?.className).not.toContain(' h-[min(82vh,calc((100vw-400px)/1.56))]');
+  });
 });
