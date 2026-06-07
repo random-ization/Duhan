@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildPictureBookReaderSessionStorageKey } from '../../src/utils/readingSession';
@@ -319,7 +319,7 @@ describe('PictureBookReaderPage session restore', () => {
     );
   });
 
-  it('uses mobile-safe canvas sizing instead of the desktop sidebar width formula', async () => {
+  it('uses a full-screen mobile reading viewport instead of the desktop sidebar width formula', async () => {
     const view = renderPage('/reading/books/storybook');
 
     await waitFor(() => {
@@ -327,16 +327,12 @@ describe('PictureBookReaderPage session restore', () => {
     });
 
     const readerCanvas = Array.from(view.container.querySelectorAll('div')).find(element =>
-      element.className.includes('calc((100vw-2rem)*1.32)')
+      element.className.includes('h-full w-full overflow-y-auto')
     );
 
     expect(readerCanvas).toBeInTheDocument();
-    expect(readerCanvas?.className).toContain(
-      'h-[min(calc(100svh-12rem),calc((100vw-2rem)*1.32))]'
-    );
-    expect(readerCanvas?.className).toContain(
-      'w-[min(calc(100vw-2rem),calc((100svh-12rem)/1.32))]'
-    );
+    expect(readerCanvas?.className).toContain('bg-k-bg px-4 pt-6');
+    expect(readerCanvas?.className).not.toContain('calc((100vw-2rem)*1.32)');
     expect(readerCanvas?.className).not.toContain(' h-[min(82vh,calc((100vw-400px)/1.56))]');
   });
 
@@ -399,16 +395,86 @@ describe('PictureBookReaderPage session restore', () => {
 
     const textBlock = Array.from(view.container.querySelectorAll('div')).find(
       element =>
-        element.className.includes('overflow-y-auto') &&
-        element.className.includes('text-slate-900')
+        element.className.includes('space-y-3') && element.className.includes('text-slate-950')
     );
     const textRegion = textBlock?.parentElement;
 
-    expect(textRegion?.className).toContain('left-5 right-5');
-    expect(textRegion?.className).toContain('w-auto');
+    expect(textRegion?.className).toContain('mx-auto w-full max-w-[34rem]');
+    expect(textRegion?.className).toContain('px-5 pt-5');
     expect(textRegion?.className).not.toContain('left-[57%]');
     expect(textRegion?.className).not.toContain('w-[36%]');
-    expect(textBlock?.className).toContain('text-[clamp(18px,5vw,24px)]');
+    expect(textBlock?.className).toContain('text-[clamp(19px,5.2vw,24px)]');
     expect(textBlock?.className).toContain('leading-[1.85]');
+  });
+
+  it('uses a scrollable mobile story flow instead of an absolutely positioned page spread', async () => {
+    const view = renderPage('/reading/books/storybook');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Sentence 1').length).toBeGreaterThan(0);
+    });
+
+    const readerCanvas = Array.from(view.container.querySelectorAll('div')).find(element =>
+      element.className.includes('h-full w-full overflow-y-auto')
+    );
+    const pageLayer = Array.from(view.container.querySelectorAll('div')).find(element =>
+      element.className.includes('min-h-full pb-28')
+    );
+    const imageRegion = Array.from(view.container.querySelectorAll('div')).find(element =>
+      element.className.includes('aspect-[4/3]')
+    );
+    const textRegion = Array.from(view.container.querySelectorAll('div')).find(element =>
+      element.className.includes('mx-auto w-full max-w-[34rem]')
+    );
+
+    expect(readerCanvas).toBeInTheDocument();
+    expect(readerCanvas?.className).not.toContain('aspect-[1.56/1]');
+    expect(pageLayer).toBeInTheDocument();
+    expect(pageLayer?.className).not.toContain('absolute inset-0');
+    expect(imageRegion?.className).toContain('relative mx-auto');
+    expect(imageRegion?.className).not.toContain('absolute');
+    expect(textRegion?.className).toContain('px-5 pt-5');
+    expect(textRegion?.className).not.toContain('bottom-14');
+  });
+
+  it('caps portrait page images so they do not dominate the mobile reading viewport', async () => {
+    class PortraitImage extends MockImage {
+      naturalWidth = 600;
+      naturalHeight = 1200;
+    }
+
+    vi.stubGlobal('Image', PortraitImage);
+
+    const view = renderPage('/reading/books/storybook');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Sentence 1').length).toBeGreaterThan(0);
+    });
+
+    const portraitImageRegion = await waitFor(() => {
+      const region = Array.from(view.container.querySelectorAll('div')).find(element =>
+        element.className.includes('aspect-[3/4]')
+      );
+      expect(region).toBeInTheDocument();
+      return region;
+    });
+
+    expect(portraitImageRegion?.className).toContain('max-h-[42svh]');
+    expect(portraitImageRegion?.className).toContain('w-[min(100%,calc(42svh*0.75))]');
+    expect(portraitImageRegion?.className).not.toContain('h-screen');
+  });
+
+  it('lets mobile readers open a larger page image without changing the reading flow', async () => {
+    renderPage('/reading/books/storybook');
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Sentence 1').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open page image' }));
+
+    expect(screen.getByRole('dialog', { name: 'Page image' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close page image' })).toBeInTheDocument();
+    expect(screen.getAllByRole('img').length).toBeGreaterThanOrEqual(2);
   });
 });

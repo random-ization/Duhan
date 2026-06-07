@@ -43,6 +43,11 @@ type BookPageQuery = {
 
 const PLAYBACK_RATES = [0.8, 1, 1.2, 1.5] as const;
 type ReaderLayout = 'stacked' | 'split';
+type PageImageOrientation = 'landscape' | 'portrait';
+type ExpandedPageImage = {
+  src: string;
+  alt: string;
+} | null;
 
 function isPictureBookTranslationDailyLimitCode(errorCode: string | undefined) {
   return errorCode === 'DAILY_LIMIT_REACHED';
@@ -115,12 +120,17 @@ function getPageImageRegionClass(
   layout: 'stacked' | 'split',
   layoutClass: string | undefined,
   isMobile: boolean,
-  hasPageImage: boolean
+  hasPageImage: boolean,
+  imageOrientation?: PageImageOrientation
 ) {
   if (isMobile) {
-    return hasPageImage
-      ? 'absolute left-4 right-4 top-4 flex h-[32%] items-center justify-center overflow-hidden rounded-[1.5rem] bg-k-bg2/70'
-      : 'hidden';
+    if (!hasPageImage) return 'hidden';
+    return cn(
+      'relative mx-auto flex items-center justify-center overflow-hidden rounded-[1.5rem] bg-k-bg2/70 shadow-k-sh-sm',
+      imageOrientation === 'portrait'
+        ? 'aspect-[3/4] max-h-[42svh] w-[min(100%,calc(42svh*0.75))]'
+        : 'aspect-[4/3] w-full max-w-[34rem]'
+    );
   }
   if (layout === 'stacked') {
     return 'absolute left-0 top-0 flex h-[62%] w-full items-center justify-center overflow-hidden';
@@ -141,8 +151,8 @@ function getPageTextRegionClass(
 ) {
   if (isMobile) {
     return hasPageImage
-      ? 'absolute left-5 right-5 top-[39%] bottom-14 w-auto'
-      : 'absolute left-5 right-5 top-6 bottom-14 w-auto';
+      ? 'relative mx-auto w-full max-w-[34rem] px-5 pt-5 pb-6'
+      : 'relative mx-auto w-full max-w-[34rem] px-5 pt-7 pb-6';
   }
   if (layout === 'stacked') {
     return 'absolute left-[8%] top-[64%] h-[31%] w-[84%]';
@@ -165,7 +175,7 @@ function getTextBlockClass(
   isMobile: boolean
 ) {
   if (isMobile) {
-    return 'h-full w-full overflow-y-auto pr-1 text-left text-[clamp(18px,5vw,24px)] leading-[1.85] text-slate-900';
+    return 'w-full space-y-3 text-left text-[clamp(19px,5.2vw,24px)] leading-[1.85] text-slate-950';
   }
   return cn(
     'h-full w-full overflow-y-auto text-slate-900',
@@ -216,6 +226,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
   const [overlayPageData, setOverlayPageData] = useState<BookPageQuery>(null);
   const [showOverlayPage, setShowOverlayPage] = useState(false);
   const [pageOrientations, setPageOrientations] = useState<Record<string, ReaderLayout>>({});
+  const [pageImageOrientations, setPageImageOrientations] = useState<
+    Record<string, PageImageOrientation>
+  >({});
+  const [expandedPageImage, setExpandedPageImage] = useState<ExpandedPageImage>(null);
   const [showTranslations, setShowTranslations] = useState(false);
   const [translatedPages, setTranslatedPages] = useState<Record<number, string[]>>({});
   const [translationFailedPages, setTranslationFailedPages] = useState<Record<number, boolean>>({});
@@ -500,8 +514,17 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     let preloadTimeout = 0;
     const commitWhenReady = async () => {
       if (cancelled) return;
+      const nextImageOrientation: PageImageOrientation =
+        preloadedImage.naturalWidth >= preloadedImage.naturalHeight ? 'landscape' : 'portrait';
       const nextOrientation: ReaderLayout =
         preloadedImage.naturalWidth >= preloadedImage.naturalHeight ? 'stacked' : 'split';
+      setPageImageOrientations(current => {
+        if (!nextImageUrl || current[nextImageUrl] === nextImageOrientation) return current;
+        return {
+          ...current,
+          [nextImageUrl]: nextImageOrientation,
+        };
+      });
       setPageOrientations(current => {
         if (!nextImageUrl || current[nextImageUrl] === nextOrientation) return current;
         return {
@@ -756,36 +779,56 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       layerPage.layoutClass
     );
     const layerSentences = layerPage.sentences ?? [];
+    const layerPageImageOrientation = pageImageSrc
+      ? pageImageOrientations[pageImageSrc]
+      : undefined;
     const safeSentenceIndex = layerSentences.length
       ? Math.min(sentenceIndex, layerSentences.length - 1)
       : 0;
+    const pageImageAlt = t('pictureBookReader.pageImageAlt', {
+      defaultValue: '{{title}} page {{page}}',
+      title: displayBook.title,
+      page: layerPageData.pageIndex + 1,
+    });
 
     return (
-      <div className={cn('absolute inset-0', extraClassName)}>
+      <div className={cn(isMobile ? 'min-h-full pb-28' : 'absolute inset-0', extraClassName)}>
         <div
           className={getPageImageRegionClass(
             layerLayout,
             layerPage.layoutClass,
             isMobile,
-            Boolean(pageImageSrc)
+            Boolean(pageImageSrc),
+            layerPageImageOrientation
           )}
         >
           {pageImageSrc ? (
-            <img
-              src={pageImageSrc}
-              alt={t('pictureBookReader.pageImageAlt', {
-                defaultValue: '{{title}} page {{page}}',
-                title: displayBook.title,
-                page: layerPageData.pageIndex + 1,
-              })}
-              className={cn(
-                isMobile
-                  ? 'h-full w-full object-contain'
-                  : layerLayout === 'stacked'
+            isMobile ? (
+              <button
+                type="button"
+                aria-label={t('pictureBookReader.openPageImage', {
+                  defaultValue: 'Open page image',
+                })}
+                onClick={() => setExpandedPageImage({ src: pageImageSrc, alt: pageImageAlt })}
+                className="h-full w-full cursor-zoom-in"
+              >
+                <img
+                  src={pageImageSrc}
+                  alt={pageImageAlt}
+                  className="h-full w-full object-contain"
+                />
+              </button>
+            ) : (
+              <img
+                src={pageImageSrc}
+                alt={pageImageAlt}
+                className={cn(
+                  layerLayout === 'stacked'
                     ? 'h-[90%] w-auto max-w-[92%] scale-[1.08] object-contain'
                     : 'h-full w-auto max-w-full scale-[1.03] object-contain'
-              )}
-            />
+                )}
+              />
+            )
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-k-bg2 text-k-sub-light">
               <BookOpen className="h-12 w-12" />
@@ -811,7 +854,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                     className={cn(
                       'transition',
                       isMobile
-                        ? 'mb-3 last:mb-0'
+                        ? 'last:mb-0'
                         : layerLayout === 'stacked'
                           ? 'mb-[0.32em] flex justify-center last:mb-0'
                           : 'mb-4 last:mb-0'
@@ -828,16 +871,16 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                       className={cn(
                         'transition-all duration-300 font-k-serif',
                         isMobile
-                          ? 'block w-full rounded-xl px-2 py-1.5 text-left whitespace-normal break-keep'
+                          ? 'block w-full rounded-[1.1rem] border-l-4 px-4 py-3 text-left whitespace-normal break-keep'
                           : layerLayout === 'stacked'
                             ? 'inline rounded-[0.35em] px-[0.16em] py-[0.02em] align-baseline'
                             : 'block w-full rounded-2xl px-4 py-3 text-left whitespace-normal break-keep',
                         isMobile && isActive
-                          ? 'bg-k-butter/55 text-k-ink shadow-none'
+                          ? 'border-k-crimson bg-k-butter/45 text-k-ink shadow-none'
                           : isActive
                             ? 'bg-k-butter text-k-ink shadow-k-sh-sm transform scale-[1.02]'
                             : isMobile
-                              ? 'text-k-ink hover:bg-k-bg2/70'
+                              ? 'border-transparent text-k-ink hover:bg-k-bg2/70'
                               : layerLayout === 'stacked'
                                 ? 'text-k-ink hover:bg-k-line'
                                 : 'text-k-ink hover:bg-k-bg2/80',
@@ -875,7 +918,13 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           )}
         </div>
 
-        <div className="absolute bottom-4 right-5 rounded-full border border-k-line bg-k-card/85 px-3 py-1 text-[11px] font-black text-k-sub shadow-k-sh-sm backdrop-blur-md sm:bottom-6 sm:right-8 sm:px-5 sm:py-1.5 sm:text-xs">
+        <div
+          className={cn(
+            isMobile
+              ? 'mx-auto mt-2 w-fit rounded-full border border-k-line bg-k-card/85 px-3 py-1 text-[11px] font-black text-k-sub shadow-k-sh-sm backdrop-blur-md'
+              : 'absolute bottom-4 right-5 rounded-full border border-k-line bg-k-card/85 px-3 py-1 text-[11px] font-black text-k-sub shadow-k-sh-sm backdrop-blur-md sm:bottom-6 sm:right-8 sm:px-5 sm:py-1.5 sm:text-xs'
+          )}
+        >
           {layerPageData.pageIndex + 1} <span className="mx-1.5 opacity-30">/</span>{' '}
           {layerPageData.pageCount}
         </div>
@@ -971,19 +1020,19 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       <main className="flex-1 flex min-h-0 relative">
         {/* ─── LEFT: READER CANVAS ─── */}
         <div className="flex-1 flex flex-col min-w-0 bg-k-bg2/30">
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden p-4 sm:p-6 lg:p-12">
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden p-0 sm:p-6 lg:p-12">
             <div
               className={cn(
-                'relative max-h-full max-w-full overflow-hidden bg-k-card shadow-k-sh-lg transition-all duration-500',
+                'relative transition-all duration-500',
                 isMobile
-                  ? 'h-[min(calc(100svh-12rem),calc((100vw-2rem)*1.32))] w-[min(calc(100vw-2rem),calc((100svh-12rem)/1.32))] rounded-[2rem] border border-k-line'
+                  ? 'h-full w-full overflow-y-auto bg-k-bg px-4 pt-6 shadow-none'
                   : currentLayout === 'stacked'
-                    ? 'aspect-[1.56/1] h-[min(82vh,calc((100vw-400px)/1.56))] w-auto rounded-[2rem] border border-k-line'
-                    : 'aspect-[1.34/1] h-[min(82vh,calc((100vw-400px)/1.34))] w-auto rounded-[2.5rem] border border-k-line'
+                    ? 'aspect-[1.56/1] h-[min(82vh,calc((100vw-400px)/1.56))] w-auto max-h-full max-w-full overflow-hidden rounded-[2rem] border border-k-line bg-k-card shadow-k-sh-lg'
+                    : 'aspect-[1.34/1] h-[min(82vh,calc((100vw-400px)/1.34))] w-auto max-h-full max-w-full overflow-hidden rounded-[2.5rem] border border-k-line bg-k-card shadow-k-sh-lg'
               )}
             >
               {renderPageLayer(renderedPageData, safeActiveSentenceIndex, true)}
-              {overlayPageData
+              {!isMobile && overlayPageData
                 ? renderPageLayer(
                     overlayPageData,
                     0,
@@ -1130,6 +1179,41 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
       </main>
 
       {/* Overlays */}
+      {expandedPageImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('pictureBookReader.pageImageDialog', {
+            defaultValue: 'Page image',
+          })}
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-k-ink/92 p-4 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setExpandedPageImage(null)}
+        >
+          <div
+            className="relative flex h-full w-full items-center justify-center"
+            onClick={event => event.stopPropagation()}
+          >
+            <img
+              src={expandedPageImage.src}
+              alt={expandedPageImage.alt}
+              className="max-h-full max-w-full object-contain shadow-k-sh-lg"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t('pictureBookReader.closePageImage', {
+                defaultValue: 'Close page image',
+              })}
+              onClick={() => setExpandedPageImage(null)}
+              className="absolute right-2 top-2 h-11 w-11 rounded-full border border-white/15 bg-white/10 text-k-bg backdrop-blur-md hover:bg-white/20 hover:text-k-bg"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {audioError && (
         <div className="absolute inset-x-0 top-24 z-[110] flex justify-center pointer-events-none">
           <div className="rounded-2xl bg-k-ink text-k-bg px-6 py-3 text-sm font-black shadow-k-sh-lg animate-in zoom-in-95">
