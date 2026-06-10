@@ -92,4 +92,5 @@ export const reading_library_progress = defineTable({
   updatedAt: v.number(),
 })
   .index('by_user_book', ['userId', 'bookId'])
-  .index('by_user', ['userId', 'lastReadAt']);
+  .index('by_user', ['userId', 'lastReadAt'])
+  .index('by_book', ['bookId']);

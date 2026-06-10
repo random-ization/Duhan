@@ -155,7 +155,6 @@ async function assertBookReadable(
   return { isOwner, isAdmin, isSharedAccess };
 }
 
-
 export const getPublicShelf = query({
   args: {
     limit: v.optional(v.number()),
@@ -321,7 +320,9 @@ export const getBookDetail = query({
       userProgress,
       accessState,
       epubUrl:
-        isOwner || isAdmin || isSharedAccess ? resolveStoragePublicUrl(book.epubObjectKey) : undefined,
+        isOwner || isAdmin || isSharedAccess
+          ? resolveStoragePublicUrl(book.epubObjectKey)
+          : undefined,
     };
   },
 });
@@ -638,15 +639,16 @@ export const deleteBook = mutation({
       .query('reading_library_chapters')
       .withIndex('by_book', q => q.eq('bookId', book._id))
       .collect();
-    const progress = await ctx.db.query('reading_library_progress').collect();
+    const progress = await ctx.db
+      .query('reading_library_progress')
+      .withIndex('by_book', q => q.eq('bookId', book._id))
+      .collect();
 
     for (const chapter of chapters) {
       await ctx.db.delete(chapter._id);
     }
     for (const row of progress) {
-      if (row.bookId === book._id) {
-        await ctx.db.delete(row._id);
-      }
+      await ctx.db.delete(row._id);
     }
     await ctx.db.delete(book._id);
     return { success: true };

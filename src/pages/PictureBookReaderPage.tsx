@@ -94,6 +94,16 @@ function toPictureBookTranslationErrorFromCode(
   });
 }
 
+// audio.src always reads back as an absolute URL, so any comparison against
+// a possibly-relative stored URL must resolve it first.
+function toAbsoluteUrl(url: string): string {
+  try {
+    return new URL(url, globalThis.window?.location?.href).href;
+  } catch {
+    return url;
+  }
+}
+
 function getLevelNumber(levelLabel?: string) {
   const match = levelLabel?.match(/(\d+)/);
   return match ? Number.parseInt(match[1], 10) : null;
@@ -269,11 +279,15 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     async (targetPageIndex: number, targetPageData: BookPageQuery | null) => {
       if (!targetPageData) return;
 
-      const sortedSentences = [...(targetPageData.page?.sentences ?? [])].sort(
-        (a, b) => (a.sentenceIndex ?? 0) - (b.sentenceIndex ?? 0)
-      );
-      const sentences = sortedSentences.map(s => s.text).filter(Boolean);
-      if (sentences.length === 0) return;
+      // Translations are rendered by array position, so the request must use
+      // the same order as the rendered sentence array. Empty sentences are
+      // skipped for the AI call but keep their slot in the aligned result.
+      const sentenceTexts = (targetPageData.page?.sentences ?? []).map(s => s.text ?? '');
+      const nonEmptyIndices = sentenceTexts
+        .map((text, idx) => (text.trim().length > 0 ? idx : -1))
+        .filter(idx => idx >= 0);
+      if (nonEmptyIndices.length === 0) return;
+      const sentences = nonEmptyIndices.map(idx => sentenceTexts[idx]);
 
       setTranslationError(null);
       setShowTranslationUpgradeCta(false);
@@ -306,9 +320,14 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             setTranslationError(toPictureBookTranslationErrorFromCode(result.errorCode, t));
             return;
           }
+          const alignedTranslations = sentenceTexts.map(() => '');
+          result.translations.forEach((translation, i) => {
+            const targetIdx = nonEmptyIndices[i];
+            if (targetIdx !== undefined) alignedTranslations[targetIdx] = translation;
+          });
           setTranslatedPages(prev => ({
             ...prev,
-            [targetPageIndex]: result.translations,
+            [targetPageIndex]: alignedTranslations,
           }));
           setTranslationFailedPages(prev => {
             if (!prev[targetPageIndex]) return prev;
@@ -591,9 +610,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
         return;
       }
 
-      const shouldReplaceSource = audio.src !== sentenceAudioUrl;
+      const resolvedAudioUrl = toAbsoluteUrl(sentenceAudioUrl);
+      const shouldReplaceSource = audio.src !== resolvedAudioUrl;
       if (shouldReplaceSource) {
-        audio.src = sentenceAudioUrl;
+        audio.src = resolvedAudioUrl;
       }
       if (restart || shouldReplaceSource) {
         audio.currentTime = 0;
@@ -697,7 +717,12 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
     const activeAudioUrl =
       normalizePublicAssetUrl(currentSentences[safeActiveSentenceIndex]?.audioUrl) ||
       currentSentences[safeActiveSentenceIndex]?.audioUrl;
-    if (audio.src && activeAudioUrl && audio.src === activeAudioUrl && audio.currentTime > 0) {
+    if (
+      audio.src &&
+      activeAudioUrl &&
+      audio.src === toAbsoluteUrl(activeAudioUrl) &&
+      audio.currentTime > 0
+    ) {
       try {
         audio.playbackRate = playbackRate;
         await audio.play();
@@ -847,7 +872,10 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
           {layerSentences.length > 0 ? (
             <div className={getTextBlockClass(layerLayout, layerPage.layoutClass, isMobile)}>
               {layerSentences.map((sentence, idx) => {
-                const isActive = sentence.sentenceIndex === safeSentenceIndex;
+                // Playback, persistence and translations all use the array
+                // position, so highlighting must use it too — the stored
+                // sentenceIndex is not guaranteed to be gap-free.
+                const isActive = idx === safeSentenceIndex;
                 return (
                   <div
                     key={sentence._id ?? `${sentence.sentenceIndex}-${sentence.text}`}
@@ -862,11 +890,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                   >
                     <button
                       type="button"
-                      onClick={
-                        isInteractive
-                          ? () => void playSentence(sentence.sentenceIndex, true)
-                          : undefined
-                      }
+                      onClick={isInteractive ? () => void playSentence(idx, true) : undefined}
                       disabled={!isInteractive}
                       className={cn(
                         'transition-all duration-300 font-k-serif',
@@ -1138,11 +1162,11 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
             className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-fine"
           >
             {currentSentences.map((sentence, idx) => {
-              const isActive = sentence.sentenceIndex === safeActiveSentenceIndex;
+              const isActive = idx === safeActiveSentenceIndex;
               return (
                 <button
                   key={sentence._id ?? idx}
-                  onClick={() => void playSentence(sentence.sentenceIndex, true)}
+                  onClick={() => void playSentence(idx, true)}
                   className={cn(
                     'w-full text-left p-4 rounded-2xl transition-all group',
                     isActive

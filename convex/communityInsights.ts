@@ -128,8 +128,11 @@ export const computeHardestWords = internalMutation({
     const periodStart = now - 30 * 24 * 60 * 60 * 1000; // Last 30 days
 
     // Scan vocab progress with lapses > 0
-    // We scan a bounded set and aggregate by word
-    const allProgress = await ctx.db.query('user_vocab_progress').take(5000);
+    // We scan a bounded set and aggregate by word.
+    // order('desc') samples the NEWEST rows — the default ascending order
+    // would keep sampling the same oldest rows once the table grows past
+    // the cap, making the stat permanently stale.
+    const allProgress = await ctx.db.query('user_vocab_progress').order('desc').take(5000);
 
     const wordStats = new Map<
       string,
@@ -204,7 +207,8 @@ export const computeCommonErrors = internalMutation({
     const now = Date.now();
     const periodStart = now - 30 * 24 * 60 * 60 * 1000;
 
-    const mistakes = await ctx.db.query('user_mistakes').take(3000);
+    // Newest rows first — see note in computeHardestWords
+    const mistakes = await ctx.db.query('user_mistakes').order('desc').take(3000);
 
     const errorCounts = new Map<
       string,
@@ -268,8 +272,11 @@ export const computeTrendingContent = internalMutation({
     const now = Date.now();
     const periodStart = now - 7 * 24 * 60 * 60 * 1000;
 
-    // Use learning_events to track what people are studying
-    const recentEvents = await ctx.db.query('learning_events').take(5000);
+    // Use learning_events to track what people are studying.
+    // Must be order('desc'): the default ascending order returns the OLDEST
+    // 5000 events, so the recent-period filter below would match nothing
+    // once the table grows past the cap.
+    const recentEvents = await ctx.db.query('learning_events').order('desc').take(5000);
 
     // Filter to recent period
     const periodEvents = recentEvents.filter(e => e.eventAt >= periodStart);
@@ -334,8 +341,9 @@ export const computeDailySummary = internalMutation({
     const now = Date.now();
     const periodStart = now - 24 * 60 * 60 * 1000;
 
-    // Count active users from learning_events
-    const recentEvents = await ctx.db.query('learning_events').take(5000);
+    // Count active users from learning_events (newest first — see
+    // computeTrendingContent for why order('desc') is required here)
+    const recentEvents = await ctx.db.query('learning_events').order('desc').take(5000);
 
     const todayEvents = recentEvents.filter(e => e.eventAt >= periodStart);
     const activeUsers = new Set<string>();
@@ -350,8 +358,8 @@ export const computeDailySummary = internalMutation({
       totalMinutes += (event.durationSec ?? 0) / 60;
     }
 
-    // Get total user vocab counts for averages
-    const allVocab = await ctx.db.query('user_vocab_progress').take(5000);
+    // Get total user vocab counts for averages (newest-first sample)
+    const allVocab = await ctx.db.query('user_vocab_progress').order('desc').take(5000);
 
     const userWordCounts = new Map<string, number>();
     for (const row of allVocab) {

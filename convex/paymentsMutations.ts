@@ -22,8 +22,20 @@ async function findUserByEmail(ctx: MutationCtx, rawEmail: string) {
     .first();
   if (legacyExact) return legacyExact;
 
-  const allUsers = await ctx.db.query('users').collect();
-  return allUsers.find(user => normalizeEmail(user.email) === normalizedEmail) ?? null;
+  // Last-resort scan for legacy rows whose stored email differs in case.
+  // New signups store lowercased emails (see auth.ts), so this only has to
+  // cover the bounded set of pre-normalization accounts. The scan is capped:
+  // an unbounded collect() would hit the transaction read limit once the
+  // users table grows, failing the whole payment mutation.
+  const LEGACY_SCAN_LIMIT = 8000;
+  const legacyUsers = await ctx.db.query('users').take(LEGACY_SCAN_LIMIT);
+  if (legacyUsers.length === LEGACY_SCAN_LIMIT) {
+    paymentLogger.warn(
+      `findUserByEmail legacy scan hit the ${LEGACY_SCAN_LIMIT}-row cap; ` +
+        'unnormalized accounts beyond the cap cannot be matched'
+    );
+  }
+  return legacyUsers.find(user => normalizeEmail(user.email) === normalizedEmail) ?? null;
 }
 
 // Internal mutation to grant premium access
