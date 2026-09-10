@@ -1,5 +1,7 @@
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useSearchParams } from 'react-router-dom';
+import { useQueuedAutosave } from '../hooks/useQueuedAutosave';
 import { useMutation, useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Folder, Grid3X3, Home } from 'lucide-react';
@@ -28,6 +30,7 @@ const LazyMobileNotebookPage = lazy(() =>
 export type ViewMode = 'gallery' | 'list' | 'table';
 export type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 export type NoteKind = 'quote_card' | 'longform_page';
+type NoteSnapshot = { pageId: Id<'note_pages'>; title: string; noteKind: NoteKind; doc: string; noteText: string; };
 export type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
 export type NotebookListResult = {
@@ -422,6 +425,7 @@ export default function NotebookV2Page() {
   const isMobile = useIsMobile();
   const { t, i18n } = useTranslation();
   const navigate = useLocalizedNavigate();
+  const [searchParams] = useSearchParams();
   const dateLocale = useMemo(() => {
     const language = i18n.resolvedLanguage || i18n.language || 'en';
     if (language.startsWith('zh')) return 'zh-CN';
@@ -443,24 +447,10 @@ export default function NotebookV2Page() {
   const [noteKind, setNoteKind] = useState<NoteKind>('longform_page');
   const [quoteText, setQuoteText] = useState('');
   const [editorDoc, setEditorDoc] = useState<JSONContent>(EMPTY_DOC);
-  const [saveState, setSaveState] = useState<SaveState>('saved');
-
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [editorPageId, setEditorPageId] = useState<Id<'note_pages'> | null>(null);
 
   const hydratedPageIdRef = useRef<Id<'note_pages'> | null>(null);
-  const lastSyncedRef = useRef<{
-    pageId: Id<'note_pages'> | null;
-    title: string;
-    noteKind: NoteKind;
-    doc: string;
-    noteText: string;
-  }>({
-    pageId: null,
-    title: '',
-    noteKind: 'longform_page',
-    doc: JSON.stringify(EMPTY_DOC),
-    noteText: '',
-  });
+  const lastSyncedRef = useRef<NoteSnapshot | null>(null);
 
   const notebooksResult = normalizeNotebookListResult(useQuery(NOTE_PAGES.listNotebooks, {}));
 
@@ -487,6 +477,23 @@ export default function NotebookV2Page() {
   const saveBlocks = useMutation(NOTE_PAGES.saveBlocks);
   const saveEditorDoc = useMutation(NOTE_PAGES.saveEditorDoc);
   const archivePage = useMutation(NOTE_PAGES.archivePage);
+  const persistNote = React.useCallback(async (snapshot: NoteSnapshot) => {
+    const metadata = await updatePage({ pageId: snapshot.pageId, title: snapshot.title });
+    if (!metadata.success) throw new Error(metadata.error || 'Failed to save note title');
+    const content = snapshot.noteKind === 'quote_card'
+      ? await saveBlocks({
+          pageId: snapshot.pageId,
+          upsertBlocks: snapshot.noteText ? [{
+            blockKey: 'note', blockType: 'paragraph', content: { text: snapshot.noteText },
+            props: { source: 'notebook' }, sortOrder: 1,
+          }] : undefined,
+          deleteBlockKeys: snapshot.noteText ? undefined : ['note'],
+        })
+      : await saveEditorDoc({ pageId: snapshot.pageId, doc: JSON.parse(snapshot.doc) });
+    if (!content.success) throw new Error(content.error || 'Failed to save note content');
+  }, [updatePage, saveBlocks, saveEditorDoc]);
+  const { saveState, lastSavedAt, activate, schedule, flush, retry } = useQueuedAutosave(persistNote);
+
   const hydrateEditorFromPayload = React.useCallback((payload: PagePayload) => {
     const pageId = payload.page.id;
     if (hydratedPageIdRef.current === pageId) return;
@@ -503,36 +510,28 @@ export default function NotebookV2Page() {
       incomingNoteKind === 'quote_card'
         ? toPlainText(payload.page.title) || payload.page.title
         : payload.page.title;
-    setTitle(normalizedTitle);
-    setNoteKind(incomingNoteKind);
+    const incoming = { pageId, title: normalizedTitle, noteKind: incomingNoteKind,
+      doc: incomingDocString, noteText: extractEditorDocText(incomingDoc).trim() };
+    const draft = activate(incoming);
+    setTitle(draft.title);
+    setNoteKind(draft.noteKind);
     setQuoteText(quoteCardContent.quoteText);
-    setEditorDoc(incomingDoc);
-    setSaveState('saved');
-    setLastSavedAt(Date.now());
-
-    lastSyncedRef.current = {
-      pageId,
-      title: normalizedTitle,
-      noteKind: incomingNoteKind,
-      doc: incomingDocString,
-      noteText: extractEditorDocText(incomingDoc).trim(),
-    };
+    setEditorDoc(JSON.parse(draft.doc) as JSONContent);
+    setEditorPageId(pageId);
+    lastSyncedRef.current = incoming;
     hydratedPageIdRef.current = pageId;
-  }, []);
+  }, [activate]);
 
   const ensureSelectedPageExists = React.useCallback(
     (items: SearchItem[]) => {
+      if (editorOpen) return;
       const exists = items.some(item => item.id === selectedPageId);
       if (exists) return;
       setSelectedPageId(items[0]?.id || null);
       hydratedPageIdRef.current = null;
     },
-    [selectedPageId]
+    [selectedPageId, editorOpen]
   );
-
-  const markSaveStateSaved = React.useCallback(() => {
-    setSaveState('saved');
-  }, []);
 
   useEffect(() => {
     if (typeof globalThis.window === 'undefined') {
@@ -572,11 +571,12 @@ export default function NotebookV2Page() {
   }, [activeNotebookId, notebooksResult.notebooks]);
 
   useEffect(() => {
-    if (!selectedPagePayload?.page) return;
+    if (!selectedPagePayload?.page || selectedPagePayload.page.id !== selectedPageId) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate local editor state when selected page payload changes
     hydrateEditorFromPayload(selectedPagePayload);
   }, [
     hydrateEditorFromPayload,
+    selectedPageId,
     selectedPagePayload,
     selectedPagePayload?.page?.id,
     selectedPagePayload?.page?.title,
@@ -585,81 +585,25 @@ export default function NotebookV2Page() {
   ]);
 
   useEffect(() => {
-    if (!selectedPageId || !selectedPagePayload?.page) return;
+    if (!selectedPageId || editorPageId !== selectedPageId) return;
+    const snapshot: NoteSnapshot = { pageId: selectedPageId, title: title.trim() || 'Untitled',
+      noteKind, doc: JSON.stringify(editorDoc || EMPTY_DOC),
+      noteText: extractEditorDocText(editorDoc || EMPTY_DOC).trim() };
+    if (JSON.stringify(lastSyncedRef.current) === JSON.stringify(snapshot)) return;
+    // An older save must never overwrite or mark a newer edit as saved.
+    lastSyncedRef.current = snapshot;
+    schedule(snapshot);
+  }, [editorDoc, editorPageId, noteKind, schedule, selectedPageId, title]);
 
-    const nextTitle = title.trim() || 'Untitled';
-    const nextDocString = JSON.stringify(editorDoc || EMPTY_DOC);
-    const nextNoteText = extractEditorDocText(editorDoc || EMPTY_DOC).trim();
+  useEffect(() => () => { void flush(); }, [flush, selectedPageId]);
 
-    if (
-      lastSyncedRef.current.pageId === selectedPageId &&
-      lastSyncedRef.current.title === nextTitle &&
-      lastSyncedRef.current.noteKind === noteKind &&
-      lastSyncedRef.current.doc === nextDocString &&
-      lastSyncedRef.current.noteText === nextNoteText
-    ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep derived save badge in sync with persisted snapshot
-      markSaveStateSaved();
-      return;
-    }
-
-    setSaveState('dirty');
-
-    const timer = globalThis.window.setTimeout(async () => {
-      try {
-        setSaveState('saving');
-        await updatePage({ pageId: selectedPageId, title: nextTitle });
-
-        if (noteKind === 'quote_card') {
-          await saveBlocks({
-            pageId: selectedPageId,
-            upsertBlocks: nextNoteText
-              ? [
-                  {
-                    blockKey: 'note',
-                    blockType: 'paragraph',
-                    content: { text: nextNoteText },
-                    props: { source: 'notebook' },
-                    sortOrder: 1,
-                  },
-                ]
-              : undefined,
-            deleteBlockKeys: nextNoteText ? undefined : ['note'],
-          });
-        } else {
-          await saveEditorDoc({
-            pageId: selectedPageId,
-            doc: JSON.parse(nextDocString) as Record<string, unknown>,
-          });
-        }
-
-        lastSyncedRef.current = {
-          pageId: selectedPageId,
-          title: nextTitle,
-          noteKind,
-          doc: nextDocString,
-          noteText: nextNoteText,
-        };
-        setSaveState('saved');
-        setLastSavedAt(Date.now());
-      } catch {
-        setSaveState('error');
-      }
-    }, 1000);
-
-    return () => globalThis.window.clearTimeout(timer);
-  }, [
-    editorDoc,
-    markSaveStateSaved,
-    noteKind,
-    saveBlocks,
-    saveEditorDoc,
-    selectedPageId,
-    selectedPagePayload?.page,
-    selectedPagePayload?.page?.id,
-    title,
-    updatePage,
-  ]);
+  const requestedPageId = searchParams.get('page');
+  useEffect(() => {
+    if (!requestedPageId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize an externally supplied deep link with the editor selection
+    setSelectedPageId(requestedPageId as Id<'note_pages'>);
+    setEditorOpen(true);
+  }, [requestedPageId]);
 
   const sourceSummary = useMemo(() => {
     const groups = new Map<
@@ -692,19 +636,19 @@ export default function NotebookV2Page() {
     return target.modules;
   }, [sourceSummary, sourceFilter]);
 
-  const searchResult = normalizeSearchResult(
-    useQuery(NOTE_PAGES.search, {
+  const rawSearchResult = useQuery(NOTE_PAGES.search, {
       query: query.trim(),
       sourceModules: selectedSourceModules,
       notebookId: activeNotebookId || undefined,
       limit: 500,
-    })
-  );
+    });
+  const searchResult = normalizeSearchResult(rawSearchResult);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- keep selected note valid when filtered list changes
+    if (rawSearchResult === undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- close a selection after the authoritative query removes that page
     ensureSelectedPageExists(searchResult.items);
-  }, [ensureSelectedPageExists, searchResult.items]);
+  }, [ensureSelectedPageExists, rawSearchResult, searchResult.items]);
 
   const pendingReviewCount = useMemo(() => {
     return baseSearchResult.items.filter(item => item.status.trim().toLowerCase() !== 'reviewed')
@@ -720,9 +664,10 @@ export default function NotebookV2Page() {
   const handleEditorOpenChange = React.useCallback((open: boolean) => {
     setEditorOpen(open);
     if (!open) {
+      void flush();
       setEditorExpanded(false);
     }
-  }, []);
+  }, [flush]);
 
   const handleCreateNote = async () => {
     const result = await createPage({
@@ -766,49 +711,7 @@ export default function NotebookV2Page() {
     navigate(appendReturnToPath(path, currentPath));
   };
 
-  const handleRetrySave = async () => {
-    if (!selectedPageId) return;
-    try {
-      const nextTitle = title.trim() || 'Untitled';
-      const nextDocString = JSON.stringify(editorDoc || EMPTY_DOC);
-      const nextNoteText = extractEditorDocText(editorDoc || EMPTY_DOC).trim();
-      setSaveState('saving');
-      await updatePage({ pageId: selectedPageId, title: nextTitle });
-      if (noteKind === 'quote_card') {
-        await saveBlocks({
-          pageId: selectedPageId,
-          upsertBlocks: nextNoteText
-            ? [
-                {
-                  blockKey: 'note',
-                  blockType: 'paragraph',
-                  content: { text: nextNoteText },
-                  props: { source: 'notebook' },
-                  sortOrder: 1,
-                },
-              ]
-            : undefined,
-          deleteBlockKeys: nextNoteText ? undefined : ['note'],
-        });
-      } else {
-        await saveEditorDoc({
-          pageId: selectedPageId,
-          doc: JSON.parse(nextDocString) as Record<string, unknown>,
-        });
-      }
-      lastSyncedRef.current = {
-        pageId: selectedPageId,
-        title: nextTitle,
-        noteKind,
-        doc: nextDocString,
-        noteText: nextNoteText,
-      };
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-    } catch {
-      setSaveState('error');
-    }
-  };
+  const handleRetrySave = retry;
 
   const contextualSidebarContent = useMemo(
     () => (
@@ -904,11 +807,7 @@ export default function NotebookV2Page() {
     enabled: true,
   });
 
-  if (isMobile) {
-    return (
-      <Suspense fallback={<div className="min-h-[50vh]" />}>
-        <LazyMobileNotebookPage
-          {...{
+  const editorProps = {
             t,
             navigate,
             dateLocale,
@@ -946,15 +845,17 @@ export default function NotebookV2Page() {
             handleDeletePage,
             handleOpenSource,
             handleRetrySave,
-          }}
-        />
-      </Suspense>
-    );
-  }
-
+  };
   return (
     <Suspense fallback={<div className="min-h-[50vh]" />}>
-      <DesktopNotebookV2Page />
+      {isMobile ? <LazyMobileNotebookPage {...editorProps} /> : <>
+        <DesktopNotebookV2Page onOpenNote={pageId => {
+          setSelectedPageId(pageId);
+          setEditorExpanded(false);
+          setEditorOpen(true);
+        }} onCreateNote={handleCreateNote} />
+        <LazyMobileNotebookPage {...editorProps} editorOnly />
+      </>}
     </Suspense>
   );
 }

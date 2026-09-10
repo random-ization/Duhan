@@ -199,16 +199,17 @@ export const save = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         text: args.text,
-        note: args.note,
-        color: resolvedColor,
-        startOffset: args.startOffset,
-        endOffset: args.endOffset,
-        scopeType: args.scopeType,
-        scopeId: args.scopeId,
-        blockId: args.blockId,
-        quote: args.quote,
-        contextBefore: args.contextBefore,
-        contextAfter: args.contextAfter,
+        // Omitted fields are unchanged; empty strings explicitly clear a note/color.
+        note: args.note ?? existing.note,
+        color: resolvedColor ?? existing.color,
+        startOffset: args.startOffset ?? existing.startOffset,
+        endOffset: args.endOffset ?? existing.endOffset,
+        scopeType: args.scopeType ?? existing.scopeType,
+        scopeId: args.scopeId ?? existing.scopeId,
+        blockId: args.blockId ?? existing.blockId,
+        quote: args.quote ?? existing.quote,
+        contextBefore: args.contextBefore ?? existing.contextBefore,
+        contextAfter: args.contextAfter ?? existing.contextAfter,
         updatedAt: now,
       });
       return { id: existing._id, success: true, upserted: true };
@@ -291,7 +292,15 @@ export const upsertByAnchor = mutation({
     };
 
     if (existing) {
-      await ctx.db.patch(existing._id, basePatch);
+      await ctx.db.patch(existing._id, {
+        ...basePatch,
+        contextKey: args.contextKey?.trim() ? args.contextKey : existing.contextKey,
+        targetType: args.targetType ?? existing.targetType,
+        note: args.note ?? existing.note,
+        color: resolvedColor ?? existing.color,
+        contextBefore: args.contextBefore ?? existing.contextBefore,
+        contextAfter: args.contextAfter ?? existing.contextAfter,
+      });
       return { id: existing._id, success: true, upserted: true };
     }
 

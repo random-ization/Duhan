@@ -41,3 +41,19 @@ export const getConvexUrl = (): string => {
 
   return resolvedConvexUrl;
 };
+
+/** Resolve the HTTP-actions origin that corresponds to the Convex deployment. */
+export const getConvexSiteUrl = (): string => {
+  if (import.meta.env.VITE_CONVEX_SITE_URL) {
+    return import.meta.env.VITE_CONVEX_SITE_URL.replace(/\/$/, '');
+  }
+
+  const url = new URL(getConvexUrl());
+  if (url.hostname.endsWith('.convex.cloud')) {
+    url.hostname = url.hostname.replace(/\.convex\.cloud$/, '.convex.site');
+  }
+  url.pathname = '';
+  url.search = '';
+  url.hash = '';
+  return url.toString().replace(/\/$/, '');
+};

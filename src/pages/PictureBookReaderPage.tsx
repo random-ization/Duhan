@@ -185,7 +185,7 @@ function getTextBlockClass(
   isMobile: boolean
 ) {
   if (isMobile) {
-    return 'w-full space-y-3 text-left text-[clamp(19px,5.2vw,24px)] leading-[1.85] text-slate-950';
+    return 'w-full space-y-3 text-left text-[clamp(19px,5.2vw,24px)] leading-[1.85] text-k-ink';
   }
   return cn(
     'h-full w-full overflow-y-auto text-slate-900',
@@ -1230,7 +1230,7 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 defaultValue: 'Close page image',
               })}
               onClick={() => setExpandedPageImage(null)}
-              className="absolute right-2 top-2 h-11 w-11 rounded-full border border-white/15 bg-white/10 text-k-bg backdrop-blur-md hover:bg-white/20 hover:text-k-bg"
+              className="absolute right-2 top-2 h-11 w-11 rounded-full border border-k-bg/15 bg-k-bg/10 text-k-bg backdrop-blur-md hover:bg-k-bg/20 hover:text-k-bg"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -1261,12 +1261,15 @@ function PictureBookReaderPageContent({ slug }: { slug?: string }) {
                 </Button>
               )}
             </div>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="auto"
               onClick={() => setTranslationError(null)}
               className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
             >
               <X size={18} />
-            </button>
+            </Button>
           </div>
         </div>
       )}

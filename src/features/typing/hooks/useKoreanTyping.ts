@@ -45,6 +45,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
   const phaseRef = useRef<TypingPhase>('start');
   const isComposingRef = useRef(false);
   const lastProcessedValueRef = useRef('');
+  const completedIndexRef = useRef(0);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -53,17 +54,16 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
   // Stats Logic
   const calculateStats = useCallback(() => {
     setStats(prev => {
-      if (!prev.startTime) return prev;
+      if (prev.startTime === null) return prev;
 
       const currentTime = Date.now();
       const timeInMinutes = (currentTime - prev.startTime) / 60000;
 
-      if (timeInMinutes <= 0) return prev;
-
-      const wpm = Math.round(completedIndex / 5 / timeInMinutes);
+      const completed = completedIndexRef.current;
+      const wpm = timeInMinutes > 0 ? Math.round(completed / 5 / timeInMinutes) : 0;
       const accuracy =
-        completedIndex > 0
-          ? Math.max(0, Math.round((completedIndex / (completedIndex + prev.errorCount)) * 100))
+        completed + prev.errorCount > 0
+          ? Math.max(0, Math.round((completed / (completed + prev.errorCount)) * 100))
           : 100;
 
       return {
@@ -72,7 +72,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
         accuracy,
       };
     });
-  }, [completedIndex]);
+  }, []);
 
   // Timer for WPM updates
   useEffect(() => {
@@ -141,12 +141,13 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
 
   // Process input and update completed index
   const processInput = useCallback(
-    (rawValue: string) => {
+    (rawValue: string, previousValue: string) => {
       if (!initialText) return;
 
       // Calculate how many characters are correctly completed
       let newCompletedIndex = 0;
       let hasIncompleteChar = false;
+      let hasError = rawValue.length > initialText.length;
 
       for (let i = 0; i < rawValue.length && i < initialText.length; i++) {
         // Pass the next target character for better composition handling
@@ -161,16 +162,28 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
           break;
         } else {
           // Incorrect - stop here
+          hasError = true;
           break;
         }
       }
 
+      // Count new committed invalid edits, not transient IME values, duplicate
+      // composition events, or deletion while the user corrects a mistake.
+      if (hasError && rawValue.length >= previousValue.length) {
+        setStats(prev => ({ ...prev, errorCount: prev.errorCount + 1 }));
+      }
+      completedIndexRef.current = newCompletedIndex;
       setCompletedIndex(newCompletedIndex);
+      calculateStats();
 
       // Check for completion
-      if (newCompletedIndex === initialText.length && !hasIncompleteChar) {
+      if (
+        newCompletedIndex === initialText.length &&
+        rawValue.length === initialText.length &&
+        !hasIncompleteChar
+      ) {
+        phaseRef.current = 'finish';
         setPhase('finish');
-        calculateStats();
       }
     },
     [initialText, calculateStats]
@@ -182,10 +195,12 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     if (!el) return;
 
     const applyCommittedInput = (rawValue: string) => {
+      if (phaseRef.current === 'finish') return;
       // De-dup to avoid double-processing when compositionend and input fire with same final value.
       if (rawValue === lastProcessedValueRef.current) {
         return;
       }
+      const previousValue = lastProcessedValueRef.current;
       lastProcessedValueRef.current = rawValue;
 
       // Start timing on first input
@@ -195,7 +210,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
         setStats(prev => (prev.startTime ? prev : { ...prev, startTime: Date.now() }));
       }
 
-      processInput(rawValue);
+      processInput(rawValue, previousValue);
     };
 
     const handleInput = () => {
@@ -274,6 +289,7 @@ export const useKoreanTyping = (initialText: string, _mode: TypingMode): UseKore
     phaseRef.current = 'start';
     isComposingRef.current = false;
     lastProcessedValueRef.current = '';
+    completedIndexRef.current = 0;
     if (inputRef.current) {
       inputRef.current.value = '';
       inputRef.current.focus();

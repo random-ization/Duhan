@@ -37,7 +37,7 @@ function* walk(dir) {
 
 function isExcluded(filePath) {
   if (excludedPathFragments.some((fragment) => filePath.includes(fragment))) return true;
-  const relativePath = path.relative(projectRoot, filePath);
+  const relativePath = path.relative(projectRoot, filePath).split(path.sep).join('/');
   return excludedRelativeFiles.has(relativePath);
 }
 
@@ -64,7 +64,7 @@ for (const filePath of walk(srcRoot)) {
   if (!cjkRegex.test(contents)) continue;
   const first = findFirstCjkLineNumber(contents);
   findings.push({
-    filePath: path.relative(projectRoot, filePath),
+    filePath: path.relative(projectRoot, filePath).split(path.sep).join('/'),
     line: first?.line ?? 0,
     preview: first?.preview ?? '',
   });

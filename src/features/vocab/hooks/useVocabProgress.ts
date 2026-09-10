@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useAction } from 'convex/react';
 import type { Id } from '../../../../convex/_generated/dataModel';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   safeGetSessionStorageItem,
   safeSetSessionStorageItem,
@@ -429,9 +429,20 @@ export function useFSRSBatchProgress(options?: {
   >('vocab:updateProgressBatch');
   const updateProgressBatch = useOfflineMutation(updateProgressBatchRef);
 
-  const queueRef = useRef<BatchQueueEntry[]>([]);
+  // Each storage scope owns its queue, including requests still in flight when
+  // the user changes courses or accounts.
+  const queue = useMemo(
+    () => ({
+      storageKey: persistKey,
+      entries: [] as BatchQueueEntry[],
+      restored: false,
+      flushPromise: null as Promise<void> | null,
+    }),
+    [persistKey]
+  );
+  const activeQueueRef = useRef(queue);
+  activeQueueRef.current = queue;
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFlushingRef = useRef(false);
 
   const [pendingCount, setPendingCount] = useState(0);
   const [isFlushing, setIsFlushing] = useState(false);
@@ -457,53 +468,56 @@ export function useFSRSBatchProgress(options?: {
     flushTimerRef.current = null;
   }, []);
 
-  const flushQueue = useCallback(async () => {
-    if (isFlushingRef.current) return;
-    if (queueRef.current.length === 0) return;
-
+  const flushQueue = useCallback((): Promise<void> => {
+    if (queue.flushPromise) return queue.flushPromise;
+    if (queue.entries.length === 0) return Promise.resolve();
     clearFlushTimer();
-    const snapshot = [...queueRef.current];
-    queueRef.current = [];
-    setPendingCount(0);
-    saveQueueSnapshot([]);
-
-    const deduped = new Map<string, BatchQueueEntry>();
-    for (const entry of snapshot) {
-      deduped.set(entry.wordId, entry);
-    }
-
-    if (deduped.size === 0) return;
-
-    isFlushingRef.current = true;
-    setIsFlushing(true);
-    try {
-      await updateProgressBatch({
-        items: Array.from(deduped.values()).map(item => ({
-          wordId: item.wordId as Id<'words'>,
-          rating: item.rating,
-          fsrsState: item.fsrsState,
-          reviewDurationMs: item.reviewDurationMs,
-          reviewedAt: item.reviewedAt,
-        })),
+    if (activeQueueRef.current === queue) setIsFlushing(true);
+    const drain = async () => {
+      // Keep the recovery snapshot until the server (or durable offline outbox)
+      // acknowledges it. Drain again if more reviews arrived during the request.
+      while (queue.entries.length > 0) {
+        const snapshot = [...queue.entries];
+        const deduped = new Map(snapshot.map(entry => [entry.wordId, entry]));
+        await updateProgressBatch({
+          items: Array.from(deduped.values()).map(item => ({
+            wordId: item.wordId as Id<'words'>,
+            rating: item.rating,
+            fsrsState: item.fsrsState,
+            reviewDurationMs: item.reviewDurationMs,
+            reviewedAt: item.reviewedAt,
+          })),
+        });
+        queue.entries.splice(0, snapshot.length);
+        saveQueueSnapshot(queue.entries);
+        if (activeQueueRef.current === queue) setPendingCount(queue.entries.length);
+      }
+    };
+    // eslint-disable-next-line react-hooks/immutability -- this memoized object is an intentional mutable queue, not rendered state
+    queue.flushPromise = drain()
+      .catch(error => {
+        logger.warn('[FSRS Batch] Flush failed; queue retained for retry:', error);
+        throw error;
+      })
+      .finally(() => {
+        queue.flushPromise = null;
+        if (activeQueueRef.current === queue) setIsFlushing(false);
       });
-    } catch (error) {
-      logger.warn('[FSRS Batch] Flush failed, restoring queue:', error);
-      queueRef.current = [...snapshot, ...queueRef.current];
-      setPendingCount(queueRef.current.length);
-      saveQueueSnapshot(queueRef.current);
-      throw error;
-    } finally {
-      isFlushingRef.current = false;
-      setIsFlushing(false);
-    }
-  }, [clearFlushTimer, saveQueueSnapshot, updateProgressBatch]);
+    return queue.flushPromise;
+  }, [clearFlushTimer, queue, saveQueueSnapshot, updateProgressBatch]);
+
+  const flushInBackground = useCallback(() => {
+    // Background callers have no place to await failures. The queue remains
+    // recoverable and explicit flushQueue callers can still handle rejection.
+    void flushQueue().catch(() => {});
+  }, [flushQueue]);
 
   const scheduleFlush = useCallback(() => {
     clearFlushTimer();
     flushTimerRef.current = setTimeout(() => {
-      void flushQueue();
+      flushInBackground();
     }, flushDebounceMs);
-  }, [clearFlushTimer, flushDebounceMs, flushQueue]);
+  }, [clearFlushTimer, flushDebounceMs, flushInBackground]);
 
   const enqueueReview = useCallback(
     (args: {
@@ -543,53 +557,59 @@ export function useFSRSBatchProgress(options?: {
         [wordKey]: optimistic,
       }));
 
-      queueRef.current.push({
+      queue.entries.push({
         wordId: wordKey,
         rating: finalRating,
         fsrsState: normalizedFsrsState,
         reviewDurationMs: args.reviewDurationMs,
         reviewedAt,
       });
-      setPendingCount(queueRef.current.length);
-      saveQueueSnapshot(queueRef.current);
+      setPendingCount(queue.entries.length);
+      saveQueueSnapshot(queue.entries);
 
-      if (queueRef.current.length >= maxBatchSize) {
-        void flushQueue();
+      if (queue.entries.length >= maxBatchSize) {
+        flushInBackground();
       } else {
         scheduleFlush();
       }
 
       return optimistic;
     },
-    [flushQueue, maxBatchSize, saveQueueSnapshot, scheduleFlush]
+    [flushInBackground, maxBatchSize, queue, saveQueueSnapshot, scheduleFlush]
   );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (queue.restored) return;
+    // eslint-disable-next-line react-hooks/immutability -- restoration is an idempotency marker owned by this queue instance
+    queue.restored = true;
+    setPendingCount(0);
+    setIsFlushing(false);
+    setOptimisticProgressMap({});
     try {
       const raw = safeGetSessionStorageItem(persistKey);
       if (!raw) return;
       const parsed = JSON.parse(raw) as BatchQueueEntry[];
       if (!Array.isArray(parsed) || parsed.length === 0) return;
-      queueRef.current = parsed.filter(entry => !!entry?.wordId && !!entry?.fsrsState);
-      setPendingCount(queueRef.current.length);
-      if (queueRef.current.length > 0) {
-        void flushQueue();
+      queue.entries = parsed.filter(entry => !!entry?.wordId && !!entry?.fsrsState);
+      setPendingCount(queue.entries.length);
+      if (queue.entries.length > 0) {
+        flushInBackground();
       }
     } catch (error) {
       logger.warn('[FSRS Batch] Failed to restore queue:', error);
     }
-  }, [flushQueue, persistKey]);
+  }, [flushInBackground, persistKey, queue]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const onPageHide = () => {
-      void flushQueue();
+      flushInBackground();
     };
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (queueRef.current.length === 0) return;
-      void flushQueue();
+      if (queue.entries.length === 0) return;
+      flushInBackground();
       event.preventDefault();
       event.returnValue = '';
     };
@@ -600,14 +620,14 @@ export function useFSRSBatchProgress(options?: {
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
-  }, [flushQueue]);
+  }, [flushInBackground, queue]);
 
   useEffect(() => {
     return () => {
       clearFlushTimer();
-      void flushQueue();
+      flushInBackground();
     };
-  }, [clearFlushTimer, flushQueue]);
+  }, [clearFlushTimer, flushInBackground]);
 
   return {
     enqueueReview,

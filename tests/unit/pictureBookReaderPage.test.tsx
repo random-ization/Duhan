@@ -395,7 +395,7 @@ describe('PictureBookReaderPage session restore', () => {
 
     const textBlock = Array.from(view.container.querySelectorAll('div')).find(
       element =>
-        element.className.includes('space-y-3') && element.className.includes('text-slate-950')
+        element.className.includes('space-y-3') && element.className.includes('text-k-ink')
     );
     const textRegion = textBlock?.parentElement;
 

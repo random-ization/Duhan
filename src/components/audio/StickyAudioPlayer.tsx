@@ -62,15 +62,24 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
     const handleEnded = () => {
       setIsPlaying(false);
     };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleError = () => setIsPlaying(false);
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('error', handleError);
     };
   }, [onTimeUpdate, initialTime, isDragging]);
 
@@ -123,11 +132,14 @@ export const StickyAudioPlayer: React.FC<StickyAudioPlayerProps> = ({
     }
   };
 
-  const restart = () => {
+  const restart = async () => {
     seekTo(0);
     if (!isPlaying && audioRef.current) {
-      audioRef.current.play();
-      setIsPlaying(true);
+      try {
+        await audioRef.current.play();
+      } catch {
+        setIsPlaying(false);
+      }
     }
   };
 

@@ -101,6 +101,12 @@ export const MobileVideoPlayerPage: React.FC = () => {
     qRef<{ id: string }, ConvexVideoDoc | null>('videos:get'),
     id ? { id } : 'skip'
   );
+  const savedProgress = useQuery(
+    qRef<{ videoId: string }, { progress: number; duration?: number } | null>(
+      'videos:getProgress'
+    ),
+    id && user ? { videoId: id } : 'skip'
+  );
 
   const [currentTime, setCurrentTime] = useState(0);
   const [showTranslation, setShowTranslation] = useState(
@@ -173,8 +179,11 @@ export const MobileVideoPlayerPage: React.FC = () => {
   }, [activeSegmentIndex, autoScroll]);
 
   const lastSaveRef = useRef(0);
+  const currentTimeRef = useRef(0);
+  const restoredVideoRef = useRef<string | null>(null);
   const handleTimeUpdate = (detail: MediaTimeUpdateEventDetail) => {
     setCurrentTime(detail.currentTime);
+    currentTimeRef.current = detail.currentTime;
     if (id && detail.currentTime - lastSaveRef.current >= 10) {
       lastSaveRef.current = detail.currentTime;
       saveVideoProgress({
@@ -185,10 +194,20 @@ export const MobileVideoPlayerPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      const progress = currentTimeRef.current;
+      if (!id || progress <= 0 || Math.abs(progress - lastSaveRef.current) < 1) return;
+      void saveVideoProgress({ videoId: id, progress }).catch(() => {});
+    };
+  }, [id, saveVideoProgress]);
+
   const seekTo = (time: number) => {
     if (playerRef.current) {
       playerRef.current.currentTime = time;
-      playerRef.current.play();
+      void playerRef.current.play().catch(() => {
+        notify.error(t('dashboard.video.playbackFailed', { defaultValue: 'Playback failed.' }));
+      });
     }
   };
 
@@ -315,6 +334,19 @@ export const MobileVideoPlayerPage: React.FC = () => {
             poster={video.thumbnailUrl}
             className="w-full h-full"
             onTimeUpdate={handleTimeUpdate}
+            onCanPlay={() => {
+              if (!id || !savedProgress || restoredVideoRef.current === id || !playerRef.current) {
+                return;
+              }
+              restoredVideoRef.current = id;
+              const duration = playerRef.current.duration || savedProgress.duration || 0;
+              if (savedProgress.progress > 0 && (!duration || savedProgress.progress < duration - 5)) {
+                playerRef.current.currentTime = savedProgress.progress;
+                setCurrentTime(savedProgress.progress);
+                currentTimeRef.current = savedProgress.progress;
+                lastSaveRef.current = savedProgress.progress;
+              }
+            }}
             onPlay={() => {
               void ensurePlaybackAccess();
             }}

@@ -5,6 +5,7 @@
 
 import { query, mutation, QueryCtx } from '../_generated/server';
 import { v } from 'convex/values';
+import { paginationOptsValidator } from 'convex/server';
 import { getOptionalAuthUserId, requireAdmin } from '../utils';
 import { DEFAULT_VOCAB_LIMIT } from '../queryLimits';
 import { vocabLogger } from '../logger';
@@ -271,6 +272,76 @@ function summarizeReviewProgress(
     recommendedToday,
   };
 }
+
+/** Admin asset browser used by the vocabulary dashboard. */
+export const getAllPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    courseId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const resolveCourseName = async (courseId: string | undefined) => {
+      if (!courseId) return undefined;
+      const normalizedId = ctx.db.normalizeId('institutes', courseId);
+      const institute = normalizedId
+        ? await ctx.db.get(normalizedId)
+        : await ctx.db
+            .query('institutes')
+            .withIndex('by_legacy_id', q => q.eq('id', courseId))
+            .unique();
+      return institute?.name;
+    };
+
+    const mapRow = async (
+      word: Doc<'words'>,
+      appearance: Doc<'vocabulary_appearances'> | null
+    ) => ({
+      ...word,
+      courseId: appearance?.courseId,
+      courseName: await resolveCourseName(appearance?.courseId),
+      unitId: appearance?.unitId,
+      meaning: appearance?.meaning ?? word.meaning,
+      meaningEn: appearance?.meaningEn ?? word.meaningEn,
+      meaningVi: appearance?.meaningVi ?? word.meaningVi,
+      meaningMn: appearance?.meaningMn ?? word.meaningMn,
+      exampleSentence: appearance?.exampleSentence,
+      exampleMeaning: appearance?.exampleMeaning,
+      exampleMeaningEn: appearance?.exampleMeaningEn,
+      exampleMeaningVi: appearance?.exampleMeaningVi,
+      exampleMeaningMn: appearance?.exampleMeaningMn,
+      appearanceId: appearance?._id,
+    });
+
+    if (args.courseId) {
+      const result = await ctx.db
+        .query('vocabulary_appearances')
+        .withIndex('by_course_unit', q => q.eq('courseId', args.courseId!))
+        .paginate(args.paginationOpts);
+      const page = await Promise.all(
+        result.page.map(async appearance => {
+          const word = await ctx.db.get(appearance.wordId);
+          return word ? mapRow(word, appearance) : null;
+        })
+      );
+      return { ...result, page: page.filter((row): row is NonNullable<typeof row> => !!row) };
+    }
+
+    const result = await ctx.db.query('words').order('desc').paginate(args.paginationOpts);
+    const page = await Promise.all(
+      result.page.map(async word => {
+        const appearance = await ctx.db
+          .query('vocabulary_appearances')
+          .withIndex('by_word_createdAt', q => q.eq('wordId', word._id))
+          .order('desc')
+          .first();
+        return mapRow(word, appearance);
+      })
+    );
+    return { ...result, page };
+  },
+});
 
 // Get vocabulary statistics for a course
 export const getStats = query({

@@ -142,8 +142,8 @@ const toSessionMode = (mode: VocabModeParam): SessionMode | null => {
 const getReviewDeckArgs = (instituteId: string | undefined) =>
   instituteId ? { courseId: instituteId } : ('skip' as const);
 
-const getFsrsPersistKey = (instituteId: string | undefined): string =>
-  instituteId ? `fsrs-progress-queue:${instituteId}` : 'fsrs-progress-queue:default';
+const getFsrsPersistKey = (instituteId: string | undefined, userId: string | undefined): string =>
+  `fsrs-progress-queue:${userId ?? 'anonymous'}:${instituteId ?? 'default'}`;
 
 const isWordsLoading = (queryResult: unknown, institutesLoading: boolean): boolean =>
   queryResult === undefined || institutesLoading;
@@ -438,7 +438,7 @@ function VocabModulePage() {
   const { enqueueReview, flushQueue, optimisticProgressMap } = useFSRSBatchProgress({
     maxBatchSize: 10,
     flushDebounceMs: 4000,
-    persistKey: getFsrsPersistKey(instituteId),
+    persistKey: getFsrsPersistKey(instituteId, user?.id),
   });
 
   // Derive loading state and allWords directly from query - no extra state needed

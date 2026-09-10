@@ -37,6 +37,9 @@ jobs:
       - name: Unit tests (JSON report)
         run: npm run test:run:json
 
+      - name: Convex backend tests
+        run: npm run test:convex
+
       - name: Regression gate (>=80, 100%)
         run: npm run regression:gate
 

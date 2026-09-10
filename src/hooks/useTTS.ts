@@ -114,6 +114,7 @@ function failCurrentRequest({
   setError: (message: string) => void;
   setIsLoading: (value: boolean) => void;
 }): false {
+  if (myRequestId !== requestIdRef.current) return false;
   setError(message);
   if (myRequestId === requestIdRef.current) setIsLoading(false);
   return false;
@@ -133,6 +134,7 @@ function failCurrentRequest({
 export const useTTS = () => {
   const speakAction = useAction(aRef<SpeakActionArgs, SpeakActionResult>('tts:speak'));
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const finishPlaybackRef = useRef<((ok: boolean) => void) | null>(null);
   const requestIdRef = useRef(0);
   const cacheRef = useRef<Map<string, string> | null>(null);
   const cacheReadyRef = useRef(false);
@@ -155,6 +157,9 @@ export const useTTS = () => {
 
   const stopCurrentAudio = useCallback(() => {
     const audio = audioRef.current;
+    // Pausing/unloading is not guaranteed to emit ended or abort. Settle callers
+    // awaiting speak() before detaching the playback event handlers.
+    finishPlaybackRef.current?.(false);
     if (audio) {
       audio.onended = null;
       audio.onerror = null;
@@ -217,6 +222,7 @@ export const useTTS = () => {
       const audioCreatedAtMs = nowMs();
 
       return new Promise<boolean>(resolve => {
+        let settled = false;
         let firstSoundLogged = false;
         let playAttemptAtMs = audioCreatedAtMs;
 
@@ -239,6 +245,11 @@ export const useTTS = () => {
         };
 
         const onPlaybackComplete = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          if (finishPlaybackRef.current === onPlaybackComplete) {
+            finishPlaybackRef.current = null;
+          }
           if (ok && !firstSoundLogged) {
             logFirstSound('ended_without_playing');
           }
@@ -257,6 +268,7 @@ export const useTTS = () => {
           resolve(ok);
         };
 
+        finishPlaybackRef.current = onPlaybackComplete;
         audio.onended = () => onPlaybackComplete(true);
         audio.onerror = () => onPlaybackComplete(false);
         audio.onabort = () => onPlaybackComplete(false);
@@ -357,6 +369,7 @@ export const useTTS = () => {
             persistCache(cache);
             return true;
           }
+          if (isStaleRequest(myRequestId, requestIdRef)) return false;
           // Remove stale/forbidden local cache URL and regenerate.
           cache.delete(cacheKey);
           persistCache(cache);
@@ -429,6 +442,7 @@ export const useTTS = () => {
 
         let played = await playFromResult(result);
         if (played) return true;
+        if (isStaleRequest(myRequestId, requestIdRef)) return false;
 
         // Retry once bypassing backend cache in case cached URL is stale.
         cache.delete(cacheKey);
@@ -452,6 +466,7 @@ export const useTTS = () => {
         }
         played = await playFromResult(result);
         if (played) return true;
+        if (isStaleRequest(myRequestId, requestIdRef)) return false;
 
         return failCurrentRequest({
           message: 'Audio playback failed',

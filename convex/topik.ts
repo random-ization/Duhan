@@ -305,6 +305,8 @@ export const startExam = mutation({
     const existingSession = await ctx.db
       .query('exam_sessions')
       .withIndex('by_user_exam', q => q.eq('userId', userId).eq('examId', exam._id))
+      .order('desc')
+      .filter(q => q.eq(q.field('status'), 'IN_PROGRESS'))
       .first();
 
     if (existingSession?.status === 'IN_PROGRESS') {
@@ -381,6 +383,7 @@ export const getSession = query({
     const session = await ctx.db
       .query('exam_sessions')
       .withIndex('by_user_exam', q => q.eq('userId', userId).eq('examId', exam._id))
+      .order('desc')
       .first();
 
     if (!session) return null;

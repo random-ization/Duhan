@@ -60,6 +60,7 @@ export interface SourceSummaryItem {
 }
 
 interface MobileNotebookPageProps {
+  editorOnly?: boolean;
   t: TranslateFn;
   navigate: NavigateFunction;
   dateLocale: string;
@@ -103,6 +104,8 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
   const [searchParams] = useSearchParams();
   const {
     t,
+    editorOnly = false,
+    handleRetrySave,
     navigate,
     dateLocale,
     activeNotebookId,
@@ -141,7 +144,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
     navigate('/courses');
   };
 
-  const recentAnnotations = useQuery(ANNOTATIONS.getRecent, { limit: 6 });
+  const recentAnnotations = useQuery(ANNOTATIONS.getRecent, editorOnly ? 'skip' : { limit: 6 });
   const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
   // Snapshot "now" once per mount so relative time labels stay stable across
   // re-renders (avoids impure Date.now() calls during render).
@@ -196,7 +199,8 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
   };
 
   return (
-    <PageShell>
+    <>
+      {!editorOnly && <PageShell>
       {/* ── Page header ────────────────────────────── */}
       <div
         style={{
@@ -813,6 +817,8 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
         </div>
       </div>
 
+      </PageShell>}
+
       {/* ── Note Editor Sheet (keep Shadcn sheet for overlay behavior) ── */}
       <Sheet open={editorOpen} onOpenChange={handleEditorOpenChange}>
         <SheetPortal>
@@ -876,11 +882,14 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                     }}
                   >
                     {saveState === 'saving' && <Loader2 size={10} className="animate-spin" />}
-                    {saveState === 'saving'
+                    {(saveState === 'saving' || saveState === 'dirty')
                       ? t('notes.v2.page.saveState.saving', { defaultValue: 'Saving…' })
                       : saveState === 'error'
                         ? t('notes.v2.page.saveState.error', { defaultValue: 'Save failed' })
                         : t('notes.v2.page.saveState.saved', { defaultValue: 'Saved' })}
+                    {saveState === 'error' && <Button type="button" variant="link" size="sm" onClick={handleRetrySave}>
+                      {t('common.retry', { defaultValue: 'Retry' })}
+                    </Button>}
                   </div>
                 </div>
 
@@ -918,8 +927,7 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
                       )}
                       <div
                         onClick={() => {
-                          handleDeletePage(selectedPageId!);
-                          handleEditorOpenChange(false);
+                          if (selectedPageId) void handleDeletePage(selectedPageId);
                         }}
                         className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-destructive hover:bg-destructive/10 active:bg-destructive/10 cursor-pointer"
                       >
@@ -941,7 +949,9 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
 
               {/* Editor Content */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
-                {!selectedPagePayload ? (
+                {selectedPagePayload === null ? (
+                  <p role="alert">{t('notes.v2.page.notFound', { defaultValue: 'This note is unavailable.' })}</p>
+                ) : !selectedPagePayload || selectedPagePayload.page.id !== selectedPageId ? (
                   <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
                     <p className="text-sm font-medium">
@@ -1026,6 +1036,6 @@ export const MobileNotebookPage: React.FC<MobileNotebookPageProps> = props => {
           </SheetContent>
         </SheetPortal>
       </Sheet>
-    </PageShell>
+    </>
   );
 };

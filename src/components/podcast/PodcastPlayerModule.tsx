@@ -1039,6 +1039,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   const analysisLoading = false;
   const transcriptLoadKeyRef = useRef<string | null>(null);
   const transcriptLoadedKeyRef = useRef<string | null>(null);
+  const transcriptRequestVersionRef = useRef(0);
   const playlistLoadedFeedRef = useRef<string | null>(null);
 
   const generateTranscript = useAction(
@@ -1099,10 +1100,12 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
       )
         return;
       transcriptLoadKeyRef.current = loadKey;
+      const requestVersion = ++transcriptRequestVersionRef.current;
       setTranscriptLoading(true);
       setTranscriptError(null);
       try {
         const db = await getTranscript({ episodeId: epId, language });
+        if (transcriptRequestVersionRef.current !== requestVersion) return;
         const existingSegments = db.segments;
         if (Array.isArray(existingSegments) && existingSegments.length > 0) {
           setTranscript(existingSegments);
@@ -1113,6 +1116,7 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
             episodeId: epId,
             language,
           });
+          if (transcriptRequestVersionRef.current !== requestVersion) return;
           if (res.success && res.data?.segments) {
             setTranscript(res.data.segments);
             transcriptLoadedKeyRef.current = loadKey;
@@ -1121,10 +1125,13 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
           }
         }
       } catch {
+        if (transcriptRequestVersionRef.current !== requestVersion) return;
         setTranscriptError('Error loading transcript');
       } finally {
-        setTranscriptLoading(false);
-        transcriptLoadKeyRef.current = null;
+        if (transcriptRequestVersionRef.current === requestVersion) {
+          setTranscriptLoading(false);
+          transcriptLoadKeyRef.current = null;
+        }
       }
     },
     [
@@ -1137,6 +1144,15 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
       generateTranscript,
     ]
   );
+
+  useEffect(() => {
+    transcriptRequestVersionRef.current += 1;
+    transcriptLoadKeyRef.current = null;
+    transcriptLoadedKeyRef.current = null;
+    setTranscript([]);
+    setTranscriptError(null);
+    setTranscriptLoading(false);
+  }, [episode.audioUrl, language, getEpisodeId]);
 
   useEffect(() => {
     if (!convexAuthLoading && isAuthenticated && episode.audioUrl) {
@@ -1189,7 +1205,9 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
   };
 
   const seekTo = (t: number) => {
-    if (audioRef.current) audioRef.current.currentTime = t;
+    if (!audioRef.current || !Number.isFinite(t)) return;
+    const maxTime = effectiveDuration > 0 ? effectiveDuration : Number.MAX_SAFE_INTEGER;
+    audioRef.current.currentTime = Math.max(0, Math.min(t, maxTime));
   };
   const skip = (s: number) => seekTo(currentTime + s);
   const changeSpeed = () => {
@@ -1198,9 +1216,13 @@ export const PodcastPlayerModule: React.FC<PodcastPlayerModuleProps> = ({
     setSpeed(n);
     if (audioRef.current) audioRef.current.playbackRate = n;
   };
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    notify.success('Link copied');
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify.success('Link copied');
+    } catch {
+      notify.error('Could not copy the link');
+    }
   };
   const handleToggleSub = async () => {
     if (!channel.feedUrl) return;

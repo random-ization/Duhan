@@ -20,6 +20,8 @@ const STORE = 'mutations';
 const INDEX_CREATED = 'by_createdAt';
 
 export type QueuedMutation = {
+  /** Account that created the action. Legacy unowned rows are never replayed. */
+  ownerId?: string;
   /** UUID-ish string: `<timestamp>-<random>`. */
   id: string;
   /** Convex function reference name, e.g. "vocab:updateProgress". */
@@ -127,9 +129,14 @@ async function withStore<T>(
  * `null` if IndexedDB is unavailable (SSR, private browsing, etc.) — callers
  * should treat `null` as "we couldn't persist, surface the original error".
  */
-export async function enqueueMutation(functionName: string, args: unknown): Promise<string | null> {
+export async function enqueueMutation(
+  functionName: string,
+  args: unknown,
+  ownerId: string
+): Promise<string | null> {
   if (!SUPPORTS_IDB) return null;
   const record: QueuedMutation = {
+    ownerId,
     id: makeId(),
     functionName,
     args,
@@ -137,7 +144,8 @@ export async function enqueueMutation(functionName: string, args: unknown): Prom
     attempts: 0,
   };
   try {
-    await withStore('readwrite', store => store.add(record));
+    const saved = await withStore('readwrite', store => store.add(record));
+    if (saved === null) return null;
     notifyListeners();
     return record.id;
   } catch (err) {
@@ -198,8 +206,11 @@ async function markAttempt(row: QueuedMutation, error: unknown): Promise<void> {
   }
 }
 
-export async function queueSize(): Promise<number> {
+export async function queueSize(ownerId?: string): Promise<number> {
   if (!SUPPORTS_IDB) return 0;
+  if (ownerId) {
+    return (await listQueuedMutations()).filter(row => row.ownerId === ownerId).length;
+  }
   try {
     const count = await withStore<number>('readonly', store => store.count());
     return count ?? 0;
@@ -234,8 +245,8 @@ export type DrainResult = {
  * Drain stops early on the first "retry" to preserve ordering (the next
  * rows likely depend on the failing one completing first).
  */
-export async function drainMutationQueue(runner: DrainRunner): Promise<DrainResult> {
-  const rows = await listQueuedMutations();
+export async function drainMutationQueue(runner: DrainRunner, ownerId: string): Promise<DrainResult> {
+  const rows = (await listQueuedMutations()).filter(row => row.ownerId === ownerId);
   let drained = 0;
   let dropped = 0;
   for (const row of rows) {
@@ -263,7 +274,7 @@ export async function drainMutationQueue(runner: DrainRunner): Promise<DrainResu
       break;
     }
   }
-  const remaining = await queueSize();
+  const remaining = await queueSize(ownerId);
   return { drained, dropped, remaining };
 }
 

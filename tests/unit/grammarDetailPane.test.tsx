@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
+import path from 'node:path';
 
 import GrammarDetailPane from '../../src/components/grammar/GrammarDetailPane';
 import type { GrammarPointData } from '../../src/types';
@@ -453,7 +454,7 @@ This is a quoted learning tip.
 
   it('masks translations from the real ~(으)려나 markdown file in context examples', () => {
     const explanation = fs.readFileSync(
-      '/Users/ryan/Documents/GitHub/语法/hanabira.org-japanese-content/markdown_grammar_korean_chinese/~(으)려나_(不知道会不会).md',
+      path.resolve(process.cwd(), 'tests/fixtures/grammar/ryeona.md'),
       'utf8'
     );
 

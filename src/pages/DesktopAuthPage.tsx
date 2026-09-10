@@ -391,13 +391,19 @@ export default function DesktopAuthPage() {
           <p className="mt-14 text-center text-xs text-k-sub/50 font-medium px-4 leading-relaxed">
             {t('auth.desktop.agreement', { defaultValue: '继续即表示同意' })} {t('appName')}{' '}
             {t('auth.desktop.and', { defaultValue: '与' })}{' '}
-            <span className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson">
+            <a
+              href={getLocalizedPath('/terms', currentLanguage)}
+              className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson"
+            >
               {t('common.terms')}
-            </span>{' '}
+            </a>{' '}
             {t('auth.desktop.and', { defaultValue: '与' })}{' '}
-            <span className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson">
+            <a
+              href={getLocalizedPath('/privacy', currentLanguage)}
+              className="text-k-ink/60 border-b border-k-ink/20 cursor-pointer hover:text-k-crimson"
+            >
               {t('common.privacy')}
-            </span>
+            </a>
           </p>
         </div>
       </div>

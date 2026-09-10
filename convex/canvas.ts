@@ -19,6 +19,7 @@ export const getCanvas = query({
                     .eq("targetId", args.targetId)
                     .eq("pageIndex", args.pageIndex)
             )
+            .filter(q => q.eq(q.field('targetType'), args.targetType))
             .unique();
 
         return layer ? { data: layer.data } : null;
@@ -54,6 +55,7 @@ export const saveCanvas = mutation({
                     .eq("targetId", args.targetId)
                     .eq("pageIndex", args.pageIndex)
             )
+            .filter(q => q.eq(q.field('targetType'), args.targetType))
             .unique();
 
         if (existing) {

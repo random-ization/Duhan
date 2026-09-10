@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { useTranslation } from 'react-i18next';
 import { NOTE_PAGES, ANNOTATIONS, type RecentAnnotation } from '../../utils/convexRefs';
 import { DesktopCard } from '../../components/desktop/ui/DesktopCard';
 import { DesignChip } from '../../components/desktop/ui/DesignChip';
 import { HanjaSeal } from '../../components/desktop/ui/HanjaSeal';
 import { Button } from '../../components/ui';
-import { useLocalizedNavigate } from '../../hooks/useLocalizedNavigate';
+import type { Id } from '../../../convex/_generated/dataModel';
 import type { SearchItem } from '../NotebookV2Page';
 
 type NotebookCardTone = 'butter' | 'pink' | 'crimson' | 'lilac' | 'sky';
 
-export default function DesktopNotebookV2Page() {
+export default function DesktopNotebookV2Page({ onOpenNote, onCreateNote }: {
+  onOpenNote: (id: Id<'note_pages'>) => void;
+  onCreateNote: () => Promise<void>;
+}) {
   const { t } = useTranslation('public');
-  const navigate = useLocalizedNavigate();
 
   const [renderTime] = useState(() => Date.now());
 
@@ -77,30 +79,20 @@ export default function DesktopNotebookV2Page() {
     limit: 50,
   });
 
-  const notes = (notesResult?.items || []) as SearchItem[];
+  const rawNotesResult = notesResult as
+    | { items?: unknown; pages?: unknown }
+    | undefined;
+  const notes = (
+    Array.isArray(rawNotesResult?.items)
+      ? rawNotesResult.items
+      : Array.isArray(rawNotesResult?.pages)
+        ? rawNotesResult.pages
+        : []
+  ) as SearchItem[];
   const isLoading = facets === undefined || notesResult === undefined;
 
   const recentAnnotations = useQuery(ANNOTATIONS.getRecent, { limit: 6 });
   const hasRecentHighlights = Array.isArray(recentAnnotations) && recentAnnotations.length > 0;
-
-  // 创建新笔记
-  const createNote = useMutation(NOTE_PAGES.createPage);
-
-  const handleCreateNote = async () => {
-    try {
-      const result = await createNote({
-        title: t('coursesOverview.desktop.notebook.newNote'),
-        tags: activeFilter !== t('coursesOverview.desktop.notebook.all') ? [activeFilter] : [],
-        metadata: { status: 'Inbox', pinned: false },
-        icon: '📝',
-      });
-      if (result?.id) {
-        navigate(`/notebook-v2?page=${result.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to create note:', error);
-    }
-  };
 
   const filters = [
     t('coursesOverview.desktop.notebook.all'),
@@ -141,7 +133,7 @@ export default function DesktopNotebookV2Page() {
         })}
         <div className="flex-1" />
         <button
-          onClick={handleCreateNote}
+          onClick={onCreateNote}
           className="cursor-pointer rounded-[11px] border-none px-[14px] py-[8px] text-[12px] font-extrabold transition-transform hover:-translate-y-0.5"
           style={{ background: 'var(--color-k-crimson)', color: 'var(--color-k-card)' }}
         >
@@ -165,6 +157,15 @@ export default function DesktopNotebookV2Page() {
               <DesktopCard
                 key={n.id}
                 pad={0}
+                onClick={() => onOpenNote(n.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpenNote(n.id);
+                  }
+                }}
                 className="overflow-hidden transition-transform hover:-translate-y-1 cursor-pointer"
               >
                 <div className="relative h-[56px] overflow-hidden" style={{ background: tone }}>
@@ -208,7 +209,7 @@ export default function DesktopNotebookV2Page() {
             {t('coursesOverview.desktop.notebook.startJourney')}
           </div>
           <Button
-            onClick={handleCreateNote}
+            onClick={onCreateNote}
             className="mt-6 rounded-xl bg-k-ink text-k-bg px-6 py-2"
           >
             {t('coursesOverview.desktop.notebook.createFirstNote')}

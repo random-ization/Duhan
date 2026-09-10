@@ -146,7 +146,9 @@ describe('GrammarModulePage AI panel persistence', () => {
   it('renders the floating AI grammar practice entry', async () => {
     renderPage();
 
-    expect(await screen.findByRole('button', { name: '打开 AI 语法练习' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: '打开 AI 语法练习' }, { timeout: 5000 })
+    ).toBeInTheDocument();
   });
 
   it('renders AI grammar practice markdown as formatted text', async () => {

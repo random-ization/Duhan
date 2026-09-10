@@ -906,6 +906,7 @@ export const create = mutation({
     searchPatterns: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<{ id: Id<'grammar_points'> }> => {
+    await requireAdmin(ctx);
     const id = await ctx.db.insert('grammar_points', {
       ...args,
       createdAt: Date.now(),
@@ -1013,6 +1014,7 @@ export const updateUnitId = mutation({
     unitId: v.number(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db
       .query('course_grammars')
       .withIndex('by_course_unit') // We can also use a filter if we dont have by_course_grammar
@@ -1036,6 +1038,43 @@ export const updateUnitId = mutation({
   },
 });
 
+export const assignToUnit = mutation({
+  args: {
+    courseId: v.string(),
+    unitId: v.number(),
+    grammarId: v.id('grammar_points'),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const grammar = await ctx.db.get(args.grammarId);
+    if (!grammar) throw new Error('Grammar point not found');
+
+    const existing = await ctx.db
+      .query('course_grammars')
+      .withIndex('by_course_unit', q =>
+        q.eq('courseId', args.courseId).eq('unitId', args.unitId)
+      )
+      .filter(q => q.eq(q.field('grammarId'), args.grammarId))
+      .first();
+    if (existing) return { success: true, id: existing._id, created: false };
+
+    const links = await ctx.db
+      .query('course_grammars')
+      .withIndex('by_course_unit', q =>
+        q.eq('courseId', args.courseId).eq('unitId', args.unitId)
+      )
+      .collect();
+    const displayOrder = links.reduce((max, link) => Math.max(max, link.displayOrder), 0) + 1;
+    const id = await ctx.db.insert('course_grammars', {
+      courseId: args.courseId,
+      unitId: args.unitId,
+      grammarId: args.grammarId,
+      displayOrder,
+    });
+    return { success: true, id, created: true };
+  },
+});
+
 export const removeFromUnit = mutation({
   args: {
     courseId: v.string(),
@@ -1043,6 +1082,7 @@ export const removeFromUnit = mutation({
     grammarId: v.id('grammar_points'),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db
       .query('course_grammars')
       .withIndex('by_course_unit', q => q.eq('courseId', args.courseId).eq('unitId', args.unitId))

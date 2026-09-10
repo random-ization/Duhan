@@ -64,7 +64,7 @@ export const getDueItems = query({
     if (kind === 'all' || kind === 'sentence') {
       const sentences = await ctx.db
         .query('user_saved_sentences')
-        .withIndex('by_user_due', q => q.eq('userId', userId).lte('fsrsDue', now))
+        .withIndex('by_user_due', q => q.eq('userId', userId).gt('fsrsDue', 0).lte('fsrsDue', now))
         .take(limit);
 
       for (const s of sentences) {
@@ -86,7 +86,7 @@ export const getDueItems = query({
     if (kind === 'all' || kind === 'grammar') {
       const grammar = await ctx.db
         .query('user_grammar_saved')
-        .withIndex('by_user_due', q => q.eq('userId', userId).lte('fsrsDue', now))
+        .withIndex('by_user_due', q => q.eq('userId', userId).gt('fsrsDue', 0).lte('fsrsDue', now))
         .take(limit);
 
       for (const g of grammar) {

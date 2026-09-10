@@ -7,6 +7,39 @@ import { Mail, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { KT } from '../components/mobile/ksoft/ksoft';
 import { motion } from 'framer-motion';
 
+const PAGE_COPY = {
+  en: {
+    tagline: 'Read Korean · Rediscover the language', heroTitle: 'Return to your\nlearning journey',
+    heroBody: 'We will help you reset your password so you can continue learning Korean.', back: 'Back to sign in',
+    title: 'Forgot password', description: 'Enter your registered email and we will send a reset link.',
+    email: 'Email address', placeholder: 'Enter your registered email', processing: 'Sending...', send: 'Send reset link →',
+    sentTitle: 'Reset email sent', sentBody: 'If this email is registered, a reset link will arrive shortly. Please check your inbox.',
+    home: 'Go to home', problem: 'Need help? Contact', support: 'support',
+  },
+  zh: {
+    tagline: '讀韓 · 重新认识韩语', heroTitle: '找回您的\n学习之旅', heroBody: '别担心，我们会协助您重设密码。完成验证后即可继续您的韩语进阶之路。',
+    back: '返回登录', title: '忘记密码', description: '输入您的注册邮箱，我们将向您发送重置链接', email: '注册邮箱',
+    placeholder: '输入您的注册邮箱', processing: '处理中...', send: '发送重置链接 →', sentTitle: '重置邮件已发送',
+    sentBody: '如果该邮箱已注册，您将很快收到包含重置链接的邮件。请检查您的收件箱。', home: '回到首页', problem: '遇到问题？请联系', support: '技术支持',
+  },
+  vi: {
+    tagline: 'Đọc tiếng Hàn · Khám phá lại ngôn ngữ', heroTitle: 'Trở lại hành trình\nhọc tập của bạn',
+    heroBody: 'Chúng tôi sẽ giúp bạn đặt lại mật khẩu để tiếp tục học tiếng Hàn.', back: 'Quay lại đăng nhập',
+    title: 'Quên mật khẩu', description: 'Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu.', email: 'Địa chỉ email',
+    placeholder: 'Nhập email đã đăng ký', processing: 'Đang gửi...', send: 'Gửi liên kết đặt lại →', sentTitle: 'Đã gửi email đặt lại',
+    sentBody: 'Nếu email này đã được đăng ký, bạn sẽ sớm nhận được liên kết đặt lại. Hãy kiểm tra hộp thư đến.',
+    home: 'Về trang chủ', problem: 'Bạn cần trợ giúp? Liên hệ', support: 'hỗ trợ',
+  },
+  mn: {
+    tagline: 'Солонгосоор унших · Хэлийг шинээр нээх', heroTitle: 'Суралцах аялалдаа\nэргэн орох',
+    heroBody: 'Нууц үгээ шинэчилж, солонгос хэлээ үргэлжлүүлэн сурахад тань тусална.', back: 'Нэвтрэх рүү буцах',
+    title: 'Нууц үгээ мартсан', description: 'Бүртгэлтэй имэйлээ оруулбал шинэчлэх холбоос илгээнэ.', email: 'Имэйл хаяг',
+    placeholder: 'Бүртгэлтэй имэйлээ оруулна уу', processing: 'Илгээж байна...', send: 'Шинэчлэх холбоос илгээх →',
+    sentTitle: 'Шинэчлэх имэйл илгээгдлээ', sentBody: 'Энэ имэйл бүртгэлтэй бол шинэчлэх холбоос удахгүй ирнэ. Ирсэн имэйлээ шалгана уу.',
+    home: 'Нүүр хуудас руу', problem: 'Тусламж хэрэгтэй юу?', support: 'Дэмжлэгтэй холбогдох',
+  },
+} as const;
+
 const getErrorMessage = (error: unknown): string | undefined => {
   if (error && typeof error === 'object' && 'message' in error) {
     const message = (error as { message?: unknown }).message;
@@ -18,6 +51,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
 const ForgotPasswordPage: React.FC = () => {
   const { t } = useTranslation();
   const language = useCurrentLanguage();
+  const copy = PAGE_COPY[language];
   const navigate = useLocalizedNavigate();
   const requestPasswordReset = useAction(
     aRef<{ email: string; language?: string }, { success: boolean }>(
@@ -80,20 +114,16 @@ const ForgotPasswordPage: React.FC = () => {
             <div>
               <div className="text-2xl font-black text-white tracking-tight">Duhan</div>
               <div className="text-xs font-medium text-white/60 tracking-widest mt-0.5">
-                讀韓 · 重新认识韩语
+                {copy.tagline}
               </div>
             </div>
           </div>
         </div>
 
         <div className="relative z-10">
-          <h1 className="text-[64px] font-black text-white leading-tight tracking-tight">
-            找回您的
-            <br />
-            学习之旅
-          </h1>
+          <h1 className="text-[64px] font-black text-white leading-tight tracking-tight whitespace-pre-line">{copy.heroTitle}</h1>
           <p className="mt-8 text-lg font-medium text-white/70 leading-relaxed max-w-md">
-            别担心，我们会协助您重设密码。完成验证后即可继续您的韩语进阶之路。
+            {copy.heroBody}
           </p>
         </div>
       </div>
@@ -106,17 +136,17 @@ const ForgotPasswordPage: React.FC = () => {
             className="flex items-center gap-2 text-k-sub hover:text-k-ink font-bold transition mb-12"
           >
             <ArrowLeft size={18} />
-            返回登录
+            {copy.back}
           </button>
 
           <div className="mb-10">
             <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-[32px] font-black tracking-tight text-k-ink">忘记密码</h2>
+              <h2 className="text-[32px] font-black tracking-tight text-k-ink">{copy.title}</h2>
               <span className="text-[26px] font-serif text-k-crimson opacity-80">
                 비밀번호 찾기
               </span>
             </div>
-            <p className="mt-2 text-k-sub font-medium">输入您的注册邮箱，我们将向您发送重置链接</p>
+            <p className="mt-2 text-k-sub font-medium">{copy.description}</p>
           </div>
 
           {submitted ? (
@@ -128,23 +158,23 @@ const ForgotPasswordPage: React.FC = () => {
               <div className="w-16 h-16 bg-k-mint/20 text-k-mintDeep rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-xl font-black text-k-ink mb-4">重置邮件已发送</h3>
+              <h3 className="text-xl font-black text-k-ink mb-4">{copy.sentTitle}</h3>
               <p className="text-k-sub font-medium leading-relaxed mb-8">
-                如果该邮箱已注册，您将很快收到包含重置链接的邮件。请检查您的收件箱。
+                {copy.sentBody}
               </p>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/')}
                 style={{ background: KT.ink }}
                 className="w-full py-4 rounded-2xl text-white font-black text-lg transition shadow-lg"
               >
-                回到首页
+                {copy.home}
               </button>
             </motion.div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-black text-k-sub uppercase tracking-widest px-1">
-                  注册邮箱
+                <label htmlFor="password-reset-email" className="text-xs font-black text-k-sub uppercase tracking-widest px-1">
+                  {copy.email}
                 </label>
                 <div className="relative group">
                   <Mail
@@ -152,9 +182,10 @@ const ForgotPasswordPage: React.FC = () => {
                     size={18}
                   />
                   <input
+                    id="password-reset-email"
                     type="email"
                     required
-                    placeholder="输入您的注册邮箱"
+                    placeholder={copy.placeholder}
                     className="w-full bg-white px-12 py-4 rounded-2xl border-2 border-k-line font-bold text-k-ink placeholder:text-k-sub focus:border-k-ink outline-none transition shadow-sm"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -175,14 +206,14 @@ const ForgotPasswordPage: React.FC = () => {
                 style={{ background: KT.crimson }}
                 className="w-full py-5 rounded-2xl text-white font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition shadow-lg shadow-k-crimson/20 disabled:opacity-50"
               >
-                {loading ? '处理中...' : '发送重置链接 →'}
+                {loading ? copy.processing : copy.send}
               </button>
             </form>
           )}
 
           <div className="mt-12 text-center text-[13px] font-medium text-k-sub leading-relaxed">
-            遇到问题？请联系{' '}
-            <button className="text-k-ink font-bold underline underline-offset-2">技术支持</button>
+            {copy.problem}{' '}
+            <a href="mailto:support@koreanstudy.me" className="text-k-ink font-bold underline underline-offset-2">{copy.support}</a>
           </div>
         </div>
       </div>

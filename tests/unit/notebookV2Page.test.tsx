@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NOTE_PAGES } from '../../src/utils/convexRefs';
 import { LayoutProvider } from '../../src/contexts/LayoutContext';
 import type { Id } from '../../convex/_generated/dataModel';
+import { MemoryRouter } from 'react-router-dom';
 
 const navigateMock = vi.fn();
 const useQueryMock = vi.fn();
@@ -77,9 +78,11 @@ const getLatestSearchArgs = () => {
 describe('NotebookV2Page', () => {
   const renderWithLayout = () =>
     render(
-      <LayoutProvider>
-        <NotebookV2Page />
-      </LayoutProvider>
+      <MemoryRouter initialEntries={['/en/notebook']}>
+        <LayoutProvider>
+          <NotebookV2Page />
+        </LayoutProvider>
+      </MemoryRouter>
     );
 
   beforeEach(() => {
@@ -245,7 +248,7 @@ describe('NotebookV2Page', () => {
     });
   });
 
-  it.skip('passes an empty string query into notePages:search on first render', async () => {
+  it('passes an empty string query into notePages:search on first render', async () => {
     renderWithLayout();
     await waitFor(() => {
       const latest = getLatestSearchArgs();
@@ -254,11 +257,15 @@ describe('NotebookV2Page', () => {
     });
   });
 
-  it.skip('saves quote cards via saveBlocks without overwriting the quote block', async () => {
+  it('saves quote cards via saveBlocks without overwriting the quote block', async () => {
     renderWithLayout();
 
-    fireEvent.click(screen.getByRole('button', { name: /Reading Note 1/ }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Mock Editor' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Reading Note 1/ }, { timeout: 7000 })
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Mock Editor' }, { timeout: 7000 })
+    );
 
     await waitFor(
       () => {
@@ -281,39 +288,32 @@ describe('NotebookV2Page', () => {
     );
   }, 15000);
 
-  it.skip('passes search/filter arguments into notePages:search query', async () => {
+  it('passes the selected desktop note type into notePages:search', async () => {
     renderWithLayout();
 
-    fireEvent.change(screen.getByPlaceholderText('Search quote or note...'), {
-      target: { value: 'grammar' },
-    });
-
-    fireEvent.change(screen.getByDisplayValue('All sources'), {
-      target: { value: 'READING' },
-    });
+    fireEvent.click(await screen.findByText('manual 1'));
 
     await waitFor(
       () => {
         const latest = getLatestSearchArgs();
         expect(latest).not.toBeNull();
-        expect(latest?.query).toBe('grammar');
-        expect(Array.isArray(latest?.sourceModules)).toBe(true);
-        expect((latest?.sourceModules as string[]).includes('READING_ARTICLE')).toBe(true);
+        expect(latest?.query).toBe('');
+        expect(latest?.noteTypes).toEqual(['manual']);
       },
       { timeout: 7000 }
     );
   }, 15000);
 
-  it.skip('does not crash when notePages search returns a malformed empty result', async () => {
+  it('does not crash when notePages search returns a malformed empty result', async () => {
     searchResultOverride = { nextCursor: 'cursor-without-items' };
 
     renderWithLayout();
 
-    expect(await screen.findByPlaceholderText('Search quote or note...')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /newNote/ })).toBeInTheDocument();
     expect(screen.queryByText(/Oops, something went wrong/i)).not.toBeInTheDocument();
   });
 
-  it.skip('normalizes legacy notePages search pages into search items', async () => {
+  it('normalizes legacy notePages search pages into search items', async () => {
     searchResultOverride = {
       pages: [
         {
@@ -334,12 +334,12 @@ describe('NotebookV2Page', () => {
     expect(screen.queryByText(/Oops, something went wrong/i)).not.toBeInTheDocument();
   });
 
-  it.skip('does not crash when notebook list query returns a malformed result', async () => {
+  it('does not crash when notebook list query returns a malformed result', async () => {
     notebookListResultOverride = { totals: { notes: 1 } };
 
     renderWithLayout();
 
-    expect(await screen.findByPlaceholderText('Search quote or note...')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /newNote/ })).toBeInTheDocument();
     expect(screen.queryByText(/Oops, something went wrong/i)).not.toBeInTheDocument();
   });
 });

@@ -17,12 +17,13 @@ type VidstackVideoPlayerProps = {
   poster?: string;
   onTimeUpdate?: (detail: MediaTimeUpdateEventDetail, nativeEvent: MediaTimeUpdateEvent) => void;
   onPlay?: MediaPlayerProps['onPlay'];
+  onCanPlay?: MediaPlayerProps['onCanPlay'];
   playbackRates?: number[];
   className?: string;
 };
 
 const VidstackVideoPlayer = forwardRef<MediaPlayerInstance, VidstackVideoPlayerProps>(
-  ({ src, title, poster, onTimeUpdate, onPlay, playbackRates, className }, ref) => (
+  ({ src, title, poster, onTimeUpdate, onPlay, onCanPlay, playbackRates, className }, ref) => (
     <MediaPlayer
       ref={ref}
       src={src}
@@ -36,6 +37,7 @@ const VidstackVideoPlayer = forwardRef<MediaPlayerInstance, VidstackVideoPlayerP
       className={className}
       onTimeUpdate={onTimeUpdate}
       onPlay={onPlay}
+      onCanPlay={onCanPlay}
     >
       <MediaProvider />
       <DefaultVideoLayout icons={defaultLayoutIcons} playbackRates={playbackRates} />

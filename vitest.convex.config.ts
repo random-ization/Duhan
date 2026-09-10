@@ -8,9 +8,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: [path.resolve(__dirname, 'convex/**/*.{test,spec}.{ts,tsx}')],
-    exclude: [path.resolve(__dirname, 'convex/**/*.e2e.{test,spec}.{ts,tsx}')],
-    setupFiles: [path.resolve(__dirname, 'tests/setup.ts')],
+    include: ['convex/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['convex/**/*.e2e.{test,spec}.{ts,tsx}', 'node_modules/**'],
+    setupFiles: ['tests/setup.ts'],
     testTimeout: 30000, // 30 seconds for integration tests
     hookTimeout: 30000,
     root: path.resolve(__dirname),

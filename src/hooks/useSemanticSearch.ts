@@ -37,6 +37,7 @@ export function useSemanticSearch(
   const search = useCallback(
     (query: string) => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      const gen = ++abortRef.current;
 
       const trimmed = query.trim();
       if (!trimmed || trimmed.length < 2) {
@@ -50,7 +51,6 @@ export function useSemanticSearch(
       setError(null);
 
       timerRef.current = setTimeout(() => {
-        const gen = ++abortRef.current;
         searchSimilar({ query: trimmed, sourceTable, limit })
           .then(res => {
             if (gen !== abortRef.current) return; // stale
@@ -70,6 +70,7 @@ export function useSemanticSearch(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      abortRef.current += 1;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);

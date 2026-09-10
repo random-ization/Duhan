@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, ChevronLeft, Settings, X, BookOpen, ChevronRight } from 'lucide-react';
 import { logError, logInfo } from '../../utils/logger';
 import { cn } from '../../lib/utils';
+import { getConvexSiteUrl } from '../../utils/convexConfig';
 
 type ReaderTheme = 'light' | 'dark' | 'sepia';
 type ReaderFontSize = 'small' | 'medium' | 'large' | 'extra-large';
@@ -60,6 +61,7 @@ export const EpubReader: React.FC = () => {
   // epub.js refs
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<EpubBook | null>(null);
+  const restoredBookRef = useRef<string | null>(null);
   const generatedLocationsRef = useRef<string | null>(null);
   const saveProgressTimeoutRef = useRef<number | null>(null);
   const pendingProgressRef = useRef<{ cfi: string; percent: number } | null>(null);
@@ -93,7 +95,7 @@ export const EpubReader: React.FC = () => {
         const url = new URL(originalUrl);
         // Get the pathname and remove leading slash
         const objectKey = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
-        const proxyUrl = `/epub?key=${encodeURIComponent(objectKey)}`;
+        const proxyUrl = `${getConvexSiteUrl()}/epub?key=${encodeURIComponent(objectKey)}`;
 
         logInfo('EPUB proxy URL constructed', {
           objectKey,
@@ -144,6 +146,7 @@ export const EpubReader: React.FC = () => {
         })
           .then(() => {
             lastSavedProgressRef.current = pending;
+            if (pendingProgressRef.current === pending) pendingProgressRef.current = null;
           })
           .catch(error => logError('Failed to save EPUB progress', error));
       }, 700);
@@ -176,11 +179,8 @@ export const EpubReader: React.FC = () => {
         });
         setRendition(rendition);
 
-        const lastCfi = bookDetail?.userProgress?.blockId;
-        const displayPromise = lastCfi ? rendition.display(lastCfi) : rendition.display();
-        displayPromise.catch(_err => {
+        rendition.display().catch(_err => {
           logError('Failed to display EPUB location', _err);
-          rendition.display().catch(innerErr => logError('Failed to display EPUB start', innerErr));
         });
 
         book.ready
@@ -246,13 +246,44 @@ export const EpubReader: React.FC = () => {
         globalThis.window.clearTimeout(saveProgressTimeoutRef.current);
         saveProgressTimeoutRef.current = null;
       }
+      const pending = pendingProgressRef.current;
+      if (pending && user?.id && bookId) {
+        void saveProgress({
+          bookId,
+          chapterIndex: currentChapter,
+          shareToken,
+          blockId: pending.cfi,
+          completionPercent: pending.percent * 100,
+        }).catch(error => logError('Failed to flush EPUB progress', error));
+      }
+      if (generatedLocationsRef.current === epubUrl) generatedLocationsRef.current = null;
       if (bookRef.current) {
         bookRef.current.destroy();
         bookRef.current = null;
       }
       setRendition(null);
     };
-  }, [epubUrl, bookDetail?.userProgress?.blockId, handleProgressSave]);
+  }, [
+    epubUrl,
+    handleProgressSave,
+    user?.id,
+    bookId,
+    currentChapter,
+    shareToken,
+    saveProgress,
+  ]);
+
+  // Restore the saved CFI once the rendition and progress query are both ready.
+  // Keeping this separate prevents a progress update from rebuilding the EPUB instance.
+  useEffect(() => {
+    const savedCfi = bookDetail?.userProgress?.blockId;
+    if (!rendition || !savedCfi || !bookId || restoredBookRef.current === bookId) return;
+    restoredBookRef.current = bookId;
+    rendition.display(savedCfi).catch(error => {
+      restoredBookRef.current = null;
+      logError('Failed to restore EPUB location', error);
+    });
+  }, [bookDetail?.userProgress?.blockId, bookId, rendition]);
 
   // Apply Theme & Style Settings
   useEffect(() => {
@@ -382,7 +413,12 @@ export const EpubReader: React.FC = () => {
   const { book } = bookDetail;
 
   return (
-    <div className={cn('min-h-screen flex flex-col transition-all duration-500', theme.page)}>
+    <div
+      className={cn(
+        'h-[100dvh] overflow-hidden flex flex-col transition-all duration-500',
+        theme.page
+      )}
+    >
       {/* Editorial Header */}
       <header
         className={cn(
@@ -445,7 +481,7 @@ export const EpubReader: React.FC = () => {
         </div>
       </header>
 
-      <main className="relative flex-1 min-h-0 mx-auto w-full max-w-[1200px] px-8 py-8 flex flex-col gap-8">
+      <main className="relative flex-1 min-h-0 mx-auto w-full max-w-[1200px] px-3 py-3 sm:px-8 sm:py-8 flex flex-col gap-8">
         {showSettings && (
           <div
             className="fixed inset-0 z-[60] bg-k-ink/5 backdrop-blur-sm"

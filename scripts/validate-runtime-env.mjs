@@ -15,6 +15,7 @@ const requireKey = key => {
 
 requireKey('SITE_URL');
 requireKey('VITE_APP_URL');
+requireKey('VITE_CONVEX_URL');
 requireKey('OPENAI_API_KEY');
 requireKey('RESEND_API_KEY');
 requireKey('EMAIL_FROM');

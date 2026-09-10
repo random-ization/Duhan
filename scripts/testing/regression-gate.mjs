@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const VITEST_REPORT = path.join(ROOT, 'docs/reports/testing/vitest-report.json');
 const UI_PARITY_REPORT = path.join(ROOT, 'docs/reports/ui-parity/summary.json');
 

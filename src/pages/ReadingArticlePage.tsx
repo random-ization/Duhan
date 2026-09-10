@@ -267,6 +267,7 @@ export default function ReadingArticlePage() {
   const articleSummary = article?.summary;
   const aiAnalysisRequestKeyRef = useRef<string | null>(null);
   const translationRequestKeyRef = useRef<string | null>(null);
+  const translationRequestVersionRef = useRef(0);
   const dictionaryLookupKeyRef = useRef<string | null>(null);
   const { annotations: scopedAnnotations, upsert: upsertScopedAnnotation } = useScopedAnnotations({
     scopeType: 'READING_ARTICLE',
@@ -424,6 +425,7 @@ export default function ReadingArticlePage() {
   }, [user, articleId, paragraphs.length, updateReadingProgress]);
 
   const requestTranslations = useCallback(async () => {
+    const requestVersion = ++translationRequestVersionRef.current;
     if (!articleTitle || paragraphs.length === 0) {
       setTranslations(prev => (prev.length === 0 ? prev : []));
       setTranslationLoading(false);
@@ -439,6 +441,7 @@ export default function ReadingArticlePage() {
         paragraphs,
         language: translationLang,
       })) as ReadingTranslationResult | null;
+      if (translationRequestVersionRef.current !== requestVersion) return;
       const next = Array.isArray(result?.translations) ? result.translations : [];
       const normalized = paragraphs.map((_, index) => next[index] || '');
       setTranslations(prev => (areStringArraysEqual(prev, normalized) ? prev : normalized));
@@ -451,10 +454,13 @@ export default function ReadingArticlePage() {
             })
       );
     } catch (error) {
+      if (translationRequestVersionRef.current !== requestVersion) return;
       setTranslations(prev => (prev.length === 0 ? prev : []));
       setTranslationError(toTranslationErrorMessage(error, uiLanguage));
     } finally {
-      setTranslationLoading(false);
+      if (translationRequestVersionRef.current === requestVersion) {
+        setTranslationLoading(false);
+      }
     }
   }, [articleTitle, paragraphs, t, translateReadingParagraphs, translationLang, uiLanguage]);
 
@@ -474,6 +480,7 @@ export default function ReadingArticlePage() {
 
   useEffect(() => {
     if (!article || !articleTitle || paragraphs.length === 0) {
+      translationRequestVersionRef.current += 1;
       translationRequestKeyRef.current = null;
       setTranslations(prev => (prev.length === 0 ? prev : []));
       setTranslationLoading(false);
@@ -487,6 +494,7 @@ export default function ReadingArticlePage() {
         ? article.paragraphTranslations[translationLang]
         : undefined;
     if (Array.isArray(pretranslated) && pretranslated.length >= paragraphs.length) {
+      translationRequestVersionRef.current += 1;
       const normalized = paragraphs.map((_, index) => pretranslated[index] || '');
       translationRequestKeyRef.current = requestKey;
       setTranslations(prev => (areStringArraysEqual(prev, normalized) ? prev : normalized));
@@ -496,6 +504,7 @@ export default function ReadingArticlePage() {
     }
 
     if (!translationEnabled) {
+      translationRequestVersionRef.current += 1;
       translationRequestKeyRef.current = null;
       setTranslations(prev => (prev.length === 0 ? prev : []));
       setTranslationLoading(false);
@@ -967,6 +976,25 @@ export default function ReadingArticlePage() {
     [activeWord, fontSize, panelTab, sessionStorageKey, translationEnabled]
   );
 
+  const persistArticleSessionNow = useCallback(
+    (scrollTop?: number) => {
+      if (restoredSessionKeyRef.current !== sessionStorageKey) return;
+      if (persistSessionTimeoutRef.current !== null) {
+        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
+        persistSessionTimeoutRef.current = null;
+      }
+      persistReadingArticleSessionState(sessionStorageKey, {
+        scrollTop: Math.max(0, scrollTop ?? contentRef.current?.scrollTop ?? 0),
+        fontSize,
+        translationEnabled,
+        panelTab,
+        activeWord: normalizeInlineWhitespace(activeWord),
+        timestamp: Date.now(),
+      });
+    },
+    [activeWord, fontSize, panelTab, sessionStorageKey, translationEnabled]
+  );
+
   useLayoutEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -998,14 +1026,10 @@ export default function ReadingArticlePage() {
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      if (persistSessionTimeoutRef.current !== null) {
-        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
-        persistSessionTimeoutRef.current = null;
-      }
-      persistArticleSession(container.scrollTop);
+      persistArticleSessionNow(container.scrollTop);
       container.removeEventListener('scroll', handleScroll);
     };
-  }, [persistArticleSession]);
+  }, [persistArticleSession, persistArticleSessionNow]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -1037,11 +1061,9 @@ export default function ReadingArticlePage() {
 
   useEffect(() => {
     return () => {
-      if (persistSessionTimeoutRef.current !== null) {
-        globalThis.window.clearTimeout(persistSessionTimeoutRef.current);
-      }
+      persistArticleSessionNow();
     };
-  }, []);
+  }, [persistArticleSessionNow]);
 
   const focusNote = useCallback((noteId: string) => {
     setSelectedNoteId(noteId);
