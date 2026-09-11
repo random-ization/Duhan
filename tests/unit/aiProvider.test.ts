@@ -50,7 +50,7 @@ describe('resolveChatProviderConfigs', () => {
         provider: 'mimo',
         apiKey: 'mimo-key',
         baseURL: 'https://api.xiaomimimo.com/v1',
-        model: 'mimo-v2-flash',
+        model: 'mimo-v2.5-pro',
       },
     ]);
   });

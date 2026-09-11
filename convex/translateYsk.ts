@@ -7,8 +7,23 @@ import OpenAI from 'openai';
 import { type Id } from './_generated/dataModel';
 import { type FunctionReference } from 'convex/server';
 import { createLogger } from './logger';
+import { resolveChatProviderConfigs } from './aiProviders';
 
 const log = createLogger('TRANSLATE');
+
+function createTranslationClient() {
+  const provider = resolveChatProviderConfigs(process.env)[0];
+  if (!provider) {
+    throw new Error('No AI chat provider is configured on Convex');
+  }
+  return {
+    client: new OpenAI({
+      apiKey: provider.apiKey,
+      ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
+    }),
+    model: provider.model,
+  };
+}
 
 type TranslateYskInternalRefs = {
   getItemsToTranslate: FunctionReference<
@@ -381,7 +396,7 @@ export const run = action({
       return { success: true, message: 'No items to translate' };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     const CHUNK_SIZE = 25;
     const updates = [];
 
@@ -414,7 +429,7 @@ Return a JSON object strictly matching this schema:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'mimo-v2-flash',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(requestPayload) },
@@ -549,7 +564,7 @@ export const runVocabLocalization = action({
       return { success: true, courseId, processed: 0, updated: 0, hasMore: false };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     const updates: Array<{
       appearanceId: Id<'vocabulary_appearances'>;
       wordId: Id<'words'>;
@@ -586,7 +601,7 @@ Rules:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'mimo-v2-flash',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -679,7 +694,7 @@ export const runUnitLocalization = action({
       };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     const updates: Array<{
       id: Id<'textbook_units'>;
       translation: string;
@@ -706,7 +721,7 @@ Use natural learner-friendly translation and preserve core meaning.`;
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'mimo-v2-flash',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -790,7 +805,7 @@ export const runGrammarLocalization = action({
       };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     const updates: Array<{
       id: Id<'grammar_points'>;
       summary: string;
@@ -846,7 +861,7 @@ Return strict JSON:
 
       try {
         const response = await openai.chat.completions.create({
-          model: 'mimo-v2-flash',
+          model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -978,7 +993,7 @@ export const runFix = action({
       return { success: true, totalUpdated: 0, hasMore: false };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     let totalUpdated = 0;
 
     const requestPayload = chunk.map((item: ReviewItem) => ({
@@ -1013,7 +1028,7 @@ Return a strictly valid JSON object matching this schema:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'mimo-v2-flash',
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1114,7 +1129,7 @@ export const fixSemantics = action({
       return { success: true, totalUpdated: 0, hasMore: false };
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { client: openai, model } = createTranslationClient();
     let totalUpdated = 0;
 
     const requestPayload = chunk.map((item: ReviewItem) => ({
@@ -1152,7 +1167,7 @@ Return a JSON object exactly matching this schema:
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'mimo-v2-flash',
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1416,13 +1431,14 @@ function chunkArray<T>(items: T[], size: number): T[][] {
 
 async function translateTranscriptBatch(
   openai: OpenAI,
+  model: string,
   target: ListeningBackfillTarget,
   items: Array<{ id: number; text: string }>
 ) {
   if (items.length === 0) return [] as string[];
 
   const completion = await openai.chat.completions.create({
-    model: 'mimo-v2-flash',
+    model,
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -1503,11 +1519,7 @@ export const backfillListeningTranslations = action({
     dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured on Convex');
-    }
-    const openai = new OpenAI({ apiKey });
+    const { client: openai, model } = createTranslationClient();
 
     const requestedLanguageSet = new Set(
       (args.languages || ['zh'])
@@ -1585,6 +1597,7 @@ export const backfillListeningTranslations = action({
         for (const batch of chunkArray(missing, 24)) {
           const translated = await translateTranscriptBatch(
             openai,
+            model,
             target,
             batch.map(item => ({ id: item.id, text: item.text }))
           );

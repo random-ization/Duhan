@@ -47,6 +47,23 @@ export function normalizeSentenceText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+export function buildFallbackSentenceTokens(value: string): SentenceToken[] {
+  const normalizedText = normalizeSentenceText(value);
+  return Array.from(normalizedText.matchAll(/[\p{L}\p{N}]+/gu), (match, index) => {
+    const surface = match[0];
+    const start = match.index;
+    return {
+      surface,
+      lemma: surface,
+      start,
+      end: start + surface.length,
+      length: surface.length,
+      wordPosition: index,
+      sentencePosition: 0,
+    };
+  });
+}
+
 export function normalizeSentenceLanguage(value?: string): SupportedSentenceLanguage {
   const normalized = (value || '').trim().toLowerCase();
   if (normalized.startsWith('en')) return 'en';

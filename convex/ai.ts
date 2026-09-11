@@ -24,7 +24,7 @@ import {
   type ChatProviderConfig,
 } from './aiProviders';
 import { aiLogger } from './logger';
-import { analyzeSentenceTokens } from './kiwi';
+import { buildFallbackSentenceTokens } from './sentenceExplainer/shared';
 
 assertProductionRuntimeEnv();
 
@@ -493,6 +493,14 @@ function createChatClient(config: ChatProviderConfig, timeout = 25000) {
     ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     timeout,
   });
+}
+
+function getPrimaryChatProviderMetadata() {
+  const provider = resolveChatProviderConfigs(process.env)[0];
+  return {
+    model: provider?.model || 'unknown',
+    provider: provider?.provider || 'unknown',
+  };
 }
 
 async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
@@ -2028,21 +2036,21 @@ export const analyzeReadingArticle = action({
       return null;
     }
 
-    // Pre-analyze with Kiwi for morphological “fact layer”
+    // Give the model a cheap lexical fact layer. Loading Kiwi's full model can exceed
+    // Convex's 512 MB action limit, so morphology remains an optional standalone feature.
     let kiwiFactLayer = '';
-    try {
-      // Analyze a representative sample (first ~500 chars) to avoid excessive processing
-      const sampleText = trimmedBody.slice(0, 500);
-      const analysis = await analyzeSentenceTokens(sampleText);
+    const lexicalCandidates = Array.from(
+      new Set(
+        buildFallbackSentenceTokens(trimmedBody.slice(0, 500))
+          .map(token => token.surface)
+          .filter(surface => /[가-힣]/.test(surface))
+      )
+    ).slice(0, 20);
+    if (lexicalCandidates.length > 0) {
       kiwiFactLayer = `
-[형태소 분석 참고 (Kiwi NLP)]
-핵심 어휘: ${analysis.lemmas.slice(0, 15).join(', ')}
-조사: ${analysis.particles.slice(0, 10).join(', ')}
-어미: ${analysis.endings.slice(0, 8).join(', ')}
-용언 어간: ${analysis.stems.slice(0, 8).join(', ')}
-** vocabulary 中的 term 必须从上述”핵심 어휘”或”용언 어간”中选取，不要虚构文中不存在的词汇。`;
-    } catch {
-      // Kiwi analysis is optional — gracefully degrade
+[원문 어절 참고]
+${lexicalCandidates.join(', ')}
+** vocabulary 中的 term 必须来自原文，不要虚构文中不存在的词汇。`;
     }
 
     try {
@@ -2266,8 +2274,7 @@ export const translateReadingParagraphs = action({
     } catch (error) {
       await logAiFailure(ctx, {
         feature: 'translate_reading_paragraphs',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        ...getPrimaryChatProviderMetadata(),
         startedAt,
         error,
       });
@@ -2329,8 +2336,7 @@ export const translateReadingParagraphs = action({
       await logAiFailure(ctx, {
         userId,
         feature: 'translate_reading_paragraphs',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        ...getPrimaryChatProviderMetadata(),
         startedAt,
         error,
       });
@@ -2449,8 +2455,7 @@ export const generateTopikWritingMaterialFallback = action({
     } catch (error) {
       await logAiFailure(ctx, {
         feature: 'topik_writing_material_fallback',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        ...getPrimaryChatProviderMetadata(),
         startedAt,
         error,
       });
@@ -2552,8 +2557,7 @@ Rules:
       await logAiFailure(ctx, {
         userId,
         feature: 'topik_writing_material_fallback',
-        model: 'mimo-v2-flash',
-        provider: 'openai',
+        ...getPrimaryChatProviderMetadata(),
         startedAt,
         error,
       });

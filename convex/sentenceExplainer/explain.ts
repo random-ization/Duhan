@@ -23,6 +23,7 @@ import { buildAffixCandidateSet, scoreGrammarMatch } from '../grammarMapping';
 import {
   SENTENCE_EXPLAINER_SOURCE,
   SENTENCE_EXPLANATION_VERSION,
+  buildFallbackSentenceTokens,
   dedupeByKey,
   getSentenceLanguageLabels,
   normalizeSentenceLanguage,
@@ -291,6 +292,18 @@ function buildCacheKeys(targetLanguage: SupportedSentenceLanguage, normalizedTex
   return {
     contentHash,
     cacheKey: hashText(`sentence_explanation|${contentHash}`),
+  };
+}
+
+function buildFallbackTokenizedResult(sentence: string): KiwiTokenizedResult {
+  const normalizedText = normalizeSentenceText(sentence);
+  return {
+    text: sentence,
+    normalizedText,
+    textHash: hashText(normalizedText),
+    modelVersion: 'lightweight-fallback-v1',
+    tokens: buildFallbackSentenceTokens(normalizedText),
+    cacheHit: false,
   };
 }
 
@@ -601,7 +614,17 @@ export const explainSentence = action({
     }
 
     try {
-      const tokenized = await ctx.runAction(tokenizePersistedAction, { text: sentence });
+      let tokenized = buildFallbackTokenizedResult(sentence);
+      if (process.env.KIWI_TOKENIZATION_ENABLED === 'true') {
+        try {
+          tokenized = await ctx.runAction(tokenizePersistedAction, { text: sentence });
+        } catch (error) {
+          console.warn(
+            '[SentenceExplainer] Kiwi tokenization unavailable; using lightweight fallback:',
+            toErrorMessage(error)
+          );
+        }
+      }
       const tokens = tokenized.tokens || [];
       const vocabularySeeds = await resolveVocabularySeeds(ctx as never, tokens, targetLanguage);
       const grammarSeeds = await resolveGrammarSeeds(ctx as never, tokens, targetLanguage);
