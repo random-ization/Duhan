@@ -5,6 +5,7 @@ import schema from './schema';
 
 const modules = {
   './_generated/server.ts': () => import('./_generated/server'),
+  './admin.ts': () => import('./admin'),
   './annotations.ts': () => import('./annotations'),
   './canvas.ts': () => import('./canvas'),
   './fsrsReview.ts': () => import('./fsrsReview'),
@@ -25,6 +26,29 @@ async function setup() {
 }
 
 describe('Backend user data regressions', () => {
+  it('loads admin users and health after exceeding the old 250-row scan batch', async () => {
+    const { t, userId } = await setup();
+    await t.run(async ctx => {
+      await ctx.db.patch(userId, { role: 'ADMIN' });
+      for (let index = 0; index < 300; index += 1) {
+        await ctx.db.insert('users', {
+          email: `admin-list-${index}@example.com`,
+          name: `Admin list user ${index}`,
+          createdAt: index,
+        });
+      }
+    });
+
+    const admin = t.withIdentity({ subject: userId });
+    const page = await admin.query(api.admin.getUsers, {
+      paginationOpts: { numItems: 20, cursor: null },
+      sortBy: 'NEWEST',
+    });
+    expect(page.page).toHaveLength(20);
+    expect(page).toMatchObject({ isDone: false, continueCursor: '20' });
+    expect(await admin.query(api.admin.getDataHealth, {})).toMatchObject({ usersScanned: 301 });
+  });
+
   it('supports the notebook create, edit, search, and reload contract used by the UI', async () => {
     const { asUser } = await setup();
     const notebook = await asUser.mutation(api.notePages.createNotebook, {

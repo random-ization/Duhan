@@ -32,7 +32,6 @@ import { LEARNING_MODULE_VALUES, normalizeLastModuleValue } from './analytics';
 
 const SCAN_PAGE_SIZE = 500;
 const ADMIN_USER_LIST_SCAN_LIMIT = 5000;
-const ADMIN_USER_SCAN_BATCH_SIZE = 250;
 const ADMIN_USER_ACTIVITY_PREVIEW_LIMIT = 10;
 const ADMIN_USER_NOTE_PREVIEW_LIMIT = 20;
 const ADMIN_USER_AUDIT_PREVIEW_LIMIT = 20;
@@ -211,22 +210,12 @@ async function insertAdminAuditLog(
 }
 
 async function collectAdminUsers(ctx: QueryCtx) {
-  const users: Doc<'users'>[] = [];
-  let cursor: string | null = null;
-
-  do {
-    const batch = await ctx.db
-      .query('users')
-      .order('desc')
-      .paginate({ cursor, numItems: ADMIN_USER_SCAN_BATCH_SIZE });
-    users.push(...batch.page);
-    if (batch.isDone || users.length >= ADMIN_USER_LIST_SCAN_LIMIT) {
-      break;
-    }
-    cursor = batch.continueCursor;
-  } while (cursor !== null);
-
-  return users.slice(0, ADMIN_USER_LIST_SCAN_LIMIT);
+  // Convex permits at most one paginated query per function invocation. This
+  // helper is shared by getUsers and getDataHealth, and looping over paginate()
+  // made both queries fail as soon as production had more than one 250-row
+  // batch. A capped take keeps the scan bounded without consuming the function's
+  // pagination slot more than once.
+  return await ctx.db.query('users').order('desc').take(ADMIN_USER_LIST_SCAN_LIMIT);
 }
 
 async function loadUsersById(ctx: QueryCtx | MutationCtx, ids: Id<'users'>[]) {
