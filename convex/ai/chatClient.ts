@@ -60,15 +60,18 @@ export async function runChatCompletionWithFallback<T extends ChatCompletionLike
 
   let lastError: unknown;
   const timeoutMs = options?.timeoutMs ?? 15000;
+  const deadlineAt = Date.now() + timeoutMs;
 
   for (const provider of providers) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
       const completion = await runWithAbortableDeadline(
         async signal => {
-          const client = createChatClient(provider, timeoutMs, signal);
+          const client = createChatClient(provider, remainingMs, signal);
           return await request({ client, provider });
         },
-        timeoutMs,
+        remainingMs,
         `${options?.label || 'chat_completion'}:${provider.provider}`
       );
       return { completion, provider };

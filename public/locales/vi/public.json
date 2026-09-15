@@ -4588,6 +4588,7 @@
       "noSelection": "Chưa chọn câu nào.",
       "loading": "Đang phân tích cấu trúc câu...",
       "error": "Giải thích thất bại",
+      "localFallback": "AI đang bận. Tạm thời hiển thị phân tích cục bộ; hãy thử lại sau.",
       "translation": "Dịch tự nhiên",
       "vocabulary": "Từ vựng trọng tâm",
       "grammar": "Điểm ngữ pháp",

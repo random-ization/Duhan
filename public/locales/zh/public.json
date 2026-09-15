@@ -4596,6 +4596,7 @@
       "noSelection": "尚未选择句子。",
       "loading": "正在分析句子结构...",
       "error": "解析失败",
+      "localFallback": "AI 服务繁忙，当前显示本地解析，可稍后重试。",
       "translation": "自然译文",
       "vocabulary": "重点词汇",
       "grammar": "语法点",

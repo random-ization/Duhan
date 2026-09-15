@@ -52,6 +52,7 @@ import AnnotationToolbar from '../../features/annotation-kit/components/Annotati
 type SentenceExplanationState = {
   id: Id<'sentence_explanations'>;
   data: SentenceExplanationPayload;
+  degraded?: boolean;
 };
 
 type SaveSentenceAssetsArgs = {
@@ -790,6 +791,15 @@ export const ReadingArticleExplainTab: React.FC<{
         </div>
       ) : sentenceExplanation?.data ? (
         <div className="space-y-4">
+          {sentenceExplanation.degraded && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              <p className="text-sm font-bold">
+                {t('readingArticle.explain.localFallback', {
+                  defaultValue: 'AI 服务繁忙，当前显示本地解析，可稍后重试。',
+                })}
+              </p>
+            </div>
+          )}
           {/* Natural Translation */}
           <section className="rounded-[28px] border border-k-line/5 bg-k-card p-6 shadow-k-sh-sm transition-all">
             <h3 className="mb-4 flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-k-ink/60">

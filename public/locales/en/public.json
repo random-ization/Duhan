@@ -4596,6 +4596,7 @@
       "noSelection": "No sentence selected.",
       "loading": "Analyzing sentence structure...",
       "error": "Explanation failed",
+      "localFallback": "AI is busy. Local analysis is shown for now; try again later.",
       "translation": "Natural Translation",
       "vocabulary": "Key Vocabulary",
       "grammar": "Grammar Points",

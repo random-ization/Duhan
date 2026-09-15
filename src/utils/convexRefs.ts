@@ -272,6 +272,8 @@ export const ONBOARDING = {
 
 export type SentenceExplanationResult = {
   success: boolean;
+  degraded?: boolean;
+  errorCode?: string;
   source?: string;
   sourceRefId?: string;
   explanationId?: Id<'sentence_explanations'>;

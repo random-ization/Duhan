@@ -182,6 +182,7 @@ export default function ReadingArticlePage() {
   const [sentenceExplanation, setSentenceExplanation] = useState<{
     id: Id<'sentence_explanations'>;
     data: SentenceExplanationPayload;
+    degraded?: boolean;
   } | null>(null);
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState<string | null>(null);
@@ -874,7 +875,11 @@ export default function ReadingArticlePage() {
         sourceRefId: articleId,
       });
       if (result.success && result.explanationId && result.data) {
-        setSentenceExplanation({ id: result.explanationId, data: result.data });
+        setSentenceExplanation({
+          id: result.explanationId,
+          data: result.data,
+          degraded: result.degraded,
+        });
       } else {
         setExplainError(result.error || 'Failed to explain sentence');
       }

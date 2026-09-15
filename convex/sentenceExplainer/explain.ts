@@ -277,7 +277,9 @@ function resolveErrorCode(error: unknown): string {
   const status = resolveHttpStatus(error);
   if (status) return `HTTP_${status}`;
   const message = toErrorMessage(error).toLowerCase();
-  if (message.includes('timeout')) return 'TIMEOUT';
+  if (message.includes('timeout') || message.includes('exceeded') || message.includes('abort')) {
+    return 'TIMEOUT';
+  }
   if (message.includes('rate limit')) return 'RATE_LIMIT';
   if (message.includes('unauthorized')) return 'UNAUTHORIZED';
   return 'UNKNOWN';
@@ -331,14 +333,18 @@ async function runChatCompletionWithFallback(
   }
 
   let lastError: unknown;
+  const timeoutMs = 20_000;
+  const deadlineAt = Date.now() + timeoutMs;
   for (const provider of providers) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
       const completion = await runWithAbortableDeadline(
         async signal => {
           const client = createChatClient(provider, signal);
           return await request({ client, provider });
         },
-        20_000,
+        remainingMs,
         `sentence_explanation:${provider.provider}`
       );
       return { completion, provider };
@@ -596,11 +602,9 @@ export const explainSentence = action({
     const startedAt = Date.now();
     const targetLanguage = normalizeSentenceLanguage(args.targetLanguage);
     const { cacheKey, contentHash } = buildCacheKeys(targetLanguage, sentence);
-    const cached = !args.forceRefresh
-      ? await ctx.runQuery(getAiCacheByKeyQuery, { key: cacheKey })
-      : null;
+    const cached = await ctx.runQuery(getAiCacheByKeyQuery, { key: cacheKey });
     const cachedPayload = cached?.payload ? pruneExplanationPayload(cached.payload) : null;
-    if (cachedPayload?.sentence) {
+    if (!args.forceRefresh && cachedPayload?.sentence) {
       const explanationId = await ctx.runMutation(upsertExplanationRecordMutation, {
         sentenceId: args.sentenceId,
         userId,
@@ -623,21 +627,33 @@ export const explainSentence = action({
       };
     }
 
-    try {
-      let tokenized = buildFallbackTokenizedResult(sentence);
-      if (process.env.KIWI_TOKENIZATION_ENABLED === 'true') {
-        try {
-          tokenized = await ctx.runAction(tokenizePersistedAction, { text: sentence });
-        } catch (error) {
-          console.warn(
-            '[SentenceExplainer] Kiwi tokenization unavailable; using lightweight fallback:',
-            toErrorMessage(error)
-          );
-        }
+    let tokenized = buildFallbackTokenizedResult(sentence);
+    if (process.env.KIWI_TOKENIZATION_ENABLED === 'true') {
+      try {
+        tokenized = await ctx.runAction(tokenizePersistedAction, { text: sentence });
+      } catch (error) {
+        console.warn(
+          '[SentenceExplainer] Kiwi tokenization unavailable; using lightweight fallback:',
+          toErrorMessage(error)
+        );
       }
-      const tokens = tokenized.tokens || [];
-      const vocabularySeeds = await resolveVocabularySeeds(ctx as never, tokens, targetLanguage);
-      const grammarSeeds = await resolveGrammarSeeds(ctx as never, tokens, targetLanguage);
+    }
+    const tokens = tokenized.tokens || [];
+    let vocabularySeeds: SentenceVocabularyItem[] = [];
+    let grammarSeeds: SentenceGrammarItem[] = [];
+    try {
+      [vocabularySeeds, grammarSeeds] = await Promise.all([
+        resolveVocabularySeeds(ctx as never, tokens, targetLanguage),
+        resolveGrammarSeeds(ctx as never, tokens, targetLanguage),
+      ]);
+    } catch (error) {
+      console.warn(
+        '[SentenceExplainer] Local learning asset lookup unavailable:',
+        toErrorMessage(error)
+      );
+    }
+
+    try {
       const languageLabels = getSentenceLanguageLabels(targetLanguage);
 
       const { completion, provider } = await runChatCompletionWithFallback(({ client, provider }) =>
@@ -757,19 +773,55 @@ Rules:
         data: payload,
       };
     } catch (error) {
+      const errorCode = resolveErrorCode(error);
       await ctx.runMutation(logFailureMutation, {
         userId,
         feature: 'sentence_explanation',
         model: 'unknown',
         provider: 'unknown',
-        errorCode: resolveErrorCode(error),
+        errorCode,
         errorMessage: toErrorMessage(error),
         durationMs: Date.now() - startedAt,
         httpStatus: resolveHttpStatus(error),
       });
+
+      const payload =
+        cachedPayload?.sentence === sentence
+          ? cachedPayload
+          : pruneExplanationPayload({
+              sentence,
+              normalizedText: tokenized.normalizedText,
+              tokens,
+              vocabulary: vocabularySeeds,
+              grammar: grammarSeeds,
+              notes: [],
+            });
+      const usedCachedAiResult = payload === cachedPayload;
+      const explanationId = await ctx.runMutation(upsertExplanationRecordMutation, {
+        sentenceId: args.sentenceId,
+        userId,
+        textHash: tokenized.textHash,
+        sentence,
+        targetLanguage,
+        explanationVersion: SENTENCE_EXPLANATION_VERSION,
+        provider: usedCachedAiResult ? 'cache' : 'local',
+        model: usedCachedAiResult ? 'cache' : tokenized.modelVersion,
+        cacheKey: usedCachedAiResult ? cacheKey : undefined,
+        payload,
+        promptVersion: usedCachedAiResult
+          ? SENTENCE_EXPLANATION_VERSION
+          : `${SENTENCE_EXPLANATION_VERSION}-local-fallback`,
+      });
+
       return {
-        success: false,
-        error: toErrorMessage(error),
+        success: true,
+        degraded: true,
+        errorCode,
+        source: args.source?.trim() || SENTENCE_EXPLAINER_SOURCE,
+        sourceRefId: args.sourceRefId?.trim() || String(explanationId),
+        explanationId,
+        cacheHit: usedCachedAiResult,
+        data: payload,
       };
     }
   },

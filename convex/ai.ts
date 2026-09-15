@@ -518,15 +518,18 @@ async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
 
   let lastError: unknown;
   const timeoutMs = options?.timeoutMs ?? 15000;
+  const deadlineAt = Date.now() + timeoutMs;
 
   for (const provider of providers) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
       const completion = await runWithAbortableDeadline(
         async signal => {
-          const client = createChatClient(provider, timeoutMs, signal);
+          const client = createChatClient(provider, remainingMs, signal);
           return await request({ client, provider });
         },
-        timeoutMs,
+        remainingMs,
         `${options?.label || 'chat_completion'}:${provider.provider}`
       );
       return { completion, provider };
@@ -911,7 +914,8 @@ async function translateSegmentTexts(
     const requestBatchTranslations = async (
       segmentTexts: string[],
       strictJsonMode: boolean,
-      provider: ChatProviderConfig
+      provider: ChatProviderConfig,
+      timeoutMs: number
     ): Promise<string[]> => {
       const indexedTexts = segmentTexts.map((text, i) => ({ i, text }));
       let retryCount = 0;
@@ -919,7 +923,7 @@ async function translateSegmentTexts(
         () =>
           runWithAbortableDeadline(
             signal =>
-              createChatClient(provider, 12000, signal).chat.completions.create({
+              createChatClient(provider, timeoutMs, signal).chat.completions.create({
                 model: provider.model,
                 ...buildFastChatCompletionOptions(provider, 3000),
                 messages: [
@@ -940,7 +944,7 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
                 ],
                 ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
               }),
-            12000,
+            timeoutMs,
             `translate_segments:${provider.provider}`
           ),
         {
@@ -1016,19 +1020,34 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
       const segmentTexts = chunk.segments.map(s => s.text);
       let chosenProvider: ChatProviderConfig | null = null;
       let translations = new Array(chunk.segments.length).fill('');
+      const deadlineAt = Date.now() + 15_000;
 
       for (const provider of providers) {
+        let remainingMs = deadlineAt - Date.now();
+        if (remainingMs <= 0) break;
+        let requestFailed = false;
         try {
-          translations = await requestBatchTranslations(segmentTexts, false, provider);
+          translations = await requestBatchTranslations(segmentTexts, false, provider, remainingMs);
         } catch (error) {
+          requestFailed = true;
           console.warn(
             `[AI] Batch ${chunk.index} primary translation failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
           );
         }
 
-        if (!translations.some(item => item.trim().length > 0)) {
+        remainingMs = deadlineAt - Date.now();
+        if (
+          !requestFailed &&
+          remainingMs > 0 &&
+          !translations.some(item => item.trim().length > 0)
+        ) {
           try {
-            translations = await requestBatchTranslations(segmentTexts, true, provider);
+            translations = await requestBatchTranslations(
+              segmentTexts,
+              true,
+              provider,
+              remainingMs
+            );
           } catch (error) {
             console.warn(
               `[AI] Batch ${chunk.index} strict translation failed on ${provider.provider}:${provider.model}: ${toErrorMessage(error)}`
@@ -1049,27 +1068,38 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
         }
       }
 
-      for (let index = 0; index < segmentTexts.length; index += 1) {
-        const sourceText = segmentTexts[index] ?? '';
-        const currentTranslation = translations[index] ?? '';
-        if (
-          currentTranslation.trim().length > 0 &&
-          !isSuspiciousUntranslatedLine(sourceText, currentTranslation, normalizedTargetLang)
-        ) {
-          continue;
-        }
+      const remainingMs = deadlineAt - Date.now();
+      const missingIndices = segmentTexts
+        .map((sourceText, index) => ({ sourceText, index }))
+        .filter(({ sourceText, index }) => {
+          const currentTranslation = translations[index] ?? '';
+          return (
+            currentTranslation.trim().length === 0 ||
+            isSuspiciousUntranslatedLine(sourceText, currentTranslation, normalizedTargetLang)
+          );
+        })
+        .slice(0, 5);
 
-        const directFallback = await translateSingleTextDirect(sourceText, normalizedTargetLang);
-        if (
-          directFallback.translation.trim().length > 0 &&
-          !isSuspiciousUntranslatedLine(
-            sourceText,
-            directFallback.translation,
-            normalizedTargetLang
+      if (remainingMs > 0 && missingIndices.length > 0) {
+        const directFallbacks = await Promise.all(
+          missingIndices.map(({ sourceText, index }) =>
+            translateSingleTextDirect(sourceText, normalizedTargetLang, remainingMs).then(
+              result => ({
+                index,
+                sourceText,
+                result,
+              })
+            )
           )
-        ) {
-          translations[index] = directFallback.translation;
-          chosenProvider = chosenProvider ?? directFallback.provider;
+        );
+        for (const { index, sourceText, result } of directFallbacks) {
+          if (
+            result.translation.trim().length > 0 &&
+            !isSuspiciousUntranslatedLine(sourceText, result.translation, normalizedTargetLang)
+          ) {
+            translations[index] = result.translation;
+            chosenProvider = chosenProvider ?? result.provider;
+          }
         }
       }
 
@@ -1102,7 +1132,8 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
 
 async function translateSingleTextDirect(
   sourceText: string,
-  normalizedTargetLang: SupportedTranslationLanguage
+  normalizedTargetLang: SupportedTranslationLanguage,
+  timeoutMs = 10_000
 ): Promise<{ translation: string; provider: ChatProviderConfig | null }> {
   const providers = resolveChatProviderConfigs(process.env);
   if (providers.length === 0) {
@@ -1110,14 +1141,17 @@ async function translateSingleTextDirect(
   }
 
   const targetLanguageLabel = TARGET_LANGUAGE_LABELS[normalizedTargetLang];
+  const deadlineAt = Date.now() + timeoutMs;
 
   for (const provider of providers) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) break;
     try {
       const completion = await retryAsync(
         () =>
           runWithAbortableDeadline(
             signal =>
-              createChatClient(provider, 10000, signal).chat.completions.create({
+              createChatClient(provider, remainingMs, signal).chat.completions.create({
                 model: provider.model,
                 ...buildFastChatCompletionOptions(provider, 300),
                 messages: [
@@ -1131,7 +1165,7 @@ async function translateSingleTextDirect(
                   },
                 ],
               }),
-            10000,
+            remainingMs,
             `translate_single:${provider.provider}`
           ),
         {
@@ -1170,9 +1204,14 @@ async function translateSingleTextDirect(
     }
   }
 
+  const remainingMs = deadlineAt - Date.now();
+  if (remainingMs <= 0) {
+    return { translation: '', provider: null };
+  }
   const emergencyTranslation = await translateSingleTextWithEmergencyFallback(
     sourceText,
-    normalizedTargetLang
+    normalizedTargetLang,
+    remainingMs
   );
   if (emergencyTranslation) {
     return { translation: emergencyTranslation, provider: null };
@@ -1190,7 +1229,8 @@ const EMERGENCY_TRANSLATION_TARGET_CODES: Record<SupportedTranslationLanguage, s
 
 async function translateSingleTextWithEmergencyFallback(
   sourceText: string,
-  normalizedTargetLang: SupportedTranslationLanguage
+  normalizedTargetLang: SupportedTranslationLanguage,
+  timeoutMs = 5000
 ): Promise<string> {
   const targetCode = EMERGENCY_TRANSLATION_TARGET_CODES[normalizedTargetLang];
   const url = new URL('https://translate.googleapis.com/translate_a/single');
@@ -1208,7 +1248,7 @@ async function translateSingleTextWithEmergencyFallback(
           'User-Agent': 'Mozilla/5.0',
         },
       },
-      10000
+      Math.max(1, Math.min(5000, timeoutMs))
     );
     if (!response.ok) {
       console.warn(`[AI] emergency translation fallback failed with ${response.status}`);

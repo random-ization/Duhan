@@ -271,7 +271,11 @@ const SentenceLearningPage: React.FC = () => {
         return;
       }
       setFreshExplanation(result);
-      notify.success(result.cacheHit ? '已载入缓存解析' : 'AI 句子解析已完成');
+      if (result.degraded) {
+        notify.info('AI 服务繁忙，已显示本地解析，可稍后重试');
+      } else {
+        notify.success(result.cacheHit ? '已载入缓存解析' : 'AI 句子解析已完成');
+      }
     } catch (error) {
       console.error(error);
       notify.error('句子解析失败，请重试');
