@@ -4,6 +4,7 @@ import {
   isLikelyTransientError,
   parseJsonObjectFromModelContent,
   retryAsync,
+  runWithAbortableDeadline,
 } from '../../convex/aiReliability';
 
 describe('parseJsonObjectFromModelContent', () => {
@@ -70,6 +71,25 @@ describe('retryAsync', () => {
       )
     ).rejects.toThrow('fatal');
     expect(calls).toBe(1);
+  });
+});
+
+describe('runWithAbortableDeadline', () => {
+  it('aborts and rejects work that exceeds the deadline', async () => {
+    let observedSignal: AbortSignal | undefined;
+
+    await expect(
+      runWithAbortableDeadline(
+        signal => {
+          observedSignal = signal;
+          return new Promise<string>(() => undefined);
+        },
+        10,
+        'slow_request'
+      )
+    ).rejects.toThrow('slow_request exceeded 10ms');
+
+    expect(observedSignal?.aborted).toBe(true);
   });
 });
 

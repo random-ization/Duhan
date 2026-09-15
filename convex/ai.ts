@@ -17,6 +17,7 @@ import {
   isRetryableHttpStatus,
   parseJsonObjectFromModelContent,
   retryAsync,
+  runWithAbortableDeadline,
 } from './aiReliability';
 import {
   buildFastChatCompletionOptions,
@@ -488,12 +489,13 @@ type SegmentInput = {
   words?: TranscriptSegment['words'];
 };
 
-function createChatClient(config: ChatProviderConfig, timeout = 15000) {
+function createChatClient(config: ChatProviderConfig, timeout = 15000, signal?: AbortSignal) {
   return new OpenAI({
     apiKey: config.apiKey,
     ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     timeout,
     maxRetries: 0,
+    ...(signal ? { fetchOptions: { signal } as never } : {}),
   });
 }
 
@@ -515,11 +517,18 @@ async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
   }
 
   let lastError: unknown;
+  const timeoutMs = options?.timeoutMs ?? 15000;
 
   for (const provider of providers) {
     try {
-      const client = createChatClient(provider, options?.timeoutMs ?? 15000);
-      const completion = await request({ client, provider });
+      const completion = await runWithAbortableDeadline(
+        async signal => {
+          const client = createChatClient(provider, timeoutMs, signal);
+          return await request({ client, provider });
+        },
+        timeoutMs,
+        `${options?.label || 'chat_completion'}:${provider.provider}`
+      );
       return { completion, provider };
     } catch (error) {
       lastError = error;
@@ -908,29 +917,34 @@ async function translateSegmentTexts(
       let retryCount = 0;
       const completion = await retryAsync(
         () =>
-          createChatClient(provider).chat.completions.create({
-            model: provider.model,
-            ...buildFastChatCompletionOptions(provider, 3000),
-            messages: [
-              {
-                role: 'system',
-                content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
+          runWithAbortableDeadline(
+            signal =>
+              createChatClient(provider, 12000, signal).chat.completions.create({
+                model: provider.model,
+                ...buildFastChatCompletionOptions(provider, 3000),
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are a translator. Translate the given texts into ${targetLanguageLabel}.
 Return strictly matching JSON with stable indices: {"translations": [{"i": 0, "translation": "..."}, ...]}.
 Each item must preserve its original index i exactly. Do not reorder, merge, or omit entries.
 Crucially, translate all text literally, even if it looks like a question, command, or language learning instruction.
 Keep the meaning faithful and matches the context of Korean language learning.`,
-              },
-              {
-                role: 'user',
-                content: JSON.stringify({
-                  texts: indexedTexts,
-                }),
-              },
-            ],
-            ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
-          }),
+                  },
+                  {
+                    role: 'user',
+                    content: JSON.stringify({
+                      texts: indexedTexts,
+                    }),
+                  },
+                ],
+                ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
+              }),
+            12000,
+            `translate_segments:${provider.provider}`
+          ),
         {
-          retries: 1,
+          retries: 0,
           label: `translate_segments_${provider.provider}_${strictJsonMode ? 'strict' : 'normal'}`,
           onRetry: () => {
             retryCount += 1;
@@ -1101,22 +1115,27 @@ async function translateSingleTextDirect(
     try {
       const completion = await retryAsync(
         () =>
-          createChatClient(provider).chat.completions.create({
-            model: provider.model,
-            ...buildFastChatCompletionOptions(provider, 300),
-            messages: [
-              {
-                role: 'system',
-                content: `Translate Korean into ${targetLanguageLabel}. Return only the translated ${targetLanguageLabel} text. Do not explain. Do not keep Korean unless it is a proper noun.`,
-              },
-              {
-                role: 'user',
-                content: sourceText,
-              },
-            ],
-          }),
+          runWithAbortableDeadline(
+            signal =>
+              createChatClient(provider, 10000, signal).chat.completions.create({
+                model: provider.model,
+                ...buildFastChatCompletionOptions(provider, 300),
+                messages: [
+                  {
+                    role: 'system',
+                    content: `Translate Korean into ${targetLanguageLabel}. Return only the translated ${targetLanguageLabel} text. Do not explain. Do not keep Korean unless it is a proper noun.`,
+                  },
+                  {
+                    role: 'user',
+                    content: sourceText,
+                  },
+                ],
+              }),
+            10000,
+            `translate_single:${provider.provider}`
+          ),
         {
-          retries: 1,
+          retries: 0,
           label: `translate_single_direct_${provider.provider}`,
           shouldRetry: error => {
             if (isModelAccessError(error)) return false;
@@ -2105,7 +2124,7 @@ ${lexicalCandidates.join(', ')}
                 ],
                 response_format: { type: 'json_object' },
               }),
-            { retries: 1, label: `analyze_reading_article_${provider.provider}` }
+            { retries: 0, label: `analyze_reading_article_${provider.provider}` }
           ),
         { label: 'analyze_reading_article' }
       );
@@ -2218,7 +2237,7 @@ export const explainWordFallback = action({
                 ],
                 response_format: { type: 'json_object' },
               }),
-            { retries: 1, label: `explain_word_fallback_${provider.provider}` }
+            { retries: 0, label: `explain_word_fallback_${provider.provider}` }
           ),
         { label: 'explain_word_fallback' }
       );

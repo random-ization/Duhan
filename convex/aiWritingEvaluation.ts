@@ -421,7 +421,7 @@ async function callAiProvider(
               },
             ],
           }),
-        { retries: 1, label: `writing_eval_q${question.number}` }
+        { retries: 0, label: `writing_eval_q${question.number}` }
       ),
     {
       label: `writing_eval_q${question.number}`,

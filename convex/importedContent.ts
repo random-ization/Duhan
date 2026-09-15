@@ -231,7 +231,7 @@ export const analyzeImportedContent = action({
                   { role: 'user', content: userPrompt },
                 ],
               }),
-            { retries: 1, label: 'analyze_imported_content' }
+            { retries: 0, label: 'analyze_imported_content' }
           ),
         { label: 'analyze_imported_content', timeoutMs: 20000 }
       );

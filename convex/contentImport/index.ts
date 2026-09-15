@@ -423,7 +423,7 @@ export const analyzeImportedContentV2 = action({
                   },
                 ],
               }),
-            { retries: 1, label: 'import_summary' }
+            { retries: 0, label: 'import_summary' }
           ),
         { label: 'import_summary', timeoutMs: 15000 }
       );

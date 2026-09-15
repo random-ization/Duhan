@@ -8,6 +8,7 @@
 import OpenAI from 'openai';
 import type { ChatProviderConfig, ChatProviderRequirements } from '../aiProviders';
 import { resolveChatProviderConfigs } from '../aiProviders';
+import { runWithAbortableDeadline } from '../aiReliability';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,12 +28,17 @@ function toErrorMessage(error: unknown): string {
 }
 
 /** Create an OpenAI-compatible client for the given provider config. */
-export function createChatClient(config: ChatProviderConfig, timeout = 15000): OpenAI {
+export function createChatClient(
+  config: ChatProviderConfig,
+  timeout = 15000,
+  signal?: AbortSignal
+): OpenAI {
   return new OpenAI({
     apiKey: config.apiKey,
     ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     timeout,
     maxRetries: 0,
+    ...(signal ? { fetchOptions: { signal } as never } : {}),
   });
 }
 
@@ -53,11 +59,18 @@ export async function runChatCompletionWithFallback<T extends ChatCompletionLike
   }
 
   let lastError: unknown;
+  const timeoutMs = options?.timeoutMs ?? 15000;
 
   for (const provider of providers) {
     try {
-      const client = createChatClient(provider, options?.timeoutMs ?? 15000);
-      const completion = await request({ client, provider });
+      const completion = await runWithAbortableDeadline(
+        async signal => {
+          const client = createChatClient(provider, timeoutMs, signal);
+          return await request({ client, provider });
+        },
+        timeoutMs,
+        `${options?.label || 'chat_completion'}:${provider.provider}`
+      );
       return { completion, provider };
     } catch (error) {
       lastError = error;

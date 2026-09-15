@@ -19,6 +19,7 @@ import {
   isRetryableHttpStatus,
   parseJsonObjectFromModelContent,
   retryAsync,
+  runWithAbortableDeadline,
 } from '../aiReliability';
 import { buildAffixCandidateSet, scoreGrammarMatch } from '../grammarMapping';
 import {
@@ -308,12 +309,13 @@ function buildFallbackTokenizedResult(sentence: string): KiwiTokenizedResult {
   };
 }
 
-function createChatClient(provider: ChatProviderConfig) {
+function createChatClient(provider: ChatProviderConfig, signal?: AbortSignal) {
   return new OpenAI({
     apiKey: provider.apiKey,
     ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
-    timeout: 15000,
+    timeout: 20000,
     maxRetries: 0,
+    ...(signal ? { fetchOptions: { signal } as never } : {}),
   });
 }
 
@@ -331,8 +333,14 @@ async function runChatCompletionWithFallback(
   let lastError: unknown;
   for (const provider of providers) {
     try {
-      const client = createChatClient(provider);
-      const completion = await request({ client, provider });
+      const completion = await runWithAbortableDeadline(
+        async signal => {
+          const client = createChatClient(provider, signal);
+          return await request({ client, provider });
+        },
+        20_000,
+        `sentence_explanation:${provider.provider}`
+      );
       return { completion, provider };
     } catch (error) {
       lastError = error;
@@ -689,7 +697,7 @@ Rules:
               response_format: { type: 'json_object' },
             }),
           {
-            retries: 1,
+            retries: 0,
             label: `sentence_explanation_${provider.provider}`,
           }
         )

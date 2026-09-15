@@ -175,7 +175,7 @@ ${kagasTypeList}
                   { role: 'user', content: userPrompt },
                 ],
               }),
-            { retries: 1, label: 'topik_writing_coach' }
+            { retries: 0, label: 'topik_writing_coach' }
           ),
         { label: 'topik_writing_coach', timeoutMs: 20000 }
       );

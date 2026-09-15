@@ -93,6 +93,29 @@ export async function retryAsync<T>(
   throw lastError;
 }
 
+export async function runWithAbortableDeadline<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  const normalizedTimeoutMs = Math.max(1, Math.floor(timeoutMs));
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation(controller.signal),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`${label} exceeded ${normalizedTimeoutMs}ms`));
+        }, normalizedTimeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function fetchWithTimeout(
   input: string | URL | Request,
   init: FetchInit = {},
