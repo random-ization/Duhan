@@ -54,7 +54,7 @@ describe('resolveChatProviderConfigs', () => {
         provider: 'mimo',
         apiKey: 'mimo-key',
         baseURL: 'https://api.xiaomimimo.com/v1',
-        model: 'mimo-v2.5-pro',
+        model: 'mimo-v2.5',
       },
     ]);
   });
@@ -70,7 +70,7 @@ describe('buildFastChatCompletionOptions', () => {
   it('disables MIMO thinking and clamps the output budget', () => {
     expect(
       buildFastChatCompletionOptions(
-        { provider: 'mimo', apiKey: 'key', model: 'mimo-v2.5-pro' },
+        { provider: 'mimo', apiKey: 'key', model: 'mimo-v2.5' },
         900
       )
     ).toEqual({ max_completion_tokens: 900, thinking: { type: 'disabled' } });

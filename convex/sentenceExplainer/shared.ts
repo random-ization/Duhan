@@ -129,7 +129,7 @@ export function pruneExplanationPayload(
           difficultyScore: item.difficultyScore,
         }))
         .filter(item => item.surface.length > 0)
-        .slice(0, 12) || [],
+        .slice(0, 8) || [],
     grammar:
       payload.grammar
         ?.map(item => ({
@@ -140,7 +140,7 @@ export function pruneExplanationPayload(
           end: item.end,
         }))
         .filter(item => item.pattern.length > 0)
-        .slice(0, 8) || [],
+        .slice(0, 5) || [],
     notes:
       payload.notes
         ?.map(note => note.trim())

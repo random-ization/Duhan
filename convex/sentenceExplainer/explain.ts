@@ -418,7 +418,7 @@ async function resolveVocabularySeeds(
     })
   );
 
-  return resolved.filter((item): item is SentenceVocabularyItem => item !== null).slice(0, 10);
+  return resolved.filter((item): item is SentenceVocabularyItem => item !== null).slice(0, 6);
 }
 
 async function resolveGrammarSeeds(
@@ -637,7 +637,7 @@ export const explainSentence = action({
           () =>
             client.chat.completions.create({
               model: provider.model,
-              ...buildFastChatCompletionOptions(provider, 900),
+              ...buildFastChatCompletionOptions(provider, 650),
               messages: [
                 {
                   role: 'system',
@@ -669,9 +669,10 @@ Output format:
   ]
 }
 Rules:
-- Keep vocabulary to 4-8 learning-relevant items.
+- Keep vocabulary to 4-6 learning-relevant items.
 - Prefer real expressions appearing in the sentence.
-- Keep grammar to 2-5 items.
+- Keep grammar to 2-3 items.
+- Keep each explanation and note to one concise sentence; return at most one note.
 - Do not repeat the entire sentence in summary.
 - Never output markdown.`,
                 },

@@ -21,7 +21,7 @@ export type FastChatCompletionOptions = {
 type EnvLike = Record<string, string | undefined>;
 
 const DEFAULT_MIMO_BASE_URL = 'https://api.xiaomimimo.com/v1';
-const DEFAULT_MIMO_MODEL = 'mimo-v2.5-pro';
+const DEFAULT_MIMO_MODEL = 'mimo-v2.5';
 const DEFAULT_MIMO_VISION_MODEL = 'mimo-v2.5';
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 

@@ -1707,7 +1707,7 @@ export const analyzeSentence = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
-            ...buildFastChatCompletionOptions(provider, 900),
+            ...buildFastChatCompletionOptions(provider, 650),
             messages: [
               {
                 role: 'system',
@@ -1801,7 +1801,7 @@ export const grammarTutorChat = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
-            ...buildFastChatCompletionOptions(provider, 700),
+            ...buildFastChatCompletionOptions(provider, 500),
             messages: [
               {
                 role: 'system',
@@ -2067,7 +2067,7 @@ ${lexicalCandidates.join(', ')}
             () =>
               client.chat.completions.create({
                 model: provider.model,
-                ...buildFastChatCompletionOptions(provider, 1400),
+                ...buildFastChatCompletionOptions(provider, 900),
                 messages: [
                   {
                     role: 'system',
@@ -2089,9 +2089,10 @@ ${lexicalCandidates.join(', ')}
 1. summary 必须是 1~2 句，且必须”概括”而不是复述原文。
 2. summary 禁止逐句翻译全文，不要按原文顺序罗列信息；总长度控制在 120 字以内（中文）或约 2 句（其他语言）。
 3. 可保留最多 1 个关键数字事实（如金额/人数），其余信息应合并表达。
-4. vocabulary 返回 5~8 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 “TOPIK 3-4”。
-5. grammar 返回 2~3 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
-6. 只返回 JSON，不要任何额外文本。${kiwiFactLayer}`,
+4. vocabulary 返回 5 个韩语核心词，term 必须是韩语；meaning 用输出语言；level 类似 “TOPIK 3-4”。
+5. grammar 返回 2 个文法点，优先文章中真实出现的表达；example 尽量取自原文短句。
+6. 每个 meaning、explanation 和 example 都只写一个简短句子。
+7. 只返回 JSON，不要任何额外文本。${kiwiFactLayer}`,
                   },
                   {
                     role: 'user',
@@ -2187,7 +2188,7 @@ export const explainWordFallback = action({
             () =>
               client.chat.completions.create({
                 model: provider.model,
-                ...buildFastChatCompletionOptions(provider, 600),
+                ...buildFastChatCompletionOptions(provider, 450),
                 messages: [
                   {
                     role: 'system',
