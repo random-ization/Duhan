@@ -707,8 +707,8 @@
         "community": "Community",
         "pricing": "Pricing",
         "faq": "FAQ",
-        "login": "Login",
-        "register": "Sign up"
+        "login": "Log In",
+        "register": "Register"
       },
       "hero": {
         "phone": {
@@ -722,225 +722,258 @@
           },
           "s3": {
             "t": "Podcast Clip",
-            "s": "Korean Alley Walk · 6 min"
+            "s": "Seoul Alley Walk · 6 min"
           },
           "s4": {
             "t": "Bedtime Reading",
-            "s": "Short Story · Memories"
+            "s": "Article · Memories of the Alleyway"
           },
           "date": "May 11th",
-          "greet": "Hello, Haeun",
-          "sub": "Daily path ready · 4 steps ~22 min"
+          "greet": "Hello, Hae-eun",
+          "sub": "Daily path ready · 4 steps, ~22 mins"
         },
-        "eyebrow": "v3.0 released · New learning path and community",
-        "titleKo": "讀韓",
+        "eyebrow": "v3.0 Released · New learning path & community",
+        "titleKo": "DuHan",
         "titlePre": "Make Korean ",
-        "titleUnderlined": "your routine",
-        "ctaPrimary": "Start learning for free →",
-        "ctaSecondary": "Watch 90s demo",
-        "meta1": "Active learners",
-        "meta2": "Daily reviews",
-        "meta3": "App Store rating",
+        "titleUnderlined": "part of your routine",
+        "ctaPrimary": "Start Learning for Free →",
+        "ctaSecondary": "Watch 90s Demo",
+        "meta1": "Active Learners",
+        "meta2": "Cards Reviewed Daily",
+        "meta3": "App Store Rating",
         "chip1": {
           "t": "Streak",
           "v": "47 Days"
         },
         "chip2": {
-          "t": "Today's New",
+          "t": "New Words Today",
           "v": "12 / 15"
         },
         "chip3": {
           "t": "TOPIK II",
           "v": "Level 5 · 87%"
         },
-        "sub": "A daily curated path · Vocab, grammar, TOPIK, media, podcasts, reading, and community interlinked · Powered by FSRS memory model."
+        "sub": "A thoughtfully curated daily learning path connecting vocabulary, grammar, TOPIK, videos, podcasts, reading, and community translation. Powered by the FSRS memory model and paced to the way you learn."
       },
       "logos": {
-        "v1": "Immersive reading",
-        "v2": "Media listening",
-        "v3": "FSRS smart reviews",
-        "v4": "Native community",
-        "v5": "Cross-platform sync"
+        "v1": "Immersive Reading in Real Context",
+        "v2": "Listen to Real Audio from Movies & Podcasts",
+        "v3": "Smart Review with FSRS Algorithm",
+        "v4": "Community Translations & Mutual Help",
+        "v5": "Sync Progress Across All Platforms"
       },
       "features": {
         "t1": {
           "title": "Daily Learning Path",
-          "pill": "/ Auto-generated @ 7:00 AM · ~22 min"
+          "pill": "/ Generated at 7:00 AM · Avg 22 mins",
+          "desc": "Using yesterday’s performance and FSRS, Duhan automatically creates a four-step loop: review, learn, listen, and read. No planning required—open the app and start with what matters most today."
         },
         "t2": {
           "title": "Vocab Book + 4 Modes",
-          "desc": "Flashcards, Learn, Test, Match — 4 ways to master a word.",
+          "desc": "Flashcards, Learn, Test, and Match — four ways to master one word.",
           "pill": "/ TOPIK I + II · 9,300 words"
         },
         "t3": {
-          "title": "Grammar Library",
-          "desc": "Every grammar with context sentences + exam questions.",
-          "pill": "/ 480 Core Grammars"
+          "title": "Grammar & Sentence Library",
+          "desc": "Each grammar point comes with real examples + past papers. Errors are automatically added to review.",
+          "pill": "/ 480 core grammar points"
         },
         "t4": {
           "title": "TOPIK Preparation",
-          "desc": "Past exams / Mocks / AI Writing score + Speed control.",
-          "pill": "/ TOPIK II avg improvement +1.4 levels"
+          "desc": "Past papers / Mock exams / AI writing evaluation + Speed listening",
+          "pill": "/ Avg TOPIK II improvement: 1.4 levels"
         },
         "t6": {
-          "title": "Native Community",
-          "desc": "Ask native speakers for the most natural translations and explanations.",
-          "pill": "/ 1.2k+ Active groups"
+          "title": "Native Community · Translation",
+          "desc": "Unsure about a translation? Post a bounty and get help from native speakers.",
+          "pill": "/ 1.2k+ active help groups"
         },
         "t5": {
-          "title": "Immersive Media & Reading",
-          "pill": "/ 4,800+ Study materials · Weekly updates"
+          "title": "Movies · Podcasts · Reading Immersive",
+          "pill": "/ 4,800+ learning materials · Weekly updates",
+          "desc": "K-drama clips, Spotify podcasts, and short news articles—with one-tap transcripts, bilingual subtitles, and instant word-to-card lookup. Turn screen time into study time."
         },
-        "title": "All-in-one Korean Toolkit"
+        "title": "The All-in-One Korean Learning Toolkit",
+        "sub": "From Hangul to TOPIK Level 6, every stage of learning Korean is covered in one place."
       },
       "loop": {
         "s1": {
-          "label": "STEP 1 · MORNING",
+          "label": "STEP 1 · Morning",
           "title": "Review Due Cards",
-          "desc": "FSRS algorithm decides what you review today · ~7 mins.",
-          "preview": "18 Cards · 7 Min"
+          "desc": "FSRS algorithm decides what to review today · Done in 7 mins on average.",
+          "preview": "18 cards · 7 mins"
         },
         "s2": {
-          "label": "STEP 2 · LESSON",
-          "title": "New Content",
-          "desc": "Textbook + Listening + Quiz · Capture any segment into cards.",
-          "preview": "L24 · 8 Min"
+          "label": "STEP 2 · Course",
+          "title": "New Lesson Content",
+          "desc": "Textbook + Listening + Instant Test · Capture any clip as a card.",
+          "preview": "L24 · 8 mins"
         },
         "s3": {
-          "label": "STEP 3 · COMMUTE",
+          "label": "STEP 3 · Commute",
           "title": "Listening Immersion",
-          "desc": "Real podcasts or K-drama clips · Bilingual subs.",
-          "preview": "Podcast 6 Min"
+          "desc": "Real podcast or K-Drama clips · Bilingual subtitles · Save words instantly.",
+          "preview": "Podcast 6 mins"
         },
         "s4": {
-          "label": "STEP 4 · BEDTIME",
-          "title": "Reading Session",
-          "desc": "Auto-matched difficulty · Consolidation through reading.",
-          "preview": "Story 4 Min"
+          "label": "STEP 4 · Bedtime",
+          "title": "Read a Passage",
+          "desc": "Auto-matched difficulty · Reading one article consolidates today's learning.",
+          "preview": "Short story 4 mins"
         },
-        "title": "Four steps to master Korean"
+        "title": "Four steps, your daily Korean is set.",
+        "sub": "No willpower needed · Open the app to see your checklist · Resume anytime"
       },
       "modules": {
-        "title": "Modules built for long-term learning",
+        "title": "Modules Built for Long-term Learning",
+        "sub": "Polished hundreds of times · No feature bloat · It just works.",
         "m1": {
-          "title": "Vocab · 4 Modes",
+          "title": "Vocab · 4 Practice Modes",
+          "desc": "One word, four ways — Flashcards for familiarity, Learning for depth, Test for time limits, and Match for fun. Each word has an FSRS memory strength bar.",
           "tag1": "FSRS Algorithm",
           "tag2": "4 Practice Modes",
-          "tag3": "Context Association",
-          "tag4": "Book Filter",
-          "link": "Learn about Vocab →"
+          "tag3": "Context Examples",
+          "tag4": "Vocab Filter",
+          "link": "Explore Vocab Module →",
+          "previewMeaning": "gol-mok-gil · n. alleyway",
+          "previewMemory": "MEMORY 60%"
         },
         "m2": {
-          "title": "TOPIK · Mocks + AI",
-          "tag1": "10 Years of Exams",
-          "tag2": "1:1 Mock Environment",
+          "title": "TOPIK · Papers + AI Scoring",
+          "desc": "Deep archive of past reading and listening papers, 1:1 real exam environment. AI writing evaluation provides 4D feedback, plus mock listening with speed control.",
+          "tag1": "10 Years of Papers",
+          "tag2": "1:1 Exam Environment",
           "tag3": "AI Writing Feedback",
-          "tag4": "Score Prediction",
-          "link": "Learn about TOPIK →"
+          "tag4": "All-around Score Prediction",
+          "link": "Explore TOPIK Module →"
         },
         "m3": {
-          "title": "Media Hub · Listening",
+          "title": "Media · Speed Listening",
+          "desc": "Goodbye boring listening drills. Huge library of real podcasts and videos, supporting 0.5x–1.5x speed, synced scripts, and one-tap word saving.",
           "tag1": "4,800+ Clips",
           "tag2": "Bilingual Subs",
           "tag3": "Tap to Save",
-          "tag4": "Difficulty Match",
-          "link": "Learn about Immersion →"
+          "tag4": "Graded Difficulty",
+          "link": "Explore Immersion Module →",
+          "previewTranslation": "A small bakery found in an alley…"
         },
         "m4": {
-          "title": "Graded Reading · AI",
-          "tag1": "Levels 1–6",
-          "tag2": "Picture Books",
-          "tag3": "Quick Lookup",
-          "tag4": "Note Capture",
-          "link": "Learn about Reading →"
+          "title": "Reading · AI Assistance",
+          "desc": "From news to picture books, all content is precisely graded L1–L6. AI automatically extracts core vocab and provides one-tap translation for complex sentences.",
+          "tag1": "Grades 1–6",
+          "tag2": "Picture Book Library",
+          "tag3": "One-tap Lookup",
+          "tag4": "Notes to Cards",
+          "link": "Explore Reading Module →",
+          "previewLevel": "3 · LEVEL 3",
+          "previewProgress": "3 / 18 sections",
+          "previewMinutes": "📖 2.4 min"
         }
       },
       "community": {
         "s1": {
-          "l": "Study Partners",
+          "l": "Study Mates",
           "s": "Grow Together"
         },
         "s2": {
-          "l": "Shared Wordbooks",
+          "l": "Public Vocab Books",
           "s": "Resource Sharing"
         },
         "s3": {
-          "l": "Learning Tips",
+          "l": "Study Tips",
           "s": "Experience Sharing"
         },
         "s4": {
-          "l": "Streak Days",
-          "s": "Milestone Tracking"
+          "l": "Daily Streak",
+          "s": "Keep Going"
         },
-        "title": "Don't study alone, go further together"
+        "title": "Don't study alone, go further together.",
+        "sub": "Share vocab cards, exchange prep tips, and witness each other's growth · K-Soft community makes Korean learning less lonely."
       },
       "pricing": {
         "perMonth": "/ mo",
         "perQuarter": "/ quarter",
         "perYear": "/ year",
-        "lifetime": "/ lifetime",
+        "lifetime": {
+          "title": "Lifetime · Pay once",
+          "desc": "One payment, permanent access to the full learning system.",
+          "cta": "Unlock forever"
+        },
         "tabMonthly": "Monthly",
         "tabQuarterly": "Quarterly",
         "tabAnnual": "Annual",
         "pro": {
-          "f1": "<b>Unlimited</b> new words + FSRS",
-          "f2": "All textbooks + TOPIK <b>Levels 1-6</b>",
+          "f1": "<b>Unlimited</b> new words + FSRS review",
+          "f2": "All courses + <b>All TOPIK 1-6</b> papers",
           "f3": "Full media library + <b>Smart scripts</b>",
-          "f4": "<b>AI Writing diagnosis</b> + Speed control",
-          "f5": "Unlimited <b>community resources</b>",
-          "f6": "<b>Real-time sync</b> across all devices",
-          "title": "Full Access · Plus",
-          "desc": "Best for serious learners · Unlock all AI features",
-          "cta": "Start Full Access Now"
+          "f4": "<b>AI writing evaluation</b> + speed listening",
+          "f5": "Unlimited community resources",
+          "f6": "Real-time progress sync",
+          "title": "Plus Plan",
+          "desc": "Unlock all AI features and advanced content.",
+          "cta": "Unlock Plus Now"
         },
-        "title": "Pick a plan, start learning",
+        "title": "Pick a Plan, Start Learning",
+        "sub": "Join the global community and unlock the full AI Korean experience.",
         "free": {
-          "title": "Starter · Free",
-          "desc": "Entry level · Start your Korean journey",
-          "unit": "/ Forever",
+          "title": "Free Tier",
+          "desc": "Start your journey for free.",
+          "unit": "/ forever",
           "f1": "<b>5 new words</b> per day",
-          "f2": "<b>30 review cards</b> limit/day",
-          "f3": "<b>Basic courses</b> (L1–L2) trial",
-          "f4": "Media library <b>preview mode</b>",
-          "f5": "TOPIK past exams (Sample)",
-          "f6": "Basic AI writing diagnosis",
-          "cta": "Start for Free"
+          "f2": "<b>30 review cards</b> daily limit",
+          "f3": "<b>Basic courses</b> (L1–L2) access",
+          "f4": "Media <b>preview mode</b>",
+          "f5": "Selected TOPIK papers",
+          "f6": "Limited AI feedback",
+          "cta": "Get Started for Free"
         },
-        "popular": "Popular"
+        "popular": "Popular",
+        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods.",
+        "bestValue": "BEST VALUE",
+        "lifetimeUnit": "/ one-time"
       },
       "testimonials": {
-        "title": "What Duhan learners are saying",
+        "title": "What DuHan Learners Say",
         "t1": {
-          "tag1": "Used for 11 months",
-          "tag2": "Reached TOPIK 5",
-          "name": "Haeun",
-          "meta": "Designer · Hangzhou"
+          "tag1": "11 months used",
+          "tag2": "Level 5 achieved",
+          "name": "Hae-eun · @hae_eun",
+          "meta": "Designer · Hangzhou",
+          "quote": "I used to use Anki but got stressed. DuHan packaged it into 'just these 4 steps,' and I've stuck with it for a year. Passed TOPIK II Level 5!"
         },
         "t2": {
-          "tag1": "Learning via Drama",
-          "tag2": "3 Months",
+          "tag1": "Learn with K-Drama",
+          "tag2": "3 months",
           "name": "Xiao Ke",
-          "meta": "Junior Student"
+          "meta": "University Student",
+          "quote": "No more relying on fansubs. I tap a word, it goes to my cards, I review it the next day — making drama watching the best way to learn."
         },
         "t3": {
-          "tag1": "Native Assistant",
-          "name": "Minji",
-          "meta": "Seoul · Native"
+          "tag1": "Native TA",
+          "name": "Minji · TA",
+          "meta": "Seoul · Native Speaker",
+          "quote": "The UI is so healing. It's like flipping through a beautiful magazine. Most importantly, it works — I actually remember the words."
         }
       },
       "faq": {
         "title": "FAQ",
-        "q1": "Is it suitable for beginners?",
-        "q2": "What is the FSRS algorithm?",
-        "q3": "Pro vs Elite differences?",
+        "q1": "Can beginners use it?",
+        "q2": "What is FSRS algorithm?",
+        "q3": "Difference between Plus and Elite?",
         "q4": "Can I study offline?",
         "q5": "Is there a student discount?",
-        "q6": "Can I get a refund?"
+        "q6": "Can I get a refund?",
+        "a1": "Absolutely. Onboarding checks your level, and complete courses cover everything from Hangul to beginner conversation. Duhan moves at your pace so the next lesson always feels manageable.",
+        "a2": "FSRS is a learning-science-based spaced repetition algorithm. It schedules each review from how difficult the word was to recall, helping you retain more while spending about 30% less time reviewing.",
+        "a3": "Plus unlocks all self-study content. Elite adds a 1:1 conversation partner, detailed writing feedback, a dedicated adviser, and study-abroad or career support for learners targeting a concrete result within six months.",
+        "a4": "Yes. Plus members can download courses, flashcards, podcasts, and reading materials for commutes, flights, or anywhere without a connection.",
+        "a5": "Verified students receive 30% off Plus and 20% off Elite. Extra student coupons are offered on March 1 and September 1 each year.",
+        "a6": "Eligible paid plans include a 7-day free trial. Refund requests are reviewed case by case based on billing status, usage history, technical issues, and applicable law."
       },
       "finalCta": {
-        "titlePre": "Make Korean",
-        "titleMid": "part of your",
-        "titlePost": "daily life today",
+        "titlePre": "Make Korean part",
+        "titleMid": "of your daily life",
+        "titlePost": "starting today",
         "sub": "Sign up in 30s · 7-day Plus free trial · No credit card required",
         "ctaPrimary": "Start for Free →",
         "ctaSecondary": "Download App"
@@ -948,34 +981,35 @@
       "footer": {
         "col1": {
           "head": "Product",
-          "l1": "Overview",
-          "l3": "TOPIK prep",
-          "l4": "Media hub",
-          "l5": "Graded reading",
+          "l1": "Features",
+          "l3": "TOPIK Prep",
+          "l4": "Media & Listening",
+          "l5": "Graded Reading",
           "l6": "Community"
         },
         "col2": {
           "head": "Learn",
-          "l1": "Guides",
-          "l2": "Grammar wiki",
-          "l3": "Exam blog",
+          "l1": "Study Guides",
+          "l2": "Grammar Wiki",
+          "l3": "Prep Blog",
           "l4": "Daily Korean"
         },
         "col3": {
           "head": "Company",
-          "l1": "About Duhan",
-          "l5": "Contact"
+          "l1": "About DuHan",
+          "l5": "Contact Us"
         },
         "col4": {
           "head": "Support",
           "l1": "Help Center",
           "l2": "Refund Policy",
-          "l3": "Privacy",
-          "l4": "Terms"
+          "l3": "Privacy Policy",
+          "l4": "Terms of Service"
         },
-        "tag1": "Duhan · Make Korean your routine.",
-        "tag2": "From vocab to TOPIK Level 6, all in one.",
-        "copy": "Duhan · All rights reserved."
+        "tag1": "DuHan · Make Korean a daily habit.",
+        "tag2": "From Hangul to TOPIK Level 6, all in one place.",
+        "copy": "© 2026 DuHan Inc. All rights reserved.",
+        "languageShortlist": "EN · ZH · KO"
       }
     }
   },

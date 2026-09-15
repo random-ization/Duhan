@@ -13,6 +13,7 @@ import { buildPricingDetailsPath } from '../utils/subscriptionPlan';
 import { Globe, Check, ArrowRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLocalizedNavigate } from '../hooks/useLocalizedNavigate';
+import { getLandingDecorations } from './landingDecorations';
 type PricePlan = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'LIFETIME';
 type PriceEntry = { amount: string; currency: string; formatted: string };
 type VariantPrices = {
@@ -35,6 +36,11 @@ function normalizeLandingSeoLanguage(language: string): LandingSeoLanguage {
     ? (language as LandingSeoLanguage)
     : 'en';
 }
+
+const useLandingDecorations = () => {
+  const { i18n } = useTranslation();
+  return getLandingDecorations(i18n.resolvedLanguage || i18n.language);
+};
 
 function getFeaturedGuidesForJsonLd(language: LandingSeoLanguage) {
   const slugs = ['topik-guide', 'korean-vocabulary', 'topik-writing'] as const;
@@ -401,6 +407,7 @@ const MobilePhoneBlock: React.FC<{ t: (k: string, opts?: Record<string, unknown>
 const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
 }) => {
+  const decorations = useLandingDecorations();
   const steps: Array<{
     kanji: string;
     title: string;
@@ -408,25 +415,25 @@ const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => 
     state: 'done' | 'active' | 'idle';
   }> = [
     {
-      kanji: '複',
+      kanji: decorations.phoneSteps[0],
       title: t('landing.v2.hero.phone.s1.t', { defaultValue: '早间复习' }),
       sub: t('landing.v2.hero.phone.s1.s', { defaultValue: '18 张到期卡 · 已完成' }),
       state: 'done',
     },
     {
-      kanji: '學',
+      kanji: decorations.phoneSteps[1],
       title: t('landing.v2.hero.phone.s2.t', { defaultValue: '新课 · L24 골목길' }),
       sub: t('landing.v2.hero.phone.s2.s', { defaultValue: '现在进行中 · 8 分钟' }),
       state: 'active',
     },
     {
-      kanji: '聽',
+      kanji: decorations.phoneSteps[2],
       title: t('landing.v2.hero.phone.s3.t', { defaultValue: '播客片段' }),
       sub: t('landing.v2.hero.phone.s3.s', { defaultValue: '한국 골목 산책 · 6 分钟' }),
       state: 'idle',
     },
     {
-      kanji: '讀',
+      kanji: decorations.phoneSteps[3],
       title: t('landing.v2.hero.phone.s4.t', { defaultValue: '睡前阅读' }),
       sub: t('landing.v2.hero.phone.s4.s', { defaultValue: '短文 · 골목길의 추억' }),
       state: 'idle',
@@ -444,7 +451,9 @@ const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => 
           <span className="font-k-mono text-[12px] font-bold tracking-[1.5px] text-k-crimson">
             {t('landing.v2.hero.phone.date', { defaultValue: '五月 十一日' })}
           </span>
-          <span className="font-k-serif text-[18px] font-medium text-k-crimson">韓</span>
+          <span className="font-k-serif text-[18px] font-medium text-k-crimson">
+            {decorations.phoneHeader}
+          </span>
         </div>
         <div className="text-[24px] font-extrabold text-k-ink">
           <span className="mr-1 font-k-serif font-medium text-k-crimson">두한</span>
@@ -511,133 +520,136 @@ const PhoneMockup: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => 
 const Hero: React.FC<{
   onFreeStart: () => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
-}> = ({ onFreeStart, t }) => (
-  <section className="relative overflow-hidden px-5 py-12 md:px-0 md:py-[80px] lg:py-[100px]">
-    <Container className="grid items-center gap-8 md:gap-[60px] lg:grid-cols-[1.05fr_1fr]">
-      <div>
-        <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-k-bg2 px-[11px] py-1 text-[11px] font-bold tracking-[0.3px] text-[#3A342E] md:mb-6 md:gap-2 md:px-[13px] md:py-1.5 md:text-[12px]">
-          <span className="h-1.5 w-1.5 rounded-full bg-k-crimson" />
-          <span className="font-k-serif font-medium text-k-crimson">新</span>
-          {t('landing.v2.hero.eyebrow', { defaultValue: 'v3.0 已发布 · 全新学习路径与社区' })}
-        </span>
-        <h1 className="m-0 mb-4 text-[44px] font-extrabold leading-[1.04] tracking-[-1.4px] text-k-ink md:mb-6 md:text-[56px] md:tracking-[-2.5px] lg:text-[72px]">
-          <span className="mr-1.5 block font-k-serif text-[56px] font-medium leading-none text-k-crimson md:inline md:text-inherit">
-            {t('landing.v2.hero.titleKo', { defaultValue: '讀韓' })}
+}> = ({ onFreeStart, t }) => {
+  const decorations = useLandingDecorations();
+  return (
+    <section className="relative overflow-hidden px-5 py-12 md:px-0 md:py-[80px] lg:py-[100px]">
+      <Container className="grid items-center gap-8 md:gap-[60px] lg:grid-cols-[1.05fr_1fr]">
+        <div>
+          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-k-bg2 px-[11px] py-1 text-[11px] font-bold tracking-[0.3px] text-[#3A342E] md:mb-6 md:gap-2 md:px-[13px] md:py-1.5 md:text-[12px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-k-crimson" />
+            <span className="font-k-serif font-medium text-k-crimson">{decorations.heroNew}</span>
+            {t('landing.v2.hero.eyebrow', { defaultValue: 'v3.0 已发布 · 全新学习路径与社区' })}
           </span>
-          <br className="hidden md:block" />
-          {t('landing.v2.hero.titlePre', { defaultValue: '让韩语 ' })}
-          <span className="relative inline-block">
-            <span className="relative z-[1]">
-              {t('landing.v2.hero.titleUnderlined', { defaultValue: '变成日常' })}
+          <h1 className="m-0 mb-4 text-[44px] font-extrabold leading-[1.04] tracking-[-1.4px] text-k-ink md:mb-6 md:text-[56px] md:tracking-[-2.5px] lg:text-[72px]">
+            <span className="mr-1.5 block font-k-serif text-[56px] font-medium leading-none text-k-crimson md:inline md:text-inherit">
+              {t('landing.v2.hero.titleKo', { defaultValue: '讀韓' })}
             </span>
-            <span
-              className="absolute inset-x-0 bottom-1 z-0 h-[10px] opacity-70 md:bottom-2 md:h-[14px]"
-              style={{ background: '#F2D27A' }}
-              aria-hidden
-            />
-          </span>
-        </h1>
-        <p className="m-0 mb-5 max-w-[540px] text-[15px] leading-[1.55] text-[#3A342E] md:mb-8 md:text-[18px] md:leading-[1.6]">
-          {t('landing.v2.hero.sub', {
-            defaultValue:
-              '每天一条精心编排的学习路径 · 单词、语法、TOPIK、影视、播客、阅读、社区互译串联 · 基于 FSRS 记忆模型，跟你的学习节奏一起呼吸。',
-          })}
-        </p>
-        <div className="mb-6 flex flex-col gap-[9px] md:mb-8 md:flex-row md:items-center md:gap-3">
-          <button
-            type="button"
-            onClick={onFreeStart}
-            className="w-full rounded-[11px] bg-k-crimson px-7 py-[15px] text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
-          >
-            {t('landing.v2.hero.ctaPrimary', { defaultValue: '免费开始学习 →' })}
-          </button>
-          <button
-            type="button"
-            className="w-full rounded-[11px] bg-k-card px-7 py-[15px] text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
-            style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-ink)' }}
-          >
-            {t('landing.v2.hero.ctaSecondary', { defaultValue: '观看 90s 演示' })}
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-3 border-t border-[rgba(31,27,23,0.08)] pt-4 md:flex md:gap-7 md:pt-7">
-          {(
-            [
-              {
-                n: '48K+',
-                nDesktop: '48,200+',
-                l: t('landing.v2.hero.meta1', { defaultValue: '活跃学习者' }),
-              },
-              {
-                n: '230K+',
-                nDesktop: '230,000+',
-                l: t('landing.v2.hero.meta2', { defaultValue: '每日复习卡' }),
-              },
-              {
-                n: '⭐ 4.9',
-                nDesktop: '⭐ 4.9',
-                l: t('landing.v2.hero.meta3', { defaultValue: 'App Store 评分' }),
-              },
-            ] as const
-          ).map(m => (
-            <div key={m.l} className="flex flex-col gap-0.5">
-              <span className="font-k-serif text-[20px] font-semibold leading-[1.1] tracking-[-0.5px] text-k-crimson md:text-[28px]">
-                <span className="md:hidden">{m.n}</span>
-                <span className="hidden md:inline">{m.nDesktop}</span>
+            <br className="hidden md:block" />
+            {t('landing.v2.hero.titlePre', { defaultValue: '让韩语 ' })}
+            <span className="relative inline-block">
+              <span className="relative z-[1]">
+                {t('landing.v2.hero.titleUnderlined', { defaultValue: '变成日常' })}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.6px] text-k-sub md:text-[11px] md:tracking-[1.4px]">
-                {m.l}
-              </span>
-            </div>
-          ))}
+              <span
+                className="absolute inset-x-0 bottom-1 z-0 h-[10px] opacity-70 md:bottom-2 md:h-[14px]"
+                style={{ background: '#F2D27A' }}
+                aria-hidden
+              />
+            </span>
+          </h1>
+          <p className="m-0 mb-5 max-w-[540px] text-[15px] leading-[1.55] text-[#3A342E] md:mb-8 md:text-[18px] md:leading-[1.6]">
+            {t('landing.v2.hero.sub', {
+              defaultValue:
+                '每天一条精心编排的学习路径 · 单词、语法、TOPIK、影视、播客、阅读、社区互译串联 · 基于 FSRS 记忆模型，跟你的学习节奏一起呼吸。',
+            })}
+          </p>
+          <div className="mb-6 flex flex-col gap-[9px] md:mb-8 md:flex-row md:items-center md:gap-3">
+            <button
+              type="button"
+              onClick={onFreeStart}
+              className="w-full rounded-[11px] bg-k-crimson px-7 py-[15px] text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
+            >
+              {t('landing.v2.hero.ctaPrimary', { defaultValue: '免费开始学习 →' })}
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-[11px] bg-k-card px-7 py-[15px] text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px] md:w-auto md:rounded-[13px] md:py-4"
+              style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-ink)' }}
+            >
+              {t('landing.v2.hero.ctaSecondary', { defaultValue: '观看 90s 演示' })}
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3 border-t border-[rgba(31,27,23,0.08)] pt-4 md:flex md:gap-7 md:pt-7">
+            {(
+              [
+                {
+                  n: '48K+',
+                  nDesktop: '48,200+',
+                  l: t('landing.v2.hero.meta1', { defaultValue: '活跃学习者' }),
+                },
+                {
+                  n: '230K+',
+                  nDesktop: '230,000+',
+                  l: t('landing.v2.hero.meta2', { defaultValue: '每日复习卡' }),
+                },
+                {
+                  n: '⭐ 4.9',
+                  nDesktop: '⭐ 4.9',
+                  l: t('landing.v2.hero.meta3', { defaultValue: 'App Store 评分' }),
+                },
+              ] as const
+            ).map(m => (
+              <div key={m.l} className="flex flex-col gap-0.5">
+                <span className="font-k-serif text-[20px] font-semibold leading-[1.1] tracking-[-0.5px] text-k-crimson md:text-[28px]">
+                  <span className="md:hidden">{m.n}</span>
+                  <span className="hidden md:inline">{m.nDesktop}</span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.6px] text-k-sub md:text-[11px] md:tracking-[1.4px]">
+                  {m.l}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Mobile phone preview block — Shows on mobile, hidden on desktop */}
-      <MobilePhoneBlock t={t} />
+        {/* Mobile phone preview block — Shows on mobile, hidden on desktop */}
+        <MobilePhoneBlock t={t} />
 
-      {/* Desktop visual — phone mockup */}
-      <div className="relative hidden h-[620px] items-center justify-center lg:flex">
-        <div
-          className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
-          style={{ width: 360, height: 360, background: '#F4C5C5', top: 60, right: -40 }}
-        />
-        <div
-          className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
-          style={{ width: 280, height: 280, background: '#F2D27A', bottom: 40, left: -20 }}
-        />
-        <div
-          className="absolute -z-10 rounded-full opacity-40 blur-[40px]"
-          style={{ width: 220, height: 220, background: '#BFE0CF', top: 240, left: 80 }}
-        />
+        {/* Desktop visual — phone mockup */}
+        <div className="relative hidden h-[620px] items-center justify-center lg:flex">
+          <div
+            className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
+            style={{ width: 360, height: 360, background: '#F4C5C5', top: 60, right: -40 }}
+          />
+          <div
+            className="absolute -z-10 rounded-full opacity-50 blur-[40px]"
+            style={{ width: 280, height: 280, background: '#F2D27A', bottom: 40, left: -20 }}
+          />
+          <div
+            className="absolute -z-10 rounded-full opacity-40 blur-[40px]"
+            style={{ width: 220, height: 220, background: '#BFE0CF', top: 240, left: 80 }}
+          />
 
-        <FloatChip
-          ch="續"
-          title={t('landing.v2.hero.chip1.t', { defaultValue: '连续学习' })}
-          value={t('landing.v2.hero.chip1.v', { defaultValue: '47 天' })}
-          className="left-[30px] top-[56px]"
-        />
-        <FloatChip
-          ch="詞"
-          title={t('landing.v2.hero.chip2.t', { defaultValue: '今日新词' })}
-          value={t('landing.v2.hero.chip2.v', { defaultValue: '12 / 15' })}
-          bg="#BFE0CF"
-          fg="var(--color-k-ink)"
-          className="right-[20px] top-[200px]"
-        />
-        <FloatChip
-          ch="能"
-          title={t('landing.v2.hero.chip3.t', { defaultValue: 'TOPIK II' })}
-          value={t('landing.v2.hero.chip3.v', { defaultValue: '5 级 · 87%' })}
-          bg="#F2D27A"
-          fg="var(--color-k-ink)"
-          className="bottom-[80px] left-[50px]"
-        />
+          <FloatChip
+            ch={decorations.heroChips[0]}
+            title={t('landing.v2.hero.chip1.t', { defaultValue: '连续学习' })}
+            value={t('landing.v2.hero.chip1.v', { defaultValue: '47 天' })}
+            className="left-[30px] top-[56px]"
+          />
+          <FloatChip
+            ch={decorations.heroChips[1]}
+            title={t('landing.v2.hero.chip2.t', { defaultValue: '今日新词' })}
+            value={t('landing.v2.hero.chip2.v', { defaultValue: '12 / 15' })}
+            bg="#BFE0CF"
+            fg="var(--color-k-ink)"
+            className="right-[20px] top-[200px]"
+          />
+          <FloatChip
+            ch={decorations.heroChips[2]}
+            title={t('landing.v2.hero.chip3.t', { defaultValue: 'TOPIK II' })}
+            value={t('landing.v2.hero.chip3.v', { defaultValue: '5 级 · 87%' })}
+            bg="#F2D27A"
+            fg="var(--color-k-ink)"
+            className="bottom-[80px] left-[50px]"
+          />
 
-        <PhoneMockup t={t} />
-      </div>
-    </Container>
-  </section>
-);
+          <PhoneMockup t={t} />
+        </div>
+      </Container>
+    </section>
+  );
+};
 
 // ───────────────────────────────────────────────────────────────────────
 // LOGOS STRIP
@@ -646,12 +658,28 @@ const Hero: React.FC<{
 const LogosStrip: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
 }) => {
+  const decorations = useLandingDecorations();
   const items = [
-    { ko: '讀', label: t('landing.v2.logos.v1', { defaultValue: '真实语境沉浸阅读' }) },
-    { ko: '聽', label: t('landing.v2.logos.v2', { defaultValue: '影视播客原声精听' }) },
-    { ko: '記', label: t('landing.v2.logos.v3', { defaultValue: 'FSRS 算法智能复习' }) },
-    { ko: '譯', label: t('landing.v2.logos.v4', { defaultValue: '母语社区互译共建' }) },
-    { ko: '通', label: t('landing.v2.logos.v5', { defaultValue: '全平台学习进度同步' }) },
+    {
+      ko: decorations.logos[0],
+      label: t('landing.v2.logos.v1', { defaultValue: '真实语境沉浸阅读' }),
+    },
+    {
+      ko: decorations.logos[1],
+      label: t('landing.v2.logos.v2', { defaultValue: '影视播客原声精听' }),
+    },
+    {
+      ko: decorations.logos[2],
+      label: t('landing.v2.logos.v3', { defaultValue: 'FSRS 算法智能复习' }),
+    },
+    {
+      ko: decorations.logos[3],
+      label: t('landing.v2.logos.v4', { defaultValue: '母语社区互译共建' }),
+    },
+    {
+      ko: decorations.logos[4],
+      label: t('landing.v2.logos.v5', { defaultValue: '全平台学习进度同步' }),
+    },
   ];
   return (
     <section className="bg-k-bg2 py-8 md:py-11">
@@ -719,6 +747,7 @@ const SectionHead: React.FC<{
 const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
 }) => {
+  const decorations = useLandingDecorations();
   type Tone = 'dark' | 'cream' | 'butter' | 'mint' | 'crimson';
   type Tile = {
     tone: Tone;
@@ -734,66 +763,66 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
     {
       tone: 'dark',
       span2: true,
-      kanji: '今',
+      kanji: decorations.features[0],
       title: t('landing.v2.features.t1.title', { defaultValue: '每日学习路径' }),
       desc: t('landing.v2.features.t1.desc', {
         defaultValue:
           '基于昨日表现与 FSRS 算法，自动生成「复习 → 新学 → 听 → 读」四步闭环。无需自己排程，打开就是今天最该做的事。',
       }),
       pill: t('landing.v2.features.t1.pill', { defaultValue: '/ 早 7:00 自动生成 · 平均 22 分钟' }),
-      deco: '今',
+      deco: decorations.features[0],
     },
     {
       tone: 'butter',
-      kanji: '詞',
+      kanji: decorations.features[1],
       title: t('landing.v2.features.t2.title', { defaultValue: '词汇本 + 四种模式' }),
       desc: t('landing.v2.features.t2.desc', {
         defaultValue: '闪卡、学习、考试、连连看 — 一个词四种练法。',
       }),
       pill: t('landing.v2.features.t2.pill', { defaultValue: '/ TOPIK I + II · 9,300 词' }),
-      deco: '詞',
+      deco: decorations.features[1],
     },
     {
       tone: 'cream',
-      kanji: '法',
+      kanji: decorations.features[2],
       title: t('landing.v2.features.t3.title', { defaultValue: '语法句型库' }),
       desc: t('landing.v2.features.t3.desc', {
         defaultValue: '每条语法配场景例句 + 真题。错误自动入复习队列。',
       }),
       pill: t('landing.v2.features.t3.pill', { defaultValue: '/ 480 条核心语法' }),
-      deco: '法',
+      deco: decorations.features[2],
     },
     {
       tone: 'mint',
-      kanji: '能',
+      kanji: decorations.features[3],
       title: t('landing.v2.features.t4.title', { defaultValue: 'TOPIK 备考' }),
       desc: t('landing.v2.features.t4.desc', {
         defaultValue: '真题 / 模考 / 写作 AI 评分 + 听力倍速精听',
       }),
       pill: t('landing.v2.features.t4.pill', { defaultValue: '/ TOPIK II 平均提升 1.4 级' }),
-      deco: '能',
+      deco: decorations.features[3],
     },
     {
       tone: 'cream',
-      kanji: '譯',
+      kanji: decorations.features[4],
       title: t('landing.v2.features.t6.title', { defaultValue: '母语社区 · 互译' }),
       desc: t('landing.v2.features.t6.desc', {
         defaultValue: '遇到翻译不准？提交悬赏，由母语者为你提供最地道的解释。',
       }),
       pill: t('landing.v2.features.t6.pill', { defaultValue: '/ 1.2k+ 活跃互助组' }),
-      deco: '譯',
+      deco: decorations.features[4],
     },
     {
       tone: 'crimson',
       span3: true,
-      kanji: '映',
+      kanji: decorations.features[5],
       title: t('landing.v2.features.t5.title', { defaultValue: '影视 · 播客 · 阅读 三栖沉浸' }),
       desc: t('landing.v2.features.t5.desc', {
         defaultValue:
           '韩剧片段、Spotify 播客、新闻短文 — 一键转录、双语字幕、生词点译入卡 · 把追剧变成最香的学习。',
       }),
       pill: t('landing.v2.features.t5.pill', { defaultValue: '/ 4,800+ 学习素材 · 每周更新' }),
-      deco: '映',
+      deco: decorations.features[5],
     },
   ];
 
@@ -845,9 +874,9 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
     <section id="features" className="py-16 md:py-24">
       <Container>
         <SectionHead
-          eyebrowKo="具"
+          eyebrowKo={decorations.featureSection[0]}
           eyebrow="FEATURES"
-          titleKo="學"
+          titleKo={decorations.featureSection[1]}
           title={t('landing.v2.features.title', { defaultValue: '一站式的韩语学习工具箱' })}
           sub={t('landing.v2.features.sub', {
             defaultValue:
@@ -903,45 +932,46 @@ const FeaturesMosaic: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
 const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
 }) => {
+  const decorations = useLandingDecorations();
   const cards = [
     {
-      koNum: '壹',
+      koNum: decorations.loopNumbers[0],
       label: t('landing.v2.loop.s1.label', { defaultValue: 'STEP 1 · 早间' }),
       title: t('landing.v2.loop.s1.title', { defaultValue: '复习到期卡' }),
       desc: t('landing.v2.loop.s1.desc', {
         defaultValue: 'FSRS 算法决定今天要复习什么 · 平均 7 分钟搞定。',
       }),
-      previewKo: '複',
+      previewKo: decorations.loopPreviews[0],
       preview: t('landing.v2.loop.s1.preview', { defaultValue: '18 卡 · 7 分钟' }),
     },
     {
-      koNum: '貳',
+      koNum: decorations.loopNumbers[1],
       label: t('landing.v2.loop.s2.label', { defaultValue: 'STEP 2 · 课程' }),
       title: t('landing.v2.loop.s2.title', { defaultValue: '新一课内容' }),
       desc: t('landing.v2.loop.s2.desc', {
         defaultValue: '课本 + 听力 + 即学即考 · 任何片段都能截图入卡。',
       }),
-      previewKo: '學',
+      previewKo: decorations.loopPreviews[1],
       preview: t('landing.v2.loop.s2.preview', { defaultValue: 'L24 · 8 分钟' }),
     },
     {
-      koNum: '參',
+      koNum: decorations.loopNumbers[2],
       label: t('landing.v2.loop.s3.label', { defaultValue: 'STEP 3 · 通勤' }),
       title: t('landing.v2.loop.s3.title', { defaultValue: '听力沉浸' }),
       desc: t('landing.v2.loop.s3.desc', {
         defaultValue: '真实播客或韩剧片段 · 双语字幕 · 生词秒收。',
       }),
-      previewKo: '聽',
+      previewKo: decorations.loopPreviews[2],
       preview: t('landing.v2.loop.s3.preview', { defaultValue: '播客 6 分钟' }),
     },
     {
-      koNum: '肆',
+      koNum: decorations.loopNumbers[3],
       label: t('landing.v2.loop.s4.label', { defaultValue: 'STEP 4 · 睡前' }),
       title: t('landing.v2.loop.s4.title', { defaultValue: '阅读一段' }),
       desc: t('landing.v2.loop.s4.desc', {
         defaultValue: '段落难度自动匹配 · 看完一篇 = 巩固今天的所学。',
       }),
-      previewKo: '讀',
+      previewKo: decorations.loopPreviews[3],
       preview: t('landing.v2.loop.s4.preview', { defaultValue: '短文 4 分钟' }),
     },
   ];
@@ -951,9 +981,9 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
         <div className="rounded-[36px] bg-k-ink px-6 py-16 text-k-bg md:px-12 md:py-24">
           <SectionHead
             tone="dark"
-            eyebrowKo="日"
+            eyebrowKo={decorations.loopSection[0]}
             eyebrow="DAILY LOOP"
-            titleKo="日"
+            titleKo={decorations.loopSection[1]}
             title={t('landing.v2.loop.title', { defaultValue: '四步，一天的韩语就稳了' })}
             sub={t('landing.v2.loop.sub', {
               defaultValue: '不需要意志力 · 早晨打开 App 就是清单 · 任何时候关掉再回来都能续上',
@@ -994,209 +1024,224 @@ const DailyLoop: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => st
 // MODULES showcase
 // ───────────────────────────────────────────────────────────────────────
 
-const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => (
-  <section id="modules" className="bg-k-bg2 py-24">
-    <Container className="max-w-7xl">
-      <SectionHead
-        eyebrowKo="模"
-        eyebrow="LEARNING MODULES"
-        titleKo="具"
-        title={t('landing.v2.modules.title', { defaultValue: '专为长期学习而生的模块' })}
-        sub={t('landing.v2.modules.sub', {
-          defaultValue: '每一个都打磨过百次 · 不堆功能 · 用起来都「这就是我要的」',
-        })}
-      />
-      <div className="grid gap-6 md:grid-cols-2">
-        <ModuleCard
-          kanji="詞"
-          title={t('landing.v2.modules.m1.title', { defaultValue: '词汇本 · 四模式练习' })}
-          desc={t('landing.v2.modules.m1.desc', {
-            defaultValue:
-              '同一个单词，四种练法 — 闪卡看脸熟、学习模式吃透、考试限时检验、连连看放松收尾。每个词都有 FSRS 记忆强度条。',
+const Modules: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const decorations = useLandingDecorations();
+  return (
+    <section id="modules" className="bg-k-bg2 py-24">
+      <Container className="max-w-7xl">
+        <SectionHead
+          eyebrowKo={decorations.moduleSection[0]}
+          eyebrow="LEARNING MODULES"
+          titleKo={decorations.moduleSection[1]}
+          title={t('landing.v2.modules.title', { defaultValue: '专为长期学习而生的模块' })}
+          sub={t('landing.v2.modules.sub', {
+            defaultValue: '每一个都打磨过百次 · 不堆功能 · 用起来都「这就是我要的」',
           })}
-          tags={[
-            t('landing.v2.modules.m1.tag1', { defaultValue: 'FSRS 算法' }),
-            t('landing.v2.modules.m1.tag2', { defaultValue: '4 种练习模式' }),
-            t('landing.v2.modules.m1.tag3', { defaultValue: '例句联想' }),
-            t('landing.v2.modules.m1.tag4', { defaultValue: '词册筛选' }),
-          ]}
-          link={t('landing.v2.modules.m1.link', { defaultValue: '了解词汇模块 →' })}
-          href="/features/vocab"
-          visualBg="#F2D27A"
-          visual={
-            <div
-              className="w-full rounded-[14px] bg-k-card p-4 text-center"
-              style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
-            >
-              <div className="font-k-serif text-[36px] font-medium tracking-[-1px] text-k-ink">
-                골목길
-              </div>
-              <div className="my-1 mb-3 text-[11px] text-k-sub">gol-mok-gil · n. 巷子</div>
-              <div className="flex justify-center gap-1">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <span
-                    key={i}
-                    className="h-2.5 w-2.5 rounded-[4px]"
-                    style={{ background: i <= 3 ? '#BFE0CF' : 'rgba(31,27,23,0.15)' }}
-                  />
-                ))}
-              </div>
-              <div className="mt-2 text-[10px] font-bold tracking-[1px] text-k-sub">記憶 60%</div>
-            </div>
-          }
         />
-
-        <ModuleCard
-          kanji="能"
-          title={t('landing.v2.modules.m2.title', { defaultValue: 'TOPIK · 真题 + AI 考评' })}
-          desc={t('landing.v2.modules.m2.desc', {
-            defaultValue:
-              '深度收录历年阅读与听力真题，1:1 还原真实考场。AI 写作实时批改给出 4 维反馈，更有全真模拟听力变速精听，助你攻克 6 级。',
-          })}
-          tags={[
-            t('landing.v2.modules.m2.tag1', { defaultValue: '10 年历年真题' }),
-            t('landing.v2.modules.m2.tag2', { defaultValue: '1:1 模考环境' }),
-            t('landing.v2.modules.m2.tag3', { defaultValue: 'AI 写作实时批改' }),
-            t('landing.v2.modules.m2.tag4', { defaultValue: '全维成绩预测' }),
-          ]}
-          link={t('landing.v2.modules.m2.link', { defaultValue: '了解 TOPIK 模块 →' })}
-          href="/features/topik"
-          visualBg="#BFE0CF"
-          visual={
-            <svg viewBox="0 0 200 200" width={180} height={180}>
-              <circle
-                cx={100}
-                cy={100}
-                r={78}
-                fill="none"
-                stroke="rgba(31,27,23,0.12)"
-                strokeWidth={14}
-              />
-              <circle
-                cx={100}
-                cy={100}
-                r={78}
-                fill="none"
-                stroke="var(--color-k-crimson)"
-                strokeWidth={14}
-                strokeLinecap="round"
-                strokeDasharray={490}
-                strokeDashoffset={100}
-                transform="rotate(-90 100 100)"
-              />
-              <text
-                x={100}
-                y={92}
-                textAnchor="middle"
-                fontFamily="Noto Serif KR"
-                fontSize={42}
-                fontWeight={500}
-                fill="var(--color-k-ink)"
+        <div className="grid gap-6 md:grid-cols-2">
+          <ModuleCard
+            kanji={decorations.modules[0]}
+            title={t('landing.v2.modules.m1.title', { defaultValue: '词汇本 · 四模式练习' })}
+            desc={t('landing.v2.modules.m1.desc', {
+              defaultValue:
+                '同一个单词，四种练法 — 闪卡看脸熟、学习模式吃透、考试限时检验、连连看放松收尾。每个词都有 FSRS 记忆强度条。',
+            })}
+            tags={[
+              t('landing.v2.modules.m1.tag1', { defaultValue: 'FSRS 算法' }),
+              t('landing.v2.modules.m1.tag2', { defaultValue: '4 种练习模式' }),
+              t('landing.v2.modules.m1.tag3', { defaultValue: '例句联想' }),
+              t('landing.v2.modules.m1.tag4', { defaultValue: '词册筛选' }),
+            ]}
+            link={t('landing.v2.modules.m1.link', { defaultValue: '了解词汇模块 →' })}
+            href="/features/vocab"
+            visualBg="#F2D27A"
+            visual={
+              <div
+                className="w-full rounded-[14px] bg-k-card p-4 text-center"
+                style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
               >
-                87
-              </text>
-              <text
-                x={100}
-                y={120}
-                textAnchor="middle"
-                fontFamily="Pretendard"
-                fontSize={11}
-                fontWeight={700}
-                fill="var(--color-k-sub)"
-                letterSpacing={1.5}
-              >
-                TOPIK II · L5
-              </text>
-            </svg>
-          }
-        />
-
-        <ModuleCard
-          kanji="映"
-          title={t('landing.v2.modules.m3.title', { defaultValue: '媒体库 · 精听变速' })}
-          desc={t('landing.v2.modules.m3.desc', {
-            defaultValue:
-              '告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。',
-          })}
-          tags={[
-            t('landing.v2.modules.m3.tag1', { defaultValue: '4,800+ 片段' }),
-            t('landing.v2.modules.m3.tag2', { defaultValue: '双语字幕' }),
-            t('landing.v2.modules.m3.tag3', { defaultValue: '点词入卡' }),
-            t('landing.v2.modules.m3.tag4', { defaultValue: '难度匹配' }),
-          ]}
-          link={t('landing.v2.modules.m3.link', { defaultValue: '了解沉浸模块 →' })}
-          href="/features/listening"
-          visualBg="#F4C5C5"
-          visual={
-            <div
-              className="w-full rounded-[14px] bg-k-ink p-4 text-k-bg"
-              style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
-            >
-              <div className="mb-2 text-[10px] font-bold tracking-[1.5px] text-[rgba(251,248,243,0.5)]">
-                ▶ NOW PLAYING · 00:47
-              </div>
-              <div className="mb-1.5 font-k-serif text-[15px] font-medium leading-[1.5]">
-                골목길에서 만난 작은 빵집…
-              </div>
-              <div className="text-[12px] leading-[1.5] text-[rgba(251,248,243,0.7)]">
-                在巷子里遇见的小面包店…
-              </div>
-              <div className="mt-3 h-[3px] overflow-hidden rounded bg-[rgba(251,248,243,0.15)]">
-                <div className="h-full w-[34%]" style={{ background: '#F2A78D' }} />
-              </div>
-            </div>
-          }
-        />
-
-        <ModuleCard
-          kanji="讀"
-          title={t('landing.v2.modules.m4.title', { defaultValue: '分级阅读 · AI 提词' })}
-          desc={t('landing.v2.modules.m4.desc', {
-            defaultValue:
-              '从新闻到精选绘本，所有内容按 L1–L6 难度精准分级。AI 自动提取核心词汇与划词翻译，让长难句解析与背景知识不再是阅读障碍。',
-          })}
-          tags={[
-            t('landing.v2.modules.m4.tag1', { defaultValue: '分级 1–6' }),
-            t('landing.v2.modules.m4.tag2', { defaultValue: '绘本库' }),
-            t('landing.v2.modules.m4.tag3', { defaultValue: '点词查询' }),
-            t('landing.v2.modules.m4.tag4', { defaultValue: '笔记入卡' }),
-          ]}
-          link={t('landing.v2.modules.m4.link', { defaultValue: '了解阅读模块 →' })}
-          href="/features/reading"
-          tone="indigo"
-          visualBg="#3D4A6B"
-          visual={
-            <div
-              className="w-full rounded-[14px] p-[18px] text-k-ink"
-              style={{
-                background: 'rgba(251,248,243,0.95)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-              }}
-            >
-              <div className="mb-2 font-k-serif text-[11px] font-bold tracking-[2px] text-k-crimson">
-                三 · LEVEL 3
-              </div>
-              <div className="font-k-serif text-[14px] font-medium leading-[1.6]">
-                <span style={{ background: '#F2D27A', padding: '0 2px', borderRadius: 2 }}>
+                <div className="font-k-serif text-[36px] font-medium tracking-[-1px] text-k-ink">
                   골목길
-                </span>
-                의 끝에 작은 빵집이 있다. 매일 아침 갓 구운 빵{' '}
-                <span style={{ background: '#F4C5C5', padding: '0 2px', borderRadius: 2 }}>
-                  냄새
-                </span>
-                가 거리를 채운다…
+                </div>
+                <div className="my-1 mb-3 text-[11px] text-k-sub">
+                  {t('landing.v2.modules.m1.previewMeaning', {
+                    defaultValue: 'gol-mok-gil · n. 巷子',
+                  })}
+                </div>
+                <div className="flex justify-center gap-1">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <span
+                      key={i}
+                      className="h-2.5 w-2.5 rounded-[4px]"
+                      style={{ background: i <= 3 ? '#BFE0CF' : 'rgba(31,27,23,0.15)' }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-2 text-[10px] font-bold tracking-[1px] text-k-sub">
+                  {t('landing.v2.modules.m1.previewMemory', { defaultValue: '記憶 60%' })}
+                </div>
               </div>
-              <div className="mt-3 flex justify-between text-[11px] font-semibold text-k-sub">
-                <span>3 / 18 段</span>
-                <span>📖 2.4 分钟</span>
+            }
+          />
+
+          <ModuleCard
+            kanji={decorations.modules[1]}
+            title={t('landing.v2.modules.m2.title', { defaultValue: 'TOPIK · 真题 + AI 考评' })}
+            desc={t('landing.v2.modules.m2.desc', {
+              defaultValue:
+                '深度收录历年阅读与听力真题，1:1 还原真实考场。AI 写作实时批改给出 4 维反馈，更有全真模拟听力变速精听，助你攻克 6 级。',
+            })}
+            tags={[
+              t('landing.v2.modules.m2.tag1', { defaultValue: '10 年历年真题' }),
+              t('landing.v2.modules.m2.tag2', { defaultValue: '1:1 模考环境' }),
+              t('landing.v2.modules.m2.tag3', { defaultValue: 'AI 写作实时批改' }),
+              t('landing.v2.modules.m2.tag4', { defaultValue: '全维成绩预测' }),
+            ]}
+            link={t('landing.v2.modules.m2.link', { defaultValue: '了解 TOPIK 模块 →' })}
+            href="/features/topik"
+            visualBg="#BFE0CF"
+            visual={
+              <svg viewBox="0 0 200 200" width={180} height={180}>
+                <circle
+                  cx={100}
+                  cy={100}
+                  r={78}
+                  fill="none"
+                  stroke="rgba(31,27,23,0.12)"
+                  strokeWidth={14}
+                />
+                <circle
+                  cx={100}
+                  cy={100}
+                  r={78}
+                  fill="none"
+                  stroke="var(--color-k-crimson)"
+                  strokeWidth={14}
+                  strokeLinecap="round"
+                  strokeDasharray={490}
+                  strokeDashoffset={100}
+                  transform="rotate(-90 100 100)"
+                />
+                <text
+                  x={100}
+                  y={92}
+                  textAnchor="middle"
+                  fontFamily="Noto Serif KR"
+                  fontSize={42}
+                  fontWeight={500}
+                  fill="var(--color-k-ink)"
+                >
+                  87
+                </text>
+                <text
+                  x={100}
+                  y={120}
+                  textAnchor="middle"
+                  fontFamily="Pretendard"
+                  fontSize={11}
+                  fontWeight={700}
+                  fill="var(--color-k-sub)"
+                  letterSpacing={1.5}
+                >
+                  TOPIK II · L5
+                </text>
+              </svg>
+            }
+          />
+
+          <ModuleCard
+            kanji={decorations.modules[2]}
+            title={t('landing.v2.modules.m3.title', { defaultValue: '媒体库 · 精听变速' })}
+            desc={t('landing.v2.modules.m3.desc', {
+              defaultValue:
+                '告别枯燥听力练习。海量真实播客与视频素材，支持 0.5x–1.5x 无级变速、同步脚本显示与点词入卡，在沉浸中驯服每一个韩语发音。',
+            })}
+            tags={[
+              t('landing.v2.modules.m3.tag1', { defaultValue: '4,800+ 片段' }),
+              t('landing.v2.modules.m3.tag2', { defaultValue: '双语字幕' }),
+              t('landing.v2.modules.m3.tag3', { defaultValue: '点词入卡' }),
+              t('landing.v2.modules.m3.tag4', { defaultValue: '难度匹配' }),
+            ]}
+            link={t('landing.v2.modules.m3.link', { defaultValue: '了解沉浸模块 →' })}
+            href="/features/listening"
+            visualBg="#F4C5C5"
+            visual={
+              <div
+                className="w-full rounded-[14px] bg-k-ink p-4 text-k-bg"
+                style={{ boxShadow: '0 8px 24px rgba(31,27,23,0.1)' }}
+              >
+                <div className="mb-2 text-[10px] font-bold tracking-[1.5px] text-[rgba(251,248,243,0.5)]">
+                  ▶ NOW PLAYING · 00:47
+                </div>
+                <div className="mb-1.5 font-k-serif text-[15px] font-medium leading-[1.5]">
+                  골목길에서 만난 작은 빵집…
+                </div>
+                <div className="text-[12px] leading-[1.5] text-[rgba(251,248,243,0.7)]">
+                  {t('landing.v2.modules.m3.previewTranslation', {
+                    defaultValue: '在巷子里遇见的小面包店…',
+                  })}
+                </div>
+                <div className="mt-3 h-[3px] overflow-hidden rounded bg-[rgba(251,248,243,0.15)]">
+                  <div className="h-full w-[34%]" style={{ background: '#F2A78D' }} />
+                </div>
               </div>
-            </div>
-          }
-        />
-      </div>
-    </Container>
-  </section>
-);
+            }
+          />
+
+          <ModuleCard
+            kanji={decorations.modules[3]}
+            title={t('landing.v2.modules.m4.title', { defaultValue: '分级阅读 · AI 提词' })}
+            desc={t('landing.v2.modules.m4.desc', {
+              defaultValue:
+                '从新闻到精选绘本，所有内容按 L1–L6 难度精准分级。AI 自动提取核心词汇与划词翻译，让长难句解析与背景知识不再是阅读障碍。',
+            })}
+            tags={[
+              t('landing.v2.modules.m4.tag1', { defaultValue: '分级 1–6' }),
+              t('landing.v2.modules.m4.tag2', { defaultValue: '绘本库' }),
+              t('landing.v2.modules.m4.tag3', { defaultValue: '点词查询' }),
+              t('landing.v2.modules.m4.tag4', { defaultValue: '笔记入卡' }),
+            ]}
+            link={t('landing.v2.modules.m4.link', { defaultValue: '了解阅读模块 →' })}
+            href="/features/reading"
+            tone="indigo"
+            visualBg="#3D4A6B"
+            visual={
+              <div
+                className="w-full rounded-[14px] p-[18px] text-k-ink"
+                style={{
+                  background: 'rgba(251,248,243,0.95)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                }}
+              >
+                <div className="mb-2 font-k-serif text-[11px] font-bold tracking-[2px] text-k-crimson">
+                  {t('landing.v2.modules.m4.previewLevel', { defaultValue: '三 · LEVEL 3' })}
+                </div>
+                <div className="font-k-serif text-[14px] font-medium leading-[1.6]">
+                  <span style={{ background: '#F2D27A', padding: '0 2px', borderRadius: 2 }}>
+                    골목길
+                  </span>
+                  의 끝에 작은 빵집이 있다. 매일 아침 갓 구운 빵{' '}
+                  <span style={{ background: '#F4C5C5', padding: '0 2px', borderRadius: 2 }}>
+                    냄새
+                  </span>
+                  가 거리를 채운다…
+                </div>
+                <div className="mt-3 flex justify-between text-[11px] font-semibold text-k-sub">
+                  <span>
+                    {t('landing.v2.modules.m4.previewProgress', { defaultValue: '3 / 18 段' })}
+                  </span>
+                  <span>
+                    {t('landing.v2.modules.m4.previewMinutes', { defaultValue: '📖 2.4 分钟' })}
+                  </span>
+                </div>
+              </div>
+            }
+          />
+        </div>
+      </Container>
+    </section>
+  );
+};
 
 const ModuleCard: React.FC<{
   kanji: string;
@@ -1252,6 +1297,7 @@ const ModuleCard: React.FC<{
 const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
 }) => {
+  const decorations = useLandingDecorations();
   const stats = [
     {
       n: '48,200+',
@@ -1278,9 +1324,9 @@ const CommunityStats: React.FC<{ t: (k: string, opts?: Record<string, unknown>) 
     <section id="community" className="py-24">
       <Container>
         <SectionHead
-          eyebrowKo="會"
+          eyebrowKo={decorations.communitySection[0]}
           eyebrow="COMMUNITY"
-          titleKo="伴"
+          titleKo={decorations.communitySection[1]}
           title={t('landing.v2.community.title', { defaultValue: '不一个人学，更走得远' })}
           sub={t('landing.v2.community.sub', {
             defaultValue:
@@ -1322,6 +1368,9 @@ const Pricing: React.FC<{
   prices: VariantPrices | null;
   onSelect: (plan: PricingMode | 'FREE') => void;
 }> = ({ t, prices, onSelect }) => {
+  const { i18n } = useTranslation();
+  const decorations = useLandingDecorations();
+  const isChinese = (i18n.resolvedLanguage || i18n.language).toLowerCase().startsWith('zh');
   const [mode, setMode] = useState<PricingMode>('ANNUAL');
 
   const getPrice = (m: PricingMode) => {
@@ -1329,7 +1378,7 @@ const Pricing: React.FC<{
   };
   const getCurrency = (m: PricingMode) => {
     const cur = prices?.REGIONAL?.[m]?.currency ?? prices?.GLOBAL?.[m]?.currency ?? null;
-    return cur === 'USD' ? '$' : cur === 'CNY' ? '¥' : (cur ?? '¥');
+    return cur === 'USD' ? '$' : cur === 'CNY' ? '¥' : (cur ?? (isChinese ? '¥' : '$'));
   };
 
   const formatPrice = (amt: string | null, fallback: string) => {
@@ -1341,7 +1390,17 @@ const Pricing: React.FC<{
   const subDisplay = {
     v: formatPrice(
       getPrice(mode),
-      mode === 'MONTHLY' ? '58' : mode === 'QUARTERLY' ? '128' : '468'
+      isChinese
+        ? mode === 'MONTHLY'
+          ? '58'
+          : mode === 'QUARTERLY'
+            ? '128'
+            : '468'
+        : mode === 'MONTHLY'
+          ? '6.90'
+          : mode === 'QUARTERLY'
+            ? '18.90'
+            : '49'
     ),
     c: getCurrency(mode),
     u:
@@ -1353,9 +1412,9 @@ const Pricing: React.FC<{
   };
 
   const lifetimeDisplay = {
-    v: formatPrice(getPrice('LIFETIME'), '888'),
+    v: formatPrice(getPrice('LIFETIME'), isChinese ? '888' : '99'),
     c: getCurrency('LIFETIME'),
-    u: t('landing.v2.pricing.lifetime', { defaultValue: '/ 终身一次' }),
+    u: t('landing.v2.pricing.lifetimeUnit', { defaultValue: '/ 终身一次' }),
   };
 
   const tabs: Array<{ key: PricingMode; label: string; save?: string }> = [
@@ -1364,7 +1423,7 @@ const Pricing: React.FC<{
     {
       key: 'ANNUAL',
       label: t('landing.v2.pricing.tabAnnual', { defaultValue: '年付' }),
-      save: '最划算',
+      save: t('landing.v2.pricing.bestValue', { defaultValue: '最划算' }),
     },
   ];
 
@@ -1383,9 +1442,9 @@ const Pricing: React.FC<{
     <section id="pricing" className="bg-k-bg2 py-16 md:py-32">
       <Container>
         <SectionHead
-          eyebrowKo="金"
+          eyebrowKo={decorations.pricingSection[0]}
           eyebrow="SUBSCRIPTION"
-          titleKo="擇"
+          titleKo={decorations.pricingSection[1]}
           title={t('landing.v2.pricing.title', { defaultValue: '选一个，开始学' })}
           sub={t('landing.v2.pricing.sub', {
             defaultValue: '加入全球学习者社区，解锁完整的 AI 韩语进阶体验',
@@ -1395,12 +1454,12 @@ const Pricing: React.FC<{
         <div className="mx-auto mt-4 grid max-w-[1200px] items-stretch gap-6 lg:grid-cols-3">
           {/* FREE */}
           <PlanCard
-            koName="無"
+            koName={decorations.pricingPlans[0]}
             title={t('landing.v2.pricing.free.title', { defaultValue: '免费版 · Free' })}
             desc={t('landing.v2.pricing.free.desc', {
               defaultValue: '入门之选 · 开启你的韩语进阶之旅',
             })}
-            currency="¥"
+            currency={isChinese ? '¥' : '$'}
             value="0"
             unit={t('landing.v2.pricing.free.unit', { defaultValue: '/ 永久' })}
             features={[
@@ -1445,7 +1504,7 @@ const Pricing: React.FC<{
               <div className="flex flex-col p-8 pt-10 h-full">
                 <div className="mb-6">
                   <Seal
-                    ch="恆"
+                    ch={decorations.pricingPlans[1]}
                     size={40}
                     bg="var(--color-k-bg)"
                     fg="var(--color-k-ink)"
@@ -1521,7 +1580,7 @@ const Pricing: React.FC<{
 
           {/* LIFETIME */}
           <PlanCard
-            koName="永"
+            koName={decorations.pricingPlans[2]}
             title={t('landing.v2.pricing.lifetime.title', { defaultValue: '终身版 · Lifetime' })}
             desc={t('landing.v2.pricing.lifetime.desc', {
               defaultValue: '终身无忧 · 一次投资，永久享有所有功能',
@@ -1618,63 +1677,66 @@ const PlanCard: React.FC<{
 
 const Testimonials: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({
   t,
-}) => (
-  <section className="py-24">
-    <Container>
-      <SectionHead
-        eyebrowKo="聲"
-        eyebrow="TESTIMONIALS"
-        titleKo="話"
-        title={t('landing.v2.testimonials.title', { defaultValue: '用过 Duhan 的人都在说' })}
-      />
-      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
-        <TestimonialCard
-          tone="crimson"
-          large
-          tags={[
-            t('landing.v2.testimonials.t1.tag1', { defaultValue: '用了 11 个月' }),
-            t('landing.v2.testimonials.t1.tag2', { defaultValue: 'TOPIK 5 级达成' }),
-          ]}
-          quote={t('landing.v2.testimonials.t1.quote', {
-            defaultValue:
-              '之前用 Anki 自己堆卡，每次复习都焦虑。Duhan 把它包装成「今天就这四步」，神奇地我居然坚持了一年。备考时连续 47 天没断卡，TOPIK II 直接 5 级。',
-          })}
-          avatarCh="河"
-          avatarBg="#F2D27A"
-          name={t('landing.v2.testimonials.t1.name', { defaultValue: '河恩 · @hae_eun' })}
-          meta={t('landing.v2.testimonials.t1.meta', { defaultValue: '设计师 · 杭州' })}
+}) => {
+  const decorations = useLandingDecorations();
+  return (
+    <section className="py-24">
+      <Container>
+        <SectionHead
+          eyebrowKo={decorations.testimonialSection[0]}
+          eyebrow="TESTIMONIALS"
+          titleKo={decorations.testimonialSection[1]}
+          title={t('landing.v2.testimonials.title', { defaultValue: '用过 Duhan 的人都在说' })}
         />
-        <TestimonialCard
-          tone="cream"
-          tags={[
-            t('landing.v2.testimonials.t2.tag1', { defaultValue: '追剧学韩语' }),
-            t('landing.v2.testimonials.t2.tag2', { defaultValue: '3 个月' }),
-          ]}
-          quote={t('landing.v2.testimonials.t2.quote', {
-            defaultValue:
-              '看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。',
-          })}
-          avatarCh="小"
-          avatarBg="#BFE0CF"
-          name={t('landing.v2.testimonials.t2.name', { defaultValue: '小柯' })}
-          meta={t('landing.v2.testimonials.t2.meta', { defaultValue: '大三学生' })}
-        />
-        <TestimonialCard
-          tone="card"
-          tags={[t('landing.v2.testimonials.t3.tag1', { defaultValue: '母语者助教' })]}
-          quote={t('landing.v2.testimonials.t3.quote', {
-            defaultValue:
-              'UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。',
-          })}
-          avatarCh="민"
-          avatarBg="#F4C5C5"
-          name={t('landing.v2.testimonials.t3.name', { defaultValue: '민지 · 助教' })}
-          meta={t('landing.v2.testimonials.t3.meta', { defaultValue: '首尔 · 母语者' })}
-        />
-      </div>
-    </Container>
-  </section>
-);
+        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
+          <TestimonialCard
+            tone="crimson"
+            large
+            tags={[
+              t('landing.v2.testimonials.t1.tag1', { defaultValue: '用了 11 个月' }),
+              t('landing.v2.testimonials.t1.tag2', { defaultValue: 'TOPIK 5 级达成' }),
+            ]}
+            quote={t('landing.v2.testimonials.t1.quote', {
+              defaultValue:
+                '之前用 Anki 自己堆卡，每次复习都焦虑。Duhan 把它包装成「今天就这四步」，神奇地我居然坚持了一年。备考时连续 47 天没断卡，TOPIK II 直接 5 级。',
+            })}
+            avatarCh={decorations.testimonialAvatars[0]}
+            avatarBg="#F2D27A"
+            name={t('landing.v2.testimonials.t1.name', { defaultValue: '河恩 · @hae_eun' })}
+            meta={t('landing.v2.testimonials.t1.meta', { defaultValue: '设计师 · 杭州' })}
+          />
+          <TestimonialCard
+            tone="cream"
+            tags={[
+              t('landing.v2.testimonials.t2.tag1', { defaultValue: '追剧学韩语' }),
+              t('landing.v2.testimonials.t2.tag2', { defaultValue: '3 个月' }),
+            ]}
+            quote={t('landing.v2.testimonials.t2.quote', {
+              defaultValue:
+                '看 K-Drama 不再只靠字幕组。点哪个词，它就入卡，第二天复习 — 把追剧变成最香的学习。',
+            })}
+            avatarCh={decorations.testimonialAvatars[1]}
+            avatarBg="#BFE0CF"
+            name={t('landing.v2.testimonials.t2.name', { defaultValue: '小柯' })}
+            meta={t('landing.v2.testimonials.t2.meta', { defaultValue: '大三学生' })}
+          />
+          <TestimonialCard
+            tone="card"
+            tags={[t('landing.v2.testimonials.t3.tag1', { defaultValue: '母语者助教' })]}
+            quote={t('landing.v2.testimonials.t3.quote', {
+              defaultValue:
+                'UI 太治愈了。每次打开都不像在背单词，像在翻一本好看的杂志。重点是真的有用，单词留得住。',
+            })}
+            avatarCh={decorations.testimonialAvatars[2]}
+            avatarBg="#F4C5C5"
+            name={t('landing.v2.testimonials.t3.name', { defaultValue: '민지 · 助教' })}
+            meta={t('landing.v2.testimonials.t3.meta', { defaultValue: '首尔 · 母语者' })}
+          />
+        </div>
+      </Container>
+    </section>
+  );
+};
 
 const TestimonialCard: React.FC<{
   tone: 'crimson' | 'cream' | 'card';
@@ -1757,14 +1819,15 @@ const FaqList: React.FC<{
   t: (k: string, opts?: Record<string, unknown>) => string;
   items: LandingFaqItem[];
 }> = ({ t, items }) => {
+  const decorations = useLandingDecorations();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   return (
     <section id="faq" className="bg-k-bg2 py-24">
       <Container>
         <SectionHead
-          eyebrowKo="問"
+          eyebrowKo={decorations.faqSection[0]}
           eyebrow="FAQ"
-          titleKo="問"
+          titleKo={decorations.faqSection[1]}
           title={t('landing.v2.faq.title', { defaultValue: '常见问题' })}
         />
         <div className="mx-auto max-w-[820px]">
@@ -1779,7 +1842,7 @@ const FaqList: React.FC<{
                 >
                   <span className="text-left">
                     <span className="mr-2 font-k-serif text-[22px] font-medium text-k-crimson">
-                      問
+                      {decorations.faqQuestion}
                     </span>
                     {item.question}
                   </span>
@@ -1806,66 +1869,72 @@ const FaqList: React.FC<{
 const FinalCta: React.FC<{
   t: (k: string, opts?: Record<string, unknown>) => string;
   onFreeStart: () => void;
-}> = ({ t, onFreeStart }) => (
-  <section className="py-24">
-    <Container>
-      <div className="relative overflow-hidden rounded-[36px] bg-k-crimson px-6 py-24 text-k-bg">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-[-120px] right-[-40px] select-none font-k-serif text-[320px] font-medium leading-[0.8] md:bottom-[-200px] md:right-[-60px] md:text-[540px]"
-          style={{ color: 'rgba(251,248,243,0.06)' }}
-        >
-          韓
-        </span>
-        <div className="relative text-center">
-          <div className="my-3 flex items-center justify-center gap-[22px]">
-            <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
-            <span className="font-k-serif text-[22px] font-medium text-[#F2A78D]">始</span>
-            <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
-          </div>
-          <h2 className="mx-auto m-0 mb-4 max-w-[760px] text-[32px] font-extrabold leading-[1.1] tracking-[-1px] md:text-[60px] md:leading-[1.05] md:tracking-[-1.4px]">
-            {t('landing.v2.finalCta.titlePre', { defaultValue: '今天就让韩语' })}
-            <br />
-            {t('landing.v2.finalCta.titleMid', { defaultValue: '成为你日常的' })}
-            <span className="font-k-serif font-medium">
-              {t('landing.v2.finalCta.titlePost', { defaultValue: '一部分' })}
-            </span>
-          </h2>
-          <p className="m-0 mb-8 text-[17px] text-[rgba(251,248,243,0.75)]">
-            {t('landing.v2.finalCta.sub', {
-              defaultValue: '注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱',
-            })}
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={onFreeStart}
-              className="rounded-[13px] bg-k-bg px-7 py-4 text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px]"
-            >
-              {t('landing.v2.finalCta.ctaPrimary', { defaultValue: '免费开始 →' })}
-            </button>
-            <button
-              type="button"
-              className="rounded-[13px] bg-transparent px-7 py-4 text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px]"
-              style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-bg)' }}
-            >
-              {t('landing.v2.finalCta.ctaSecondary', { defaultValue: '下载 iOS / Android' })}
-            </button>
+}> = ({ t, onFreeStart }) => {
+  const decorations = useLandingDecorations();
+  return (
+    <section className="py-24">
+      <Container>
+        <div className="relative overflow-hidden rounded-[36px] bg-k-crimson px-6 py-24 text-k-bg">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-[-120px] right-[-40px] select-none font-k-serif text-[320px] font-medium leading-[0.8] md:bottom-[-200px] md:right-[-60px] md:text-[540px]"
+            style={{ color: 'rgba(251,248,243,0.06)' }}
+          >
+            {decorations.finalBackground}
+          </span>
+          <div className="relative text-center">
+            <div className="my-3 flex items-center justify-center gap-[22px]">
+              <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
+              <span className="font-k-serif text-[22px] font-medium text-[#F2A78D]">
+                {decorations.finalStart}
+              </span>
+              <span className="h-px max-w-[80px] flex-1 bg-[rgba(251,248,243,0.4)]" />
+            </div>
+            <h2 className="mx-auto m-0 mb-4 max-w-[760px] text-[32px] font-extrabold leading-[1.1] tracking-[-1px] md:text-[60px] md:leading-[1.05] md:tracking-[-1.4px]">
+              {t('landing.v2.finalCta.titlePre', { defaultValue: '今天就让韩语' })}
+              <br />
+              {t('landing.v2.finalCta.titleMid', { defaultValue: '成为你日常的' })}
+              <span className="font-k-serif font-medium">
+                {t('landing.v2.finalCta.titlePost', { defaultValue: '一部分' })}
+              </span>
+            </h2>
+            <p className="m-0 mb-8 text-[17px] text-[rgba(251,248,243,0.75)]">
+              {t('landing.v2.finalCta.sub', {
+                defaultValue: '注册 30 秒 · 7 天 Plus 免费试用 · 不要 1 块钱',
+              })}
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={onFreeStart}
+                className="rounded-[13px] bg-k-bg px-7 py-4 text-[15px] font-bold text-k-ink transition-transform hover:-translate-y-[1px]"
+              >
+                {t('landing.v2.finalCta.ctaPrimary', { defaultValue: '免费开始 →' })}
+              </button>
+              <button
+                type="button"
+                className="rounded-[13px] bg-transparent px-7 py-4 text-[15px] font-bold text-k-bg transition-transform hover:-translate-y-[1px]"
+                style={{ boxShadow: 'inset 0 0 0 1.5px var(--color-k-bg)' }}
+              >
+                {t('landing.v2.finalCta.ctaSecondary', { defaultValue: '下载 iOS / Android' })}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </Container>
-  </section>
-);
+      </Container>
+    </section>
+  );
+};
 
 // ───────────────────────────────────────────────────────────────────────
 // FOOTER
 // ───────────────────────────────────────────────────────────────────────
 
 const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => string }> = ({ t }) => {
+  const decorations = useLandingDecorations();
   const cols: Array<{ koHead: string; head: string; links: string[] }> = [
     {
-      koHead: '具',
+      koHead: decorations.footerColumns[0],
       head: t('landing.v2.footer.col1.head', { defaultValue: '产品' }),
       links: [
         t('landing.v2.footer.col1.l1', { defaultValue: '功能总览' }),
@@ -1876,7 +1945,7 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
       ],
     },
     {
-      koHead: '學',
+      koHead: decorations.footerColumns[1],
       head: t('landing.v2.footer.col2.head', { defaultValue: '学习' }),
       links: [
         t('landing.v2.footer.col2.l1', { defaultValue: '学习指南' }),
@@ -1886,7 +1955,7 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
       ],
     },
     {
-      koHead: '司',
+      koHead: decorations.footerColumns[2],
       head: t('landing.v2.footer.col3.head', { defaultValue: '公司' }),
       links: [
         t('landing.v2.footer.col3.l1', { defaultValue: '关于 Duhan' }),
@@ -1894,7 +1963,7 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
       ],
     },
     {
-      koHead: '助',
+      koHead: decorations.footerColumns[3],
       head: t('landing.v2.footer.col4.head', { defaultValue: '支持' }),
       links: [
         t('landing.v2.footer.col4.l1', { defaultValue: '帮助中心' }),
@@ -1928,7 +1997,7 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
               {t('landing.v2.footer.tag2', { defaultValue: '从单词到 TOPIK 6 级，一站搞定。' })}
             </p>
             <div className="flex gap-2">
-              {['小', 'D'].map(s => (
+              {[decorations.socialFirst, 'D'].map(s => (
                 <a
                   key={s}
                   href="#"
@@ -1973,7 +2042,9 @@ const Footer: React.FC<{ t: (k: string, opts?: Record<string, unknown>) => strin
             <a href="#" className="text-k-sub no-underline">
               Cookies
             </a>
-            <span className="text-[13px] font-bold text-k-ink">EN · 中 · 한국어</span>
+            <span className="text-[13px] font-bold text-k-ink">
+              {t('landing.v2.footer.languageShortlist', { defaultValue: 'EN · 中 · 한국어' })}
+            </span>
           </div>
         </div>
       </Container>

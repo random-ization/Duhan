@@ -722,146 +722,161 @@
           },
           "s3": {
             "t": "Đoạn podcast",
-            "s": "Korean Alley Walk · 6 phút"
+            "s": "Dạo bước trong hẻm Seoul · 6 phút"
           },
           "s4": {
             "t": "Đọc trước khi đi ngủ",
-            "s": "Truyện ngắn · Ký ức"
+            "s": "Bài viết · Ký ức con ngõ nhỏ"
           },
           "date": "Ngày 11 tháng 5",
-          "greet": "Xin chào, Haeun",
-          "sub": "Đường đi hàng ngày đã sẵn sàng · 4 bước ~22 phút"
+          "greet": "Xin chào Hae-eun",
+          "sub": "Lộ trình hàng ngày đã sẵn sàng · 4 bước, ~22 phút"
         },
-        "eyebrow": "Phiên bản 3.0 đã được phát hành · Lộ trình học tập và cộng đồng mới",
-        "titleKo": "讀韓",
+        "eyebrow": "Ra mắt v3.0 · Lộ trình học mới & cộng đồng",
+        "titleKo": "DuHan",
         "titlePre": "Make Korean",
-        "titleUnderlined": "thói quen của bạn",
+        "titleUnderlined": "một phần thói quen của bạn",
         "ctaPrimary": "Bắt đầu học miễn phí →",
-        "ctaSecondary": "Xem bản demo thập niên 90",
-        "meta1": "Học viên hoạt động",
-        "meta2": "Đánh giá hàng ngày",
-        "meta3": "Xếp hạng trên App Store",
+        "ctaSecondary": "Xem bản demo 90 giây",
+        "meta1": "Học viên tích cực",
+        "meta2": "Số thẻ ôn tập hàng ngày",
+        "meta3": "Đánh giá trên App Store",
         "chip1": {
           "t": "Dải, sọc, vân",
           "v": "47 Ngày"
         },
         "chip2": {
-          "t": "Mới hôm nay",
+          "t": "Từ mới hôm nay",
           "v": "12 / 15"
         },
         "chip3": {
           "t": "Topik II",
           "v": "Cấp 5 · 87%"
         },
-        "sub": "A daily curated path · Vocab, grammar, TOPIK, media, podcasts, reading, and community interlinked · Powered by FSRS memory model."
+        "sub": "Mỗi ngày một lộ trình học tập được thiết kế tỉ mỉ · kết hợp từ vựng, ngữ pháp, TOPIK, phim ảnh, podcast, bài đọc và dịch thuật cộng đồng · Dựa trên mô hình ghi nhớ FSRS, cùng nhịp thở với tốc độ học tập của bạn."
       },
       "logos": {
-        "v1": "Đắm chìm trong việc đọc sách",
-        "v2": "Nghe phương tiện truyền thông",
-        "v3": "Đánh giá thông minh FSRS",
-        "v4": "Cộng đồng bản địa",
-        "v5": "Đa nền tảng"
+        "v1": "Đọc sâu trong ngữ cảnh thực tế",
+        "v2": "Nghe âm thanh thực tế từ phim ảnh & podcast",
+        "v3": "Ôn tập thông minh với thuật toán FSRS",
+        "v4": "Dịch thuật cộng đồng & Hỗ trợ lẫn nhau",
+        "v5": "Đồng bộ tiến trình trên tất cả các nền tảng"
       },
       "features": {
         "t1": {
           "title": "Lộ trình học tập hàng ngày",
-          "pill": "/ Tự động tạo lúc 7:00 sáng · ~22 phút"
+          "pill": "/ Được tạo lúc 7:00 sáng · Trung bình 22 phút",
+          "desc": "Dựa trên hiệu suất của ngày hôm qua và thuật toán FSRS, tự động tạo chu trình khép kín 4 bước 'Ôn tập → Học mới → Nghe → Đọc'. Không cần tự lên lịch trình, mở ứng dụng ra là có ngay việc cần làm nhất hôm nay."
         },
         "t2": {
           "title": "Sách từ vựng + 4 chế độ",
-          "desc": "Flashcards, Learn, Test, Match — 4 cách để thành thạo một từ.",
+          "desc": "Thẻ ghi nhớ, Học, Kiểm tra và Ghép cặp — bốn phương pháp để làm chủ một từ vựng.",
           "pill": "/ Topik I + II · 9.300 từ"
         },
         "t3": {
-          "title": "Thư viện ngữ pháp",
-          "desc": "Mỗi ngữ pháp với câu ngữ cảnh + câu hỏi thi.",
-          "pill": "/ 480 Ngữ pháp chính"
+          "title": "Thư viện Ngữ pháp & Câu",
+          "desc": "Mỗi điểm ngữ pháp đều đi kèm với ví dụ thực tế + đề thi cũ. Các lỗi sai sẽ tự động được thêm vào phần ôn tập.",
+          "pill": "/ 480 điểm ngữ pháp cốt lõi"
         },
         "t4": {
           "title": "Chuẩn bị Topik",
-          "desc": "Các bài kiểm tra trước đây/Điểm Mock / AI Writing + Kiểm soát tốc độ.",
-          "pill": "/ Topik II cải thiện trung bình +1,4 cấp độ"
+          "desc": "Đề thi cũ / Thi thử / Đánh giá viết bằng AI + Nghe tốc độ",
+          "pill": "/ Cải thiện TOPIK II trung bình: 1.4 cấp"
         },
         "t6": {
-          "title": "Cộng đồng bản địa",
-          "desc": "Hỏi người bản ngữ về các bản dịch và giải thích tự nhiên nhất.",
-          "pill": "/ 1.2k+ Nhóm hoạt động"
+          "title": "Cộng đồng bản xứ · Dịch thuật",
+          "desc": "Không chắc chắn về bản dịch? Hãy đặt tiền thưởng để nhận trợ giúp từ người bản xứ.",
+          "pill": "/ Hơn 1.2k nhóm trợ giúp hoạt động"
         },
         "t5": {
-          "title": "Truyền thông & Đọc sách nhập vai",
-          "pill": "/4.800+ Tài liệu học tập · Cập nhật hàng tuần"
+          "title": "Phim ảnh · Podcast · Đọc hiểu nhập vai",
+          "pill": "/ Hơn 4.800 tài liệu học tập · Cập nhật hàng tuần",
+          "desc": "Trích đoạn phim Hàn, podcast Spotify, bài báo ngắn — chuyển âm một chạm, phụ đề song ngữ, chạm để dịch từ mới vào thẻ từ · Biến việc cày phim thành cách học thú vị nhất."
         },
-        "title": "Bộ công cụ tiếng Hàn tất cả trong một"
+        "title": "Bộ công cụ học tiếng Hàn tất cả trong một",
+        "sub": "Từ bảng chữ cái đến TOPIK cấp 6, bao trùm mọi tình huống trong hành trình học tiếng Hàn của bạn — không còn phải chắp vá mười ứng dụng khác nhau."
       },
       "loop": {
         "s1": {
-          "label": "BƯỚC 1 · BUỔI SÁNG",
+          "label": "BƯỚC 1 · Buổi sáng",
           "title": "Xem xét thẻ đến hạn",
-          "desc": "Thuật toán FSRS quyết định những gì bạn đánh giá hôm nay · ~7 phút.",
-          "preview": "18 lá · 7 phút"
+          "desc": "Thuật toán FSRS quyết định nội dung cần ôn tập hôm nay · Hoàn thành trung bình trong 7 phút.",
+          "preview": "18 thẻ · 7 phút"
         },
         "s2": {
-          "label": "BƯỚC 2 · BÀI HỌC",
-          "title": "New content",
-          "desc": "Sách giáo khoa + Nghe + Bài kiểm tra · Ghi lại bất kỳ phân đoạn nào vào thẻ.",
+          "label": "BƯỚC 2 · Khóa học",
+          "title": "Nội dung bài học mới",
+          "desc": "Giáo trình + Luyện nghe + Kiểm tra tức thì · Lưu lại bất kỳ clip nào làm thẻ học.",
           "preview": "L24 · 8 phút"
         },
         "s3": {
-          "label": "BƯỚC 3 · CHUYẾN XE ĐI LÀM",
+          "label": "BƯỚC 3 · Di chuyển",
           "title": "Lắng nghe",
-          "desc": "Podcast thực hoặc clip K-drama · Phụ đề song ngữ.",
+          "desc": "Clip podcast hoặc phim Hàn thực tế · Phụ đề song ngữ · Lưu từ vựng tức thì.",
           "preview": "Podcast 6 phút"
         },
         "s4": {
-          "label": "BƯỚC 4 · GIỜ ĐI NGỦ",
-          "title": "Buổi đọc",
-          "desc": "Độ khó tự động khớp · Củng cố thông qua việc đọc.",
-          "preview": "Câu chuyện 4 Tối thiểu"
+          "label": "BƯỚC 4 · Trước khi ngủ",
+          "title": "Đọc một đoạn văn",
+          "desc": "Tự động điều chỉnh độ khó · Đọc một bài viết giúp củng cố kiến thức đã học hôm nay.",
+          "preview": "Truyện ngắn 4 phút"
         },
-        "title": "Bốn bước để thành thạo tiếng Hàn"
+        "title": "Bốn bước để hoàn thiện bài học tiếng Hàn hàng ngày của bạn.",
+        "sub": "Không cần ý chí bền bỉ · Mở ứng dụng để xem danh sách việc cần làm · Tiếp tục bất cứ lúc nào"
       },
       "modules": {
         "title": "Các học phần được thiết kế để ghi nhớ lâu dài",
+        "sub": "Được tinh chỉnh hàng trăm lần · Không tính năng dư thừa · Hoạt động hoàn hảo.",
         "m1": {
-          "title": "Từ vựng · 4 chế độ",
+          "title": "Từ vựng · 4 chế độ luyện tập",
+          "desc": "Một từ học theo bốn cách — Thẻ ghi nhớ (Flashcard) để ghi nhớ ban đầu, Học sâu (Learning) để nắm vững chi tiết, Kiểm tra (Test) với thời gian giới hạn, và Ghép cặp (Match) để giải trí. Mỗi từ đều có thanh hiển thị mức độ ghi nhớ FSRS.",
           "tag1": "Thuật toán FSRS",
           "tag2": "4 Chế độ thực hành",
-          "tag3": "Liên kết ngữ cảnh",
-          "tag4": "Bộ lọc sách",
-          "link": "Tìm hiểu về Vocab →"
+          "tag3": "Ví dụ ngữ cảnh",
+          "tag4": "Bộ lọc từ vựng",
+          "link": "Khám phá Mô-đun Từ vựng →",
+          "previewMeaning": "gol-mok-gil · d. ngõ",
+          "previewMemory": "GHI NHỚ 60%"
         },
         "m2": {
-          "title": "TOPIK · Thi thử + AI",
+          "title": "TOPIK · Đề thi + Chấm điểm AI",
+          "desc": "Kho tài liệu đề thi nghe và đọc cũ phong phú, mô phỏng phòng thi thực tế tỉ lệ 1:1. Đánh giá kỹ năng viết bằng AI cung cấp phản hồi đa chiều (4D), kết hợp với luyện nghe thử nghiệm có thể điều chỉnh tốc độ.",
           "tag1": "Đề thi 10 năm qua",
           "tag2": "Môi trường thi thử 1:1",
           "tag3": "Phản hồi kỹ năng viết từ AI",
-          "tag4": "Dự đoán điểm số",
-          "link": "Tìm hiểu về TOPIK →"
+          "tag4": "Dự đoán điểm số toàn diện",
+          "link": "Khám phá Mô-đun TOPIK →"
         },
         "m3": {
-          "title": "Trung tâm phương tiện · Luyện nghe",
+          "title": "Phương tiện · Luyện nghe tốc độ",
+          "desc": "Tạm biệt các bài luyện nghe nhàm chán. Thư viện khổng lồ gồm các podcast và video thực tế, hỗ trợ tốc độ từ 0.5x đến 1.5x, đồng bộ bản chép lời và lưu từ vựng chỉ bằng một chạm.",
           "tag1": "4.800+ Clip",
           "tag2": "Phụ đề song ngữ",
           "tag3": "Nhấn để lưu",
-          "tag4": "Độ khó phù hợp",
-          "link": "Tìm hiểu về Phương pháp Nhập vai →"
+          "tag4": "Độ khó phân cấp",
+          "link": "Khám phá Mô-đun Đắm mình →",
+          "previewTranslation": "Một tiệm bánh nhỏ trong con hẻm…"
         },
         "m4": {
-          "title": "Đọc theo cấp độ · AI",
-          "tag1": "Cấp 1–6",
-          "tag2": "Sách tranh",
-          "tag3": "Tra cứu nhanh",
-          "tag4": "Ghi lại ghi chú",
-          "link": "Tìm hiểu về Đọc hiểu →"
+          "title": "Đọc · Hỗ trợ AI",
+          "desc": "Từ tin tức đến sách tranh, mọi nội dung đều được phân loại chính xác theo cấp độ L1–L6. AI tự động trích xuất từ vựng cốt lõi và cung cấp bản dịch một chạm cho các câu phức tạp.",
+          "tag1": "Cấp độ 1–6",
+          "tag2": "Thư viện sách tranh",
+          "tag3": "Tra cứu bằng một chạm",
+          "tag4": "Chuyển ghi chú thành thẻ học",
+          "link": "Khám phá Mô-đun Đọc →",
+          "previewLevel": "3 · CẤP 3",
+          "previewProgress": "3 / 18 đoạn",
+          "previewMinutes": "📖 2,4 phút"
         }
       },
       "community": {
         "s1": {
-          "l": "Đối tác nghiên cứu",
+          "l": "Bạn học",
           "s": "Cùng nhau phát triển"
         },
         "s2": {
-          "l": "Sách từ vựng được chia sẻ",
+          "l": "Sổ từ vựng công khai",
           "s": "Tác vụ chia sẻ tài nguyên"
         },
         "s3": {
@@ -869,78 +884,96 @@
           "s": "Chia sẻ bài học kinh nghiệm"
         },
         "s4": {
-          "l": "Số Ngày Có Chuỗi",
-          "s": "Theo dõi cột mốc"
+          "l": "Chuỗi hàng ngày",
+          "s": "Tiếp tục cố gắng"
         },
-        "title": "Đừng học một mình, hãy cùng nhau tiến xa hơn"
+        "title": "Đừng học một mình, hãy cùng nhau tiến xa hơn.",
+        "sub": "Chia sẻ thẻ từ vựng, trao đổi mẹo ôn thi và cùng chứng kiến sự trưởng thành của nhau · Cộng đồng K-Soft giúp việc học tiếng Hàn bớt cô đơn hơn."
       },
       "pricing": {
         "perMonth": "/ tháng",
         "perQuarter": "/ quý",
         "perYear": "/ năm",
-        "lifetime": "/ trọn đời",
+        "lifetime": {
+          "title": "Goi tron doi · Tra mot lan",
+          "desc": "Thanh toan mot lan, mo khoa tron doi toan bo he thong hoc.",
+          "cta": "Mo khoa vinh vien"
+        },
         "tabMonthly": "Hàng tháng",
         "tabQuarterly": "Theo quý",
         "tabAnnual": "Hàng năm",
         "pro": {
-          "f1": "<b>Không giới hạn</b> từ mới + FSRS",
-          "f2": "Tất cả giáo trình + TOPIK <b>Cấp độ 1-6</b>",
+          "f1": "<b>Không giới hạn</b> từ mới + Ôn tập FSRS",
+          "f2": "Tất cả khóa học + <b>Tất cả đề thi TOPIK 1-6</b>",
           "f3": "Thư viện nội dung đầy đủ + <b>Bản chép lời thông minh</b>",
-          "f4": "<b>Chẩn đoán viết bằng AI</b> + Điều khiển tốc độ",
-          "f5": "Không giới hạn <b>tài nguyên cộng đồng</b>",
-          "f6": "<b>Đồng bộ hóa thời gian thực</b> trên mọi thiết bị",
-          "title": "Quyền truy cập đầy đủ · Plus",
-          "desc": "Tốt nhất cho người học nghiêm túc · Mở khóa mọi tính năng AI",
-          "cta": "Bắt đầu truy cập đầy đủ ngay"
+          "f4": "<b>Đánh giá viết bằng AI</b> + Luyện nghe tốc độ",
+          "f5": "Không giới hạn tài nguyên cộng đồng",
+          "f6": "Đồng bộ hóa tiến độ thời gian thực",
+          "title": "Gói Plus",
+          "desc": "Mở khóa tất cả các tính năng AI và nội dung nâng cao.",
+          "cta": "Mở khóa Plus ngay"
         },
-        "title": "Chọn một gói, bắt đầu học",
+        "title": "Chọn một gói và bắt đầu học",
+        "sub": "Tham gia cộng đồng toàn cầu và mở khóa toàn bộ trải nghiệm học tiếng Hàn cùng AI.",
         "free": {
-          "title": "Bắt đầu · Miễn phí",
-          "desc": "Cấp độ nhập môn · Bắt đầu hành trình tiếng Hàn của bạn",
-          "unit": "/ Trọn đời",
+          "title": "Gói miễn phí",
+          "desc": "Bắt đầu hành trình của bạn miễn phí.",
+          "unit": "/ trọn đời",
           "f1": "<b>5 từ mới</b> mỗi ngày",
-          "f2": "Giới hạn <b>30 thẻ ôn tập</b>/ngày",
-          "f3": "Dùng thử <b>khóa học cơ bản</b> (L1–L2)",
-          "f4": "Chế độ <b>xem trước</b> thư viện phương tiện",
-          "f5": "Đề thi TOPIK các kỳ trước (Mẫu)",
-          "f6": "Chẩn đoán viết bằng AI cơ bản",
+          "f2": "Giới hạn <b>30 thẻ ôn tập</b> mỗi ngày",
+          "f3": "Truy cập <b>khóa học cơ bản</b> (L1–L2)",
+          "f4": "Chế độ <b>xem trước</b> phương tiện",
+          "f5": "Đề thi TOPIK đã chọn",
+          "f6": "Phản hồi AI bị giới hạn",
           "cta": "Bắt đầu miễn phí"
         },
-        "popular": "Phổ biến"
+        "popular": "Phổ biến",
+        "fine": "Tự động áp dụng trợ giá theo khu vực · Hỗ trợ các phương thức thanh toán chính.",
+        "bestValue": "TIẾT KIỆM NHẤT",
+        "lifetimeUnit": "/ trọn đời"
       },
       "testimonials": {
-        "title": "Học viên Duhan đang nói gì",
+        "title": "Học viên DuHan nói gì",
         "t1": {
-          "tag1": "Đã dùng được 11 tháng",
-          "tag2": "Đã đạt TOPIK 5",
-          "name": "Haeun",
-          "meta": "Nhà thiết kế · Hàng Châu"
+          "tag1": "Đã sử dụng 11 tháng",
+          "tag2": "Đạt cấp 5",
+          "name": "Hae-eun · @hae_eun",
+          "meta": "Nhà thiết kế · Hàng Châu",
+          "quote": "Tôi từng dùng Anki nhưng thấy rất áp lực. DuHan đã tinh gọn thành 'chỉ với 4 bước này', và tôi đã kiên trì suốt một năm qua. Tôi đã đỗ TOPIK II Cấp 5!"
         },
         "t2": {
-          "tag1": "Học qua phim truyền hình",
+          "tag1": "Học qua phim K-Drama",
           "tag2": "3 tháng",
           "name": "Xiao Ke",
-          "meta": "Học viên sơ cấp"
+          "meta": "Sinh viên đại học",
+          "quote": "Không còn phải phụ thuộc vào vietsub nữa. Tôi chỉ cần nhấn vào một từ, từ đó sẽ được thêm vào thẻ học, và tôi ôn lại vào ngày hôm sau — biến việc xem phim truyền hình trở thành cách tốt nhất để học tập."
         },
         "t3": {
-          "tag1": "Trợ lý bản xứ",
-          "name": "Minji",
-          "meta": "Seoul · Bản xứ"
+          "tag1": "TA bản xứ",
+          "name": "Minji · TA",
+          "meta": "Seoul · Người bản xứ",
+          "quote": "Giao diện người dùng thật dễ chịu. Giống như đang lật giở một cuốn tạp chí đẹp mắt. Quan trọng nhất là nó thực sự hiệu quả — tôi thực sự nhớ được các từ."
         }
       },
       "faq": {
         "title": "Câu hỏi thường gặp",
-        "q1": "MT5 có phù hợp cho người mới bắt đầu không?",
+        "q1": "Người mới bắt đầu có thể sử dụng không?",
         "q2": "Thuật toán FSRS là gì?",
-        "q3": "Sự khác biệt giữa Pro và Elite?",
+        "q3": "Sự khác biệt giữa Plus và Elite?",
         "q4": "Tôi có thể học ngoại tuyến không?",
         "q5": "Có giảm giá cho sinh viên không?",
-        "q6": "Tôi có thể được hoàn tiền không?"
+        "q6": "Tôi có thể được hoàn tiền không?",
+        "a1": "Hoàn toàn có thể. Hướng dẫn dành cho người dùng mới sẽ đánh giá trình độ của bạn · có các khóa học đầy đủ từ bảng chữ cái đến hội thoại nhập môn · Hệ thống sẽ tiến triển theo nhịp độ của bạn, không bao giờ để bạn bị mắc kẹt vì 'quá khó'.",
+        "a2": "Thuật toán lặp lại ngắt quãng dựa trên khoa học học tập (chính xác hơn Anki SM-2 truyền thống) · Tự động sắp xếp thời gian ôn tập tiếp theo dựa trên mức độ dễ/khó mà bạn nhớ lại mỗi lần · Tiết kiệm trung bình 30% thời gian ôn tập nhưng ghi nhớ lâu hơn.",
+        "a3": "Gói Plus cung cấp toàn bộ nội dung học tập · Gói Elite bổ sung thêm bạn đồng hành luyện nói 1-1 trực tiếp, sửa bài viết chuyên sâu, cố vấn riêng và gói hỗ trợ du học/tìm việc — phù hợp với người học cần đạt kết quả thực tế trong vòng 6 tháng (TOPIK điểm cao / Tìm việc / Du học).",
+        "a4": "Gói Plus hỗ trợ học ngoại tuyến · Có thể tải xuống các khóa học, flashcard, podcast và tài liệu đọc · Hoàn toàn tiện lợi khi di chuyển trên tàu điện ngầm hay máy bay.",
+        "a5": "Xác thực học sinh/sinh viên (Thẻ học sinh, sinh viên) được giảm 30% Plus · 20% Elite. Nhận thêm mã giảm giá vào Ngày hội học sinh (1/9 và 1/3) hàng năm.",
+        "a6": "Các gói trả phí đủ điều kiện cung cấp bản dùng thử miễn phí 7 ngày; yêu cầu hoàn tiền sẽ được xem xét theo từng trường hợp dựa trên tình trạng thanh toán, lịch sử sử dụng, sự cố kỹ thuật và luật pháp hiện hành."
       },
       "finalCta": {
-        "titlePre": "Make Korean",
-        "titleMid": "một phần của",
-        "titlePost": "cuộc sống hàng ngày ngày hôm nay",
+        "titlePre": "Biến tiếng Hàn thành một phần",
+        "titleMid": "trong cuộc sống hàng ngày của bạn",
+        "titlePost": "bắt đầu từ hôm nay",
         "sub": "Đăng ký sau 30 giây · 7 ngày dùng thử miễn phí Plus · Không yêu cầu thẻ tín dụng",
         "ctaPrimary": "Bắt đầu miễn phí",
         "ctaSecondary": "Tải ứng dụng"
@@ -948,34 +981,35 @@
       "footer": {
         "col1": {
           "head": "Sản phẩm",
-          "l1": "Tổng quan",
-          "l3": "Chuẩn bị Topik",
-          "l4": "hub Media",
-          "l5": "Đo ̣ c đươ ̣ c phân loa",
+          "l1": "Tính năng",
+          "l3": "Luyện thi TOPIK",
+          "l4": "Phương tiện & Luyện nghe",
+          "l5": "Đọc theo cấp độ",
           "l6": "Cộng đồng"
         },
         "col2": {
           "head": "Học",
-          "l1": "Đường căn",
-          "l2": "Wiki ngữ pháp",
-          "l3": "Blog thi",
+          "l1": "Hướng dẫn học tập",
+          "l2": "Wiki Ngữ pháp",
+          "l3": "Blog ôn luyện",
           "l4": "Tiếng Hàn hàng ngày"
         },
         "col3": {
           "head": "Công ty",
-          "l1": "Giới thiệu về Duhan",
-          "l5": "Danh bạ"
+          "l1": "Về DuHan",
+          "l5": "Liên hệ với chúng tôi"
         },
         "col4": {
           "head": "Hỗ trợ",
           "l1": "Trung tâm Trợ giúp",
           "l2": "Chính sách Hoàn tiền",
-          "l3": "Quyền riêng tư",
-          "l4": "Terms"
+          "l3": "Chính sách bảo mật",
+          "l4": "Điều khoản dịch vụ"
         },
-        "tag1": "Duhan · Hãy biến tiếng Hàn thành thói quen của bạn.",
-        "tag2": "Từ từ vựng đến Topik Cấp độ 6, tất cả trong một.",
-        "copy": "Duhan · Bảo lưu mọi quyền."
+        "tag1": "DuHan · Biến tiếng Hàn thành thói quen hàng ngày.",
+        "tag2": "Từ bảng chữ cái Hangul đến TOPIK Cấp 6, tất cả trong một ứng dụng.",
+        "copy": "© 2026 DuHan Inc. All rights reserved.",
+        "languageShortlist": "EN · VI · KO"
       }
     }
   },

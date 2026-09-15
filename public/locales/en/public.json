@@ -850,7 +850,7 @@
           "t": "TOPIK II",
           "v": "Level 5 · 87%"
         },
-        "sub": "每天一条精心编排的学习路径 · 单词、语法、TOPIK、影视、播客、阅读、社区互译串联 · 基于 FSRS 记忆模型，跟你的学习节奏一起呼吸。"
+        "sub": "A thoughtfully curated daily learning path connecting vocabulary, grammar, TOPIK, videos, podcasts, reading, and community translation. Powered by the FSRS memory model and paced to the way you learn."
       },
       "logos": {
         "v1": "Immersive Reading in Real Context",
@@ -863,7 +863,7 @@
         "t1": {
           "title": "Daily Learning Path",
           "pill": "/ Generated at 7:00 AM · Avg 22 mins",
-          "desc": "基于昨日表现与 FSRS 算法，自动生成「复习 → 新学 → 听 → 读」四步闭环。无需自己排程，打开就是今天最该做的事。"
+          "desc": "Using yesterday’s performance and FSRS, Duhan automatically creates a four-step loop: review, learn, listen, and read. No planning required—open the app and start with what matters most today."
         },
         "t2": {
           "title": "Vocab Book + 4 Modes",
@@ -888,10 +888,10 @@
         "t5": {
           "title": "Movies · Podcasts · Reading Immersive",
           "pill": "/ 4,800+ learning materials · Weekly updates",
-          "desc": "韩剧片段、Spotify 播客、新闻短文 — 一键转录、双语字幕、生词点译入卡 · 把追剧变成最香的学习。"
+          "desc": "K-drama clips, Spotify podcasts, and short news articles—with one-tap transcripts, bilingual subtitles, and instant word-to-card lookup. Turn screen time into study time."
         },
         "title": "The All-in-One Korean Learning Toolkit",
-        "sub": "从五十音到 TOPIK 6 级，覆盖你学韩语过程中的每一个场景 — 不再东拼西凑十个 App。"
+        "sub": "From Hangul to TOPIK Level 6, every stage of learning Korean is covered in one place."
       },
       "loop": {
         "s1": {
@@ -931,7 +931,9 @@
           "tag2": "4 Practice Modes",
           "tag3": "Context Examples",
           "tag4": "Vocab Filter",
-          "link": "Explore Vocab Module →"
+          "link": "Explore Vocab Module →",
+          "previewMeaning": "gol-mok-gil · n. alleyway",
+          "previewMemory": "MEMORY 60%"
         },
         "m2": {
           "title": "TOPIK · Papers + AI Scoring",
@@ -949,7 +951,8 @@
           "tag2": "Bilingual Subs",
           "tag3": "Tap to Save",
           "tag4": "Graded Difficulty",
-          "link": "Explore Immersion Module →"
+          "link": "Explore Immersion Module →",
+          "previewTranslation": "A small bakery found in an alley…"
         },
         "m4": {
           "title": "Reading · AI Assistance",
@@ -958,7 +961,10 @@
           "tag2": "Picture Book Library",
           "tag3": "One-tap Lookup",
           "tag4": "Notes to Cards",
-          "link": "Explore Reading Module →"
+          "link": "Explore Reading Module →",
+          "previewLevel": "3 · LEVEL 3",
+          "previewProgress": "3 / 18 sections",
+          "previewMinutes": "📖 2.4 min"
         }
       },
       "community": {
@@ -1019,7 +1025,9 @@
           "cta": "Get Started for Free"
         },
         "popular": "Popular",
-        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods."
+        "fine": "Regional pricing subsidies automatically applied · Supports major payment methods.",
+        "bestValue": "BEST VALUE",
+        "lifetimeUnit": "/ one-time"
       },
       "testimonials": {
         "title": "What DuHan Learners Say",
@@ -1052,12 +1060,12 @@
         "q4": "Can I study offline?",
         "q5": "Is there a student discount?",
         "q6": "Can I get a refund?",
-        "a1": "完全可以。新用户引导会评估你的水平 · 从五十音到入门会话都有完整课程 · 系统会按你的节奏推进，永远不会让你卡在「太难了」上。",
-        "a2": "基于学习科学的间隔重复算法（比传统 Anki SM-2 更精准）· 根据你每次回忆的难度自动安排下一次复习时间 · 平均节省 30% 复习时间，记忆留存却更久。",
-        "a3": "Plus 给你全部学习内容 · Elite 在此之上加 1v1 真人语伴、写作精改、专属顾问、留学求职配套 — 适合 6 个月内需要拿出实绩的学习者（TOPIK 高分 / 求职 / 留学）。",
-        "a4": "Plus 起支持离线 · 课程、闪卡、播客、阅读素材都可下载 · 通勤地铁、飞机上完全没问题。",
-        "a5": "学生认证（学信网 / 学生证）可享 Plus 七折 · Elite 八折。每年学生节（9/1 和 3/1）另有立减券。",
-        "a6": "符合条件的付费方案提供 7 天免费试用；退款申请会结合扣费情况、使用记录、技术问题和适用法律逐案审核。"
+        "a1": "Absolutely. Onboarding checks your level, and complete courses cover everything from Hangul to beginner conversation. Duhan moves at your pace so the next lesson always feels manageable.",
+        "a2": "FSRS is a learning-science-based spaced repetition algorithm. It schedules each review from how difficult the word was to recall, helping you retain more while spending about 30% less time reviewing.",
+        "a3": "Plus unlocks all self-study content. Elite adds a 1:1 conversation partner, detailed writing feedback, a dedicated adviser, and study-abroad or career support for learners targeting a concrete result within six months.",
+        "a4": "Yes. Plus members can download courses, flashcards, podcasts, and reading materials for commutes, flights, or anywhere without a connection.",
+        "a5": "Verified students receive 30% off Plus and 20% off Elite. Extra student coupons are offered on March 1 and September 1 each year.",
+        "a6": "Eligible paid plans include a 7-day free trial. Refund requests are reviewed case by case based on billing status, usage history, technical issues, and applicable law."
       },
       "finalCta": {
         "titlePre": "Make Korean part",
@@ -1097,7 +1105,8 @@
         },
         "tag1": "DuHan · Make Korean a daily habit.",
         "tag2": "From Hangul to TOPIK Level 6, all in one place.",
-        "copy": "© 2026 DuHan Inc. All rights reserved."
+        "copy": "© 2026 DuHan Inc. All rights reserved.",
+        "languageShortlist": "EN · ZH · KO"
       }
     }
   },

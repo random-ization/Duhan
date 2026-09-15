@@ -936,7 +936,9 @@
           "tag2": "4 种练习模式",
           "tag3": "例句联想",
           "tag4": "词册筛选",
-          "link": "了解词汇模块 →"
+          "link": "了解词汇模块 →",
+          "previewMeaning": "gol-mok-gil · n. 巷子",
+          "previewMemory": "记忆 60%"
         },
         "m2": {
           "title": "TOPIK · 真题 + AI 考评",
@@ -954,7 +956,8 @@
           "tag2": "双语字幕",
           "tag3": "点词入卡",
           "tag4": "难度匹配",
-          "link": "了解沉浸模块 →"
+          "link": "了解沉浸模块 →",
+          "previewTranslation": "在巷子里遇见的小面包店…"
         },
         "m4": {
           "title": "分级阅读 · AI 提词",
@@ -963,7 +966,10 @@
           "tag2": "绘本库",
           "tag3": "点词查询",
           "tag4": "笔记入卡",
-          "link": "了解阅读模块 →"
+          "link": "了解阅读模块 →",
+          "previewLevel": "三 · LEVEL 3",
+          "previewProgress": "3 / 18 段",
+          "previewMinutes": "📖 2.4 分钟"
         }
       },
       "community": {
@@ -1024,7 +1030,9 @@
           "cta": "免费开始"
         },
         "popular": "热门",
-        "fine": "系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联"
+        "fine": "系统已自动识别您的地区并为您提供专属价格补贴 · 支持微信 / 支付宝 / 银联",
+        "bestValue": "最划算",
+        "lifetimeUnit": "/ 终身一次"
       },
       "testimonials": {
         "title": "用过 Duhan 的人都在说",
@@ -1102,7 +1110,8 @@
         },
         "tag1": "讀韓 · 让韩语变成日常。",
         "tag2": "从单词到 TOPIK 6 级，一站搞定。",
-        "copy": "讀韓 · 沪 ICP 备 2026000000 号"
+        "copy": "讀韓 · 沪 ICP 备 2026000000 号",
+        "languageShortlist": "EN · 中 · KO"
       }
     }
   },
