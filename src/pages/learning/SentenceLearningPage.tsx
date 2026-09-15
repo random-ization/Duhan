@@ -144,6 +144,7 @@ const SentenceLearningPage: React.FC = () => {
   );
   const activeExplanationId = freshExplanation?.explanationId ?? latestExplanation?._id;
   const activePayload = freshExplanation?.data ?? latestExplanation?.payload;
+  const localPreviewTokens = sentence?.text.match(/[\p{L}\p{N}]+/gu)?.slice(0, 12) ?? [];
   const vocabularyItems = activePayload?.vocabulary ?? [];
   const vocabularyDrafts = buildVocabularyCardDrafts(vocabularyItems);
   const vocabularyDraftSeedKey = [
@@ -417,6 +418,20 @@ const SentenceLearningPage: React.FC = () => {
           <div className="rounded-2xl border border-k-line bg-k-bg2/40 p-5 text-xl font-bold leading-relaxed text-k-ink">
             {sentence.text}
           </div>
+          {explaining && !activePayload && localPreviewTokens.length > 0 && (
+            <div className="rounded-2xl border border-k-line bg-k-bg2/20 p-4" aria-live="polite">
+              <p className="mb-3 text-xs font-semibold text-k-sub">
+                已完成本地分词，正在生成词义和语法解释…
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {localPreviewTokens.map((token, index) => (
+                  <DesignChip key={`${token}-${index}`} tone="muted" size="sm">
+                    {token}
+                  </DesignChip>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <Button
               className="gap-2 bg-k-ink text-k-bg hover:bg-k-ink/90"

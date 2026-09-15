@@ -4,6 +4,7 @@ import { makeFunctionReference } from 'convex/server';
 import type { FunctionReference } from 'convex/server';
 import { getAuthUserId } from './utils';
 import { runChatCompletionWithFallback } from './ai/chatClient';
+import { buildFastChatCompletionOptions } from './aiProviders';
 import { parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
 import {
   WRITING_FEEDBACK_RESULT_VALIDATOR,
@@ -166,6 +167,7 @@ ${kagasTypeList}
             () =>
               client.chat.completions.create({
                 model: activeProvider.model,
+                ...buildFastChatCompletionOptions(activeProvider, 1800),
                 temperature: 0.3,
                 response_format: { type: 'json_object' },
                 messages: [
@@ -173,9 +175,9 @@ ${kagasTypeList}
                   { role: 'user', content: userPrompt },
                 ],
               }),
-            { retries: 2, label: 'topik_writing_coach' }
+            { retries: 1, label: 'topik_writing_coach' }
           ),
-        { label: 'topik_writing_coach', timeoutMs: 30000 }
+        { label: 'topik_writing_coach', timeoutMs: 20000 }
       );
 
       const raw = completion.choices[0]?.message?.content ?? '{}';
@@ -185,8 +187,13 @@ ${kagasTypeList}
         throw new Error('AI 返回的不是有效的 JSON 格式');
       }
 
-      // Kiwi-based validation: verify AI error positions against actual text
-      if (parsed.errors.length > 0 && userAnswer) {
+      // Full Kiwi validation is opt-in because loading its model can exceed the
+      // Convex action memory limit and delay an otherwise complete AI response.
+      if (
+        process.env.KIWI_TOKENIZATION_ENABLED === 'true' &&
+        parsed.errors.length > 0 &&
+        userAnswer
+      ) {
         try {
           const annotations = await ctx.runAction(annotateWritingErrorsWithKiwiAction, {
             userAnswer,

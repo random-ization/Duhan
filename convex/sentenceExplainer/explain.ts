@@ -10,6 +10,7 @@ import type { FunctionReference } from 'convex/server';
 import { createHash } from 'node:crypto';
 import OpenAI from 'openai';
 import {
+  buildFastChatCompletionOptions,
   isModelAccessError,
   resolveChatProviderConfigs,
   type ChatProviderConfig,
@@ -311,7 +312,8 @@ function createChatClient(provider: ChatProviderConfig) {
   return new OpenAI({
     apiKey: provider.apiKey,
     ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
-    timeout: 25000,
+    timeout: 15000,
+    maxRetries: 0,
   });
 }
 
@@ -635,6 +637,7 @@ export const explainSentence = action({
           () =>
             client.chat.completions.create({
               model: provider.model,
+              ...buildFastChatCompletionOptions(provider, 900),
               messages: [
                 {
                   role: 'system',
@@ -685,7 +688,7 @@ Rules:
               response_format: { type: 'json_object' },
             }),
           {
-            retries: 2,
+            retries: 1,
             label: `sentence_explanation_${provider.provider}`,
           }
         )

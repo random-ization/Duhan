@@ -6,7 +6,7 @@
  */
 
 import OpenAI from 'openai';
-import type { ChatProviderConfig } from '../aiProviders';
+import type { ChatProviderConfig, ChatProviderRequirements } from '../aiProviders';
 import { resolveChatProviderConfigs } from '../aiProviders';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,11 +27,12 @@ function toErrorMessage(error: unknown): string {
 }
 
 /** Create an OpenAI-compatible client for the given provider config. */
-export function createChatClient(config: ChatProviderConfig, timeout = 25000): OpenAI {
+export function createChatClient(config: ChatProviderConfig, timeout = 15000): OpenAI {
   return new OpenAI({
     apiKey: config.apiKey,
     ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     timeout,
+    maxRetries: 0,
   });
 }
 
@@ -44,9 +45,9 @@ export function createChatClient(config: ChatProviderConfig, timeout = 25000): O
  */
 export async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
   request: (args: { client: OpenAI; provider: ChatProviderConfig }) => Promise<T>,
-  options?: { label?: string; timeoutMs?: number }
+  options?: { label?: string; timeoutMs?: number; requirements?: ChatProviderRequirements }
 ): Promise<ChatCompletionWithProvider<T>> {
-  const providers = resolveChatProviderConfigs(process.env);
+  const providers = resolveChatProviderConfigs(process.env, options?.requirements);
   if (providers.length === 0) {
     throw new Error('No AI chat provider configured');
   }
@@ -55,7 +56,7 @@ export async function runChatCompletionWithFallback<T extends ChatCompletionLike
 
   for (const provider of providers) {
     try {
-      const client = createChatClient(provider, options?.timeoutMs ?? 25000);
+      const client = createChatClient(provider, options?.timeoutMs ?? 15000);
       const completion = await request({ client, provider });
       return { completion, provider };
     } catch (error) {

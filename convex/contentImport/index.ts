@@ -19,6 +19,7 @@ import { ConvexError, v } from 'convex/values';
 import type { Id } from '../_generated/dataModel';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { runChatCompletionWithFallback } from '../ai/chatClient';
+import { buildFastChatCompletionOptions } from '../aiProviders';
 import { parseJsonObjectFromModelContent, retryAsync } from '../aiReliability';
 import { aiLogger } from '../logger';
 import { splitKoreanSentences } from './splitter';
@@ -334,16 +335,19 @@ export const importFromUrl = action({
       sourceRefId: args.url,
     });
 
-    // Run Kiwi difficulty estimation + AI summary in parallel
-    const [difficultyResult] = await Promise.allSettled([
-      ctx.runAction(estimateDifficultyFromTextAction, {
-        text: rawText,
-        sentenceCount: sentences.length,
-      }),
-    ]);
-
-    const difficulty: DifficultyEstimate | null =
-      difficultyResult.status === 'fulfilled' ? difficultyResult.value : null;
+    // Full Kiwi analysis is opt-in because its model can exceed the Convex action
+    // memory limit. The AI summary still runs asynchronously below.
+    let difficulty: DifficultyEstimate | null = null;
+    if (process.env.KIWI_TOKENIZATION_ENABLED === 'true') {
+      try {
+        difficulty = await ctx.runAction(estimateDifficultyFromTextAction, {
+          text: rawText,
+          sentenceCount: sentences.length,
+        });
+      } catch {
+        // Imported content remains usable without the optional difficulty estimate.
+      }
+    }
 
     if (difficulty) {
       await ctx.runMutation(updateContentAnalysisMutation, {
@@ -380,16 +384,18 @@ export const analyzeImportedContentV2 = action({
     });
     if (!content) return;
 
-    // 1. Kiwi-based difficulty estimation
+    // 1. Optional Kiwi-based difficulty estimation
     const sentences = splitKoreanSentences(content.rawText);
     let difficulty: DifficultyEstimate | null = null;
-    try {
-      difficulty = await ctx.runAction(estimateDifficultyFromTextAction, {
-        text: content.rawText,
-        sentenceCount: sentences.length,
-      });
-    } catch {
-      // Graceful degradation
+    if (process.env.KIWI_TOKENIZATION_ENABLED === 'true') {
+      try {
+        difficulty = await ctx.runAction(estimateDifficultyFromTextAction, {
+          text: content.rawText,
+          sentenceCount: sentences.length,
+        });
+      } catch {
+        // Graceful degradation
+      }
     }
 
     // 2. AI summary generation
@@ -401,6 +407,7 @@ export const analyzeImportedContentV2 = action({
             () =>
               client.chat.completions.create({
                 model: activeProvider.model,
+                ...buildFastChatCompletionOptions(activeProvider, 400),
                 temperature: 0.3,
                 response_format: { type: 'json_object' },
                 messages: [
@@ -416,7 +423,7 @@ export const analyzeImportedContentV2 = action({
                   },
                 ],
               }),
-            { retries: 2, label: 'import_summary' }
+            { retries: 1, label: 'import_summary' }
           ),
         { label: 'import_summary', timeoutMs: 15000 }
       );

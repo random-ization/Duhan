@@ -7,7 +7,7 @@ import OpenAI from 'openai';
 import { type Id } from './_generated/dataModel';
 import { type FunctionReference } from 'convex/server';
 import { createLogger } from './logger';
-import { resolveChatProviderConfigs } from './aiProviders';
+import { buildFastChatCompletionOptions, resolveChatProviderConfigs } from './aiProviders';
 
 const log = createLogger('TRANSLATE');
 
@@ -20,8 +20,11 @@ function createTranslationClient() {
     client: new OpenAI({
       apiKey: provider.apiKey,
       ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
+      timeout: 15000,
+      maxRetries: 0,
     }),
     model: provider.model,
+    requestOptions: buildFastChatCompletionOptions(provider, 3200),
   };
 }
 
@@ -396,7 +399,7 @@ export const run = action({
       return { success: true, message: 'No items to translate' };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     const CHUNK_SIZE = 25;
     const updates = [];
 
@@ -430,6 +433,7 @@ Return a JSON object strictly matching this schema:
       try {
         const response = await openai.chat.completions.create({
           model,
+          ...requestOptions,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(requestPayload) },
@@ -564,7 +568,7 @@ export const runVocabLocalization = action({
       return { success: true, courseId, processed: 0, updated: 0, hasMore: false };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     const updates: Array<{
       appearanceId: Id<'vocabulary_appearances'>;
       wordId: Id<'words'>;
@@ -602,6 +606,7 @@ Rules:
       try {
         const response = await openai.chat.completions.create({
           model,
+          ...requestOptions,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -694,7 +699,7 @@ export const runUnitLocalization = action({
       };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     const updates: Array<{
       id: Id<'textbook_units'>;
       translation: string;
@@ -722,6 +727,7 @@ Use natural learner-friendly translation and preserve core meaning.`;
       try {
         const response = await openai.chat.completions.create({
           model,
+          ...requestOptions,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -805,7 +811,7 @@ export const runGrammarLocalization = action({
       };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     const updates: Array<{
       id: Id<'grammar_points'>;
       summary: string;
@@ -862,6 +868,7 @@ Return strict JSON:
       try {
         const response = await openai.chat.completions.create({
           model,
+          ...requestOptions,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: JSON.stringify(payload) },
@@ -993,7 +1000,7 @@ export const runFix = action({
       return { success: true, totalUpdated: 0, hasMore: false };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     let totalUpdated = 0;
 
     const requestPayload = chunk.map((item: ReviewItem) => ({
@@ -1029,6 +1036,7 @@ Return a strictly valid JSON object matching this schema:
     try {
       const response = await openai.chat.completions.create({
         model,
+        ...requestOptions,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1129,7 +1137,7 @@ export const fixSemantics = action({
       return { success: true, totalUpdated: 0, hasMore: false };
     }
 
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
     let totalUpdated = 0;
 
     const requestPayload = chunk.map((item: ReviewItem) => ({
@@ -1168,6 +1176,7 @@ Return a JSON object exactly matching this schema:
     try {
       const response = await openai.chat.completions.create({
         model,
+        ...requestOptions,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: JSON.stringify(requestPayload) },
@@ -1432,6 +1441,7 @@ function chunkArray<T>(items: T[], size: number): T[][] {
 async function translateTranscriptBatch(
   openai: OpenAI,
   model: string,
+  requestOptions: ReturnType<typeof buildFastChatCompletionOptions>,
   target: ListeningBackfillTarget,
   items: Array<{ id: number; text: string }>
 ) {
@@ -1439,6 +1449,7 @@ async function translateTranscriptBatch(
 
   const completion = await openai.chat.completions.create({
     model,
+    ...requestOptions,
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -1519,7 +1530,7 @@ export const backfillListeningTranslations = action({
     dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { client: openai, model } = createTranslationClient();
+    const { client: openai, model, requestOptions } = createTranslationClient();
 
     const requestedLanguageSet = new Set(
       (args.languages || ['zh'])
@@ -1598,6 +1609,7 @@ export const backfillListeningTranslations = action({
           const translated = await translateTranscriptBatch(
             openai,
             model,
+            requestOptions,
             target,
             batch.map(item => ({ id: item.id, text: item.text }))
           );

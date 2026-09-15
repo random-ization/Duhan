@@ -20,7 +20,7 @@ import { getAuthUserId } from './utils';
 import type { Id } from './_generated/dataModel';
 import { parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
 import { runChatCompletionWithFallback } from './ai/chatClient';
-import { resolveChatProviderConfigs } from './aiProviders';
+import { buildFastChatCompletionOptions, resolveChatProviderConfigs } from './aiProviders';
 
 // ─── Shared dimension schema ──────────────────────────────────────────────────
 
@@ -392,14 +392,14 @@ async function callAiProvider(
   const hasImage = Boolean(question.image?.trim());
   const userContent: Array<
     | { type: 'text'; text: string }
-    | { type: 'image_url'; image_url: { url: string; detail: 'low' | 'high' | 'auto' } }
+    | { type: 'image_url'; image_url: { url: string; detail: 'low' } }
   > = [{ type: 'text', text: userPrompt }];
   if (hasImage) {
     userContent.push({
       type: 'image_url',
       image_url: {
         url: question.image!.trim(),
-        detail: 'auto',
+        detail: 'low',
       },
     });
   }
@@ -410,6 +410,7 @@ async function callAiProvider(
         () =>
           client.chat.completions.create({
             model: activeProvider.model,
+            ...buildFastChatCompletionOptions(activeProvider, 1800),
             temperature: 0.3,
             response_format: { type: 'json_object' },
             messages: [
@@ -420,9 +421,13 @@ async function callAiProvider(
               },
             ],
           }),
-        { retries: 2, label: `writing_eval_q${question.number}` }
+        { retries: 1, label: `writing_eval_q${question.number}` }
       ),
-    { label: `writing_eval_q${question.number}`, timeoutMs: 20000 }
+    {
+      label: `writing_eval_q${question.number}`,
+      timeoutMs: hasImage ? 20000 : 15000,
+      requirements: { vision: hasImage },
+    }
   );
   aiLogger.info(`Writing evaluation completed for Q${question.number}`, {
     provider: provider.provider,

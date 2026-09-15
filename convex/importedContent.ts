@@ -10,6 +10,7 @@ import { v } from 'convex/values';
 import { api, internal } from './_generated/api';
 import { getAuthUserId } from './utils';
 import { runChatCompletionWithFallback } from './ai/chatClient';
+import { buildFastChatCompletionOptions } from './aiProviders';
 import { parseJsonObjectFromModelContent, retryAsync } from './aiReliability';
 import { aiLogger } from './logger';
 import { splitKoreanSentences } from './contentImport/splitter';
@@ -222,6 +223,7 @@ export const analyzeImportedContent = action({
             () =>
               client.chat.completions.create({
                 model: activeProvider.model,
+                ...buildFastChatCompletionOptions(activeProvider, 700),
                 temperature: 0.3,
                 response_format: { type: 'json_object' },
                 messages: [
@@ -229,7 +231,7 @@ export const analyzeImportedContent = action({
                   { role: 'user', content: userPrompt },
                 ],
               }),
-            { retries: 2, label: 'analyze_imported_content' }
+            { retries: 1, label: 'analyze_imported_content' }
           ),
         { label: 'analyze_imported_content', timeoutMs: 20000 }
       );

@@ -19,6 +19,7 @@ import {
   retryAsync,
 } from './aiReliability';
 import {
+  buildFastChatCompletionOptions,
   isModelAccessError,
   resolveChatProviderConfigs,
   type ChatProviderConfig,
@@ -487,11 +488,12 @@ type SegmentInput = {
   words?: TranscriptSegment['words'];
 };
 
-function createChatClient(config: ChatProviderConfig, timeout = 25000) {
+function createChatClient(config: ChatProviderConfig, timeout = 15000) {
   return new OpenAI({
     apiKey: config.apiKey,
     ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     timeout,
+    maxRetries: 0,
   });
 }
 
@@ -516,7 +518,7 @@ async function runChatCompletionWithFallback<T extends ChatCompletionLike>(
 
   for (const provider of providers) {
     try {
-      const client = createChatClient(provider, options?.timeoutMs ?? 25000);
+      const client = createChatClient(provider, options?.timeoutMs ?? 15000);
       const completion = await request({ client, provider });
       return { completion, provider };
     } catch (error) {
@@ -908,6 +910,7 @@ async function translateSegmentTexts(
         () =>
           createChatClient(provider).chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 3000),
             messages: [
               {
                 role: 'system',
@@ -927,7 +930,7 @@ Keep the meaning faithful and matches the context of Korean language learning.`,
             ...(strictJsonMode ? { response_format: { type: 'json_object' as const } } : {}),
           }),
         {
-          retries: 2,
+          retries: 1,
           label: `translate_segments_${provider.provider}_${strictJsonMode ? 'strict' : 'normal'}`,
           onRetry: () => {
             retryCount += 1;
@@ -1100,6 +1103,7 @@ async function translateSingleTextDirect(
         () =>
           createChatClient(provider).chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 300),
             messages: [
               {
                 role: 'system',
@@ -1112,7 +1116,7 @@ async function translateSingleTextDirect(
             ],
           }),
         {
-          retries: 2,
+          retries: 1,
           label: `translate_single_direct_${provider.provider}`,
           shouldRetry: error => {
             if (isModelAccessError(error)) return false;
@@ -1627,6 +1631,7 @@ export const analyzeText = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1500),
             messages: [
               {
                 role: 'system',
@@ -1654,7 +1659,6 @@ Return a JSON object with a "tokens" key containing an array of:
               { role: 'user', content: args.text },
             ],
             response_format: { type: 'json_object' },
-            max_tokens: 4000,
           }),
         { label: 'analyze_text' }
       );
@@ -1703,6 +1707,7 @@ export const analyzeSentence = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 900),
             messages: [
               {
                 role: 'system',
@@ -1796,6 +1801,7 @@ export const grammarTutorChat = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 700),
             messages: [
               {
                 role: 'system',
@@ -1870,6 +1876,7 @@ export const analyzeQuestion = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1400),
             messages: [
               {
                 role: 'system',
@@ -2060,6 +2067,7 @@ ${lexicalCandidates.join(', ')}
             () =>
               client.chat.completions.create({
                 model: provider.model,
+                ...buildFastChatCompletionOptions(provider, 1400),
                 messages: [
                   {
                     role: 'system',
@@ -2096,7 +2104,7 @@ ${lexicalCandidates.join(', ')}
                 ],
                 response_format: { type: 'json_object' },
               }),
-            { retries: 2, label: `analyze_reading_article_${provider.provider}` }
+            { retries: 1, label: `analyze_reading_article_${provider.provider}` }
           ),
         { label: 'analyze_reading_article' }
       );
@@ -2179,6 +2187,7 @@ export const explainWordFallback = action({
             () =>
               client.chat.completions.create({
                 model: provider.model,
+                ...buildFastChatCompletionOptions(provider, 600),
                 messages: [
                   {
                     role: 'system',
@@ -2208,7 +2217,7 @@ export const explainWordFallback = action({
                 ],
                 response_format: { type: 'json_object' },
               }),
-            { retries: 2, label: `explain_word_fallback_${provider.provider}` }
+            { retries: 1, label: `explain_word_fallback_${provider.provider}` }
           ),
         { label: 'explain_word_fallback' }
       );
@@ -2473,6 +2482,7 @@ export const generateTopikWritingMaterialFallback = action({
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1200),
             messages: [
               {
                 role: 'system',
@@ -2754,6 +2764,7 @@ export const generateVideoAnalysis = action({
           ({ client, provider }) =>
             client.chat.completions.create({
               model: provider.model,
+              ...buildFastChatCompletionOptions(provider, 3000),
               messages: [
                 {
                   role: 'system',
@@ -2850,6 +2861,7 @@ Example answer format for Korean sentences:
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1800),
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
@@ -2936,6 +2948,7 @@ ${args.grammars.map(g => `ID: ${g.id} | Title: ${g.title} | Summary: ${g.summary
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1400),
             messages: [{ role: 'user', content: prompt }],
             response_format: { type: 'json_object' as const },
           }),
@@ -3192,6 +3205,7 @@ ${args.items
         ({ client, provider }) =>
           client.chat.completions.create({
             model: provider.model,
+            ...buildFastChatCompletionOptions(provider, 1800),
             messages: [{ role: 'user', content: llmPrompt }],
             response_format: { type: 'json_object' as const },
             temperature: 0.1,
@@ -3436,6 +3450,7 @@ Return a raw JSON object only:
       ({ client, provider }) =>
         client.chat.completions.create({
           model: provider.model,
+          ...buildFastChatCompletionOptions(provider, 1800),
           messages: [
             { role: 'system', content: 'You return only raw JSON.' },
             { role: 'user', content: prompt },
